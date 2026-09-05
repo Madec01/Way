@@ -552,7 +552,7 @@ class Player {
       aim = tgt ? angleTo(this.x, this.y, tgt.x, tgt.y) : (mv.x || mv.y ? Math.atan2(mv.y, mv.x) : this.aim);
       firing = t.fire || (t.autoFire && !!tgt); wantSkill = Input.wasPressed('skill'); if (t.interact) { Input.press('KeyE'); t.interact = false; }
     } else {
-      mv = Input.axis(); aim = angleTo(this.x, this.y, Input.mouse.x, Input.mouse.y);
+      const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y); mv = Input.axis(); aim = angleTo(this.x, this.y, wm.x, wm.y);
       firing = Input.mouse.down || Input.isDown('fire'); wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
     }
     this.moveDir = mv; this.aim = aim; if (Math.abs(Math.cos(aim)) > 0.2) this.facing = Math.cos(aim) > 0 ? 1 : -1;

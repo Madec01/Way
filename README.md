@@ -7,7 +7,8 @@ Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.htm
 
 - ZQSD / WASD / flèches : déplacement · souris : visée · clic gauche : attaque (maintenir pour l'arc : charge)
 - clic droit / Espace / Maj : compétence active (dash, bouclier…) · E : interagir (coffre) · Échap / P : pause · F1 : panneau debug (mode Test)
-- **Tactile** (téléphone, tablette) : joystick à gauche pour se déplacer, visée automatique sur l'ennemi le plus proche ; à droite, TIR (maintenir), COMP. (compétence), E (coffre), II (pause). Option « tir automatique » dans le menu pause.
+- **Tactile** (téléphone, tablette) : joystick à gauche pour se déplacer, visée automatique sur l'ennemi le plus proche ; à droite, TIR (maintenir), COMP. (compétence), E (coffre), II (pause). Option « tir automatique » dans le menu pause. Bouton ⛶ pour le plein écran.
+- **Zoom caméra** : la caméra suit le joueur ; zoom réglable dans le menu pause (1× à 2×, 1,5× par défaut en tactile). Plein écran depuis le menu principal, la pause ou le bouton tactile.
 
 ## Musiques
 Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (salles 1-4 et 6-8) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `boss2.mp3` pour le biome suivant, etc. Fichier absent : musique générative. Détails dans `assets/music/README.md`.

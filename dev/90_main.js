@@ -4,20 +4,23 @@
 
 function update(dt, rawDt) {
   UI.update(rawDt); Touch.sync();
-  if (G.state === 'run') Run.update(dt);
+  if (G.state === 'run') { Run.update(dt); if (G.player) Camera.follow(G.player.x, G.player.y, rawDt); }
 }
 function render(ctx) {
   ctx.setTransform(ctx.getTransform());
   if (G.state === 'run' && G.room) {
     ctx.save();
+    Camera.apply(ctx);
     if (G.shake > 0) ctx.translate(VFX_RNG.range(-G.shake, G.shake), VFX_RNG.range(-G.shake, G.shake));
+    ctx.fillStyle = '#07080d'; ctx.fillRect(-W, -H, 3 * W, 3 * H);
     Room.render(ctx);
     Pickups.render(ctx);
     const ents = G.enemies.slice().sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
     G.player.render(ctx);
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx); Floaters.render(ctx);
+    Debug.renderOverlay(ctx);
     ctx.restore();
-    UI.renderHud(ctx); Debug.renderOverlay(ctx);
+    UI.renderHud(ctx);
   } else UI.renderBackdrop(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);
 }
@@ -30,6 +33,7 @@ async function boot() {
   document.addEventListener('pointerdown', wake, { once: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
   UI.init(); Debug.init(); Touch.init();
+  Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));
   await Sprites.load();
   UI.showMenu();
   Engine.start(update, render);

@@ -84,6 +84,28 @@ const STR = {
   wave: 'Vague', boss: 'Mini-boss', ready: 'Prêt', interact: 'E : interagir',
 };
 
+/* ---------- Caméra (zoom + suivi du joueur ; le HUD n'est pas affecté) ---------- */
+const Camera = {
+  x: W / 2, y: H / 2, zoom: 1,
+  snap(x, y) { this.x = x; this.y = y; this.clamp(); },
+  follow(x, y, dt) { const k = Math.min(1, 6 * dt); this.x = lerp(this.x, x, k); this.y = lerp(this.y, y, k); this.clamp(); },
+  clamp() { const hw = W / (2 * this.zoom), hh = H / (2 * this.zoom); this.x = clamp(this.x, hw, W - hw); this.y = clamp(this.y, hh, H - hh); },
+  apply(ctx) { ctx.translate(W / 2, H / 2); ctx.scale(this.zoom, this.zoom); ctx.translate(-this.x, -this.y); },
+  toWorld(sx, sy) { return { x: this.x + (sx - W / 2) / this.zoom, y: this.y + (sy - H / 2) / this.zoom }; },
+  setZoom(z) { this.zoom = clamp(z || 1, 1, 2.5); this.clamp(); },
+};
+/* ---------- Plein écran ---------- */
+const Fullscreen = {
+  get active() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
+  supported() { const d = document.documentElement; return !!(d.requestFullscreen || d.webkitRequestFullscreen); },
+  enter() {
+    const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : d.webkitRequestFullscreen ? d.webkitRequestFullscreen() : null;
+    if (p && p.then) p.then(() => { try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* */ } }).catch(() => {});
+  },
+  exit() { if (document.exitFullscreen) document.exitFullscreen().catch(() => {}); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); },
+  toggle() { this.active ? this.exit() : this.enter(); },
+};
+
 /* ---------- Time ---------- */
 const Time = { scale: 1, slow: 1, slowUntil: 0, now: 0, frame: 0 };
 

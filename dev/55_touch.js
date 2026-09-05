@@ -19,7 +19,8 @@ const Touch = (() => {
       <button class="tbtn fire" id="t-fire">TIR</button>
       <button class="tbtn skill" id="t-skill">COMP.</button>
       <button class="tbtn act" id="t-act">E</button>
-      <button class="tbtn pause" id="t-pause">II</button>`;
+      <button class="tbtn pause" id="t-pause">II</button>
+      <button class="tbtn fs" id="t-fs">⛶</button>`;
     stick = document.getElementById('t-stick'); knob = document.getElementById('t-knob');
     const zone = document.getElementById('t-zone');
     const T = Input.touch;
@@ -42,12 +43,14 @@ const Touch = (() => {
     hold('t-skill', () => { Input.press('Space'); });
     hold('t-act', () => { T.interact = true; });
     hold('t-pause', () => { if (G.state === 'run') UI.togglePause(); });
+    hold('t-fs', () => Fullscreen.toggle());
     layer.addEventListener('contextmenu', e => e.preventDefault());
   }
   function activate() {
     if (Input.touch.active) return; Input.touch.active = true; build();
     try { Input.touch.autoFire = !!Meta.profile.touchAutoFire; } catch (e) { /* */ }
     document.body.classList.add('touch');
+    if (!Meta.profile.zoom) Camera.setZoom(1.5);
   }
   function init() {
     window.addEventListener('touchstart', activate, { once: true, passive: true });

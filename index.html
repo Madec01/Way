@@ -109,6 +109,7 @@ body.touch #ui .screen{padding:calc(10px*var(--ui-scale));align-items:flex-start
 body.touch .cards .card{min-width:11em;max-width:15em;padding:.55em .7em;font-size:.92em}
 body.touch .prep h2{font-size:1.2em}
 body.touch .prep .passives .tiny{display:none}
+#touch .tbtn.fs{right:calc(68px*var(--ui-scale));top:calc(56px*var(--ui-scale));width:calc(44px*var(--ui-scale));height:calc(44px*var(--ui-scale));font-size:calc(16px*var(--ui-scale))}
 
 </style>
 </head>
@@ -203,6 +204,28 @@ const STR = {
   paused: 'Pause', resume: 'Reprendre', quit: 'Abandonner la run', dead: 'Sujet perdu',
   toHub: 'Retour au hub', victory: 'Protocole terminé', pending: 'en attente',
   wave: 'Vague', boss: 'Mini-boss', ready: 'Prêt', interact: 'E : interagir',
+};
+
+/* ---------- Caméra (zoom + suivi du joueur ; le HUD n'est pas affecté) ---------- */
+const Camera = {
+  x: W / 2, y: H / 2, zoom: 1,
+  snap(x, y) { this.x = x; this.y = y; this.clamp(); },
+  follow(x, y, dt) { const k = Math.min(1, 6 * dt); this.x = lerp(this.x, x, k); this.y = lerp(this.y, y, k); this.clamp(); },
+  clamp() { const hw = W / (2 * this.zoom), hh = H / (2 * this.zoom); this.x = clamp(this.x, hw, W - hw); this.y = clamp(this.y, hh, H - hh); },
+  apply(ctx) { ctx.translate(W / 2, H / 2); ctx.scale(this.zoom, this.zoom); ctx.translate(-this.x, -this.y); },
+  toWorld(sx, sy) { return { x: this.x + (sx - W / 2) / this.zoom, y: this.y + (sy - H / 2) / this.zoom }; },
+  setZoom(z) { this.zoom = clamp(z || 1, 1, 2.5); this.clamp(); },
+};
+/* ---------- Plein écran ---------- */
+const Fullscreen = {
+  get active() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
+  supported() { const d = document.documentElement; return !!(d.requestFullscreen || d.webkitRequestFullscreen); },
+  enter() {
+    const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : d.webkitRequestFullscreen ? d.webkitRequestFullscreen() : null;
+    if (p && p.then) p.then(() => { try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* */ } }).catch(() => {});
+  },
+  exit() { if (document.exitFullscreen) document.exitFullscreen().catch(() => {}); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); },
+  toggle() { this.active ? this.exit() : this.enter(); },
 };
 
 /* ---------- Time ---------- */
@@ -2308,9 +2331,10 @@ const Music = (() => {
       try { const r = await fetch(url, { method: 'HEAD' }); if (r.ok) { resolved[key] = url; return url; } } catch (e) { break; }   // file:// → fetch impossible → génératif
     }
     if (key === 'menu') { const h = await resolve('hub'); resolved.menu = h; return h; }
+    if (key === 'hub') { const m = await resolve('menu'); resolved.hub = m; return m; }   // pas de hub.mp3 : le hub garde la musique du menu
     resolved[key] = null; return null;
   }
-  let current = null, generative = false, enabled = true, armed = false; const preloaded = {};
+  let current = null, currentUrl = null, generative = false, enabled = true, armed = false; const preloaded = {};
   /* précharge (cache navigateur) les pistes d'un biome pour un démarrage immédiat en salle */
   function preload(kinds) { for (const k of kinds) { const key = keyFor(k); resolve(key).then(url => { if (!url || preloaded[url]) return; preloaded[url] = { ready: false }; fetch(url).then(r => r.ok ? r.blob() : null).then(b => { if (b) { preloaded[url].blobUrl = URL.createObjectURL(b); preloaded[url].ready = true; } }).catch(() => {}); }); } }
   function play(kind) {
@@ -2320,14 +2344,15 @@ const Music = (() => {
     resolve(key).then(url => {
       if (current !== key) return;
       const mood = key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome';
-      if (!url) { generative = true; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
-      generative = false;
+      if (!url) { generative = true; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
+      if (url === currentUrl && !generative && AudioEngine.musicState && AudioEngine.musicState().hasTrack) return;   // même piste déjà en cours : on continue sans coupure
+      generative = false; currentUrl = url;
       const src = preloaded[url] && preloaded[url].ready ? preloaded[url].blobUrl : url;   // déjà téléchargé → lecture locale immédiate
       const p = AudioEngine.playMusic(src, { fadeIn: 0.6, fadeOut: 0.8, loop: true, stream: true });
       if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome'); } });
     });
   }
-  function stop() { current = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
+  function stop() { current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
   function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); preload(['biome', 'boss']); }
@@ -3021,7 +3046,7 @@ class Player {
       aim = tgt ? angleTo(this.x, this.y, tgt.x, tgt.y) : (mv.x || mv.y ? Math.atan2(mv.y, mv.x) : this.aim);
       firing = t.fire || (t.autoFire && !!tgt); wantSkill = Input.wasPressed('skill'); if (t.interact) { Input.press('KeyE'); t.interact = false; }
     } else {
-      mv = Input.axis(); aim = angleTo(this.x, this.y, Input.mouse.x, Input.mouse.y);
+      const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y); mv = Input.axis(); aim = angleTo(this.x, this.y, wm.x, wm.y);
       firing = Input.mouse.down || Input.isDown('fire'); wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
     }
     this.moveDir = mv; this.aim = aim; if (Math.abs(Math.cos(aim)) > 0.2) this.facing = Math.cos(aim) > 0 ? 1 : -1;
@@ -3743,7 +3768,7 @@ const Room = {
     applyDifficulty();
     G.enemies = []; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
     G.room = Room.create(def);
-    const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0;
+    const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.snap(pl.x, pl.y);
     for (const h of pl.hooks.onRoomStart) { if (h.effect === 'shield_on_room') { pl.shield = Math.max(pl.shield, h.amount * (h.stacks || 1)); pl.shieldUntil = Time.now + 999; } else if (h.effect === 'heal_on_room') pl.heal(pl.stats.maxHp * h.fraction * (h.stacks || 1)); }
     G.run.roomIndex = index; G.run.stats.roomsEntered++;
     Modular.init(G.room);
@@ -4024,6 +4049,7 @@ const UI = (() => {
         </div>
         <div class="row small">
           <button class="btn ghost" id="btn-credits">Crédits</button>
+          <button class="btn ghost" id="btn-fs">Plein écran</button>
           <button class="btn ghost" id="btn-reset">Réinitialiser la sauvegarde</button>
         </div>
         <p class="muted tiny">ZQSD / WASD : déplacement · souris : visée · clic gauche : attaque · clic droit / Espace / Maj : compétence (dash…) · E : interagir · Échap : pause · tactile : joystick à gauche, boutons à droite${G.mode === 'test' ? ' · F1 : debug' : ''}</p>
@@ -4032,6 +4058,8 @@ const UI = (() => {
     s.querySelector('#btn-normal').onclick = () => { Meta.setMode('normal'); Debug.hide(); Run.toHub(); };
     s.querySelector('#btn-test').onclick = () => { Meta.setMode('test'); Run.toHub(); toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5); };
     s.querySelector('#btn-credits').onclick = showCredits;
+    s.querySelector('#btn-fs').onclick = () => Fullscreen.toggle();
+    if (Input.touch.active) for (const id of ['#btn-normal', '#btn-test']) { const b = s.querySelector(id); const f = b.onclick; b.onclick = () => { if (!Fullscreen.active) Fullscreen.enter(); f(); }; }
     s.querySelector('#btn-reset').onclick = () => { if (confirm('Effacer la sauvegarde du mode Normal ?')) { Meta.reset(); showMenu(); } };
     show('menu'); Music.play('menu');
   }
@@ -4182,9 +4210,13 @@ const UI = (() => {
         <label>Effets <input type="range" min="0" max="1" step="0.05" value="${v.sfx}" data-v="sfx"></label>
         <label>Musique <input type="range" min="0" max="1" step="0.05" value="${v.music}" data-v="music"></label>
         ${Input.touch.active ? `<label>Tir automatique (tactile) <input type="checkbox" id="pause-autofire" ${Input.touch.autoFire ? 'checked' : ''}></label>` : ''}
+        <label>Zoom caméra <select id="pause-zoom">${[1, 1.25, 1.5, 1.75, 2].map(z => `<option value="${z}" ${Math.abs(Camera.zoom - z) < 0.01 ? 'selected' : ''}>${z}×</option>`).join('')}</select></label>
       </div>
+      <div class="row small"><button class="btn ghost" id="pause-fs">${Fullscreen.active ? 'Quitter le plein écran' : 'Plein écran'}</button></div>
       <div class="row"><button class="btn primary" id="pause-resume">${STR.resume}</button><button class="btn ghost" id="pause-quit">${STR.quit}</button></div></div>`;
     s.querySelectorAll('input[type=range]').forEach(i => i.oninput = () => { v[i.dataset.v] = +i.value; AudioEngine.setVolume(v); Meta.save(); });
+    s.querySelector('#pause-zoom').onchange = e => { Camera.setZoom(+e.target.value); Meta.profile.zoom = +e.target.value; Meta.save(); };
+    s.querySelector('#pause-fs').onclick = () => { Fullscreen.toggle(); setTimeout(() => { if (G.overlay === 'pause') { togglePause(); togglePause(); } }, 300); };
     const af = s.querySelector('#pause-autofire'); if (af) af.onchange = () => { Input.touch.autoFire = af.checked; Meta.profile.touchAutoFire = af.checked; Meta.save(); };
     s.querySelector('#pause-resume').onclick = togglePause;
     s.querySelector('#pause-quit').onclick = () => { hideAll(); Run.abort(); };
@@ -4326,7 +4358,8 @@ const Touch = (() => {
       <button class="tbtn fire" id="t-fire">TIR</button>
       <button class="tbtn skill" id="t-skill">COMP.</button>
       <button class="tbtn act" id="t-act">E</button>
-      <button class="tbtn pause" id="t-pause">II</button>`;
+      <button class="tbtn pause" id="t-pause">II</button>
+      <button class="tbtn fs" id="t-fs">⛶</button>`;
     stick = document.getElementById('t-stick'); knob = document.getElementById('t-knob');
     const zone = document.getElementById('t-zone');
     const T = Input.touch;
@@ -4349,12 +4382,14 @@ const Touch = (() => {
     hold('t-skill', () => { Input.press('Space'); });
     hold('t-act', () => { T.interact = true; });
     hold('t-pause', () => { if (G.state === 'run') UI.togglePause(); });
+    hold('t-fs', () => Fullscreen.toggle());
     layer.addEventListener('contextmenu', e => e.preventDefault());
   }
   function activate() {
     if (Input.touch.active) return; Input.touch.active = true; build();
     try { Input.touch.autoFire = !!Meta.profile.touchAutoFire; } catch (e) { /* */ }
     document.body.classList.add('touch');
+    if (!Meta.profile.zoom) Camera.setZoom(1.5);
   }
   function init() {
     window.addEventListener('touchstart', activate, { once: true, passive: true });
@@ -4592,20 +4627,23 @@ const Debug = (() => {
 
 function update(dt, rawDt) {
   UI.update(rawDt); Touch.sync();
-  if (G.state === 'run') Run.update(dt);
+  if (G.state === 'run') { Run.update(dt); if (G.player) Camera.follow(G.player.x, G.player.y, rawDt); }
 }
 function render(ctx) {
   ctx.setTransform(ctx.getTransform());
   if (G.state === 'run' && G.room) {
     ctx.save();
+    Camera.apply(ctx);
     if (G.shake > 0) ctx.translate(VFX_RNG.range(-G.shake, G.shake), VFX_RNG.range(-G.shake, G.shake));
+    ctx.fillStyle = '#07080d'; ctx.fillRect(-W, -H, 3 * W, 3 * H);
     Room.render(ctx);
     Pickups.render(ctx);
     const ents = G.enemies.slice().sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
     G.player.render(ctx);
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx); Floaters.render(ctx);
+    Debug.renderOverlay(ctx);
     ctx.restore();
-    UI.renderHud(ctx); Debug.renderOverlay(ctx);
+    UI.renderHud(ctx);
   } else UI.renderBackdrop(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);
 }
@@ -4618,6 +4656,7 @@ async function boot() {
   document.addEventListener('pointerdown', wake, { once: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
   UI.init(); Debug.init(); Touch.init();
+  Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));
   await Sprites.load();
   UI.showMenu();
   Engine.start(update, render);

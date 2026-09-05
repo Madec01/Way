@@ -38,6 +38,7 @@ const UI = (() => {
         </div>
         <div class="row small">
           <button class="btn ghost" id="btn-credits">Crédits</button>
+          <button class="btn ghost" id="btn-fs">Plein écran</button>
           <button class="btn ghost" id="btn-reset">Réinitialiser la sauvegarde</button>
         </div>
         <p class="muted tiny">ZQSD / WASD : déplacement · souris : visée · clic gauche : attaque · clic droit / Espace / Maj : compétence (dash…) · E : interagir · Échap : pause · tactile : joystick à gauche, boutons à droite${G.mode === 'test' ? ' · F1 : debug' : ''}</p>
@@ -46,6 +47,8 @@ const UI = (() => {
     s.querySelector('#btn-normal').onclick = () => { Meta.setMode('normal'); Debug.hide(); Run.toHub(); };
     s.querySelector('#btn-test').onclick = () => { Meta.setMode('test'); Run.toHub(); toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5); };
     s.querySelector('#btn-credits').onclick = showCredits;
+    s.querySelector('#btn-fs').onclick = () => Fullscreen.toggle();
+    if (Input.touch.active) for (const id of ['#btn-normal', '#btn-test']) { const b = s.querySelector(id); const f = b.onclick; b.onclick = () => { if (!Fullscreen.active) Fullscreen.enter(); f(); }; }
     s.querySelector('#btn-reset').onclick = () => { if (confirm('Effacer la sauvegarde du mode Normal ?')) { Meta.reset(); showMenu(); } };
     show('menu'); Music.play('menu');
   }
@@ -196,9 +199,13 @@ const UI = (() => {
         <label>Effets <input type="range" min="0" max="1" step="0.05" value="${v.sfx}" data-v="sfx"></label>
         <label>Musique <input type="range" min="0" max="1" step="0.05" value="${v.music}" data-v="music"></label>
         ${Input.touch.active ? `<label>Tir automatique (tactile) <input type="checkbox" id="pause-autofire" ${Input.touch.autoFire ? 'checked' : ''}></label>` : ''}
+        <label>Zoom caméra <select id="pause-zoom">${[1, 1.25, 1.5, 1.75, 2].map(z => `<option value="${z}" ${Math.abs(Camera.zoom - z) < 0.01 ? 'selected' : ''}>${z}×</option>`).join('')}</select></label>
       </div>
+      <div class="row small"><button class="btn ghost" id="pause-fs">${Fullscreen.active ? 'Quitter le plein écran' : 'Plein écran'}</button></div>
       <div class="row"><button class="btn primary" id="pause-resume">${STR.resume}</button><button class="btn ghost" id="pause-quit">${STR.quit}</button></div></div>`;
     s.querySelectorAll('input[type=range]').forEach(i => i.oninput = () => { v[i.dataset.v] = +i.value; AudioEngine.setVolume(v); Meta.save(); });
+    s.querySelector('#pause-zoom').onchange = e => { Camera.setZoom(+e.target.value); Meta.profile.zoom = +e.target.value; Meta.save(); };
+    s.querySelector('#pause-fs').onclick = () => { Fullscreen.toggle(); setTimeout(() => { if (G.overlay === 'pause') { togglePause(); togglePause(); } }, 300); };
     const af = s.querySelector('#pause-autofire'); if (af) af.onchange = () => { Input.touch.autoFire = af.checked; Meta.profile.touchAutoFire = af.checked; Meta.save(); };
     s.querySelector('#pause-resume').onclick = togglePause;
     s.querySelector('#pause-quit').onclick = () => { hideAll(); Run.abort(); };

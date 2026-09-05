@@ -97,3 +97,4 @@ body.touch #ui .screen{padding:calc(10px*var(--ui-scale));align-items:flex-start
 body.touch .cards .card{min-width:11em;max-width:15em;padding:.55em .7em;font-size:.92em}
 body.touch .prep h2{font-size:1.2em}
 body.touch .prep .passives .tiny{display:none}
+#touch .tbtn.fs{right:calc(68px*var(--ui-scale));top:calc(56px*var(--ui-scale));width:calc(44px*var(--ui-scale));height:calc(44px*var(--ui-scale));font-size:calc(16px*var(--ui-scale))}
