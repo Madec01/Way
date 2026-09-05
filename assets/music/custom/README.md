@@ -4,7 +4,8 @@ Déposez ici vos fichiers, ils remplacent automatiquement les pistes fournies (a
 
 | Fichier | Utilisé pour |
 |---|---|
-| `hub.mp3` | Salle Zéro (hub) et menu |
+| `menu.mp3` | Menu principal (sans ce fichier : la musique du hub) |
+| `hub.mp3` | Salle Zéro (hub) |
 | `biome1.mp3` | Biome 1 (ADMISSION) : salles 1 à 4 et 6 à 8 |
 | `boss1.mp3` | Biome 1 : salle 5 (mini-boss) et salle 9 (revanche) |
 | `biome2.mp3`, `boss2.mp3` | Biome 2, même logique |

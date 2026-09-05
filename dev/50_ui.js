@@ -47,7 +47,7 @@ const UI = (() => {
     s.querySelector('#btn-test').onclick = () => { Meta.setMode('test'); Run.toHub(); toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5); };
     s.querySelector('#btn-credits').onclick = showCredits;
     s.querySelector('#btn-reset').onclick = () => { if (confirm('Effacer la sauvegarde du mode Normal ?')) { Meta.reset(); showMenu(); } };
-    show('menu'); Music.play('hub');
+    show('menu'); Music.play('menu');
   }
 
   /* ---------- Hub ---------- */
