@@ -231,7 +231,7 @@ const UI = (() => {
     const s = screens.credits;
     s.innerHTML = `<div class="panel center credits"><h2>Crédits</h2>
       <p class="small"><b>Sprites</b> : 0x72 — Dungeon Tileset II (CC0). Kenney — Tiny Dungeon, Particle Pack, UI Pack, Pixel Shmup, Game Icons (CC0). Icônes game-icons.net (CC BY 3.0).</p>
-      <p class="small"><b>Musique</b> : Kevin MacLeod (incompetech.com) — « Basement Floor », « Latin Industries », « In a Heartbeat », « Ouroboros ». Licensed under Creative Commons: By Attribution 4.0 — creativecommons.org/licenses/by/4.0/</p>
+      <p class="small"><b>Musique</b> : pistes de l'auteur du jeu (dossier assets/music), repli génératif Web Audio.</p>
       <p class="small"><b>Polices</b> : Silkscreen, VT323, Pixelify Sans (SIL Open Font License).</p>
       <p class="small"><b>Sons</b> : synthèse organique Web Audio (bruit filtré, FM, convolution), module AudioEngine.</p>
       <p class="muted tiny">Détails et liens dans CREDITS.md et ASSETS.md.</p>

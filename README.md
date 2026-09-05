@@ -1,6 +1,6 @@
 # SUJET NEUF — roguelite à salles
 
-Un roguelite d'action 2D vue de dessus, dans le navigateur. Palier ADMISSION complet : 9 salles (préparation, pièges, combats, coffres, mini-boss, salles modulaires, boss revanche), en un seul fichier `index.html` (Canvas 2D, JS vanilla, Web Audio, localStorage) + un dossier `assets/` (sprites CC0, musiques CC-BY).
+Un roguelite d'action 2D vue de dessus, dans le navigateur. Palier ADMISSION complet : 9 salles (préparation, pièges, combats, coffres, mini-boss, salles modulaires, boss revanche), en un seul fichier `index.html` (Canvas 2D, JS vanilla, Web Audio, localStorage) + un dossier `assets/` (sprites CC0, vos musiques).
 
 ## Jouer
 Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.html`. Ouvrir directement le fichier fonctionne aussi, mais certains navigateurs bloquent alors les musiques.
@@ -8,8 +8,8 @@ Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.htm
 - ZQSD / WASD / flèches : déplacement · souris : visée · clic gauche : attaque (maintenir pour l'arc : charge)
 - clic droit / Espace / Maj : compétence active · E : interagir (coffre) · Échap / P : pause · F1 : panneau debug (mode Test)
 
-## Vos propres musiques
-Déposez dans `assets/music/custom/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (salles 1-4 et 6-8) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `boss2.mp3` pour le biome suivant, etc. Ils remplacent les pistes fournies sans toucher au code. Détails dans `assets/music/custom/README.md`.
+## Musiques
+Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (salles 1-4 et 6-8) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `boss2.mp3` pour le biome suivant, etc. Fichier absent : musique générative. Détails dans `assets/music/README.md`.
 
 ## Modes
 - **Normal** : sauvegarde locale, 1 sujet et 2 armes débloqués, économie normale.

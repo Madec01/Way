@@ -1,3 +1,5 @@
+> Note (septembre 2026) : les quatre pistes Kevin MacLeod listées ci-dessous ont été retirées du dépôt à la demande de l'auteur ; les musiques sont désormais celles déposées dans `assets/music/` (voir son README).
+
 # SALLE ZÉRO — Inventaire des assets
 
 Tous les fichiers sont dans `salle-zero/assets/`. **Poids total : 12,53 Mo** (musique 11,79 Mo · sprites 0,40 Mo · polices 0,26 Mo · icônes 0,09 Mo), 149 fichiers.
