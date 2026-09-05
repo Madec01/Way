@@ -955,12 +955,12 @@
     return { g, stop: () => { try { src.stop(); } catch (e) { /* */ } try { src.disconnect(); g.disconnect(); } catch (e) { /* */ } } };
   }
   function makeTrackFromElement(url, loop) {
-    const el = new Audio(); el.crossOrigin = 'anonymous'; el.loop = !!loop; el.src = url;
+    const el = new Audio(); el.crossOrigin = 'anonymous'; el.loop = !!loop; el.preload = 'auto'; el.src = url;
     const node = ctx.createMediaElementSource(el);
     const g = ctx.createGain(); g.gain.value = 0;
     node.connect(g); g.connect(musicDuck);
     const p = el.play(); if (p && p.catch) p.catch(() => { /* autoplay refusé : silencieux */ });
-    return { g, stop: () => { try { el.pause(); el.src = ''; node.disconnect(); g.disconnect(); } catch (e) { /* */ } } };
+    return { g, el, stop: () => { try { el.pause(); el.src = ''; node.disconnect(); g.disconnect(); } catch (e) { /* */ } } };
   }
   function fadeTrack(track, to, seconds, thenStop) {
     const t = ctx.currentTime;
@@ -987,7 +987,7 @@
       return true;
     };
     const viaElement = () => { try { return start(makeTrackFromElement(url, loop)); } catch (e) { console.warn('[AudioEngine] playMusic', e); return false; } };
-    if (typeof fetch !== 'function') return Promise.resolve(viaElement());
+    if (opts.stream || typeof fetch !== 'function') return Promise.resolve(viaElement());   // stream : lecture immédiate via <audio>, sans télécharger tout le fichier
     return fetch(url)
       .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
       .then((ab) => ctx.decodeAudioData(ab))
@@ -1145,6 +1145,7 @@
   api.playMusic = playMusic;
   api.stopMusic = stopMusic;
   api.duckMusic = duckMusic;
+  api.musicState = () => ({ hasTrack: !!music.cur, gain: music.cur ? music.cur.g.gain.value : null, el: music.cur && music.cur.el ? { paused: music.cur.el.paused, t: music.cur.el.currentTime, ready: music.cur.el.readyState, net: music.cur.el.networkState, err: music.cur.el.error && music.cur.el.error.code, src: music.cur.el.currentSrc.slice(-24) } : null, generative: !!gen, ctxState: ctx ? ctx.state : null, ctxTime: ctx ? ctx.currentTime : null });
   api.startGenerativeMusic = startGenerativeMusic;
   api.stopGenerativeMusic = stopGenerativeMusic;
   api.list = () => NAMES.slice();

@@ -25,8 +25,10 @@ async function boot() {
   const canvas = document.getElementById('c');
   Engine.init(canvas);
   Meta.load(); Content.validate();
-  Input.attach(canvas, () => { AudioEngine.init(); AudioEngine.setVolume(Meta.profile.volume); Music.restart(); });
-  document.addEventListener('pointerdown', () => { AudioEngine.init(); AudioEngine.resume && AudioEngine.resume(); AudioEngine.setVolume(Meta.profile.volume); Music.restart(); }, { once: true });
+  const wake = () => { AudioEngine.init(); AudioEngine.resume && AudioEngine.resume(); AudioEngine.setVolume(Meta.profile.volume); Music.restart(); };
+  Input.attach(canvas, wake);
+  document.addEventListener('pointerdown', wake, { once: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
   UI.init(); Debug.init();
   await Sprites.load();
   UI.showMenu();

@@ -121,7 +121,9 @@ const Music = (() => {
     if (key === 'menu') { const h = await resolve('hub'); resolved.menu = h; return h; }
     resolved[key] = null; return null;
   }
-  let current = null, generative = false, enabled = true;
+  let current = null, generative = false, enabled = true, armed = false; const preloaded = {};
+  /* précharge (cache navigateur) les pistes d'un biome pour un démarrage immédiat en salle */
+  function preload(kinds) { for (const k of kinds) { const key = keyFor(k); resolve(key).then(url => { if (!url || preloaded[url]) return; preloaded[url] = { ready: false }; fetch(url).then(r => r.ok ? r.blob() : null).then(b => { if (b) { preloaded[url].blobUrl = URL.createObjectURL(b); preloaded[url].ready = true; } }).catch(() => {}); }); } }
   function play(kind) {
     const key = keyFor(kind);
     if (!enabled || current === key) return; current = key;
@@ -131,12 +133,14 @@ const Music = (() => {
       const mood = key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome';
       if (!url) { generative = true; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
       generative = false;
-      const p = AudioEngine.playMusic(url, { fadeIn: 1.2, fadeOut: 1.2, loop: true });
+      const src = preloaded[url] && preloaded[url].ready ? preloaded[url].blobUrl : url;   // déjà téléchargé → lecture locale immédiate
+      const p = AudioEngine.playMusic(src, { fadeIn: 0.6, fadeOut: 0.8, loop: true, stream: true });
       if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome'); } });
     });
   }
   function stop() { current = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
-  function restart() { const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); }
-  return { play, stop, setEnabled, restart, keyFor, get current() { return current; }, get generative() { return generative; } };
+  /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
+  function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); preload(['biome', 'boss']); }
+  return { play, stop, setEnabled, restart, preload, keyFor, get current() { return current; }, get generative() { return generative; } };
 })();
