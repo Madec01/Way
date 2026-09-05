@@ -2266,33 +2266,36 @@ const Sprites = (() => {
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */
 const Music = (() => {
-  /* Pistes fournies (CC-BY). Pour mettre VOS musiques : déposez assets/music/custom/hub.mp3, biome1.mp3, boss.mp3 (ou .ogg) ;
-     elles sont utilisées à la place des pistes fournies si elles existent. Aucune modification de code nécessaire. */
+  /* Pistes fournies (CC-BY), utilisées par défaut pour tous les biomes.
+     VOS musiques : déposez dans assets/music/custom/ les fichiers hub.mp3, biome1.mp3 (salles 1-4 et 6-8 du biome 1), boss1.mp3 (salles 5 et 9),
+     puis biome2.mp3 / boss2.mp3 pour le biome 2, etc. (.ogg et .m4a acceptés). Aucune modification de code nécessaire. */
   const TRACKS = { hub: ASSET_BASE + 'music/hub_basement_floor.mp3', biome: ASSET_BASE + 'music/biome1_latin_industries.mp3', boss: ASSET_BASE + 'music/boss_in_a_heartbeat.mp3' };
-  const CUSTOM = { hub: 'hub', biome: 'biome1', boss: 'boss' };
   const resolved = {};
+  /* 'biome' / 'boss' → 'biome1' / 'boss1' selon le biome de la run courante */
+  function keyFor(kind) { if (kind === 'hub') return 'hub'; const n = (G.run && G.run.biome && G.run.biome.order) || 1; return kind + n; }
   async function resolve(key) {
     if (resolved[key]) return resolved[key];
     for (const ext of ['mp3', 'ogg', 'm4a']) {
-      const url = ASSET_BASE + 'music/custom/' + CUSTOM[key] + '.' + ext;
+      const url = ASSET_BASE + 'music/custom/' + key + '.' + ext;
       try { const r = await fetch(url, { method: 'HEAD' }); if (r.ok) { resolved[key] = url; return url; } } catch (e) { break; }   // file:// → fetch impossible, on garde les pistes fournies
     }
-    resolved[key] = TRACKS[key]; return TRACKS[key];
+    const fallback = TRACKS[key.replace(/\d+$/, '')] || TRACKS.biome; resolved[key] = fallback; return fallback;
   }
   let current = null, generative = false, enabled = true;
-  function play(key) {
+  function play(kind) {
+    const key = keyFor(kind);
     if (!enabled || current === key) return; current = key;
     if (!AudioEngine.isReady || !AudioEngine.isReady()) return;
     resolve(key).then(url => {
       if (current !== key) return;
       const p = AudioEngine.playMusic(url, { fadeIn: 1.2, fadeOut: 1.2, loop: true });
-      if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key === 'boss' ? 'boss' : key === 'hub' ? 'hub' : 'biome'); } });
+      if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key.startsWith('boss') ? 'boss' : key === 'hub' ? 'hub' : 'biome'); } });
     });
   }
   function stop() { current = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
-  function restart() { const k = current; current = null; if (k) play(k); }
-  return { play, stop, setEnabled, restart, get current() { return current; }, TRACKS };
+  function restart() { const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); }
+  return { play, stop, setEnabled, restart, keyFor, get current() { return current; }, TRACKS };
 })();
 
 </script>

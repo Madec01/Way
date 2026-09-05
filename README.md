@@ -9,7 +9,7 @@ Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.htm
 - clic droit / Espace / Maj : compétence active · E : interagir (coffre) · Échap / P : pause · F1 : panneau debug (mode Test)
 
 ## Vos propres musiques
-Déposez `hub.mp3`, `biome1.mp3` et `boss.mp3` (ou `.ogg`) dans `assets/music/custom/` : elles remplacent les pistes fournies sans toucher au code. Détails dans `assets/music/custom/README.md`.
+Déposez dans `assets/music/custom/` les fichiers `hub.mp3`, `biome1.mp3` (salles 1-4 et 6-8) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `boss2.mp3` pour le biome suivant, etc. Ils remplacent les pistes fournies sans toucher au code. Détails dans `assets/music/custom/README.md`.
 
 ## Modes
 - **Normal** : sauvegarde locale, 1 sujet et 2 armes débloqués, économie normale.
