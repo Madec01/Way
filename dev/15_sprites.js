@@ -83,13 +83,22 @@ const Sprites = (() => {
   }
   function drawBlock(ctx, o) {
     ctx.save();
+    /* ombre portée au sol */
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(o.px + 6, o.py + 8, o.pw, o.ph);
+    /* corps : dalle métallique claire, bien détachée du sol */
+    ctx.fillStyle = '#4a5578'; ctx.fillRect(o.px, o.py, o.pw, o.ph);
     for (let ty = 0; ty < o.h; ty++) for (let tx = 0; tx < o.w; tx++) {
       const x = o.px + tx * TILE, y = o.py + ty * TILE;
       const t = o.h > 1 ? (ty === 0 ? TILES.column[0] : ty === o.h - 1 ? TILES.column[2] : TILES.column[1]) : TILES.column[2];
-      if (!tile(ctx, t, x, y)) { ctx.fillStyle = '#2b3350'; ctx.fillRect(x, y, TILE, TILE); ctx.strokeStyle = '#6ee7ff55'; ctx.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2); }
+      ctx.globalAlpha = 0.9; tile(ctx, t, x, y); ctx.globalAlpha = 1;
     }
-    ctx.fillStyle = 'rgba(40,70,110,.25)'; ctx.fillRect(o.px, o.py, o.pw, o.ph);
-    ctx.strokeStyle = 'rgba(110,231,255,.3)'; ctx.lineWidth = 1; ctx.strokeRect(o.px + 0.5, o.py + 0.5, o.pw - 1, o.ph - 1);
+    /* face supérieure claire + arêtes lumineuses */
+    ctx.fillStyle = 'rgba(180,200,240,.22)'; ctx.fillRect(o.px, o.py, o.pw, Math.min(10, o.ph));
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(o.px, o.py + o.ph - 6, o.pw, 6);
+    ctx.strokeStyle = '#9fd8ff'; ctx.lineWidth = 2; ctx.shadowColor = '#6ee7ff'; ctx.shadowBlur = 10; ctx.strokeRect(o.px + 1, o.py + 1, o.pw - 2, o.ph - 2);
+    ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(o.px + 2, o.py + o.ph - 2); ctx.lineTo(o.px + 2, o.py + 2); ctx.lineTo(o.px + o.pw - 2, o.py + 2); ctx.stroke();
+    /* bandes d'avertissement jaunes/noires au pied (lisible même en périphérie) */
+    ctx.save(); ctx.beginPath(); ctx.rect(o.px + 2, o.py + o.ph - 12, o.pw - 4, 8); ctx.clip(); for (let x = o.px - 8; x < o.px + o.pw + 8; x += 12) { ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.moveTo(x, o.py + o.ph - 4); ctx.lineTo(x + 6, o.py + o.ph - 12); ctx.lineTo(x + 12, o.py + o.ph - 12); ctx.lineTo(x + 6, o.py + o.ph - 4); ctx.fill(); } ctx.restore();
     ctx.restore();
   }
   function drawChest(ctx, ch) {

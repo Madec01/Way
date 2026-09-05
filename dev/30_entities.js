@@ -266,14 +266,16 @@ const Combat = {
     for (let i = 0; i < jumps; i++) {
       const nxt = nearestEnemy(cur.x, cur.y, radius, x => !done.has(x));
       if (!nxt) break; done.add(nxt);
-      G.room.beams.push({ ax: cur.x, ay: cur.y, bx: nxt.x, by: nxt.y, t: 0, life: 0.15, color: '#b3e5ff', width: 3 });
+      G.room.beams.push({ ax: cur.x, ay: cur.y, bx: nxt.x, by: nxt.y, t: 0, life: 0.28, color: '#b3e5ff', width: 5, jag: true }); Particles.spawn(nxt.x, nxt.y, { count: 6, color: '#b3e5ff', size: 2, speedMax: 140, glow: true });
       Combat.hitEnemy(nxt, dmg, { chained: true, noCrit: true, x: nxt.x, y: nxt.y, silent: true });
       cur = nxt;
     }
   },
   explosion(x, y, radius, dmg, color = '#ff8c42', fromPlayer = true) {
-    G.room.blasts.push({ x, y, r: radius, t: 0, life: 0.35, color });
-    Particles.spawn(x, y, { count: 14, color, size: 3, speedMax: 220, glow: true });
+    G.room.blasts.push({ x, y, r: radius, t: 0, life: 0.45, color, fill: true });
+    Particles.spawn(x, y, { count: 18, color, size: 4, speedMax: 260, glow: true, life: 0.6 });
+    Particles.spawn(x, y, { count: 8, color: '#fff3c4', size: 3, speedMax: 120, glow: true, life: 0.3 });
+    G.shake = Math.min(10, G.shake + radius * 0.04);
     if (fromPlayer) { for (const e of G.enemies) if (!e.dead && dist(x, y, e.x, e.y) < radius + e.r) Combat.hitEnemy(e, dmg, { explosion: true, noCrit: true, x, y, silent: true }); }
     else { const pl = G.player; if (!pl.dead && dist(x, y, pl.x, pl.y) < radius + pl.r) Combat.hitPlayer(dmg, { type: 'explosion', x, y }); }
     AudioEngine.skillShockwave({ x: (x - W / 2) / (W / 2), intensity: 0.6 });
@@ -587,7 +589,7 @@ class Player {
     const wantDrones = dr ? (dr.count || 1) * (dr.stacks || 1) : 0;
     if (this.drones.length !== wantDrones) this.drones = Array.from({ length: wantDrones }, (_, i) => ({ x: this.x, y: this.y, cd: i * 0.3 }));
     this.drones.forEach((d, i) => { const a = Time.now * 1.4 + i * TAU / this.drones.length; const tx = this.x + Math.cos(a) * 46, ty = this.y + Math.sin(a) * 46; d.x = lerp(d.x, tx, Math.min(1, 8 * dt)); d.y = lerp(d.y, ty, Math.min(1, 8 * dt)); d.cd -= dt; if (d.cd <= 0) { const tgt = nearestEnemy(d.x, d.y, (dr.range || 340) * this.stats.range); if (tgt) { d.cd = 1 / ((dr.fireRate || 2) * this.stats.fireRate); const aa = angleTo(d.x, d.y, tgt.x, tgt.y); Projectiles.spawn({ x: d.x, y: d.y, vx: Math.cos(aa) * 600, vy: Math.sin(aa) * 600, r: 4, damage: (dr.damage || 8) * this.stats.damage, owner: 'player', life: 1.2, color: '#9ff', knockback: 0.3, pierce: this.stats.pierce }); } } });
-    if (this.skillCd > 0) { this.skillCd -= dt; if (this.skillCd <= 0 && this.skillCharges < this.skillMaxCharges) { this.skillCharges++; if (this.skillCharges < this.skillMaxCharges) this.skillCd = Skills.cooldownOf(this); AudioEngine.uiHover && AudioEngine.uiHover({ intensity: 0.3 }); } }
+    if (this.skillCd > 0) { this.skillCd -= dt; if (this.skillCd <= 0 && this.skillCharges < this.skillMaxCharges) { this.skillCharges++; if (this.skillCharges < this.skillMaxCharges) this.skillCd = Skills.cooldownOf(this); AudioEngine.uiConfirm && AudioEngine.uiConfirm({ intensity: 0.25 }); } }
     /* --- arme & compétence --- */
     Weapons.update(this, dt, firing, aim);
     if (wantSkill && this.skill) Skills.use(this, aim);

@@ -2295,13 +2295,22 @@ const Sprites = (() => {
   }
   function drawBlock(ctx, o) {
     ctx.save();
+    /* ombre portée au sol */
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(o.px + 6, o.py + 8, o.pw, o.ph);
+    /* corps : dalle métallique claire, bien détachée du sol */
+    ctx.fillStyle = '#4a5578'; ctx.fillRect(o.px, o.py, o.pw, o.ph);
     for (let ty = 0; ty < o.h; ty++) for (let tx = 0; tx < o.w; tx++) {
       const x = o.px + tx * TILE, y = o.py + ty * TILE;
       const t = o.h > 1 ? (ty === 0 ? TILES.column[0] : ty === o.h - 1 ? TILES.column[2] : TILES.column[1]) : TILES.column[2];
-      if (!tile(ctx, t, x, y)) { ctx.fillStyle = '#2b3350'; ctx.fillRect(x, y, TILE, TILE); ctx.strokeStyle = '#6ee7ff55'; ctx.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2); }
+      ctx.globalAlpha = 0.9; tile(ctx, t, x, y); ctx.globalAlpha = 1;
     }
-    ctx.fillStyle = 'rgba(40,70,110,.25)'; ctx.fillRect(o.px, o.py, o.pw, o.ph);
-    ctx.strokeStyle = 'rgba(110,231,255,.3)'; ctx.lineWidth = 1; ctx.strokeRect(o.px + 0.5, o.py + 0.5, o.pw - 1, o.ph - 1);
+    /* face supérieure claire + arêtes lumineuses */
+    ctx.fillStyle = 'rgba(180,200,240,.22)'; ctx.fillRect(o.px, o.py, o.pw, Math.min(10, o.ph));
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(o.px, o.py + o.ph - 6, o.pw, 6);
+    ctx.strokeStyle = '#9fd8ff'; ctx.lineWidth = 2; ctx.shadowColor = '#6ee7ff'; ctx.shadowBlur = 10; ctx.strokeRect(o.px + 1, o.py + 1, o.pw - 2, o.ph - 2);
+    ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(o.px + 2, o.py + o.ph - 2); ctx.lineTo(o.px + 2, o.py + 2); ctx.lineTo(o.px + o.pw - 2, o.py + 2); ctx.stroke();
+    /* bandes d'avertissement jaunes/noires au pied (lisible même en périphérie) */
+    ctx.save(); ctx.beginPath(); ctx.rect(o.px + 2, o.py + o.ph - 12, o.pw - 4, 8); ctx.clip(); for (let x = o.px - 8; x < o.px + o.pw + 8; x += 12) { ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.moveTo(x, o.py + o.ph - 4); ctx.lineTo(x + 6, o.py + o.ph - 12); ctx.lineTo(x + 12, o.py + o.ph - 12); ctx.lineTo(x + 6, o.py + o.ph - 4); ctx.fill(); } ctx.restore();
     ctx.restore();
   }
   function drawChest(ctx, ch) {
@@ -2760,14 +2769,16 @@ const Combat = {
     for (let i = 0; i < jumps; i++) {
       const nxt = nearestEnemy(cur.x, cur.y, radius, x => !done.has(x));
       if (!nxt) break; done.add(nxt);
-      G.room.beams.push({ ax: cur.x, ay: cur.y, bx: nxt.x, by: nxt.y, t: 0, life: 0.15, color: '#b3e5ff', width: 3 });
+      G.room.beams.push({ ax: cur.x, ay: cur.y, bx: nxt.x, by: nxt.y, t: 0, life: 0.28, color: '#b3e5ff', width: 5, jag: true }); Particles.spawn(nxt.x, nxt.y, { count: 6, color: '#b3e5ff', size: 2, speedMax: 140, glow: true });
       Combat.hitEnemy(nxt, dmg, { chained: true, noCrit: true, x: nxt.x, y: nxt.y, silent: true });
       cur = nxt;
     }
   },
   explosion(x, y, radius, dmg, color = '#ff8c42', fromPlayer = true) {
-    G.room.blasts.push({ x, y, r: radius, t: 0, life: 0.35, color });
-    Particles.spawn(x, y, { count: 14, color, size: 3, speedMax: 220, glow: true });
+    G.room.blasts.push({ x, y, r: radius, t: 0, life: 0.45, color, fill: true });
+    Particles.spawn(x, y, { count: 18, color, size: 4, speedMax: 260, glow: true, life: 0.6 });
+    Particles.spawn(x, y, { count: 8, color: '#fff3c4', size: 3, speedMax: 120, glow: true, life: 0.3 });
+    G.shake = Math.min(10, G.shake + radius * 0.04);
     if (fromPlayer) { for (const e of G.enemies) if (!e.dead && dist(x, y, e.x, e.y) < radius + e.r) Combat.hitEnemy(e, dmg, { explosion: true, noCrit: true, x, y, silent: true }); }
     else { const pl = G.player; if (!pl.dead && dist(x, y, pl.x, pl.y) < radius + pl.r) Combat.hitPlayer(dmg, { type: 'explosion', x, y }); }
     AudioEngine.skillShockwave({ x: (x - W / 2) / (W / 2), intensity: 0.6 });
@@ -3081,7 +3092,7 @@ class Player {
     const wantDrones = dr ? (dr.count || 1) * (dr.stacks || 1) : 0;
     if (this.drones.length !== wantDrones) this.drones = Array.from({ length: wantDrones }, (_, i) => ({ x: this.x, y: this.y, cd: i * 0.3 }));
     this.drones.forEach((d, i) => { const a = Time.now * 1.4 + i * TAU / this.drones.length; const tx = this.x + Math.cos(a) * 46, ty = this.y + Math.sin(a) * 46; d.x = lerp(d.x, tx, Math.min(1, 8 * dt)); d.y = lerp(d.y, ty, Math.min(1, 8 * dt)); d.cd -= dt; if (d.cd <= 0) { const tgt = nearestEnemy(d.x, d.y, (dr.range || 340) * this.stats.range); if (tgt) { d.cd = 1 / ((dr.fireRate || 2) * this.stats.fireRate); const aa = angleTo(d.x, d.y, tgt.x, tgt.y); Projectiles.spawn({ x: d.x, y: d.y, vx: Math.cos(aa) * 600, vy: Math.sin(aa) * 600, r: 4, damage: (dr.damage || 8) * this.stats.damage, owner: 'player', life: 1.2, color: '#9ff', knockback: 0.3, pierce: this.stats.pierce }); } } });
-    if (this.skillCd > 0) { this.skillCd -= dt; if (this.skillCd <= 0 && this.skillCharges < this.skillMaxCharges) { this.skillCharges++; if (this.skillCharges < this.skillMaxCharges) this.skillCd = Skills.cooldownOf(this); AudioEngine.uiHover && AudioEngine.uiHover({ intensity: 0.3 }); } }
+    if (this.skillCd > 0) { this.skillCd -= dt; if (this.skillCd <= 0 && this.skillCharges < this.skillMaxCharges) { this.skillCharges++; if (this.skillCharges < this.skillMaxCharges) this.skillCd = Skills.cooldownOf(this); AudioEngine.uiConfirm && AudioEngine.uiConfirm({ intensity: 0.25 }); } }
     /* --- arme & compétence --- */
     Weapons.update(this, dt, firing, aim);
     if (wantSkill && this.skill) Skills.use(this, aim);
@@ -3293,8 +3304,26 @@ class Enemy {
         default: ctx.arc(this.x, this.y, this.r, 0, TAU);
       }
       ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = '#0b0d14'; ctx.beginPath(); ctx.arc(this.x + this.facing * 4, this.y - 2, 3, 0, TAU); ctx.fill(); } });
-    /* statuts */
-    if (this.status) { if (this.status.burn) { ctx.fillStyle = '#ff8c42'; ctx.beginPath(); ctx.arc(this.x + VFX_RNG.range(-6, 6), this.y - this.r - VFX_RNG.range(0, 8), 3, 0, TAU); ctx.fill(); } if (this.status.freeze) { ctx.strokeStyle = '#9ff'; ctx.lineWidth = 2; ctx.strokeRect(this.x - this.r - 2, this.y - this.r - 2, this.r * 2 + 4, this.r * 2 + 4); } if (this.status.poison) { ctx.fillStyle = '#9f6'; ctx.beginPath(); ctx.arc(this.x - this.r, this.y - this.r, 4, 0, TAU); ctx.fill(); } }
+    /* statuts : brûlure = flammes qui montent, gel = givre bleu sur le corps, poison = bulles vertes */
+    if (this.status) {
+      if (this.status.burn) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 4; i++) { const fx = this.x + VFX_RNG.range(-this.r * 0.8, this.r * 0.8), fy = this.y + this.r * 0.4 - VFX_RNG.range(0, this.r * 1.8); const rr = VFX_RNG.range(3, 7); const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, rr * 2); g.addColorStop(0, 'rgba(255,240,150,.9)'); g.addColorStop(0.4, 'rgba(255,120,40,.7)'); g.addColorStop(1, 'rgba(255,60,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy, rr * 2, 0, TAU); ctx.fill(); }
+        ctx.restore();
+        if (VFX_RNG.chance(0.5)) Particles.spawn(this.x + VFX_RNG.range(-6, 6), this.y - this.r * 0.5, { count: 1, color: VFX_RNG.chance(0.5) ? '#ff8c42' : '#ffd166', size: 3, speedMin: 30, speedMax: 70, angle: -Math.PI / 2, spread: 0.5, life: 0.5, glow: true });
+      }
+      if (this.status.freeze) {
+        ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = '#9ff'; ctx.beginPath(); ctx.arc(this.x, this.y - 4, this.r + 4, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 1; ctx.strokeStyle = '#e0ffff'; ctx.lineWidth = 2; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 12; ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + Time.now * 0.5; ctx.lineTo(this.x + Math.cos(a) * (this.r + 8), this.y - 4 + Math.sin(a) * (this.r + 8)); } ctx.closePath(); ctx.stroke();
+        for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + Time.now; ctx.beginPath(); ctx.moveTo(this.x, this.y - 4); ctx.lineTo(this.x + Math.cos(a) * (this.r + 10), this.y - 4 + Math.sin(a) * (this.r + 10)); ctx.stroke(); }
+        ctx.restore();
+      }
+      if (this.status.poison) {
+        ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = '#7ed957'; ctx.beginPath(); ctx.arc(this.x, this.y - 4, this.r + 3, 0, TAU); ctx.fill(); ctx.globalAlpha = 0.9; ctx.fillStyle = '#b7ff7a';
+        for (let i = 0; i < 3; i++) { const t = (Time.now * 1.5 + i * 0.33) % 1; ctx.beginPath(); ctx.arc(this.x + Math.sin(i * 2.1 + Time.now) * this.r * 0.6, this.y + this.r * 0.3 - t * this.r * 2, 2 + (1 - t) * 2, 0, TAU); ctx.fill(); }
+        ctx.restore();
+      }
+    }
     /* barre de vie si entamé */
     if (this.hp < this.maxHp && !this.isBoss) { const w = this.r * 2.2; ctx.fillStyle = '#000a'; ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w, 4); ctx.fillStyle = '#ff5e7a'; ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w * clamp(this.hp / this.maxHp, 0, 1), 4); }
     if (Time.now < this.stunUntil) { ctx.fillStyle = '#ffd166'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✦', this.x, this.y - this.r - 14); }
@@ -3885,7 +3914,11 @@ const Room = {
     const r = G.room; if (!r) return;
     for (const s of r.slashes) { const k = s.t / s.life; ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = 14; ctx.lineWidth = s.slam ? 6 : 4; ctx.beginPath(); if (s.slam) ctx.arc(s.cx, s.cy, s.range * (0.5 + 0.5 * k), 0, TAU); else ctx.arc(s.x, s.y, s.range * (0.7 + 0.3 * k), s.a - s.arc / 2, s.a + s.arc / 2); ctx.stroke(); ctx.restore(); }
     for (const b of r.beams) { const k = b.t / b.life; ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = b.color; ctx.shadowColor = b.color; ctx.shadowBlur = 16; ctx.lineWidth = b.width; ctx.beginPath(); ctx.moveTo(b.ax, b.ay); if (b.jag) { const n = 6; for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(lerp(b.ax, b.bx, t) + VFX_RNG.range(-8, 8), lerp(b.ay, b.by, t) + VFX_RNG.range(-8, 8)); } } ctx.lineTo(b.bx, b.by); ctx.stroke(); ctx.restore(); }
-    for (const b of r.blasts) { const k = b.t / b.life; ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = b.color; ctx.lineWidth = 6 * (1 - k) + 1; ctx.shadowColor = b.color; ctx.shadowBlur = 20; ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU); ctx.stroke(); ctx.restore(); }
+    for (const b of r.blasts) {
+      const k = b.t / b.life; ctx.save();
+      if (b.fill) { ctx.globalCompositeOperation = 'lighter'; const rr = b.r * (0.4 + 0.6 * k); const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, rr); g.addColorStop(0, `rgba(255,245,200,${0.9 * (1 - k)})`); g.addColorStop(0.45, b.color); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = (1 - k) * 0.85; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, rr, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+      ctx.globalAlpha = 1 - k; ctx.strokeStyle = b.color; ctx.lineWidth = 7 * (1 - k) + 1; ctx.shadowColor = b.color; ctx.shadowBlur = 24; ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU); ctx.stroke(); ctx.restore();
+    }
   },
 };
 
@@ -4024,7 +4057,10 @@ const UI = (() => {
   function init() {
     root = $('#ui');
     for (const s of ['menu', 'hub', 'prep', 'choice', 'pause', 'end', 'credits', 'lore']) { const d = el('div', 'screen', ''); d.id = 'screen-' + s; d.hidden = true; root.appendChild(d); screens[s] = d; }
-    root.addEventListener('mouseover', e => { if (e.target.closest('button, .card')) AudioEngine.uiHover({ intensity: 0.4 }); });
+    /* son de survol : une seule fois par bouton/carte, jamais plus d'un toutes les 90 ms (sinon ça grésille) */
+    let lastHover = null, lastHoverT = 0;
+    root.addEventListener('mouseover', e => { const el = e.target.closest('button, .card'); if (!el || el === lastHover) return; lastHover = el; const now = performance.now(); if (now - lastHoverT < 90) return; lastHoverT = now; AudioEngine.uiHover({ intensity: 0.25 }); });
+    root.addEventListener('mouseout', e => { const el = e.target.closest('button, .card'); if (el && el === lastHover && !el.contains(e.relatedTarget)) lastHover = null; });
     window.addEventListener('keydown', e => {
       if (e.code === 'F1' && G.mode === 'test') { e.preventDefault(); Debug.toggle(); }
       if (G.state === 'run' && (e.code === 'Escape' || e.code === 'KeyP') && !G.overlay) togglePause();

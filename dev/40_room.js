@@ -157,7 +157,11 @@ const Room = {
     const r = G.room; if (!r) return;
     for (const s of r.slashes) { const k = s.t / s.life; ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = 14; ctx.lineWidth = s.slam ? 6 : 4; ctx.beginPath(); if (s.slam) ctx.arc(s.cx, s.cy, s.range * (0.5 + 0.5 * k), 0, TAU); else ctx.arc(s.x, s.y, s.range * (0.7 + 0.3 * k), s.a - s.arc / 2, s.a + s.arc / 2); ctx.stroke(); ctx.restore(); }
     for (const b of r.beams) { const k = b.t / b.life; ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = b.color; ctx.shadowColor = b.color; ctx.shadowBlur = 16; ctx.lineWidth = b.width; ctx.beginPath(); ctx.moveTo(b.ax, b.ay); if (b.jag) { const n = 6; for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(lerp(b.ax, b.bx, t) + VFX_RNG.range(-8, 8), lerp(b.ay, b.by, t) + VFX_RNG.range(-8, 8)); } } ctx.lineTo(b.bx, b.by); ctx.stroke(); ctx.restore(); }
-    for (const b of r.blasts) { const k = b.t / b.life; ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = b.color; ctx.lineWidth = 6 * (1 - k) + 1; ctx.shadowColor = b.color; ctx.shadowBlur = 20; ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU); ctx.stroke(); ctx.restore(); }
+    for (const b of r.blasts) {
+      const k = b.t / b.life; ctx.save();
+      if (b.fill) { ctx.globalCompositeOperation = 'lighter'; const rr = b.r * (0.4 + 0.6 * k); const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, rr); g.addColorStop(0, `rgba(255,245,200,${0.9 * (1 - k)})`); g.addColorStop(0.45, b.color); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = (1 - k) * 0.85; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, rr, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+      ctx.globalAlpha = 1 - k; ctx.strokeStyle = b.color; ctx.lineWidth = 7 * (1 - k) + 1; ctx.shadowColor = b.color; ctx.shadowBlur = 24; ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU); ctx.stroke(); ctx.restore();
+    }
   },
 };
 

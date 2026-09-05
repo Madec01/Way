@@ -13,7 +13,10 @@ const UI = (() => {
   function init() {
     root = $('#ui');
     for (const s of ['menu', 'hub', 'prep', 'choice', 'pause', 'end', 'credits', 'lore']) { const d = el('div', 'screen', ''); d.id = 'screen-' + s; d.hidden = true; root.appendChild(d); screens[s] = d; }
-    root.addEventListener('mouseover', e => { if (e.target.closest('button, .card')) AudioEngine.uiHover({ intensity: 0.4 }); });
+    /* son de survol : une seule fois par bouton/carte, jamais plus d'un toutes les 90 ms (sinon ça grésille) */
+    let lastHover = null, lastHoverT = 0;
+    root.addEventListener('mouseover', e => { const el = e.target.closest('button, .card'); if (!el || el === lastHover) return; lastHover = el; const now = performance.now(); if (now - lastHoverT < 90) return; lastHoverT = now; AudioEngine.uiHover({ intensity: 0.25 }); });
+    root.addEventListener('mouseout', e => { const el = e.target.closest('button, .card'); if (el && el === lastHover && !el.contains(e.relatedTarget)) lastHover = null; });
     window.addEventListener('keydown', e => {
       if (e.code === 'F1' && G.mode === 'test') { e.preventDefault(); Debug.toggle(); }
       if (G.state === 'run' && (e.code === 'Escape' || e.code === 'KeyP') && !G.overlay) togglePause();

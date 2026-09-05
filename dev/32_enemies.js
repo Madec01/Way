@@ -172,8 +172,26 @@ class Enemy {
         default: ctx.arc(this.x, this.y, this.r, 0, TAU);
       }
       ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = '#0b0d14'; ctx.beginPath(); ctx.arc(this.x + this.facing * 4, this.y - 2, 3, 0, TAU); ctx.fill(); } });
-    /* statuts */
-    if (this.status) { if (this.status.burn) { ctx.fillStyle = '#ff8c42'; ctx.beginPath(); ctx.arc(this.x + VFX_RNG.range(-6, 6), this.y - this.r - VFX_RNG.range(0, 8), 3, 0, TAU); ctx.fill(); } if (this.status.freeze) { ctx.strokeStyle = '#9ff'; ctx.lineWidth = 2; ctx.strokeRect(this.x - this.r - 2, this.y - this.r - 2, this.r * 2 + 4, this.r * 2 + 4); } if (this.status.poison) { ctx.fillStyle = '#9f6'; ctx.beginPath(); ctx.arc(this.x - this.r, this.y - this.r, 4, 0, TAU); ctx.fill(); } }
+    /* statuts : brûlure = flammes qui montent, gel = givre bleu sur le corps, poison = bulles vertes */
+    if (this.status) {
+      if (this.status.burn) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 4; i++) { const fx = this.x + VFX_RNG.range(-this.r * 0.8, this.r * 0.8), fy = this.y + this.r * 0.4 - VFX_RNG.range(0, this.r * 1.8); const rr = VFX_RNG.range(3, 7); const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, rr * 2); g.addColorStop(0, 'rgba(255,240,150,.9)'); g.addColorStop(0.4, 'rgba(255,120,40,.7)'); g.addColorStop(1, 'rgba(255,60,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy, rr * 2, 0, TAU); ctx.fill(); }
+        ctx.restore();
+        if (VFX_RNG.chance(0.5)) Particles.spawn(this.x + VFX_RNG.range(-6, 6), this.y - this.r * 0.5, { count: 1, color: VFX_RNG.chance(0.5) ? '#ff8c42' : '#ffd166', size: 3, speedMin: 30, speedMax: 70, angle: -Math.PI / 2, spread: 0.5, life: 0.5, glow: true });
+      }
+      if (this.status.freeze) {
+        ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = '#9ff'; ctx.beginPath(); ctx.arc(this.x, this.y - 4, this.r + 4, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 1; ctx.strokeStyle = '#e0ffff'; ctx.lineWidth = 2; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 12; ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + Time.now * 0.5; ctx.lineTo(this.x + Math.cos(a) * (this.r + 8), this.y - 4 + Math.sin(a) * (this.r + 8)); } ctx.closePath(); ctx.stroke();
+        for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + Time.now; ctx.beginPath(); ctx.moveTo(this.x, this.y - 4); ctx.lineTo(this.x + Math.cos(a) * (this.r + 10), this.y - 4 + Math.sin(a) * (this.r + 10)); ctx.stroke(); }
+        ctx.restore();
+      }
+      if (this.status.poison) {
+        ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = '#7ed957'; ctx.beginPath(); ctx.arc(this.x, this.y - 4, this.r + 3, 0, TAU); ctx.fill(); ctx.globalAlpha = 0.9; ctx.fillStyle = '#b7ff7a';
+        for (let i = 0; i < 3; i++) { const t = (Time.now * 1.5 + i * 0.33) % 1; ctx.beginPath(); ctx.arc(this.x + Math.sin(i * 2.1 + Time.now) * this.r * 0.6, this.y + this.r * 0.3 - t * this.r * 2, 2 + (1 - t) * 2, 0, TAU); ctx.fill(); }
+        ctx.restore();
+      }
+    }
     /* barre de vie si entamé */
     if (this.hp < this.maxHp && !this.isBoss) { const w = this.r * 2.2; ctx.fillStyle = '#000a'; ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w, 4); ctx.fillStyle = '#ff5e7a'; ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w * clamp(this.hp / this.maxHp, 0, 1), 4); }
     if (Time.now < this.stunUntil) { ctx.fillStyle = '#ffd166'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✦', this.x, this.y - this.r - 14); }
