@@ -420,7 +420,7 @@ const CONTENT = {
       ],
       weakness: { desc: 'Sa prise de calibration dorsale est à nu : tout coup porté dans un cône de 90° derrière lui fait ×1,6 et le "débranche" 0,6 s (étourdi, ne se retourne pas). Une charge finie dans un mur (1,5 s d\'étourdissement) est le moyen le plus sûr d\'atteindre son dos.', rule: 'back', damageMul: 1.6, window: 0.6, coneAngle: 1.57, stunCooldown: 4.0 },
       revenge: {
-        hpMul: 1.6,
+        hpMul: 1.6, plateHits: 6, window: 0.4, wallStun: 0.6, name: 'Étalon 07 / rév. B', phaseText: 'DONNÉES CHARGÉES', mimic: true,
         extraPhases: [
           { hpBelow: 0.3, patterns: [
             { kind: 'laser_sweep', telegraph: 1.0, duration: 2.5, cooldown: 7.0, angularSpeed: 1.6, length: 700, damage: 20 },
@@ -428,7 +428,7 @@ const CONTENT = {
             { kind: 'charge', telegraph: 0.5, duration: 0.6, cooldown: 3.0, speed: 800, damage: 26, stopOnWall: false, stunTime: 0.6 }
           ] }
         ],
-        desc: 'PRÉVU (salle 9) : ÉTALON 07 / rév. B, reconditionné entre les salles 5 et 9. 3040 PV (×1,6). Une plaque de tôle vissée à la va-vite couvre la prise dorsale : la faiblesse est inactive jusqu\'à 6 impacts dans le dos, puis la plaque saute et la faiblesse revient avec une fenêtre de 0,4 s au lieu de 0,6. Ses charges ne s\'arrêtent plus dans les murs (0,6 s d\'étourdissement). Il a chargé vos données de consignation : en phase 2 il reproduit votre compétence de salle 1 (dash → charge courte, tourelle → summon, onde → slam, blink → téléportation dans votre dos) et ses patterns sous 30 % PV s\'inspirent des greffes refusées aux level-ups (proposition lore, à trancher en phase 2).'
+        desc: 'Salle 9 : ÉTALON 07 / rév. B, reconditionné entre les salles 5 et 9. 3040 PV (×1,6). Une plaque de tôle vissée à la va-vite couvre la prise dorsale : la faiblesse est inactive jusqu\'à 6 impacts dans le dos, puis la plaque saute et la faiblesse revient avec une fenêtre de 0,4 s au lieu de 0,6. Ses charges ne s\'arrêtent plus dans les murs (0,6 s d\'étourdissement). Il a chargé vos données de consignation : en phase 2 il reproduit votre compétence de salle 1 (dash → charge courte, tourelle → summon, onde → slam, blink → téléportation dans votre dos) et ses patterns sous 30 % PV s\'inspirent des greffes refusées aux level-ups (implémenté : dash → charge courte, blink → téléportation dans le dos, tourelle → summon, onde → slam, bouclier → blindage, ralenti → brouillage, aimant → aspiration, surrégime → frénésie).'
       }
     }
   ],
@@ -588,9 +588,19 @@ const CONTENT = {
       waves: [
         { at: 'start', spawns: [ { enemy: 'enemy_eclipse', count: 2, x: -1, y: -1 }, { enemy: 'enemy_sentinelle', count: 2, x: -1, y: -1 } ] },
         { at: 'clear', spawns: [ { enemy: 'enemy_incubateur', count: 1, x: 21, y: 6 }, { enemy: 'enemy_rodeur', count: 4, x: -1, y: -1 } ] },
-        { at: 'clear', spawns: [ { enemy: 'enemy_bloc', count: 2, x: -1, y: -1 }, { enemy: 'enemy_meche', count: 3, x: -1, y: -1 } ] }
+        { at: 'clear', spawns: [ { enemy: 'enemy_bloc', count: 2, x: -1, y: -1 }, { enemy: 'enemy_meche', count: 3, x: -1, y: -1 } ] },
+        { at: 'clear', spawns: [ { enemy: 'enemy_eclipse', count: 2, x: -1, y: -1 }, { enemy: 'enemy_sentinelle', count: 2, x: -1, y: -1 }, { enemy: 'enemy_nuee', count: 2, x: -1, y: -1 } ] }
       ],
-      traps: [], fragments: [], modular: [] },
+      traps: [], fragments: [],
+      modular: [
+        { kind: 'slide_wall', x: 3, y: 1, w: 1, h: 4, dx: 0, dy: 7, period: 8, phase: 0 },
+        { kind: 'slide_wall', x: 20, y: 8, w: 1, h: 4, dx: 0, dy: -7, period: 8, phase: 4 },
+        { kind: 'rotor', cx: 12, cy: 6.5, arms: 2, length: 4, angularSpeed: 0.55 },
+        { kind: 'floor_cycle', period: 10, telegraph: 1.5, configs: [
+          [ { x: 7, y: 3, w: 1, h: 1 }, { x: 16, y: 3, w: 1, h: 1 }, { x: 7, y: 9, w: 1, h: 1 }, { x: 16, y: 9, w: 1, h: 1 } ],
+          [ { x: 5, y: 6, w: 2, h: 1 }, { x: 17, y: 6, w: 2, h: 1 }, { x: 11, y: 1, w: 2, h: 1 }, { x: 11, y: 11, w: 2, h: 1 } ]
+        ] }
+      ] },
     { id: 'room_b1_7', biome: 'biome_1', index: 7, type: 'COMBAT_TRAP_MODULAR', refTime: 90,
       obstacles: [ { x: 6, y: 6, w: 1, h: 1 }, { x: 17, y: 6, w: 1, h: 1 } ],
       waves: [
@@ -600,11 +610,17 @@ const CONTENT = {
       ],
       traps: [
         { trap: 'trap_grille', x: 2, y: 1, w: 20, h: 11, phase: 0 },
-        { trap: 'trap_nappe', x: 11, y: 6, phase: 0 }
+        { trap: 'trap_nappe', x: 11, y: 6, phase: 0 },
+        { trap: 'trap_tourelle', x: 0, y: 6, phase: 0.6 },
+        { trap: 'trap_tourelle', x: 23, y: 6, phase: 1.8 }
       ],
-      fragments: [], modular: [] },
+      fragments: [],
+      modular: [
+        { kind: 'safe_zone', radius: 3, period: 9, telegraph: 2.2, damage: 15, speed: 1.6, path: [ { x: 4, y: 3 }, { x: 19, y: 3 }, { x: 19, y: 9 }, { x: 4, y: 9 } ] },
+        { kind: 'slide_wall', x: 11, y: 0, w: 2, h: 3, dx: 0, dy: 8, period: 10, phase: 2 }
+      ] },
     { id: 'room_b1_8', biome: 'biome_1', index: 8, type: 'CHEST_FINAL', refTime: 20,
-      obstacles: [], waves: [], traps: [], fragments: [], modular: [] },
+      obstacles: [ { x: 8, y: 4, w: 1, h: 1 }, { x: 8, y: 8, w: 1, h: 1 }, { x: 15, y: 4, w: 1, h: 1 }, { x: 15, y: 8, w: 1, h: 1 } ], waves: [], traps: [], fragments: [], modular: [] },
     { id: 'room_b1_9', biome: 'biome_1', index: 9, type: 'BOSS_REVENGE', refTime: 150,
       obstacles: [ { x: 5, y: 3, w: 2, h: 2 }, { x: 17, y: 3, w: 2, h: 2 }, { x: 5, y: 8, w: 2, h: 2 }, { x: 17, y: 8, w: 2, h: 2 } ],
       waves: [ { at: 'start', spawns: [ { enemy: 'boss_etalon_07', count: 1, x: 18, y: 6 } ] } ],

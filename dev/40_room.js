@@ -23,7 +23,7 @@ const Room = {
     const r = {
       def, index: def.index, type: def.type, state: 'intro', time: 0, stateT: 0, refTime: def.refTime || 45,
       obstacles: (def.obstacles || []).map(o => ({ x: o.x, y: o.y, w: o.w, h: o.h, px: ROOM_X + o.x * TILE, py: ROOM_Y + o.y * TILE, pw: o.w * TILE, ph: o.h * TILE })),
-      traps: [], waves: (def.waves || []).map(w => Object.assign({ done: false }, w)), waveIdx: 0,
+      colliders: [], lastDamageT: 0, traps: [], waves: (def.waves || []).map(w => Object.assign({ done: false }, w)), waveIdx: 0,
       fragmentsDef: (def.fragments || []).slice(), fragmentsSpawned: 0, fragments: 0,
       hits: 0, kills: 0, combo: 0, comboUntil: 0, bestCombo: 0, comboTarget: 8, died: false,
       doorOpen: false, chest: null, boss: null,
@@ -37,17 +37,17 @@ const Room = {
   load(index) {
     const def = G.run.rooms.find(r => r.index === index);
     if (!def) { console.error('Salle absente', index); return false; }
-    if (ROOM_TYPES[def.type] && ROOM_TYPES[def.type].phase > 1) { UI.toast(`Salle ${index} (${ROOM_TYPES[def.type].label}) : prévue en phase 2.`); return false; }
     applyDifficulty();
     G.enemies = []; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
     G.room = Room.create(def);
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0;
     for (const h of pl.hooks.onRoomStart) { if (h.effect === 'shield_on_room') { pl.shield = Math.max(pl.shield, h.amount * (h.stacks || 1)); pl.shieldUntil = Time.now + 999; } else if (h.effect === 'heal_on_room') pl.heal(pl.stats.maxHp * h.fraction * (h.stacks || 1)); }
     G.run.roomIndex = index; G.run.stats.roomsEntered++;
-    if (def.type === 'CHEST') { G.room.chest = { x: W / 2, y: H / 2, r: 22, opened: false }; G.room.doorOpen = false; }
+    Modular.init(G.room);
+    if (def.type === 'CHEST' || def.type === 'CHEST_FINAL') { G.room.chest = { x: W / 2, y: H / 2, r: 22, opened: false }; G.room.doorOpen = false; }
     if (def.type === 'TRAP') { G.room.doorOpen = true; }
     UI.banner(G.room.label, '#6ee7ff'); AudioEngine.uiConfirm({});
-    if (def.type === 'MINIBOSS') Music.play('boss'); else Music.play('biome');
+    if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Music.play('boss'); else Music.play('biome');
     return true;
   },
   begin() { G.room.state = 'fight'; G.room.stateT = 0; },
@@ -72,8 +72,9 @@ const Room = {
   spawnBoss(def, x, y) {
     def = def || Content.boss(G.run.biome.miniboss); if (!def) { UI.toast('Mini-boss absent du contenu'); G.room.doorOpen = true; return; }
     if (G.room.boss) return;
-    const b = new Boss(def, x || ROOM_X + ROOM_W * 0.72, y || ROOM_Y + ROOM_H / 2); G.enemies.push(b); G.room.boss = b;
-    UI.banner(def.name, '#ff3b5c', def.subtitle || ''); AudioEngine.bossRoar({});
+    const revenge = G.room.type === 'BOSS_REVENGE';
+    const b = new Boss(def, x || ROOM_X + ROOM_W * 0.72, y || ROOM_Y + ROOM_H / 2, { revenge }); G.enemies.push(b); G.room.boss = b;
+    UI.banner(b.name, '#ff3b5c', revenge ? 'Il a chargé vos données de consignation.' : (def.subtitle || '')); AudioEngine.bossRoar({});
   },
   onBossDefeated(b) { G.room.bossDead = true; G.run.stats.bossKilled = true; G.shake = 14; UI.banner(Content.pick('bossWin') || 'Étalon neutralisé', '#ffd166'); AudioEngine.roomClear({}); for (let i = 0; i < 12; i++) Pickups.spawn(b.x, b.y, 'coin', 1); },
   alive() { return G.enemies.filter(e => !e.dead).length; },
@@ -90,14 +91,14 @@ const Room = {
         const trig = w.at === 'start' ? r.stateT >= 0 : w.at === 'clear' ? (alive === 0 && r.wavesStarted && r.lastWaveT < r.stateT - 0.5) : typeof w.at === 'number' ? r.stateT >= w.at : false;
         if (trig) { w.done = true; r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
       }
-      if (r.type === 'MINIBOSS' && !r.boss && r.stateT > 0.2 && !r.waves.length) Room.spawnBoss();
+      if ((r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') && !r.boss && r.stateT > 0.2 && !r.waves.length) Room.spawnBoss();
       /* fragments d'énergie */
       for (const f of r.fragmentsDef) { if (!f.spawned && r.stateT >= (f.at || 0)) { f.spawned = true; Pickups.spawn(tileX(f.x), tileY(f.y), 'fragment', f.xp || 12); r.fragmentsSpawned++; } }
       /* condition de fin */
       const allWaves = r.waves.every(w => w.done);
-      if (r.type === 'CHEST') { /* fin par interaction */ }
+      if (r.type === 'CHEST' || r.type === 'CHEST_FINAL') { /* fin par interaction */ }
       else if (r.type === 'TRAP') { /* porte ouverte dès le début */ }
-      else if (r.type === 'MINIBOSS') { if (r.bossDead && Room.alive() === 0) Room.clear(); }
+      else if (r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') { if (r.bossDead && Room.alive() === 0) Room.clear(); }
       else if (allWaves && Room.alive() === 0 && r.wavesStarted) Room.clear();
     }
     /* coffre */
@@ -107,7 +108,7 @@ const Room = {
     /* pièges */
     for (const t of r.traps) t.update(dt, r.time);
     /* salles modulaires (phase 2) : Modular.update(r, dt) déplacera les obstacles et recalculera px/py */
-    if (r.modular.length && typeof Modular !== 'undefined') Modular.update(r, dt);
+    if (r.modular.length) Modular.update(r, dt);
     /* zones de dégâts (traînées de feu, gaz du joueur…) */
     for (let i = r.hazards.length - 1; i >= 0; i--) {
       const h = r.hazards[i]; if (Time.now > h.until) { r.hazards.splice(i, 1); continue; }
@@ -129,13 +130,14 @@ const Room = {
   /* score de la salle courante */
   score() { const r = G.room; return Progression.roomScore({ hits: r.hits, time: r.time, refTime: r.refTime, bestCombo: r.bestCombo, comboTarget: r.comboTarget, died: r.died, fragments: r.fragments, fragmentsTotal: r.fragmentsDef.length }); },
   /* danger pour le bot */
-  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, r.time)); return d; },
+  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, r.time)); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); return d; },
 
   render(ctx) {
     const r = G.room; if (!r) return;
     Sprites.drawFloor(ctx, r);
     /* obstacles */
-    for (const o of r.obstacles) Sprites.drawBlock(ctx, o);
+    for (const o of r.obstacles) if (!o.dyn) Sprites.drawBlock(ctx, o);
+    if (r.modular.length) Modular.render(ctx, r);
     /* porte */
     const dx = ROOM_X + ROOM_W, dy = ROOM_Y + ROOM_H / 2;
     ctx.save(); ctx.fillStyle = r.doorOpen ? '#0b0d14' : '#2b3350'; ctx.fillRect(dx - 4, dy - TILE, TILE + 8, TILE * 2);
@@ -229,7 +231,7 @@ const Run = {
     /* checkpoint : consignation des pièces */
     if (r.index === 4 || r.index === 8) Run.checkpoint();
   },
-  checkpoint() { const r = G.run; if (r.coinsPending > 0) { r.coinsValidated += r.coinsPending; UI.toast(`Consignation : ${r.coinsPending} crédits validés`); r.coinsPending = 0; } r.lastCheckpoint = G.room.index; Meta.addCoins(0); },
+  checkpoint() { const r = G.run; if (r.coinsPending > 0) { r.coinsValidated += r.coinsPending; UI.toast(`Consignation : ${r.coinsPending} crédits validés`); r.coinsPending = 0; } r.lastCheckpoint = G.room.index; },
   finishRoom() {
     const r = G.room; const s = Room.score();
     G.run.scores.push({ index: r.index, score: s, hits: r.hits, time: r.time, died: r.died });
@@ -237,12 +239,13 @@ const Run = {
     if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(30 * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
     if (r.index === 3) Meta.unlockLore('room3_done');
     if (r.index === 5) { Meta.unlockLore('room5_reached'); if (r.hits === 0) Meta.unlockLore('boss_no_hit'); }
+    if (r.index === 9 && r.hits === 0) Meta.unlockLore('boss_no_hit');
   },
   nextRoom() {
     if (G.overlay || G.room.leaving) return; G.room.leaving = true;
     Run.finishRoom();
-    const next = G.room.index + 1; const maxPhase1 = 5;
-    if (next > maxPhase1 || !G.run.rooms.find(x => x.index === next) || ROOM_TYPES[G.run.rooms.find(x => x.index === next).type].phase > 1) { Run.endLevel(true); return; }
+    const next = G.room.index + 1;
+    if (!G.run.rooms.find(x => x.index === next)) { Run.endLevel(true); return; }
     UI.transition(() => { Room.load(next); });
   },
   onPlayerDeath() {
@@ -256,8 +259,8 @@ const Run = {
   },
   endLevel(victory) {
     const r = G.run; if (r.ended) return; r.ended = true;
-    const total = r.coinsValidated + r.coinsPending + (victory ? 60 : 0); Meta.addCoins(total); Meta.recordRun(true);
-    G.paused = true; UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus: 60 });
+    const bonus = Math.round(150 * G.player.stats.coinGain * G.debug.coinMul); const total = r.coinsValidated + r.coinsPending + bonus; Meta.addCoins(total); Meta.recordRun(true);
+    G.paused = true; UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
     Music.play('hub');
   },
   abort() { const r = G.run; if (!r || r.ended) return; r.ended = true; const kept = Progression.coinsKeptOnDeath(r.coinsPending, G.room.index, r.lastCheckpoint); Meta.addCoins(r.coinsValidated + kept); Meta.recordRun(false); Run.toHub(); },

@@ -139,3 +139,18 @@ Plancher coffre selon score moyen : 1.0 → 1 colossal garanti + tirage décalé
 
 Pièces "en attente" depuis le dernier checkpoint. Mort en salle N conserve `10 % × (N − dernier checkpoint)` des pièces en attente.
 Salle 4 (coffre) = checkpoint : tout ce qui est en attente est validé. Fin de niveau = tout validé.
+
+## 6. Salles modulaires (`rooms[].modular`, salles 6-7)
+
+Éléments de décor animés avec collision, déterministes (pilotés par le temps de salle + `phase`). Coordonnées en tuiles.
+
+| kind | champs | comportement |
+|---|---|---|
+| `slide_wall` | `x, y, w, h, dx, dy, period, phase` | Bloc solide qui glisse de (x,y) à (x+dx,y+dy) et revient : 40 % de pause, 10 % de trajet, 40 % de pause, 10 % de retour. Bordure orange avant chaque départ. Entraîne ce qu'il touche. |
+| `rotor` | `cx, cy, arms, length, angularSpeed, a0` | Barre(s) tournante(s) autour d'un pivot (collider segment + pivot 1×1). Renvoie les projectiles à rebond, détruit les autres. |
+| `floor_cycle` | `period, telegraph, configs: [[{x,y,w,h}...], ...]` | Toutes les `period` s, la configuration d'obstacles suivante remplace la précédente ; les blocs à venir sont dessinés en pointillés orange pendant `telegraph` s. |
+| `safe_zone` | `radius, period, telegraph, damage, speed, path: [{x,y}...], enemyMul` | Disque sûr qui suit `path` en boucle. Toutes les `period` s, une impulsion frappe tout ce qui est hors du disque (joueur : `damage` en dégâts de piège ; ennemis : `damage × enemyMul`, 0,5 par défaut). Compte à rebours affiché pendant `telegraph`. |
+
+## 7. Boss revanche (`bosses[].revenge`, salle 9)
+
+`{ hpMul, plateHits, window, name, phaseText, mimic, extraPhases: [phase...] }`. Le boss reprend ses phases de la salle 5, plus `extraPhases` (triées par seuil de PV). Sa faiblesse dorsale est couverte par une plaque : inactive tant que `plateHits` coups dans le dos ne l'ont pas arrachée, puis fenêtre réduite à `window`. Avec `mimic`, un pattern miroir de la compétence choisie en salle 1 est inséré en tête de la 2e phase : dash → charge courte, blink → `teleport` (dans le dos + éventail), turret → `summon`, shockwave → `slam`, shield → `shield` (dégâts ×0,15 pendant 3 s), slowtime → `slow` (joueur ralenti), magnet → `pull` (aspiration + explosion), overdrive → `ring` rapide.

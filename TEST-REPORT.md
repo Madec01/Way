@@ -230,3 +230,18 @@ Bugs moteur corrigés dans `dev/` et vérifiés par un nouveau balayage (8 armes
 | 5.1 Salles 1 et 3 courtes | Une 4e vague ajoutée à chaque salle (Éclipse, Nuée, Incubateur en renfort). Salle 1 dure désormais 25-50 s pour le bot. |
 
 Balayage final (mode normal, difficulté 1, bot aléatoire, 1 seed par arme) : pistolet, boomerang et foudre battent le boss (82-121 s de run) ; lame, orbe, brûleur meurent en salle 3 ; masse en salle 2 ; arc meurt sur le boss. À confirmer par un playtest humain avant tout nouveau réglage.
+
+---
+
+## 8. Phase 2 — salles 6 à 9 (balayages de l'agent principal)
+
+Balayage headless après implémentation (6 armes, 1 seed chacune, `maxRooms: 9`, 0 erreur JS) :
+
+| Mode | Résultat |
+|---|---|
+| Test (passifs au max) | 6/6 atteignent la salle 9, 6/6 victoires après correctifs (avant : 1 blocage en salle 6). Combat de la revanche : 16-47 s. |
+| Normal (profil vierge) | pistolet : victoire (201 s) ; boomerang et foudre : morts en salle 9 ; arc : mort en salle 5 ; lame et brûleur : morts en salle 3. |
+
+Bugs trouvés et corrigés pendant la passe : ennemis ballottés entre les blocs carrés du rotor et inaccessibles (rotor réécrit en colliders segment, relocalisation automatique d'un ennemi immobile 6 s ou enfermé dans un mur 1,5 s, le bot resserre sa distance après 8 s sans dégât infligé) ; teinte d'alerte de la zone sûre qui effaçait le sol (tracé en règle `evenodd`) ; Éclipse qui n'attaquait jamais hors de portée (dash forcé après 3 temps d'attente).
+
+À évaluer en playtest humain : durée des salles 6-7 avec le sol changeant, dégâts de l'impulsion de la salle 7 (15) cumulés à la grille laser, lisibilité de la plaque dorsale (compteur affiché à chaque coup), difficulté de la phase 3 de la revanche.

@@ -207,9 +207,9 @@ const UI = (() => {
   function showEnd({ victory, kept, pending, validated, total, bonus }) {
     const s = screens.end; const st = G.run.stats;
     s.innerHTML = `<div class="panel center end">
-      <div class="eyebrow">${victory ? 'Case 5 cochée' : 'Réimpression'}</div>
+      <div class="eyebrow">${victory ? 'Case 9 cochée — protocole H-9 terminé' : 'Réimpression'}</div>
       <h2 class="${victory ? 'good' : 'bad'}">${victory ? STR.victory : STR.dead}</h2>
-      <p class="muted">${esc(Content.pick(victory ? 'bossWin' : 'death'))}</p>
+      <p class="muted">${esc(victory ? 'Le formulaire s\'arrête à la case 9. La question n\'a pas de case. Poursuivez.' : Content.pick('death'))}</p>
       <div class="grid2">
         <div>Crédits consignés (salle 4)</div><div>◈ ${fmt(validated)}</div>
         <div>${victory ? 'Crédits en attente validés' : `Crédits en attente conservés (${Math.round(clamp(0.1 * (st.deathRoom - G.run.lastCheckpoint), 0, 1) * 100)} % de ${fmt(pending)})`}</div><div>◈ ${fmt(kept)}</div>

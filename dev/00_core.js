@@ -29,7 +29,7 @@ const ROOM_TYPES = {
   COMBAT_MODULAR: { label: 'Combat + Modulaire', phase: 2 },
   COMBAT_TRAP_MODULAR: { label: 'Combat + Pièges + Modulaire', phase: 2 },
   CHEST_FINAL: { label: 'Coffre final', phase: 2 },
-  BOSS_REVENGE: { label: 'Boss (revanche)', phase: 2 },
+  BOSS_REVENGE: { label: 'Revanche', phase: 2 },
 };
 
 /* ---------- Utilitaires ---------- */

@@ -125,6 +125,8 @@ Moi : architecture, moteur, intégration, arbitrage, cohérence.
 - Panneau debug F1 (mode Test) : difficulté, saut de salle, multiplicateurs, rareté forcée, invulnérabilité, spawn, hitboxes, scores, test audio, autoplay.
 - `AudioEngine` organique (37 sons), musiques CC-BY avec repli génératif, sprites CC0 avec placeholders `TODO_SPRITE`.
 
-**Prévu, non implémenté** (architecture en place) : salles 6-9 (`ROOM_TYPES` phase 2, `modular[]` par salle, crochet `Modular.update`), boss revanche (`bosses[].revenge`), *Mémoire sélective* (n'agit qu'au coffre 8), manette (`Input` abstrait), mobile.
+**Phase 2 (salles 6-9) — implémentée** : module `Modular` (murs coulissants, rotor à collider segment, sol à configurations alternées, zone sûre mobile à impulsions), coffre final avec *Mémoire sélective*, checkpoint salle 8, boss revanche (PV ×1,6, phase 3, plaque dorsale à 6 coups, mimétisme de la compétence du joueur), fin de niveau après la salle 9 avec prime. Voir SCHEMA.md §6-7 et CONTENT.md §14.
+
+**Reste pour la suite** : biome 2 (LA SERRE) et 3 (LES ARCHIVES) : nouveaux ennemis, pièges, passifs de niveau, armes ; manette (`Input` abstrait) ; mobile ; playtest humain pour l'équilibrage des salles 6-9.
 
 **Comment tester** : `python3 -m http.server 8765`, ouvrir `http://localhost:8765/`, Mode Test, F1. Sources dans `dev/`, assemblage `node dev/build.js`.

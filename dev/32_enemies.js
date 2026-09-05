@@ -57,11 +57,20 @@ class Enemy {
     if (target.x < this.x - 2) this.facing = -1; else if (target.x > this.x + 2) this.facing = 1;
     this['ai_' + this.archetype](dt, target, d);
     this.hitWall = false; resolveRoomCollision(this);
+    /* anti-blocage : un ennemi immobile 6 s loin du joueur est relocalisé (recoin derrière un mur mobile, pile d'ennemis) */
+    if (pointBlocked(this.x, this.y, this.r * 0.5)) { this.inWallT = (this.inWallT || 0) + dt; if (this.inWallT > 1.5) { this.inWallT = 0; this.relocate(); } } else this.inWallT = 0;
+    if (this.lastX == null || dist(this.x, this.y, this.lastX, this.lastY) > 24) { this.lastX = this.x; this.lastY = this.y; this.stuckT = 0; }
+    else if (d > 160 && this.archetype !== 'summoner' && this.archetype !== 'shooter') { this.stuckT = (this.stuckT || 0) + dt; if (this.stuckT > 6) this.relocate(); }
+    else if (d > 160) { this.stuckT = (this.stuckT || 0) + dt; if (this.stuckT > 14) this.relocate(); }
     /* contact */
     if (this.contactCd <= 0 && !pl.dead && dist(this.x, this.y, pl.x, pl.y) < this.r + pl.r) {
       if (Combat.hitPlayer(this.contactDamage(), { type: 'contact', source: this, x: this.x, y: this.y })) { this.contactCd = 0.6; const a = angleTo(pl.x, pl.y, this.x, this.y); this.kvx += Math.cos(a) * 120; this.kvy += Math.sin(a) * 120; }
     }
     for (const dc of G.room.decoys) if (dist(this.x, this.y, dc.x, dc.y) < this.r + dc.r && this.contactCd <= 0) { dc.hp -= this.damage; this.contactCd = 0.6; }
+  }
+  relocate() {
+    this.stuckT = 0; const pl = G.player;
+    for (let k = 0; k < 20; k++) { const x = RNG.range(ROOM_X + 40, ROOM_X + ROOM_W - 40), y = RNG.range(ROOM_Y + 40, ROOM_Y + ROOM_H - 40); if (dist(x, y, pl.x, pl.y) > 200 && !pointBlocked(x, y, this.r + 8)) { Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true }); this.x = x; this.y = y; this.lastX = x; this.lastY = y; Particles.spawn(x, y, { count: 8, color: this.color, glow: true }); Floaters.add(x, y - this.r - 10, 'relocalisé', '#9aa4c4', 11); return; } }
   }
   contactDamage() { return this.archetype === 'tank' && this.state === 'charge' ? Math.round(this.damage * (this.behavior.chargeDamageMul || 1.5)) : this.damage; }
   pickTarget() { const pl = G.player; let t = pl; let bd = Infinity; for (const dc of G.room.decoys) { const d = dist(this.x, this.y, dc.x, dc.y); if (d < bd) { bd = d; t = dc; } } return t; }
@@ -131,7 +140,7 @@ class Enemy {
   ai_dasher(dt, t, d) {
     const b = this.behavior;
     if (this.state === 'spawn') this.setState('wait');
-    if (this.state === 'wait') { this.moveToward(t.x, t.y, dt, 0.5); if (this.stateT > (b.wait || 1.2) && d < (b.range || 420)) { this.setState('windup'); this.dashA = angleTo(this.x, this.y, t.x, t.y); this.dashLen = Math.min(d + 40, b.dashDistance || 300); } }
+    if (this.state === 'wait') { this.moveToward(t.x, t.y, dt, 0.5); if (this.stateT > (b.wait || 1.2) && (d < (b.range || 420) || this.stateT > (b.wait || 1.2) * 3)) { this.setState('windup'); this.dashA = angleTo(this.x, this.y, t.x, t.y); this.dashLen = Math.min(d + 40, b.dashDistance || 300); } }
     else if (this.state === 'windup') { this.tele = 1; this.dashA = angleTo(this.x, this.y, t.x, t.y); if (this.stateT >= this.telegraph.time) { this.tele = 0; this.setState('dash'); this.dashed = 0; Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true }); } }
     else if (this.state === 'dash') { const sp = (b.dashSpeed || 900) * this.slow; const step = sp * dt; this.x += Math.cos(this.dashA) * step; this.y += Math.sin(this.dashA) * step; this.dashed += step; if (this.dashed >= this.dashLen || this.hitWall) { this.setState('wait'); this.stateT = -(b.postDashPause || 0); } }
   }
@@ -174,17 +183,56 @@ class Enemy {
 
 /* ---------- Mini-boss ---------- */
 class Boss extends Enemy {
-  constructor(def, x, y) {
-    super({ id: def.id, name: def.name, archetype: 'boss', hp: def.hp, speed: def.speed, damage: def.damage, radius: def.radius || 30, xp: def.xp, coins: def.coins, color: def.color || '#ff3b5c', sprite: def.sprite, telegraph: { time: 0.8, color: '#ff3b5c' } }, x, y, { noSpawn: true });
-    this.bossDef = def; this.isBoss = true; this.mass = 12; this.phaseIdx = 0; this.phase = def.phases[0]; this.patternIdx = 0; this.patternCd = 1.5; this.cur = null; this.weak = def.weakness || { rule: 'after_charge', damageMul: 2, window: 1.5 };
+  constructor(def, x, y, opts = {}) {
+    const rv = opts.revenge ? (def.revenge || { hpMul: 1.5 }) : null;
+    super({ id: def.id, name: rv && rv.name || def.name, archetype: 'boss', hp: Math.round(def.hp * (rv ? rv.hpMul || 1.5 : 1)), speed: def.speed * (rv ? 1.1 : 1), damage: def.damage, radius: def.radius || 30, xp: Math.round(def.xp * (rv ? 1.5 : 1)), coins: Math.round(def.coins * (rv ? 1.5 : 1)), color: rv ? '#ff7a3c' : (def.color || '#ff3b5c'), sprite: def.sprite, telegraph: { time: 0.8, color: '#ff3b5c' } }, x, y, { noSpawn: true });
+    this.bossDef = def; this.isBoss = true; this.mass = 12; this.phaseIdx = 0; this.patternIdx = 0; this.patternCd = 1.5; this.cur = null;
+    this.weak = Object.assign({}, def.weakness || { rule: 'after_charge', damageMul: 2, window: 1.5 });
+    this.revenge = rv;
+    /* phases : celles du mini-boss, plus les phases supplémentaires de la revanche (triées par seuil décroissant) */
+    this.phases = def.phases.map(p => Object.assign({}, p, { patterns: p.patterns.slice() }));
+    if (rv) {
+      for (const p of (rv.extraPhases || [])) this.phases.push(Object.assign({}, p, { patterns: p.patterns.slice() }));
+      this.phases.sort((a, b) => (b.hpBelow != null ? b.hpBelow : 1) - (a.hpBelow != null ? a.hpBelow : 1));
+      /* plaque : la faiblesse dorsale est inactive tant que la plaque tient */
+      this.plateHits = 0; this.plateNeeded = rv.plateHits || 6; this.plateOn = true;
+      /* mimétisme : il reproduit la compétence choisie en salle 1, insérée en tête de la 2e phase */
+      if (rv.mimic !== false && G.run && G.run.skill) { const mp = Boss.mimicPattern(G.run.skill); if (mp && this.phases[1]) this.phases[1].patterns.unshift(mp); else if (mp) this.phases[0].patterns.push(mp); }
+      this.phaseText = rv.phaseText;
+    }
+    this.phase = this.phases[0];
     this.weakActive = false; this.weakUntil = 0; this.weakMul = this.weak.damageMul || 2; this.facingA = 0; this.intro = 1.5; this.spawnT = 0;
+  }
+  /* pattern miroir de la compétence du joueur */
+  static mimicPattern(skillId) {
+    const s = Content.skill(skillId); if (!s) return null; const k = s.effect.kind;
+    return {
+      dash: { kind: 'charge', telegraph: 0.35, duration: 0.35, cooldown: 2.2, speed: 900, damage: 22, stunTime: 0.4, color: '#9ff', label: 'DASH COPIÉ' },
+      blink: { kind: 'teleport', telegraph: 0.6, duration: 0.4, cooldown: 4, count: 5, spread: 1.0, projSpeed: 320, projDamage: 14, color: '#c9a3ff', label: 'SAUT DE PHASE COPIÉ' },
+      turret: { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 8, enemy: 'enemy_sentinelle', count: 2, label: 'TOURELLE COPIÉE' },
+      shockwave: { kind: 'slam', telegraph: 0.9, duration: 0.4, cooldown: 5, radius: 170, damage: 28, label: 'ONDE COPIÉE' },
+      shield: { kind: 'shield', telegraph: 0.4, duration: 3, cooldown: 9, label: 'BLINDAGE' },
+      slowtime: { kind: 'slow', telegraph: 0.6, duration: 2.5, cooldown: 8, scale: 0.55, label: 'BROUILLAGE' },
+      magnet: { kind: 'pull', telegraph: 0.7, duration: 1.4, cooldown: 7, force: 520, damage: 18, label: 'ASPIRATION' },
+      overdrive: { kind: 'ring', telegraph: 0.5, duration: 1.6, cooldown: 6, count: 10, rate: 3, rotate: 0.3, projSpeed: 280, projDamage: 13, projSize: 7, label: 'FRÉNÉSIE' },
+      decoy: { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 8, enemy: 'enemy_nuee', count: 1, label: 'LEURRE COPIÉ' },
+    }[k] || null;
+  }
+  /* coup dans le dos : renvoie true si la faiblesse s'applique */
+  backHit() {
+    if (this.plateOn) {
+      this.plateHits++; Floaters.add(this.x, this.y - this.r - 24, `PLAQUE ${this.plateHits}/${this.plateNeeded}`, '#cfd6e6', 14); AudioEngine.hitCrit({ intensity: 0.5 });
+      if (this.plateHits >= this.plateNeeded) { this.plateOn = false; this.weak.window = (this.revenge && this.revenge.window) || 0.4; Floaters.add(this.x, this.y - this.r - 40, 'PLAQUE ARRACHÉE', '#ffd166', 20); Particles.spawn(this.x, this.y, { count: 20, color: '#cfd6e6', glow: true, speedMax: 260 }); G.shake = 8; AudioEngine.bossPhase({}); }
+      return false;
+    }
+    return true;
   }
   ai_boss(dt, t, d) {
     const pl = G.player;
     if (this.intro > 0) { this.intro -= dt; return; }
     /* changement de phase */
-    const next = this.bossDef.phases[this.phaseIdx + 1];
-    if (next && this.hp / this.maxHp <= (next.hpBelow || 0.5)) { this.phaseIdx++; this.phase = next; this.patternIdx = 0; this.cur = null; this.patternCd = 1.2; this.stunUntil = Time.now + 1; this.invulnPhase = Time.now + 1; Particles.spawn(this.x, this.y, { count: 30, color: this.color, glow: true, speedMax: 300 }); G.shake = 10; AudioEngine.bossPhase({}); UI.banner(this.bossDef.phaseText || 'PHASE ' + (this.phaseIdx + 1), this.color); }
+    const next = this.phases[this.phaseIdx + 1];
+    if (next && this.hp / this.maxHp <= (next.hpBelow || 0.5)) { this.phaseIdx++; this.phase = next; this.patternIdx = 0; this.cur = null; this.patternCd = 1.2; this.stunUntil = Time.now + 1; this.invulnPhase = Time.now + 1; Particles.spawn(this.x, this.y, { count: 30, color: this.color, glow: true, speedMax: 300 }); G.shake = 10; AudioEngine.bossPhase({}); UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color); }
     /* faiblesse temporelle */
     if (this.weakActive && Time.now > this.weakUntil) this.weakActive = false;
     if (this.weak.rule === 'back') { this.facingA = this.cur && this.cur.kind === 'charge' ? this.chargeA : angleTo(this.x, this.y, pl.x, pl.y); }
@@ -192,7 +240,7 @@ class Boss extends Enemy {
     /* déplacement d'attente : approche lente */
     if (d > 180) this.moveToward(t.x, t.y, dt, 0.7, false); else if (d < 100) this.moveToward(this.x * 2 - t.x, this.y * 2 - t.y, dt, 0.5, false);
     this.patternCd -= dt;
-    if (this.patternCd <= 0) { const pats = this.phase.patterns; const p = pats[this.patternIdx % pats.length]; this.patternIdx++; this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p); this.tele = 1; this.telegraph = { time: p.telegraph || 0.8, color: p.color || this.color }; this.chargeA = angleTo(this.x, this.y, t.x, t.y); AudioEngine.trapWarn({ intensity: 0.7 }); }
+    if (this.patternCd <= 0) { const pats = this.phase.patterns; const p = pats[this.patternIdx % pats.length]; this.patternIdx++; this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p); this.tele = 1; this.telegraph = { time: p.telegraph || 0.8, color: p.color || this.color }; this.chargeA = angleTo(this.x, this.y, t.x, t.y); AudioEngine.trapWarn({ intensity: 0.7 }); if (p.label) Floaters.add(this.x, this.y - this.r - 30, p.label, p.color || '#ff7a3c', 15); }
   }
   runPattern(dt, t, d) {
     const c = this.cur; c.t += dt; const pl = G.player; const rate = G.difficulty.fireRateMul;
@@ -211,6 +259,10 @@ class Boss extends Enemy {
       case 'slam': { const jt = c.jump || 0.6; if (c.t < jt) { const k = c.t / jt; this.x = lerp(c.sx != null ? c.sx : (c.sx = this.x), c.tx, k); this.y = lerp(c.sy != null ? c.sy : (c.sy = this.y), c.ty, k); this.air = Math.sin(k * Math.PI) * 60; } else { this.air = 0; Combat.explosion(this.x, this.y, (c.radius || 120), Math.round((c.damage || this.damage) * G.difficulty.damageMul), c.color || '#ffb347', false); G.shake = 12; this.endPattern(); if (this.weak.rule === 'while_stunned') { this.weakActive = true; this.weakUntil = Time.now + (this.weak.window || 1.2); this.stunUntil = this.weakUntil; } } break; }
       case 'summon': { if (!c.fired) { c.fired = 1; const def = Content.enemy(c.enemy); for (let i = 0; i < (c.count || 3); i++) { const a = RNG.range(0, TAU); const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 70, this.y + Math.sin(a) * 70, { hpMul: 0.8 }); if (e) { e.xp = Math.round(e.xp * 0.5); } } AudioEngine.trapGas({}); } if (c.t >= (c.duration || 0.5)) this.endPattern(); break; }
       case 'laser_sweep': { const sweep = c.sweep || Math.PI; const a0 = c.a0 != null ? c.a0 : (c.a0 = angleTo(this.x, this.y, pl.x, pl.y) - sweep / 2 * (c.dir = RNG.chance(0.5) ? 1 : -1)); const a = a0 + c.dir * sweep * (c.t / dur); const len = c.length || 700; G.room.beams.push({ ax: this.x, ay: this.y, bx: this.x + Math.cos(a) * len, by: this.y + Math.sin(a) * len, t: 0, life: 0.05, color: c.color || '#ff3b5c', width: 8 }); if (segCircle(this.x, this.y, this.x + Math.cos(a) * len, this.y + Math.sin(a) * len, pl.x, pl.y, pl.r)) Combat.hitPlayer(Math.round((c.damage || this.damage * 0.8) * G.difficulty.damageMul), { type: 'trap', x: this.x, y: this.y }); if (c.t >= dur) this.endPattern(); break; }
+      case 'teleport': { if (!c.fired) { c.fired = 1; Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true }); const a = angleTo(pl.x, pl.y, this.x, this.y); const dd = this.r + pl.r + 40; let tx = pl.x - Math.cos(angleTo(this.x, this.y, pl.x, pl.y)) * -dd, ty = pl.y - Math.sin(angleTo(this.x, this.y, pl.x, pl.y)) * -dd; /* derrière le joueur : opposé à la direction boss→joueur */ tx = pl.x + (pl.x - this.x) / Math.max(1, dist(pl.x, pl.y, this.x, this.y)) * dd; ty = pl.y + (pl.y - this.y) / Math.max(1, dist(pl.x, pl.y, this.x, this.y)) * dd; tx = clamp(tx, ROOM_X + this.r, ROOM_X + ROOM_W - this.r); ty = clamp(ty, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r); this.x = tx; this.y = ty; resolveRoomCollision(this); Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true }); AudioEngine.skillBlink({}); const n = c.count || 5, sp = c.spread || 1; const a0 = angleTo(this.x, this.y, pl.x, pl.y); for (let i = 0; i < n; i++) enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), { speed: c.projSpeed || 320, damage: c.projDamage || 14, r: c.projSize || 7, color: c.color }); } if (c.t >= dur) this.endPattern(); break; }
+      case 'shield': { if (!c.fired) { c.fired = 1; this.shieldUntil = Time.now + dur; AudioEngine.skillShield({}); } if (c.t >= 0.3) this.endPattern(); break; }
+      case 'slow': { if (!c.fired) { c.fired = 1; pl.jamUntil = Time.now + dur; pl.jamScale = c.scale || 0.55; AudioEngine.skillSlowtime({}); Floaters.add(pl.x, pl.y - 34, 'BROUILLÉ', '#c9a3ff', 16); } if (c.t >= 0.3) this.endPattern(); break; }
+      case 'pull': { const a = angleTo(pl.x, pl.y, this.x, this.y); const f = (c.force || 500) * dt; if (!pl.dead && !pl.dashing) { pl.x += Math.cos(a) * f; pl.y += Math.sin(a) * f; resolveRoomCollision(pl); } G.room.beams.push({ ax: this.x, ay: this.y, bx: pl.x, by: pl.y, t: 0, life: 0.05, color: '#c9a3ff', width: 3 }); if (c.t >= dur) { this.endPattern(); if (dist(pl.x, pl.y, this.x, this.y) < this.r + pl.r + 30) Combat.explosion(this.x, this.y, this.r + 60, Math.round((c.damage || 18) * G.difficulty.damageMul), '#c9a3ff', false); } break; }
       default: this.endPattern();
     }
   }
@@ -228,8 +280,10 @@ class Boss extends Enemy {
   }
   render(ctx) {
     const y0 = this.y; this.y -= this.air || 0;
+    if (this.shieldUntil > Time.now) { ctx.save(); ctx.strokeStyle = '#8ff'; ctx.lineWidth = 4; ctx.shadowColor = '#8ff'; ctx.shadowBlur = 18; ctx.beginPath(); ctx.arc(this.x, this.y, this.r + 8, 0, TAU); ctx.stroke(); ctx.restore(); }
+    if (this.revenge && this.plateOn) { ctx.save(); ctx.fillStyle = '#8890aa'; ctx.strokeStyle = '#cfd6e6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.x - Math.cos(this.facingA) * (this.r - 4), this.y - Math.sin(this.facingA) * (this.r - 4), 9, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
     if (this.weakActive) { ctx.save(); ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 20; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.arc(this.x, this.y, this.r + 10 + Math.sin(Time.now * 12) * 3, 0, TAU); ctx.stroke(); ctx.restore(); }
-    if (this.weak.rule === 'back') { ctx.save(); ctx.fillStyle = '#ffd166'; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(this.x - Math.cos(this.facingA) * (this.r - 4), this.y - Math.sin(this.facingA) * (this.r - 4), 6, 0, TAU); ctx.fill(); ctx.restore(); }
+    if (this.weak.rule === 'back' && !(this.revenge && this.plateOn)) { ctx.save(); ctx.fillStyle = '#ffd166'; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(this.x - Math.cos(this.facingA) * (this.r - 4), this.y - Math.sin(this.facingA) * (this.r - 4), 6, 0, TAU); ctx.fill(); ctx.restore(); }
     if (this.cur && this.cur.kind === 'slam' && this.cur.phase === 'act') { ctx.save(); ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.arc(this.cur.tx, this.cur.ty, this.cur.radius || 120, 0, TAU); ctx.stroke(); ctx.restore(); }
     super.render(ctx); this.y = y0;
   }

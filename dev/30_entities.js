@@ -57,10 +57,17 @@ function resolveRoomCollision(e) {
     if (px < py) e.x += px * Math.sign(dx || 1); else e.y += py * Math.sign(dy || 1);
     e.hitWall = true;
   }
+  /* colliders segment (bras de rotor) : repousser le long de la normale */
+  for (const c of G.room.colliders) {
+    const dx = c.bx - c.ax, dy = c.by - c.ay, l2 = dx * dx + dy * dy; let t = l2 ? ((e.x - c.ax) * dx + (e.y - c.ay) * dy) / l2 : 0; t = clamp(t, 0, 1);
+    const px = c.ax + dx * t, py = c.ay + dy * t; const d = dist(e.x, e.y, px, py); const min = r + c.r;
+    if (d < min) { const nx = d > 0.001 ? (e.x - px) / d : -dy / Math.sqrt(l2 || 1), ny = d > 0.001 ? (e.y - py) / d : dx / Math.sqrt(l2 || 1); e.x += nx * (min - d + 0.5); e.y += ny * (min - d + 0.5); e.hitWall = true; if (c.vx != null) { e.x += c.vx * FIXED_DT; e.y += c.vy * FIXED_DT; } }
+  }
 }
 function pointBlocked(x, y, r = 0) {
   if (x < ROOM_X + r || x > ROOM_X + ROOM_W - r || y < ROOM_Y + r || y > ROOM_Y + ROOM_H - r) return true;
   for (const o of G.room.obstacles) if (circleRect(x, y, r, o.px, o.py, o.pw, o.ph)) return true;
+  for (const c of G.room.colliders) if (segCircle(c.ax, c.ay, c.bx, c.by, x, y, r + c.r)) return true;
   return false;
 }
 function lineOfSight(ax, ay, bx, by) {
@@ -104,6 +111,12 @@ const Projectiles = {
           if (Math.abs(dx) > Math.abs(dy)) { p.vx = -p.vx; p.x = cx + Math.sign(dx) * (o.pw / 2 + p.r + 1); } else { p.vy = -p.vy; p.y = cy + Math.sign(dy) * (o.ph / 2 + p.r + 1); }
           if (!p.returning) p.bounce--; bounced = true;
         } else { this.list.splice(i, 1); p = null; break; }
+      }
+      if (!p) continue;
+      if (!p.ghost) for (const c of G.room.colliders) {
+        if (!segCircle(c.ax, c.ay, c.bx, c.by, p.x, p.y, p.r + c.r)) continue;
+        if (p.bounce > 0 || p.returning) { const dx = c.bx - c.ax, dy = c.by - c.ay; const l = Math.hypot(dx, dy) || 1; const nx = -dy / l, ny = dx / l; const dot = p.vx * nx + p.vy * ny; p.vx -= 2 * dot * nx; p.vy -= 2 * dot * ny; p.x += p.vx * dt * 2; p.y += p.vy * dt * 2; if (!p.returning) p.bounce--; bounced = true; }
+        else { this.list.splice(i, 1); p = null; break; }
       }
       if (!p) continue;
       if (bounced) { p.hit.clear(); Particles.spawn(p.x, p.y, { count: 3, color: p.color, size: 2 }); if (p.seekOnBounce) { const tgt = nearestEnemy(p.x, p.y, p.seekRadius || 220); if (tgt) { const sp = Math.hypot(p.vx, p.vy), a = angleTo(p.x, p.y, tgt.x, tgt.y); p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp; } } }
@@ -211,10 +224,11 @@ const Combat = {
       if (crit) { d *= pl.stats.critMult; info.crit = true; }
     }
     if (e.isBoss) {
+      if (e.shieldUntil > Time.now) { d *= 0.15; Particles.spawn(info.x || e.x, info.y || e.y, { count: 3, color: '#8ff', size: 2 }); }
       if (e.weakActive) d *= e.weakMul;
       else if (e.weak.rule === 'back' && !info.dot && info.vx != null && !(info.proj && info.proj.returning)) {   // le retour du boomerang ne compte pas comme un coup dans le dos
         const a = Math.atan2(info.vy, info.vx);
-        if (Math.abs(wrapAngle(a - e.facingA)) < (e.weak.coneAngle || 1.57) / 2) {
+        if (Math.abs(wrapAngle(a - e.facingA)) < (e.weak.coneAngle || 1.57) / 2 && (!e.backHit || e.backHit())) {
           d *= e.weakMul; info.backHit = true;
           if (Time.now >= (e.backStunReadyAt || 0)) { e.backStunReadyAt = Time.now + (e.weak.stunCooldown || 3); e.stunUntil = Time.now + (e.weak.window || 0.8); e.weakActive = true; e.weakUntil = e.stunUntil; Floaters.add(e.x, e.y - e.r - 24, 'DÉBRANCHÉ', '#ffd166', 18); AudioEngine.bossPhase({ intensity: 0.4 }); }
         }
@@ -239,7 +253,7 @@ const Combat = {
         else if (h.effect === 'crit_explode' && info.crit && !info.explosion) Combat.explosion(e.x, e.y, (h.radius || 70) * pl.stats.areaSize, d * (h.damageMul || 0.6), '#ffb347', true);
       }
       if (pl.stats.lifesteal > 0) pl.heal(d * pl.stats.lifesteal, true);
-      G.run.stats.damageDealt += d;
+      G.run.stats.damageDealt += d; G.room.lastDamageT = G.room.time;
     }
     if (e.hp <= 0) Combat.killEnemy(e, info);
   },
@@ -532,7 +546,7 @@ class Player {
       if (this.dashT >= this.dashDur) this.dashing = false;
     } else {
       let sp = this.stats.speed; if (Time.now < this.killSpeedUntil) sp *= this.killSpeedMul;
-      if (this.charge > 0) sp *= 0.6; if (this.gasSlowUntil > Time.now) sp *= 0.7;
+      if (this.charge > 0) sp *= 0.6; if (this.gasSlowUntil > Time.now) sp *= 0.7; if (this.jamUntil > Time.now) sp *= (this.jamScale || 0.55);
       if (Time.now < Time.slowUntil && this.slowImmune > Time.now) sp /= Time.slow;  // ralenti du temps : le joueur garde sa vitesse
       this.vx = mv.x * sp; this.vy = mv.y * sp; this.x += this.vx * dt; this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);

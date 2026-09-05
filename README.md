@@ -1,6 +1,6 @@
-# SUJET NEUF — roguelite à salles (phase 1)
+# SUJET NEUF — roguelite à salles
 
-Un roguelite d'action 2D vue de dessus, dans le navigateur, en un seul fichier `index.html` (Canvas 2D, JS vanilla, Web Audio, localStorage) + un dossier `assets/` (sprites CC0, musiques CC-BY).
+Un roguelite d'action 2D vue de dessus, dans le navigateur. Palier ADMISSION complet : 9 salles (préparation, pièges, combats, coffres, mini-boss, salles modulaires, boss revanche), en un seul fichier `index.html` (Canvas 2D, JS vanilla, Web Audio, localStorage) + un dossier `assets/` (sprites CC0, musiques CC-BY).
 
 ## Jouer
 Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.html`. Ouvrir directement le fichier fonctionne aussi, mais certains navigateurs bloquent alors les musiques.

@@ -407,3 +407,16 @@ Si ces effets ne sont pas retenus : remplacer *Enchaînement* par `cooldownReduc
 10. **Chance** : Trèfle ×4 (+8) + Chance méta (+10) = +18 luck → commun 42 %, épique ~21 %, colossal ~10 %. Un joueur maxé voit un colossal presque à chaque coffre. À plafonner (`luck` max 15) si les colossales perdent leur rareté.
 11. **Nuée et XP** : 15 XP par groupe est généreux pour 40 PV totaux ; l'Incubateur qui en génère jusqu'à 4 (60 XP + 20 pièces) est une "ferme" si on le laisse vivre. Voulu comme dilemme risque/récompense, mais plafonner `max` à 3 si l'Agent Test observe du farming en salle 6-7.
 12. **Skill `slowtime`** à 20 s de cooldown avec Réactivité T4 (-20 %) + Récupération ×4 (-24 %) + Amplificateur ×2 (-20 %) = 0,64 de réduction → 7,2 s de cooldown pour 3 s de ralenti à 35 % : proche de l'abus. `cooldownReduction` est plafonné à 0,8 par le schéma ; envisager un plafond à 0,6.
+
+---
+
+## 14. Phase 2 — salles 6 à 9 (implémenté)
+
+| Salle | Type | Contenu |
+|---|---|---|
+| 6 | Combat + Modulaire | 4 vagues (Éclipses, Sentinelles, Incubateur, Rôdeurs, Blocs, Mèches, Nuées). Deux murs coulissants verticaux (colonnes 3 et 20, période 8 s, déphasés), un rotor à 2 bras de 4 tuiles au centre (0,55 rad/s), un sol qui alterne deux configurations de blocs toutes les 10 s (télégraphe 1,5 s). |
+| 7 | Combat + Pièges + Modulaire | 3 vagues (Incubateur, Éclipses, Bloc, Sentinelles, Nuées, Mèches). Grille laser sur toute la salle (3 s), nappe de gaz centrale, deux tourelles aux flancs, un mur coulissant vertical central (période 10 s) et une **zone sûre mobile** (rayon 3 tuiles, parcours rectangulaire à 1,6 tuile/s) : toutes les 9 s, une impulsion inflige 15 dégâts à tout ce qui est hors de la zone (les ennemis prennent la moitié). |
+| 8 | Coffre final | 3 choix (4 avec le passif), plancher calculé sur les salles 1-7, ou sur les 3 meilleurs scores avec *Mémoire sélective*. Checkpoint : consignation des crédits. |
+| 9 | Revanche | Étalon 07 / rév. B : 3040 PV (×1,6), vitesse +10 %, phases 1-2 de la salle 5 + phase 3 sous 30 % (balayage laser, anneau de 16, charges à 800 px/s qui ne s'arrêtent que 0,6 s dans les murs). Plaque dorsale : la faiblesse est inactive jusqu'à 6 coups dans le dos, puis fenêtre de 0,4 s. Il copie la compétence choisie en salle 1 dès la phase 2. Deux tourelles fixes en haut et en bas. |
+
+Fin de niveau après la salle 9 : tous les crédits en attente sont validés + prime de 150 (× gain de crédits).
