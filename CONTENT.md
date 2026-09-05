@@ -420,3 +420,19 @@ Si ces effets ne sont pas retenus : remplacer *Enchaînement* par `cooldownReduc
 | 9 | Revanche | Étalon 07 / rév. B : 3040 PV (×1,6), vitesse +10 %, phases 1-2 de la salle 5 + phase 3 sous 30 % (balayage laser, anneau de 16, charges à 800 px/s qui ne s'arrêtent que 0,6 s dans les murs). Plaque dorsale : la faiblesse est inactive jusqu'à 6 coups dans le dos, puis fenêtre de 0,4 s. Il copie la compétence choisie en salle 1 dès la phase 2. Deux tourelles fixes en haut et en bas. |
 
 Fin de niveau après la salle 9 : tous les crédits en attente sont validés + prime de 150 (× gain de crédits).
+
+
+---
+
+## 15. Retour de playtest — greffes offensives et compétences (v2)
+
+Compétences de base renforcées d'environ 20 % (dash 250 px / 5 s, bouclier 55 PV / 5 s, onde 60 dégâts dans 210 px / 9 s, dilatation 3,5 s / 16 s, tourelle 14 dégâts / 10 s / 14 s, saut de phase 280 px / 7 s, aimant 3 s / 10 s, surrégime +60 % / 6 s).
+
+23 greffes ajoutées (74 au total : 22 communes, 27 rares, 17 épiques, 8 colossales) :
+
+| Rareté | Greffes |
+|---|---|
+| Commun | Projectiles lourds (zone et recul), Munitions (dégâts + cadence) |
+| Rare | Balles incendiaires, Balles électriques, Balles givrantes, Second canon (+1 projectile), Satellite (orbe), Tir arrière, Aura brûlante, Drone d'appoint, Exécution, Gel profond, Rafale |
+| Épique | Salve (+2 projectiles), Ceinture d'astéroïdes (+3 orbes), Tir guidé, Éclats, Balles explosives, Foudre ambiante, Conducteur |
+| Colossal | Tempête (foudre toutes les 0,7 s à 3 sauts), Mitraille (+3 projectiles guidés), Noyau (5 orbes + aura) |

@@ -26,6 +26,7 @@ const TILES = { floor: [[16, 64], [32, 64], [48, 64], [16, 80], [32, 80], [48, 8
 
 const Sprites = (() => {
   let sheet = null, ready = false, failed = false; const floorCache = new Map();
+  let _fx = null; function flashCanvas(w, h) { if (!_fx) _fx = document.createElement('canvas'); if (_fx.width < w || _fx.height < h) { _fx.width = Math.max(_fx.width, Math.ceil(w)); _fx.height = Math.max(_fx.height, Math.ceil(h)); } return _fx; }
   function load() {
     return new Promise(res => {
       sheet = new Image();
@@ -44,8 +45,12 @@ const Sprites = (() => {
     const oy = d.foot ? dh / 2 - 14 * (opts.scale || 1) * 1 : 0;   // ancrage au pied : le corps déborde vers le haut
     ctx.save(); ctx.translate(x, y - (d.foot ? oy * 0.5 : 0)); if (opts.flip) ctx.scale(-1, 1);
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
-    ctx.drawImage(sheet, sx + frame * sw, sy, sw, sh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
-    if (opts.flash) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(-dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh); }
+    if (opts.flash) {
+      /* flash blanc limité aux pixels du sprite : on passe par un canvas hors écran (sinon le rectangle entier s'éclaire) */
+      const fx = flashCanvas(dw, dh); const g = fx.getContext('2d'); g.imageSmoothingEnabled = false; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, dw, dh);
+      g.drawImage(sheet, sx + frame * sw, sy, sw, sh, 0, 0, dw, dh); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(0, 0, dw, dh);
+      ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
+    } else ctx.drawImage(sheet, sx + frame * sw, sy, sw, sh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
     ctx.restore(); return true;
   }
   function tile(ctx, t, dx, dy, w = TILE, h = TILE) { if (!ready) return false; ctx.drawImage(sheet, t[0], t[1], 16, 16, dx, dy, w, h); return true; }
@@ -102,13 +107,28 @@ const Sprites = (() => {
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */
 const Music = (() => {
+  /* Pistes fournies (CC-BY). Pour mettre VOS musiques : déposez assets/music/custom/hub.mp3, biome1.mp3, boss.mp3 (ou .ogg) ;
+     elles sont utilisées à la place des pistes fournies si elles existent. Aucune modification de code nécessaire. */
   const TRACKS = { hub: ASSET_BASE + 'music/hub_basement_floor.mp3', biome: ASSET_BASE + 'music/biome1_latin_industries.mp3', boss: ASSET_BASE + 'music/boss_in_a_heartbeat.mp3' };
+  const CUSTOM = { hub: 'hub', biome: 'biome1', boss: 'boss' };
+  const resolved = {};
+  async function resolve(key) {
+    if (resolved[key]) return resolved[key];
+    for (const ext of ['mp3', 'ogg', 'm4a']) {
+      const url = ASSET_BASE + 'music/custom/' + CUSTOM[key] + '.' + ext;
+      try { const r = await fetch(url, { method: 'HEAD' }); if (r.ok) { resolved[key] = url; return url; } } catch (e) { break; }   // file:// → fetch impossible, on garde les pistes fournies
+    }
+    resolved[key] = TRACKS[key]; return TRACKS[key];
+  }
   let current = null, generative = false, enabled = true;
   function play(key) {
     if (!enabled || current === key) return; current = key;
     if (!AudioEngine.isReady || !AudioEngine.isReady()) return;
-    const p = AudioEngine.playMusic(TRACKS[key], { fadeIn: 1.2, fadeOut: 1.2, loop: true });
-    if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key === 'boss' ? 'boss' : key === 'hub' ? 'hub' : 'biome'); } });
+    resolve(key).then(url => {
+      if (current !== key) return;
+      const p = AudioEngine.playMusic(url, { fadeIn: 1.2, fadeOut: 1.2, loop: true });
+      if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key === 'boss' ? 'boss' : key === 'hub' ? 'hub' : 'biome'); } });
+    });
   }
   function stop() { current = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }

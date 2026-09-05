@@ -128,6 +128,7 @@ const Projectiles = {
           if (dist(p.x, p.y, e.x, e.y) < p.r + e.r) {
             p.hit.add(e);
             Combat.hitEnemy(e, p.damage, { x: p.x, y: p.y, crit: p.crit, noCrit: p.noCrit, proj: p, knockback: p.knockback || 1, vx: p.vx, vy: p.vy });
+            if (!p.shard && p.kind !== 'flame') { const sp = pl.hooks.onHit.find(h => h.effect === 'split_on_hit'); if (sp && RNG.chance(sp.chance != null ? sp.chance : 1)) { const base = Math.atan2(p.vy, p.vx), spd = Math.hypot(p.vx, p.vy) * 0.9; const cnt = sp.count || 2; for (let k = 0; k < cnt; k++) { const a = base + (k % 2 ? 1 : -1) * (0.6 + Math.floor(k / 2) * 0.4); Projectiles.spawn({ x: p.x, y: p.y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: Math.max(3, p.r * 0.7), damage: Math.max(1, p.damage * (sp.damageMul || 0.4)), owner: 'player', pierce: 0, life: 0.8, range: 260, color: p.color, kind: 'bullet', shard: true, noCrit: true }); } } }
             if (p.pierce > 0) p.pierce--; else if (!p.returning && !p.ghostHits) { this.list.splice(i, 1); break; }
           }
         }
@@ -223,6 +224,7 @@ const Combat = {
       const crit = info.crit != null ? info.crit : RNG.chance(pl.stats.critChance);
       if (crit) { d *= pl.stats.critMult; info.crit = true; }
     }
+    if (!info.dot && e.status && e.status.freeze) { const fb = Progression.hasPassive(pl.hooks, 'frost_bonus'); if (fb) d *= fb.mul || 1.3; }
     if (e.isBoss) {
       if (e.shieldUntil > Time.now) { d *= 0.15; Particles.spawn(info.x || e.x, info.y || e.y, { count: 3, color: '#8ff', size: 2 }); }
       if (e.weakActive) d *= e.weakMul;
@@ -251,10 +253,12 @@ const Combat = {
         else if (h.effect === 'poison' && RNG.chance(chance)) applyStatus(e, 'poison', h);
         else if (h.effect === 'chain' && RNG.chance(chance) && !info.chained) Combat.chain(e, d * (h.damageMul || 0.5), h.jumps || 2, h.radius || 180);
         else if (h.effect === 'crit_explode' && info.crit && !info.explosion) Combat.explosion(e.x, e.y, (h.radius || 70) * pl.stats.areaSize, d * (h.damageMul || 0.6), '#ffb347', true);
+        else if (h.effect === 'hit_explode' && !info.explosion && !info.chained && RNG.chance(chance)) Combat.explosion(e.x, e.y, (h.radius || 60) * pl.stats.areaSize, d * (h.damageMul || 0.6), '#ff8c42', true);
       }
       if (pl.stats.lifesteal > 0) pl.heal(d * pl.stats.lifesteal, true);
       G.run.stats.damageDealt += d; G.room.lastDamageT = G.room.time;
     }
+    if (e.hp > 0 && !e.isBoss && !info.dot) { const ex = Progression.hasPassive(pl.hooks, 'execute'); if (ex && e.hp / e.maxHp <= (ex.threshold || 0.15)) { e.hp = 0; Floaters.add(e.x, e.y - e.r - 16, 'EXÉCUTION', '#ff5e7a', 13); } }
     if (e.hp <= 0) Combat.killEnemy(e, info);
   },
   chain(from, dmg, jumps, radius) {
@@ -376,15 +380,18 @@ const Weapons = {
     const n = (w.projectiles || 1) + st.projectiles; const spread = (w.spread || 0) + (n > 1 ? 0.12 * (n - 1) : 0);
     const spd = (w.projSpeed || 520) * st.projSpeed * (o.speedMul || 1);
     const canReturn = w.special && w.special.kind === 'return' || !!Progression.hasPassive(pl.hooks, 'projectiles_return');
-    for (let i = 0; i < n; i++) {
-      const a = aim + (n > 1 ? lerp(-spread / 2, spread / 2, i / (n - 1)) : 0) + RNG.range(-0.02, 0.02);
+    const hom = Progression.hasPassive(pl.hooks, 'homing'); const rear = Progression.hasPassive(pl.hooks, 'rear_shot');
+    const angles = []; for (let i = 0; i < n; i++) angles.push(aim + (n > 1 ? lerp(-spread / 2, spread / 2, i / (n - 1)) : 0) + RNG.range(-0.02, 0.02));
+    if (rear) angles.push(aim + Math.PI);
+    for (let i = 0; i < angles.length; i++) {
+      const a = angles[i]; const isRear = rear && i === angles.length - 1;
       Projectiles.spawn({
         x: pl.x + Math.cos(a) * (pl.r + 6), y: pl.y + Math.sin(a) * (pl.r + 6), vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, speed: spd,
-        r: (o.size || w.size || 5), damage: Weapons.dmgOf(pl, o.damageMul || 1), owner: 'player',
+        r: (o.size || w.size || 5), damage: Weapons.dmgOf(pl, (o.damageMul || 1) * (isRear ? (rear.damageMul || 0.5) : 1)), owner: 'player',
         pierce: (w.pierce || 0) + st.pierce + (o.extraPierce || 0), bounce: (w.bounce || 0) + st.bounce,
         range: (w.range || 500) * st.range, life: 3, color: w.color || WEAPON_COLORS[w.family] || '#ffe9a8', kind: o.kind || (w.family === 'boomerang' ? 'boomerang' : 'bullet'),
         canReturn, knockback: w.knockback || 1, spin: w.family === 'boomerang' ? 0 : null, ghostHits: w.family === 'boomerang',
-        homing: w.special && w.special.kind === 'homing' ? (w.special.turn || 3) : 0, seekOnBounce: !!(w.special && w.special.seekOnBounce), seekRadius: w.special && w.special.seekRadius,
+        homing: w.special && w.special.kind === 'homing' ? (w.special.turn || 3) : (hom ? (hom.turn || 2.5) : 0), seekOnBounce: !!(w.special && w.special.seekOnBounce), seekRadius: w.special && w.special.seekRadius,
       });
     }
     const snd = { blade: 'shootBlade', hammer: 'shootHammer', bow: 'shootBow', pistol: 'shootPistol', boomerang: 'shootBoomerang', orb: 'shootOrb', chain: 'shootChain', flame: 'shootFlame' }[w.family] || 'shootPistol';
@@ -479,6 +486,7 @@ const Skills = {
     for (const h of pl.hooks.onSkill) {
       if (h.effect === 'shockwave') Combat.playerShockwave(h);
       else if (h.effect === 'bullet_time_skill') { Time.slow = h.scale || 0.5; Time.slowUntil = Time.now + (h.duration || 0.8); }
+      else if (h.effect === 'fire_frenzy') pl.addBuff('frenzy', h.duration || 3, [{ stat: 'fireRate', mul: h.fireRateMul || 1.4 }, { stat: 'damage', mul: h.damageMul || 1 }]);
     }
     G.run.stats.skillUses++;
     return true;
@@ -500,14 +508,17 @@ class Player {
     this.magnetUntil = 0; this.killSpeedUntil = 0; this.killSpeedMul = 1; this.overdriveUntil = 0; this.overdrive = null;
     this.flags = {}; this.weapon = null; this.skill = null; this.trail = null; this.orbitShield = null; this.secondChanceUsed = false;
     this.stats = Object.assign({}, BASE_STATS); this.hooks = Progression.collectHooks([]);
+    this.buffs = []; this.stormT = 0; this.auraCd = new Map(); this.drones = [];
     this.bot = null;  // contrôleur autoplay
   }
+  addBuff(id, duration, mods) { this.buffs = this.buffs.filter(b => b.id !== id); this.buffs.push({ id, until: Time.now + duration, mods }); this.recompute(); }
   sources() {
     const src = [];
     const c = this.char; if (c) { src.push({ id: c.id, mods: Object.keys(c.stats || {}).map(k => k === 'maxHp' || k === 'speed' || k === 'luck' ? { stat: k, add: c.stats[k] - BASE_STATS[k] } : { stat: k, mul: c.stats[k] / BASE_STATS[k] }) }); if (c.trait) src.push(c.trait); }
     src.push(...Meta.activeSources());
     if (G.run.levelPassive) { src.push(G.run.levelPassive.bonus); src.push(G.run.levelPassive.malus); }
     for (const u of G.run.upgrades) src.push(Object.assign({}, u.def, { stacks: u.stacks }));
+    for (const b of this.buffs) src.push({ id: 'buff_' + b.id, mods: b.mods });
     if (this.overdrive && Time.now < this.overdriveUntil) src.push({ id: 'overdrive', mods: [{ stat: 'fireRate', mul: this.overdrive.fireRate }, { stat: 'damage', mul: this.overdrive.damage }, { stat: 'speed', mul: this.overdrive.speed }] });
     return src;
   }
@@ -519,7 +530,8 @@ class Player {
     if (this.stats.maxHp > oldMax) this.hp += this.stats.maxHp - oldMax; this.hp = Math.min(this.hp, this.stats.maxHp);
     this.flags.xpMagnet = !!Progression.hasPassive(hooks, 'xp_magnet');
     this.skillMaxCharges = Progression.hasPassive(hooks, 'double_skill') ? 2 : 1; this.skillCharges = Math.min(this.skillCharges, this.skillMaxCharges);
-    const os = Progression.hasPassive(hooks, 'orbit_shield'); this.orbitShield = os ? { count: os.count || 2, damage: os.damage || 6, radius: os.radius || 48, orbs: [], cd: new Map() } : null;
+    const oss = hooks.passive.filter(e => e.effect === 'orbit_shield'); const os = oss.length ? { count: oss.reduce((s, e) => s + (e.count || 1) * (e.stacks || 1), 0), damage: oss.reduce((s, e) => Math.max(s, e.damage || 6), 0), radius: oss.reduce((s, e) => Math.max(s, e.radius || 48), 0) } : null;
+    this.orbitShield = os ? Object.assign(os, { orbs: [], cd: new Map() }) : null;
     if (this.weapon && this.weapon.type !== 'orbital') this.orbs = null;
   }
   heal(n, silent) { if (this.dead) return; const before = this.hp; this.hp = Math.min(this.stats.maxHp, this.hp + n); if (!silent && this.hp - before >= 1) Floaters.add(this.x, this.y - 30, '+' + Math.round(this.hp - before), '#7fff9a'); }
@@ -557,6 +569,18 @@ class Player {
     if (this.shield > 0 && Time.now > this.shieldUntil) this.shield = 0;
     if (this.overdrive) { if (Time.now > this.overdriveUntil) { this.overdrive = null; this.recompute(); } else if (this.overdrive.selfDps) this.hp = Math.max(1, this.hp - this.overdrive.selfDps * dt); }
     if (this.hurtFlash > 0) this.hurtFlash -= dt;
+    if (this.buffs.length && this.buffs.some(b => Time.now > b.until)) { this.buffs = this.buffs.filter(b => Time.now <= b.until); this.recompute(); }
+    /* foudre ambiante */
+    const storm = Progression.hasPassive(this.hooks, 'lightning_storm');
+    if (storm) { this.stormT += dt; const every = (storm.every || 2) / Math.max(1, storm.stacks || 1); if (this.stormT >= every) { this.stormT = 0; const tgt = nearestEnemy(this.x, this.y, (storm.radius || 320) * this.stats.range); if (tgt) { G.room.beams.push({ ax: tgt.x + VFX_RNG.range(-30, 30), ay: ROOM_Y - 20, bx: tgt.x, by: tgt.y, t: 0, life: 0.18, color: '#b3e5ff', width: 4, jag: true }); Combat.hitEnemy(tgt, (storm.damage || 18) * this.stats.damage, { x: tgt.x, y: tgt.y, knockback: 0.3, silent: true }); if (storm.jumps) Combat.chain(tgt, (storm.damage || 18) * this.stats.damage * 0.6, storm.jumps, 160); AudioEngine.shootChain({ intensity: 0.5 }); } } }
+    /* aura brûlante */
+    const aura = Progression.hasPassive(this.hooks, 'burn_aura');
+    if (aura) { const R = (aura.radius || 90) * this.stats.areaSize; for (const e of G.enemies) { if (e.dead || dist(this.x, this.y, e.x, e.y) > R + e.r) continue; const last = this.auraCd.get(e) || -9; if (Time.now - last < 0.25) continue; this.auraCd.set(e, Time.now); Combat.hitEnemy(e, (aura.dps || 12) * (aura.stacks || 1) * this.stats.damage * 0.25, { dot: true, x: e.x, y: e.y }); if (RNG.chance(0.3)) applyStatus(e, 'burn', { dps: 4, duration: 1.5 }); } if (VFX_RNG.chance(0.4)) { const a = VFX_RNG.range(0, TAU); Particles.spawn(this.x + Math.cos(a) * R, this.y + Math.sin(a) * R, { count: 1, color: '#ff8c42', size: 2, speedMax: 30, life: 0.4, glow: true }); } }
+    /* drones */
+    const dr = Progression.hasPassive(this.hooks, 'drone');
+    const wantDrones = dr ? (dr.count || 1) * (dr.stacks || 1) : 0;
+    if (this.drones.length !== wantDrones) this.drones = Array.from({ length: wantDrones }, (_, i) => ({ x: this.x, y: this.y, cd: i * 0.3 }));
+    this.drones.forEach((d, i) => { const a = Time.now * 1.4 + i * TAU / this.drones.length; const tx = this.x + Math.cos(a) * 46, ty = this.y + Math.sin(a) * 46; d.x = lerp(d.x, tx, Math.min(1, 8 * dt)); d.y = lerp(d.y, ty, Math.min(1, 8 * dt)); d.cd -= dt; if (d.cd <= 0) { const tgt = nearestEnemy(d.x, d.y, (dr.range || 340) * this.stats.range); if (tgt) { d.cd = 1 / ((dr.fireRate || 2) * this.stats.fireRate); const aa = angleTo(d.x, d.y, tgt.x, tgt.y); Projectiles.spawn({ x: d.x, y: d.y, vx: Math.cos(aa) * 600, vy: Math.sin(aa) * 600, r: 4, damage: (dr.damage || 8) * this.stats.damage, owner: 'player', life: 1.2, color: '#9ff', knockback: 0.3, pierce: this.stats.pierce }); } } });
     if (this.skillCd > 0) { this.skillCd -= dt; if (this.skillCd <= 0 && this.skillCharges < this.skillMaxCharges) { this.skillCharges++; if (this.skillCharges < this.skillMaxCharges) this.skillCd = Skills.cooldownOf(this); AudioEngine.uiHover && AudioEngine.uiHover({ intensity: 0.3 }); } }
     /* --- arme & compétence --- */
     Weapons.update(this, dt, firing, aim);
@@ -584,6 +608,7 @@ class Player {
     if (this.charge > 0) { const ch = this.weapon.charge || { min: 0.15, max: 0.9 }; const t = clamp((this.charge - ch.min) / (ch.max - ch.min), 0, 1); ctx.strokeStyle = t >= 1 ? '#ffd166' : '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.x, this.y, this.r + 10, -Math.PI / 2, -Math.PI / 2 + TAU * t); ctx.stroke(); }
     /* orbes d'arme */
     if (this.orbs) for (const o of this.orbs) { ctx.fillStyle = this.weapon.color || WEAPON_COLORS[this.weapon.family] || '#c9a3ff'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(o.x, o.y, (this.weapon.size || 10) * this.stats.areaSize, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
+    for (const d of this.drones) { ctx.fillStyle = '#3a4260'; ctx.beginPath(); ctx.arc(d.x, d.y, 7, 0, TAU); ctx.fill(); ctx.fillStyle = '#9ff'; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(d.x, d.y, 3, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
     if (this.orbitShield) for (const o of this.orbitShield.orbs) { ctx.fillStyle = '#8ff'; ctx.shadowColor = '#8ff'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(o.x, o.y, 6, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
     /* indicateur de visée */
     ctx.globalAlpha = 0.35; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(this.x + Math.cos(this.aim) * (this.r + 4), this.y + Math.sin(this.aim) * (this.r + 4)); ctx.lineTo(this.x + Math.cos(this.aim) * (this.r + 18), this.y + Math.sin(this.aim) * (this.r + 18)); ctx.stroke();

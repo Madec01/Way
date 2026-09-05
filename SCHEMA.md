@@ -70,6 +70,19 @@ Un `hooks` est un objet `{ <hook>: [{effect, ...params}] }`. Hooks : `onHit` (un
 | `kill_speed` | onKill | `speedMul, duration` | vitesse après kill |
 | `xp_magnet` | passive | — | tous les pickups sont aimantés en permanence |
 | `bullet_time_skill` | onSkill | `duration, scale` | ralenti à l'usage de compétence |
+| `skill_reset_on_kill` | onKill | `chance, fraction` | un kill réduit le cooldown de la compétence |
+| `charge_speed` | passive | `mul` | l'arc se charge plus vite |
+| `speed_burst` | onDamaged / onTrapDamage | `speedMul, duration` | vitesse après un coup |
+| `homing` | passive | `turn` | les projectiles se dirigent vers l'ennemi le plus proche |
+| `split_on_hit` | onHit | `chance, count, damageMul` | un impact libère des éclats |
+| `lightning_storm` | passive | `every, damage, radius, jumps` | foudre périodique sur l'ennemi le plus proche |
+| `burn_aura` | passive | `radius, dps` | aura de feu autour du joueur |
+| `drone` | passive | `count, damage, fireRate, range` | drone(s) qui suivent et tirent |
+| `execute` | passive | `threshold` | les ennemis (hors boss) sous le seuil meurent au coup suivant |
+| `rear_shot` | passive | `damageMul` | un projectile supplémentaire vers l'arrière |
+| `hit_explode` | onHit | `chance, radius, damageMul` | un impact peut exploser |
+| `frost_bonus` | passive | `mul` | dégâts bonus sur les ennemis gelés |
+| `fire_frenzy` | onSkill | `fireRateMul, damageMul, duration` | cadence temporaire après une compétence |
 
 Un agent de contenu peut proposer **au maximum 6 effets nouveaux**, marqués `NEW:` avec une description précise ; ils seront implémentés ou remplacés.
 

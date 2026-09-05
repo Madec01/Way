@@ -1560,22 +1560,22 @@ const CONTENT = {
   // COMPÉTENCES ACTIVES
   // =====================================================================
   skills: [
-    { id: 'skill_dash', name: 'Dash', desc: 'Ruée de 220 px, invulnérable pendant 0,2 s. Cooldown 6 s.',
-      cooldown: 6, duration: 0.2, effect: { kind: 'dash', distance: 220, invulnerable: true }, icon: 'dash' },
-    { id: 'skill_shield', name: 'Bouclier', desc: 'Bouclier de 40 PV gris pendant 4 s. Cooldown 14 s.',
-      cooldown: 14, duration: 4, effect: { kind: 'shield', amount: 40 }, icon: 'shield' },
-    { id: 'skill_shockwave', name: 'Onde de choc', desc: 'Repousse et inflige 45 dégâts dans 180 px. Cooldown 10 s.',
-      cooldown: 10, duration: 0.3, effect: { kind: 'shockwave', radius: 180, damage: 45, knockback: 2.5 }, icon: 'shockwave' },
-    { id: 'skill_slowtime', name: 'Dilatation', desc: 'Le monde ralentit à 35 % pendant 3 s, pas vous. Cooldown 20 s.',
-      cooldown: 20, duration: 3, effect: { kind: 'slowtime', scale: 0.35, playerScale: 1.0 }, icon: 'slowtime' },
-    { id: 'skill_turret', name: 'Tourelle', desc: 'Tourelle 60 PV, 10 dégâts ×3/s, portée 360 px, 8 s. Cooldown 16 s.',
-      cooldown: 16, duration: 8, effect: { kind: 'turret', damage: 10, fireRate: 3, range: 360, hp: 60 }, icon: 'turret' },
-    { id: 'skill_blink', name: 'Saut de phase', desc: 'Téléportation de 260 px vers le curseur, 0,15 s invulnérable. CD 8 s.',
-      cooldown: 8, duration: 0, effect: { kind: 'blink', distance: 260, invulnerable: 0.15, ignoreObstacles: true }, icon: 'blink' },
-    { id: 'skill_magnet', name: 'Aimant', desc: 'Attire tous les pickups de la salle pendant 2 s. Cooldown 12 s.',
-      cooldown: 12, duration: 2, effect: { kind: 'magnet', radius: 1400, pullSpeed: 900 }, icon: 'magnet' },
-    { id: 'skill_overdrive', name: 'Surrégime', desc: '+50 % dégâts et cadence 5 s, mais 2 PV/s perdus. Cooldown 18 s.',
-      cooldown: 18, duration: 5, effect: { kind: 'overdrive', damageMul: 1.5, fireRateMul: 1.5, selfDamagePerSec: 2 }, icon: 'overdrive' }
+    { id: 'skill_dash', name: 'Dash', desc: 'Ruée de 250 px, invulnérable pendant 0,22 s. Cooldown 5 s.',
+      cooldown: 5, duration: 0.22, effect: { kind: 'dash', distance: 250, invulnerable: true }, icon: 'dash' },
+    { id: 'skill_shield', name: 'Bouclier', desc: 'Bouclier de 55 PV gris pendant 5 s. Cooldown 12 s.',
+      cooldown: 12, duration: 5, effect: { kind: 'shield', amount: 55 }, icon: 'shield' },
+    { id: 'skill_shockwave', name: 'Onde de choc', desc: 'Repousse, étourdit et inflige 60 dégâts dans 210 px. Cooldown 9 s.',
+      cooldown: 9, duration: 0.3, effect: { kind: 'shockwave', radius: 210, damage: 60, knockback: 3 }, icon: 'shockwave' },
+    { id: 'skill_slowtime', name: 'Dilatation', desc: 'Le monde ralentit à 35 % pendant 3,5 s, pas vous. Cooldown 16 s.',
+      cooldown: 16, duration: 3.5, effect: { kind: 'slowtime', scale: 0.35, playerScale: 1.0 }, icon: 'slowtime' },
+    { id: 'skill_turret', name: 'Tourelle', desc: 'Tourelle : 14 dégâts ×3/s, portée 380 px, 10 s. Cooldown 14 s.',
+      cooldown: 14, duration: 10, effect: { kind: 'turret', damage: 14, fireRate: 3, range: 380, hp: 60 }, icon: 'turret' },
+    { id: 'skill_blink', name: 'Saut de phase', desc: 'Téléportation de 280 px vers le curseur, 0,25 s invulnérable. CD 7 s.',
+      cooldown: 7, duration: 0, effect: { kind: 'blink', distance: 280, invulnerable: 0.25, ignoreObstacles: true }, icon: 'blink' },
+    { id: 'skill_magnet', name: 'Aimant', desc: 'Attire tous les pickups de la salle pendant 3 s. Cooldown 10 s.',
+      cooldown: 10, duration: 3, effect: { kind: 'magnet', radius: 1400, pullSpeed: 900 }, icon: 'magnet' },
+    { id: 'skill_overdrive', name: 'Surrégime', desc: '+60 % dégâts et cadence 6 s, mais 1,5 PV/s perdu. Cooldown 16 s.',
+      cooldown: 16, duration: 6, effect: { kind: 'overdrive', damageMul: 1.6, fireRateMul: 1.6, selfDamagePerSec: 1.5 }, icon: 'overdrive' }
   ],
 
   // =====================================================================
@@ -1684,6 +1684,30 @@ const CONTENT = {
       mods: [{ stat: 'areaSize', mul: 1.2 }], hooks: { onHit: [{ effect: 'burn', chance: 1.0, dps: 8, duration: 3 }] } },
 
     // ---- COLOSSALES (5) ----
+    /* --- Greffes offensives supplémentaires (retour joueur : plus de projectiles, d'orbes, de balles à effet) --- */
+    { id: 'upg_balles_incendiaires', name: 'Balles incendiaires', desc: '35 % de chance d\'enflammer : 8 dégâts/s pendant 2,5 s.', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { onHit: [{ effect: 'burn', chance: 0.35, dps: 8, duration: 2.5 }] } },
+    { id: 'upg_balles_electriques', name: 'Balles électriques', desc: '30 % de chance d\'électriser : saute sur 2 ennemis (60 % des dégâts).', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { onHit: [{ effect: 'chain', chance: 0.3, jumps: 2, radius: 170, damageMul: 0.6 }] } },
+    { id: 'upg_balles_givrantes', name: 'Balles givrantes', desc: '30 % de chance de geler 1,5 s (vitesse -60 %).', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { onHit: [{ effect: 'freeze', chance: 0.3, duration: 1.5, slow: 0.6 }] } },
+    { id: 'upg_second_canon', name: 'Second canon', desc: '+1 projectile par tir.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 2, mods: [{ stat: 'projectiles', add: 1 }], hooks: {} },
+    { id: 'upg_salve', name: 'Salve', desc: '+2 projectiles par tir, -15 % dégâts.', rarity: 'epic', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [{ stat: 'projectiles', add: 2 }, { stat: 'damage', mul: 0.85 }], hooks: {} },
+    { id: 'upg_satellite', name: 'Satellite', desc: 'Un orbe tourne autour de vous : 14 dégâts au contact, bloque les tirs.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 3, mods: [], hooks: { passive: [{ effect: 'orbit_shield', count: 1, damage: 14, radius: 64 }] } },
+    { id: 'upg_ceinture', name: 'Ceinture d\'astéroïdes', desc: '+3 orbes en orbite, 18 dégâts au contact.', rarity: 'epic', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'orbit_shield', count: 3, damage: 18, radius: 80 }] } },
+    { id: 'upg_tir_guide', name: 'Tir guidé', desc: 'Vos projectiles se dirigent vers l\'ennemi le plus proche.', rarity: 'epic', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'homing', turn: 2.5 }] } },
+    { id: 'upg_eclats', name: 'Éclats', desc: 'Chaque impact libère 2 éclats (40 % des dégâts).', rarity: 'epic', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { onHit: [{ effect: 'split_on_hit', chance: 1, count: 2, damageMul: 0.4 }] } },
+    { id: 'upg_tir_arriere', name: 'Tir arrière', desc: 'Chaque tir envoie aussi un projectile derrière vous (50 %).', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'rear_shot', damageMul: 0.5 }] } },
+    { id: 'upg_balles_explosives', name: 'Balles explosives', desc: '25 % de chance qu\'un impact explose (60 px, 70 % des dégâts).', rarity: 'epic', category: 'special', weaponFamily: null, maxStacks: 1, mods: [], hooks: { onHit: [{ effect: 'hit_explode', chance: 0.25, radius: 60, damageMul: 0.7 }] } },
+    { id: 'upg_foudre_ambiante', name: 'Foudre ambiante', desc: 'Toutes les 2 s, la foudre frappe l\'ennemi le plus proche (22 dégâts).', rarity: 'epic', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { passive: [{ effect: 'lightning_storm', every: 2, damage: 22, radius: 320 }] } },
+    { id: 'upg_aura_brulante', name: 'Aura brûlante', desc: 'Les ennemis à moins de 90 px brûlent : 12 dégâts/s.', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { passive: [{ effect: 'burn_aura', radius: 90, dps: 12 }] } },
+    { id: 'upg_drone', name: 'Drone d\'appoint', desc: 'Un drone vous suit et tire 2 fois/s (8 dégâts).', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 3, mods: [], hooks: { passive: [{ effect: 'drone', count: 1, damage: 8, fireRate: 2, range: 340 }] } },
+    { id: 'upg_execution', name: 'Exécution', desc: 'Les ennemis (hors boss) sous 15 % de PV meurent au prochain coup.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'execute', threshold: 0.15 }] } },
+    { id: 'upg_gel_profond', name: 'Gel profond', desc: 'Les ennemis gelés subissent +35 % de dégâts.', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'frost_bonus', mul: 1.35 }] } },
+    { id: 'upg_rafale', name: 'Rafale', desc: 'Après une compétence : cadence +45 % pendant 3 s.', rarity: 'rare', category: 'mobility', weaponFamily: null, maxStacks: 1, mods: [], hooks: { onSkill: [{ effect: 'fire_frenzy', fireRateMul: 1.45, duration: 3 }] } },
+    { id: 'upg_projectiles_lourds', name: 'Projectiles lourds', desc: '+15 % zone d\'effet et recul.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 3, mods: [{ stat: 'areaSize', mul: 1.15 }, { stat: 'knockback', mul: 1.2 }], hooks: {} },
+    { id: 'upg_munitions', name: 'Munitions', desc: '+10 % dégâts, +8 % cadence.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 4, mods: [{ stat: 'damage', mul: 1.1 }, { stat: 'fireRate', mul: 1.08 }], hooks: {} },
+    { id: 'upg_conducteur', name: 'Conducteur', desc: 'Les coups critiques électrisent toujours (3 sauts).', rarity: 'epic', category: 'special', weaponFamily: null, maxStacks: 1, mods: [{ stat: 'critChance', add: 0.05 }], hooks: { onHit: [{ effect: 'chain', chance: 0.45, jumps: 3, radius: 190, damageMul: 0.7 }] } },
+    { id: 'upg_tempete', name: 'Tempête', desc: 'La foudre frappe toutes les 0,7 s et saute sur 3 ennemis.', rarity: 'colossal', category: 'special', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'lightning_storm', every: 0.7, damage: 26, radius: 380, jumps: 3 }] } },
+    { id: 'upg_mitraille', name: 'Mitraille', desc: '+3 projectiles, +25 % cadence, tirs guidés.', rarity: 'colossal', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [{ stat: 'projectiles', add: 3 }, { stat: 'fireRate', mul: 1.25 }], hooks: { passive: [{ effect: 'homing', turn: 3 }] } },
+    { id: 'upg_noyau', name: 'Noyau', desc: '5 orbes en orbite (22 dégâts) et une aura brûlante de 120 px.', rarity: 'colossal', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'orbit_shield', count: 5, damage: 22, radius: 96 }, { effect: 'burn_aura', radius: 120, dps: 16 }] } },
     { id: 'upg_rappel', name: 'Rappel', desc: 'Vos projectiles reviennent vers vous : un second passage sur tout.', rarity: 'colossal', category: 'special', weaponFamily: null, maxStacks: 1,
       mods: [], hooks: { passive: [{ effect: 'projectiles_return' }] } },
     { id: 'upg_sillage', name: 'Sillage', desc: 'Chaque dash laisse une traînée de feu 2,5 s (25 dégâts/s). +10 % vitesse.', rarity: 'colossal', category: 'mobility', weaponFamily: null, maxStacks: 1,
@@ -2161,6 +2185,7 @@ const TILES = { floor: [[16, 64], [32, 64], [48, 64], [16, 80], [32, 80], [48, 8
 
 const Sprites = (() => {
   let sheet = null, ready = false, failed = false; const floorCache = new Map();
+  let _fx = null; function flashCanvas(w, h) { if (!_fx) _fx = document.createElement('canvas'); if (_fx.width < w || _fx.height < h) { _fx.width = Math.max(_fx.width, Math.ceil(w)); _fx.height = Math.max(_fx.height, Math.ceil(h)); } return _fx; }
   function load() {
     return new Promise(res => {
       sheet = new Image();
@@ -2179,8 +2204,12 @@ const Sprites = (() => {
     const oy = d.foot ? dh / 2 - 14 * (opts.scale || 1) * 1 : 0;   // ancrage au pied : le corps déborde vers le haut
     ctx.save(); ctx.translate(x, y - (d.foot ? oy * 0.5 : 0)); if (opts.flip) ctx.scale(-1, 1);
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
-    ctx.drawImage(sheet, sx + frame * sw, sy, sw, sh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
-    if (opts.flash) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(-dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh); }
+    if (opts.flash) {
+      /* flash blanc limité aux pixels du sprite : on passe par un canvas hors écran (sinon le rectangle entier s'éclaire) */
+      const fx = flashCanvas(dw, dh); const g = fx.getContext('2d'); g.imageSmoothingEnabled = false; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, dw, dh);
+      g.drawImage(sheet, sx + frame * sw, sy, sw, sh, 0, 0, dw, dh); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(0, 0, dw, dh);
+      ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
+    } else ctx.drawImage(sheet, sx + frame * sw, sy, sw, sh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
     ctx.restore(); return true;
   }
   function tile(ctx, t, dx, dy, w = TILE, h = TILE) { if (!ready) return false; ctx.drawImage(sheet, t[0], t[1], 16, 16, dx, dy, w, h); return true; }
@@ -2237,13 +2266,28 @@ const Sprites = (() => {
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */
 const Music = (() => {
+  /* Pistes fournies (CC-BY). Pour mettre VOS musiques : déposez assets/music/custom/hub.mp3, biome1.mp3, boss.mp3 (ou .ogg) ;
+     elles sont utilisées à la place des pistes fournies si elles existent. Aucune modification de code nécessaire. */
   const TRACKS = { hub: ASSET_BASE + 'music/hub_basement_floor.mp3', biome: ASSET_BASE + 'music/biome1_latin_industries.mp3', boss: ASSET_BASE + 'music/boss_in_a_heartbeat.mp3' };
+  const CUSTOM = { hub: 'hub', biome: 'biome1', boss: 'boss' };
+  const resolved = {};
+  async function resolve(key) {
+    if (resolved[key]) return resolved[key];
+    for (const ext of ['mp3', 'ogg', 'm4a']) {
+      const url = ASSET_BASE + 'music/custom/' + CUSTOM[key] + '.' + ext;
+      try { const r = await fetch(url, { method: 'HEAD' }); if (r.ok) { resolved[key] = url; return url; } } catch (e) { break; }   // file:// → fetch impossible, on garde les pistes fournies
+    }
+    resolved[key] = TRACKS[key]; return TRACKS[key];
+  }
   let current = null, generative = false, enabled = true;
   function play(key) {
     if (!enabled || current === key) return; current = key;
     if (!AudioEngine.isReady || !AudioEngine.isReady()) return;
-    const p = AudioEngine.playMusic(TRACKS[key], { fadeIn: 1.2, fadeOut: 1.2, loop: true });
-    if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key === 'boss' ? 'boss' : key === 'hub' ? 'hub' : 'biome'); } });
+    resolve(key).then(url => {
+      if (current !== key) return;
+      const p = AudioEngine.playMusic(url, { fadeIn: 1.2, fadeOut: 1.2, loop: true });
+      if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key === 'boss' ? 'boss' : key === 'hub' ? 'hub' : 'biome'); } });
+    });
   }
   function stop() { current = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
@@ -2275,7 +2319,8 @@ const STAT_LABELS = {
 const HOOK_NAMES = ['onHit', 'onKill', 'onDash', 'onSkill', 'onDamaged', 'onRoomStart', 'onLevelUp', 'onTrapDamage', 'passive'];
 const KNOWN_EFFECTS = new Set(['burn', 'freeze', 'poison', 'chain', 'explode', 'heal_on_kill', 'coin_on_kill', 'fire_trail', 'shockwave',
   'shield_on_room', 'heal_on_room', 'reroll_on_levelup', 'traps_heal', 'projectiles_return', 'orbit_shield', 'glass_cannon', 'double_skill',
-  'time_slow_on_damage', 'fragments_double', 'second_chance', 'crit_explode', 'kill_speed', 'xp_magnet', 'bullet_time_skill', 'skill_reset_on_kill', 'charge_speed', 'speed_burst']);
+  'time_slow_on_damage', 'fragments_double', 'second_chance', 'crit_explode', 'kill_speed', 'xp_magnet', 'bullet_time_skill', 'skill_reset_on_kill', 'charge_speed', 'speed_burst',
+  'homing', 'split_on_hit', 'lightning_storm', 'burn_aura', 'drone', 'execute', 'rear_shot', 'hit_explode', 'frost_bonus', 'fire_frenzy']);
 
 const Progression = (() => {
   /* --- Agrégation : sources = [{mods:[], hooks:{}, stacks}] --- */
@@ -2513,6 +2558,7 @@ const Projectiles = {
           if (dist(p.x, p.y, e.x, e.y) < p.r + e.r) {
             p.hit.add(e);
             Combat.hitEnemy(e, p.damage, { x: p.x, y: p.y, crit: p.crit, noCrit: p.noCrit, proj: p, knockback: p.knockback || 1, vx: p.vx, vy: p.vy });
+            if (!p.shard && p.kind !== 'flame') { const sp = pl.hooks.onHit.find(h => h.effect === 'split_on_hit'); if (sp && RNG.chance(sp.chance != null ? sp.chance : 1)) { const base = Math.atan2(p.vy, p.vx), spd = Math.hypot(p.vx, p.vy) * 0.9; const cnt = sp.count || 2; for (let k = 0; k < cnt; k++) { const a = base + (k % 2 ? 1 : -1) * (0.6 + Math.floor(k / 2) * 0.4); Projectiles.spawn({ x: p.x, y: p.y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: Math.max(3, p.r * 0.7), damage: Math.max(1, p.damage * (sp.damageMul || 0.4)), owner: 'player', pierce: 0, life: 0.8, range: 260, color: p.color, kind: 'bullet', shard: true, noCrit: true }); } } }
             if (p.pierce > 0) p.pierce--; else if (!p.returning && !p.ghostHits) { this.list.splice(i, 1); break; }
           }
         }
@@ -2608,6 +2654,7 @@ const Combat = {
       const crit = info.crit != null ? info.crit : RNG.chance(pl.stats.critChance);
       if (crit) { d *= pl.stats.critMult; info.crit = true; }
     }
+    if (!info.dot && e.status && e.status.freeze) { const fb = Progression.hasPassive(pl.hooks, 'frost_bonus'); if (fb) d *= fb.mul || 1.3; }
     if (e.isBoss) {
       if (e.shieldUntil > Time.now) { d *= 0.15; Particles.spawn(info.x || e.x, info.y || e.y, { count: 3, color: '#8ff', size: 2 }); }
       if (e.weakActive) d *= e.weakMul;
@@ -2636,10 +2683,12 @@ const Combat = {
         else if (h.effect === 'poison' && RNG.chance(chance)) applyStatus(e, 'poison', h);
         else if (h.effect === 'chain' && RNG.chance(chance) && !info.chained) Combat.chain(e, d * (h.damageMul || 0.5), h.jumps || 2, h.radius || 180);
         else if (h.effect === 'crit_explode' && info.crit && !info.explosion) Combat.explosion(e.x, e.y, (h.radius || 70) * pl.stats.areaSize, d * (h.damageMul || 0.6), '#ffb347', true);
+        else if (h.effect === 'hit_explode' && !info.explosion && !info.chained && RNG.chance(chance)) Combat.explosion(e.x, e.y, (h.radius || 60) * pl.stats.areaSize, d * (h.damageMul || 0.6), '#ff8c42', true);
       }
       if (pl.stats.lifesteal > 0) pl.heal(d * pl.stats.lifesteal, true);
       G.run.stats.damageDealt += d; G.room.lastDamageT = G.room.time;
     }
+    if (e.hp > 0 && !e.isBoss && !info.dot) { const ex = Progression.hasPassive(pl.hooks, 'execute'); if (ex && e.hp / e.maxHp <= (ex.threshold || 0.15)) { e.hp = 0; Floaters.add(e.x, e.y - e.r - 16, 'EXÉCUTION', '#ff5e7a', 13); } }
     if (e.hp <= 0) Combat.killEnemy(e, info);
   },
   chain(from, dmg, jumps, radius) {
@@ -2761,15 +2810,18 @@ const Weapons = {
     const n = (w.projectiles || 1) + st.projectiles; const spread = (w.spread || 0) + (n > 1 ? 0.12 * (n - 1) : 0);
     const spd = (w.projSpeed || 520) * st.projSpeed * (o.speedMul || 1);
     const canReturn = w.special && w.special.kind === 'return' || !!Progression.hasPassive(pl.hooks, 'projectiles_return');
-    for (let i = 0; i < n; i++) {
-      const a = aim + (n > 1 ? lerp(-spread / 2, spread / 2, i / (n - 1)) : 0) + RNG.range(-0.02, 0.02);
+    const hom = Progression.hasPassive(pl.hooks, 'homing'); const rear = Progression.hasPassive(pl.hooks, 'rear_shot');
+    const angles = []; for (let i = 0; i < n; i++) angles.push(aim + (n > 1 ? lerp(-spread / 2, spread / 2, i / (n - 1)) : 0) + RNG.range(-0.02, 0.02));
+    if (rear) angles.push(aim + Math.PI);
+    for (let i = 0; i < angles.length; i++) {
+      const a = angles[i]; const isRear = rear && i === angles.length - 1;
       Projectiles.spawn({
         x: pl.x + Math.cos(a) * (pl.r + 6), y: pl.y + Math.sin(a) * (pl.r + 6), vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, speed: spd,
-        r: (o.size || w.size || 5), damage: Weapons.dmgOf(pl, o.damageMul || 1), owner: 'player',
+        r: (o.size || w.size || 5), damage: Weapons.dmgOf(pl, (o.damageMul || 1) * (isRear ? (rear.damageMul || 0.5) : 1)), owner: 'player',
         pierce: (w.pierce || 0) + st.pierce + (o.extraPierce || 0), bounce: (w.bounce || 0) + st.bounce,
         range: (w.range || 500) * st.range, life: 3, color: w.color || WEAPON_COLORS[w.family] || '#ffe9a8', kind: o.kind || (w.family === 'boomerang' ? 'boomerang' : 'bullet'),
         canReturn, knockback: w.knockback || 1, spin: w.family === 'boomerang' ? 0 : null, ghostHits: w.family === 'boomerang',
-        homing: w.special && w.special.kind === 'homing' ? (w.special.turn || 3) : 0, seekOnBounce: !!(w.special && w.special.seekOnBounce), seekRadius: w.special && w.special.seekRadius,
+        homing: w.special && w.special.kind === 'homing' ? (w.special.turn || 3) : (hom ? (hom.turn || 2.5) : 0), seekOnBounce: !!(w.special && w.special.seekOnBounce), seekRadius: w.special && w.special.seekRadius,
       });
     }
     const snd = { blade: 'shootBlade', hammer: 'shootHammer', bow: 'shootBow', pistol: 'shootPistol', boomerang: 'shootBoomerang', orb: 'shootOrb', chain: 'shootChain', flame: 'shootFlame' }[w.family] || 'shootPistol';
@@ -2864,6 +2916,7 @@ const Skills = {
     for (const h of pl.hooks.onSkill) {
       if (h.effect === 'shockwave') Combat.playerShockwave(h);
       else if (h.effect === 'bullet_time_skill') { Time.slow = h.scale || 0.5; Time.slowUntil = Time.now + (h.duration || 0.8); }
+      else if (h.effect === 'fire_frenzy') pl.addBuff('frenzy', h.duration || 3, [{ stat: 'fireRate', mul: h.fireRateMul || 1.4 }, { stat: 'damage', mul: h.damageMul || 1 }]);
     }
     G.run.stats.skillUses++;
     return true;
@@ -2885,14 +2938,17 @@ class Player {
     this.magnetUntil = 0; this.killSpeedUntil = 0; this.killSpeedMul = 1; this.overdriveUntil = 0; this.overdrive = null;
     this.flags = {}; this.weapon = null; this.skill = null; this.trail = null; this.orbitShield = null; this.secondChanceUsed = false;
     this.stats = Object.assign({}, BASE_STATS); this.hooks = Progression.collectHooks([]);
+    this.buffs = []; this.stormT = 0; this.auraCd = new Map(); this.drones = [];
     this.bot = null;  // contrôleur autoplay
   }
+  addBuff(id, duration, mods) { this.buffs = this.buffs.filter(b => b.id !== id); this.buffs.push({ id, until: Time.now + duration, mods }); this.recompute(); }
   sources() {
     const src = [];
     const c = this.char; if (c) { src.push({ id: c.id, mods: Object.keys(c.stats || {}).map(k => k === 'maxHp' || k === 'speed' || k === 'luck' ? { stat: k, add: c.stats[k] - BASE_STATS[k] } : { stat: k, mul: c.stats[k] / BASE_STATS[k] }) }); if (c.trait) src.push(c.trait); }
     src.push(...Meta.activeSources());
     if (G.run.levelPassive) { src.push(G.run.levelPassive.bonus); src.push(G.run.levelPassive.malus); }
     for (const u of G.run.upgrades) src.push(Object.assign({}, u.def, { stacks: u.stacks }));
+    for (const b of this.buffs) src.push({ id: 'buff_' + b.id, mods: b.mods });
     if (this.overdrive && Time.now < this.overdriveUntil) src.push({ id: 'overdrive', mods: [{ stat: 'fireRate', mul: this.overdrive.fireRate }, { stat: 'damage', mul: this.overdrive.damage }, { stat: 'speed', mul: this.overdrive.speed }] });
     return src;
   }
@@ -2904,7 +2960,8 @@ class Player {
     if (this.stats.maxHp > oldMax) this.hp += this.stats.maxHp - oldMax; this.hp = Math.min(this.hp, this.stats.maxHp);
     this.flags.xpMagnet = !!Progression.hasPassive(hooks, 'xp_magnet');
     this.skillMaxCharges = Progression.hasPassive(hooks, 'double_skill') ? 2 : 1; this.skillCharges = Math.min(this.skillCharges, this.skillMaxCharges);
-    const os = Progression.hasPassive(hooks, 'orbit_shield'); this.orbitShield = os ? { count: os.count || 2, damage: os.damage || 6, radius: os.radius || 48, orbs: [], cd: new Map() } : null;
+    const oss = hooks.passive.filter(e => e.effect === 'orbit_shield'); const os = oss.length ? { count: oss.reduce((s, e) => s + (e.count || 1) * (e.stacks || 1), 0), damage: oss.reduce((s, e) => Math.max(s, e.damage || 6), 0), radius: oss.reduce((s, e) => Math.max(s, e.radius || 48), 0) } : null;
+    this.orbitShield = os ? Object.assign(os, { orbs: [], cd: new Map() }) : null;
     if (this.weapon && this.weapon.type !== 'orbital') this.orbs = null;
   }
   heal(n, silent) { if (this.dead) return; const before = this.hp; this.hp = Math.min(this.stats.maxHp, this.hp + n); if (!silent && this.hp - before >= 1) Floaters.add(this.x, this.y - 30, '+' + Math.round(this.hp - before), '#7fff9a'); }
@@ -2942,6 +2999,18 @@ class Player {
     if (this.shield > 0 && Time.now > this.shieldUntil) this.shield = 0;
     if (this.overdrive) { if (Time.now > this.overdriveUntil) { this.overdrive = null; this.recompute(); } else if (this.overdrive.selfDps) this.hp = Math.max(1, this.hp - this.overdrive.selfDps * dt); }
     if (this.hurtFlash > 0) this.hurtFlash -= dt;
+    if (this.buffs.length && this.buffs.some(b => Time.now > b.until)) { this.buffs = this.buffs.filter(b => Time.now <= b.until); this.recompute(); }
+    /* foudre ambiante */
+    const storm = Progression.hasPassive(this.hooks, 'lightning_storm');
+    if (storm) { this.stormT += dt; const every = (storm.every || 2) / Math.max(1, storm.stacks || 1); if (this.stormT >= every) { this.stormT = 0; const tgt = nearestEnemy(this.x, this.y, (storm.radius || 320) * this.stats.range); if (tgt) { G.room.beams.push({ ax: tgt.x + VFX_RNG.range(-30, 30), ay: ROOM_Y - 20, bx: tgt.x, by: tgt.y, t: 0, life: 0.18, color: '#b3e5ff', width: 4, jag: true }); Combat.hitEnemy(tgt, (storm.damage || 18) * this.stats.damage, { x: tgt.x, y: tgt.y, knockback: 0.3, silent: true }); if (storm.jumps) Combat.chain(tgt, (storm.damage || 18) * this.stats.damage * 0.6, storm.jumps, 160); AudioEngine.shootChain({ intensity: 0.5 }); } } }
+    /* aura brûlante */
+    const aura = Progression.hasPassive(this.hooks, 'burn_aura');
+    if (aura) { const R = (aura.radius || 90) * this.stats.areaSize; for (const e of G.enemies) { if (e.dead || dist(this.x, this.y, e.x, e.y) > R + e.r) continue; const last = this.auraCd.get(e) || -9; if (Time.now - last < 0.25) continue; this.auraCd.set(e, Time.now); Combat.hitEnemy(e, (aura.dps || 12) * (aura.stacks || 1) * this.stats.damage * 0.25, { dot: true, x: e.x, y: e.y }); if (RNG.chance(0.3)) applyStatus(e, 'burn', { dps: 4, duration: 1.5 }); } if (VFX_RNG.chance(0.4)) { const a = VFX_RNG.range(0, TAU); Particles.spawn(this.x + Math.cos(a) * R, this.y + Math.sin(a) * R, { count: 1, color: '#ff8c42', size: 2, speedMax: 30, life: 0.4, glow: true }); } }
+    /* drones */
+    const dr = Progression.hasPassive(this.hooks, 'drone');
+    const wantDrones = dr ? (dr.count || 1) * (dr.stacks || 1) : 0;
+    if (this.drones.length !== wantDrones) this.drones = Array.from({ length: wantDrones }, (_, i) => ({ x: this.x, y: this.y, cd: i * 0.3 }));
+    this.drones.forEach((d, i) => { const a = Time.now * 1.4 + i * TAU / this.drones.length; const tx = this.x + Math.cos(a) * 46, ty = this.y + Math.sin(a) * 46; d.x = lerp(d.x, tx, Math.min(1, 8 * dt)); d.y = lerp(d.y, ty, Math.min(1, 8 * dt)); d.cd -= dt; if (d.cd <= 0) { const tgt = nearestEnemy(d.x, d.y, (dr.range || 340) * this.stats.range); if (tgt) { d.cd = 1 / ((dr.fireRate || 2) * this.stats.fireRate); const aa = angleTo(d.x, d.y, tgt.x, tgt.y); Projectiles.spawn({ x: d.x, y: d.y, vx: Math.cos(aa) * 600, vy: Math.sin(aa) * 600, r: 4, damage: (dr.damage || 8) * this.stats.damage, owner: 'player', life: 1.2, color: '#9ff', knockback: 0.3, pierce: this.stats.pierce }); } } });
     if (this.skillCd > 0) { this.skillCd -= dt; if (this.skillCd <= 0 && this.skillCharges < this.skillMaxCharges) { this.skillCharges++; if (this.skillCharges < this.skillMaxCharges) this.skillCd = Skills.cooldownOf(this); AudioEngine.uiHover && AudioEngine.uiHover({ intensity: 0.3 }); } }
     /* --- arme & compétence --- */
     Weapons.update(this, dt, firing, aim);
@@ -2969,6 +3038,7 @@ class Player {
     if (this.charge > 0) { const ch = this.weapon.charge || { min: 0.15, max: 0.9 }; const t = clamp((this.charge - ch.min) / (ch.max - ch.min), 0, 1); ctx.strokeStyle = t >= 1 ? '#ffd166' : '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.x, this.y, this.r + 10, -Math.PI / 2, -Math.PI / 2 + TAU * t); ctx.stroke(); }
     /* orbes d'arme */
     if (this.orbs) for (const o of this.orbs) { ctx.fillStyle = this.weapon.color || WEAPON_COLORS[this.weapon.family] || '#c9a3ff'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(o.x, o.y, (this.weapon.size || 10) * this.stats.areaSize, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
+    for (const d of this.drones) { ctx.fillStyle = '#3a4260'; ctx.beginPath(); ctx.arc(d.x, d.y, 7, 0, TAU); ctx.fill(); ctx.fillStyle = '#9ff'; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(d.x, d.y, 3, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
     if (this.orbitShield) for (const o of this.orbitShield.orbs) { ctx.fillStyle = '#8ff'; ctx.shadowColor = '#8ff'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(o.x, o.y, 6, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
     /* indicateur de visée */
     ctx.globalAlpha = 0.35; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(this.x + Math.cos(this.aim) * (this.r + 4), this.y + Math.sin(this.aim) * (this.r + 4)); ctx.lineTo(this.x + Math.cos(this.aim) * (this.r + 18), this.y + Math.sin(this.aim) * (this.r + 18)); ctx.stroke();

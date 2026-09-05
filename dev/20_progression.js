@@ -19,7 +19,8 @@ const STAT_LABELS = {
 const HOOK_NAMES = ['onHit', 'onKill', 'onDash', 'onSkill', 'onDamaged', 'onRoomStart', 'onLevelUp', 'onTrapDamage', 'passive'];
 const KNOWN_EFFECTS = new Set(['burn', 'freeze', 'poison', 'chain', 'explode', 'heal_on_kill', 'coin_on_kill', 'fire_trail', 'shockwave',
   'shield_on_room', 'heal_on_room', 'reroll_on_levelup', 'traps_heal', 'projectiles_return', 'orbit_shield', 'glass_cannon', 'double_skill',
-  'time_slow_on_damage', 'fragments_double', 'second_chance', 'crit_explode', 'kill_speed', 'xp_magnet', 'bullet_time_skill', 'skill_reset_on_kill', 'charge_speed', 'speed_burst']);
+  'time_slow_on_damage', 'fragments_double', 'second_chance', 'crit_explode', 'kill_speed', 'xp_magnet', 'bullet_time_skill', 'skill_reset_on_kill', 'charge_speed', 'speed_burst',
+  'homing', 'split_on_hit', 'lightning_storm', 'burn_aura', 'drone', 'execute', 'rear_shot', 'hit_explode', 'frost_bonus', 'fire_frenzy']);
 
 const Progression = (() => {
   /* --- Agrégation : sources = [{mods:[], hooks:{}, stacks}] --- */

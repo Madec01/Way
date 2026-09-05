@@ -8,6 +8,9 @@ Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.htm
 - ZQSD / WASD / flèches : déplacement · souris : visée · clic gauche : attaque (maintenir pour l'arc : charge)
 - clic droit / Espace / Maj : compétence active · E : interagir (coffre) · Échap / P : pause · F1 : panneau debug (mode Test)
 
+## Vos propres musiques
+Déposez `hub.mp3`, `biome1.mp3` et `boss.mp3` (ou `.ogg`) dans `assets/music/custom/` : elles remplacent les pistes fournies sans toucher au code. Détails dans `assets/music/custom/README.md`.
+
 ## Modes
 - **Normal** : sauvegarde locale, 1 sujet et 2 armes débloqués, économie normale.
 - **Test** : tout débloqué, passifs au maximum, panneau debug (difficulté 0,5× → 3×, saut de salle, multiplicateurs XP/crédits, rareté forcée, invulnérabilité, spawn d'ennemi/piège, hitboxes, scores en direct, écran de test audio, autoplay).
