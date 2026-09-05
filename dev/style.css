@@ -1,6 +1,6 @@
 :root{--bg:#07080d;--panel:rgba(16,20,34,.72);--line:rgba(110,231,255,.22);--text:#e8ecf7;--muted:#9aa4c4;--accent:#6ee7ff;--gold:#ffd166;--danger:#ff5e7a;--good:#7fff9a;--ui-scale:1}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;overflow:hidden;user-select:none}
+html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;overflow:hidden;user-select:none;touch-action:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
 #c{position:fixed;display:block;background:#07080d;image-rendering:pixelated;image-rendering:crisp-edges}
 #ui{position:fixed;pointer-events:none;overflow:hidden}
 #ui.active{pointer-events:auto}
@@ -74,3 +74,26 @@ h3{margin:.8em 0 .4em;font-size:1em;color:var(--accent);letter-spacing:.08em;tex
 #debug .chk{margin-right:.4em}
 #debug .dout{white-space:pre-wrap;background:#000;padding:.4em;border-radius:6px;max-height:140px;overflow:auto;margin:.4em 0}
 #debug .abtns{display:flex;flex-wrap:wrap;gap:.25em;margin:.4em 0}
+
+/* ---- tactile ---- */
+#touch{position:fixed;overflow:hidden;z-index:5;touch-action:none}
+#touch[hidden]{display:none}
+#touch .tzone{position:absolute;left:0;top:0;width:55%;height:100%;touch-action:none}
+#touch .tstick{position:absolute;width:calc(140px*var(--ui-scale));height:calc(140px*var(--ui-scale));margin:calc(-70px*var(--ui-scale)) 0 0 calc(-70px*var(--ui-scale));border-radius:50%;border:2px solid rgba(110,231,255,.35);background:rgba(16,20,34,.35);pointer-events:none;transform:scale(var(--ui-scale));transform-origin:0 0}
+#touch .tstick[hidden]{display:none}
+#touch .tknob{position:absolute;left:50%;top:50%;width:56px;height:56px;border-radius:50%;background:rgba(110,231,255,.55);box-shadow:0 0 18px rgba(110,231,255,.5);transform:translate(-50%,-50%)}
+#touch .tbtn{position:absolute;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(16,20,34,.55);color:#fff;font:700 calc(15px*var(--ui-scale)) "Segoe UI",system-ui,sans-serif;letter-spacing:.05em;backdrop-filter:blur(4px);touch-action:none;user-select:none;-webkit-user-select:none}
+#touch .tbtn.on{background:rgba(110,231,255,.45);border-color:#6ee7ff;box-shadow:0 0 22px rgba(110,231,255,.6)}
+#touch .tbtn.fire{right:calc(28px*var(--ui-scale));bottom:calc(40px*var(--ui-scale));width:calc(120px*var(--ui-scale));height:calc(120px*var(--ui-scale));border-color:rgba(255,209,102,.6)}
+#touch .tbtn.fire.on{background:rgba(255,209,102,.45);border-color:#ffd166;box-shadow:0 0 22px rgba(255,209,102,.6)}
+#touch .tbtn.skill{right:calc(160px*var(--ui-scale));bottom:calc(70px*var(--ui-scale));width:calc(86px*var(--ui-scale));height:calc(86px*var(--ui-scale));border-color:rgba(127,255,154,.6)}
+#touch .tbtn.act{right:calc(70px*var(--ui-scale));bottom:calc(180px*var(--ui-scale));width:calc(62px*var(--ui-scale));height:calc(62px*var(--ui-scale))}
+#touch .tbtn.pause{right:calc(16px*var(--ui-scale));top:calc(56px*var(--ui-scale));width:calc(44px*var(--ui-scale));height:calc(44px*var(--ui-scale));font-size:calc(13px*var(--ui-scale))}
+body.touch #ui .screen{font-size:calc(15px*var(--ui-scale))}
+body.touch .btn{padding:.7em 1.3em}
+#ui .screen{touch-action:pan-y}
+#ui .screen .panel{touch-action:pan-y;max-height:100%;overflow:auto}
+body.touch #ui .screen{padding:calc(10px*var(--ui-scale));align-items:flex-start}
+body.touch .cards .card{min-width:11em;max-width:15em;padding:.55em .7em;font-size:.92em}
+body.touch .prep h2{font-size:1.2em}
+body.touch .prep .passives .tiny{display:none}

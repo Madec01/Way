@@ -545,7 +545,13 @@ class Player {
     /* --- intentions : humain ou bot --- */
     let mv, aim, firing, wantSkill;
     if (this.bot) { const c = this.bot(this); mv = c.move; aim = c.aim; firing = c.fire; wantSkill = c.skill; }
-    else {
+    else if (Input.touch.active) {
+      const t = Input.touch; mv = { x: t.move.x, y: t.move.y };
+      /* visée automatique : l'ennemi le plus proche, sinon la direction du joystick, sinon la dernière visée */
+      const tgt = nearestEnemy(this.x, this.y, 720);
+      aim = tgt ? angleTo(this.x, this.y, tgt.x, tgt.y) : (mv.x || mv.y ? Math.atan2(mv.y, mv.x) : this.aim);
+      firing = t.fire || (t.autoFire && !!tgt); wantSkill = Input.wasPressed('skill'); if (t.interact) { Input.press('KeyE'); t.interact = false; }
+    } else {
       mv = Input.axis(); aim = angleTo(this.x, this.y, Input.mouse.x, Input.mouse.y);
       firing = Input.mouse.down || Input.isDown('fire'); wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
     }

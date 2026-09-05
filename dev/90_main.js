@@ -3,7 +3,7 @@
    ========================================================================= */
 
 function update(dt, rawDt) {
-  UI.update(rawDt);
+  UI.update(rawDt); Touch.sync();
   if (G.state === 'run') Run.update(dt);
 }
 function render(ctx) {
@@ -29,7 +29,7 @@ async function boot() {
   Input.attach(canvas, wake);
   document.addEventListener('pointerdown', wake, { once: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
-  UI.init(); Debug.init();
+  UI.init(); Debug.init(); Touch.init();
   await Sprites.load();
   UI.showMenu();
   Engine.start(update, render);

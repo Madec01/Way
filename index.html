@@ -2,13 +2,17 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07080d">
 <title>SUJET NEUF — Protocole H-9</title>
 <!-- Fichier généré par dev/build.js : ne pas éditer directement, éditer dev/*.js puis `node dev/build.js`. -->
 <style>
 :root{--bg:#07080d;--panel:rgba(16,20,34,.72);--line:rgba(110,231,255,.22);--text:#e8ecf7;--muted:#9aa4c4;--accent:#6ee7ff;--gold:#ffd166;--danger:#ff5e7a;--good:#7fff9a;--ui-scale:1}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;overflow:hidden;user-select:none}
+html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;overflow:hidden;user-select:none;touch-action:none;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
 #c{position:fixed;display:block;background:#07080d;image-rendering:pixelated;image-rendering:crisp-edges}
 #ui{position:fixed;pointer-events:none;overflow:hidden}
 #ui.active{pointer-events:auto}
@@ -83,11 +87,35 @@ h3{margin:.8em 0 .4em;font-size:1em;color:var(--accent);letter-spacing:.08em;tex
 #debug .dout{white-space:pre-wrap;background:#000;padding:.4em;border-radius:6px;max-height:140px;overflow:auto;margin:.4em 0}
 #debug .abtns{display:flex;flex-wrap:wrap;gap:.25em;margin:.4em 0}
 
+/* ---- tactile ---- */
+#touch{position:fixed;overflow:hidden;z-index:5;touch-action:none}
+#touch[hidden]{display:none}
+#touch .tzone{position:absolute;left:0;top:0;width:55%;height:100%;touch-action:none}
+#touch .tstick{position:absolute;width:calc(140px*var(--ui-scale));height:calc(140px*var(--ui-scale));margin:calc(-70px*var(--ui-scale)) 0 0 calc(-70px*var(--ui-scale));border-radius:50%;border:2px solid rgba(110,231,255,.35);background:rgba(16,20,34,.35);pointer-events:none;transform:scale(var(--ui-scale));transform-origin:0 0}
+#touch .tstick[hidden]{display:none}
+#touch .tknob{position:absolute;left:50%;top:50%;width:56px;height:56px;border-radius:50%;background:rgba(110,231,255,.55);box-shadow:0 0 18px rgba(110,231,255,.5);transform:translate(-50%,-50%)}
+#touch .tbtn{position:absolute;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(16,20,34,.55);color:#fff;font:700 calc(15px*var(--ui-scale)) "Segoe UI",system-ui,sans-serif;letter-spacing:.05em;backdrop-filter:blur(4px);touch-action:none;user-select:none;-webkit-user-select:none}
+#touch .tbtn.on{background:rgba(110,231,255,.45);border-color:#6ee7ff;box-shadow:0 0 22px rgba(110,231,255,.6)}
+#touch .tbtn.fire{right:calc(28px*var(--ui-scale));bottom:calc(40px*var(--ui-scale));width:calc(120px*var(--ui-scale));height:calc(120px*var(--ui-scale));border-color:rgba(255,209,102,.6)}
+#touch .tbtn.fire.on{background:rgba(255,209,102,.45);border-color:#ffd166;box-shadow:0 0 22px rgba(255,209,102,.6)}
+#touch .tbtn.skill{right:calc(160px*var(--ui-scale));bottom:calc(70px*var(--ui-scale));width:calc(86px*var(--ui-scale));height:calc(86px*var(--ui-scale));border-color:rgba(127,255,154,.6)}
+#touch .tbtn.act{right:calc(70px*var(--ui-scale));bottom:calc(180px*var(--ui-scale));width:calc(62px*var(--ui-scale));height:calc(62px*var(--ui-scale))}
+#touch .tbtn.pause{right:calc(16px*var(--ui-scale));top:calc(56px*var(--ui-scale));width:calc(44px*var(--ui-scale));height:calc(44px*var(--ui-scale));font-size:calc(13px*var(--ui-scale))}
+body.touch #ui .screen{font-size:calc(15px*var(--ui-scale))}
+body.touch .btn{padding:.7em 1.3em}
+#ui .screen{touch-action:pan-y}
+#ui .screen .panel{touch-action:pan-y;max-height:100%;overflow:auto}
+body.touch #ui .screen{padding:calc(10px*var(--ui-scale));align-items:flex-start}
+body.touch .cards .card{min-width:11em;max-width:15em;padding:.55em .7em;font-size:.92em}
+body.touch .prep h2{font-size:1.2em}
+body.touch .prep .passives .tiny{display:none}
+
 </style>
 </head>
 <body>
 <canvas id="c" width="1280" height="720"></canvas>
 <div id="ui"></div>
+<div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <script>
 /* ==== 00_core.js ==== */
@@ -184,6 +212,7 @@ const Time = { scale: 1, slow: 1, slowUntil: 0, now: 0, frame: 0 };
 const Input = (() => {
   const keys = new Set(), pressed = new Set();
   const mouse = { x: W / 2, y: H / 2, down: false, right: false, moved: 0 };
+  const touch = { active: false, move: { x: 0, y: 0 }, fire: false, skill: false, interact: false, autoFire: false };
   let canvas = null, scale = 1, offX = 0, offY = 0;
   const KEYMAP = {
     up: ['KeyW', 'KeyZ', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'KeyQ', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
@@ -203,8 +232,8 @@ const Input = (() => {
     window.addEventListener('keyup', e => keys.delete(e.code));
     window.addEventListener('blur', () => { keys.clear(); mouse.down = false; mouse.right = false; });
     const toLogical = e => { const r = canvas.getBoundingClientRect(); mouse.x = clamp((e.clientX - r.left) / scale, 0, W); mouse.y = clamp((e.clientY - r.top) / scale, 0, H); mouse.moved = Time.now; };
-    canvas.addEventListener('mousemove', toLogical);
-    canvas.addEventListener('mousedown', e => { firstInt(); toLogical(e); if (e.button === 0) mouse.down = true; if (e.button === 2) { mouse.right = true; pressed.add('Mouse2'); } });
+    canvas.addEventListener('mousemove', e => { if (!touch.active) toLogical(e); });
+    canvas.addEventListener('mousedown', e => { firstInt(); if (touch.active) return; toLogical(e); if (e.button === 0) mouse.down = true; if (e.button === 2) { mouse.right = true; pressed.add('Mouse2'); } });
     window.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; if (e.button === 2) mouse.right = false; });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
   }
@@ -219,7 +248,8 @@ const Input = (() => {
   }
   /* Gamepad : abstraction prévue, non branchée en phase 1. */
   function endFrame() { pressed.clear(); }
-  return { attach, setScale, isDown, wasPressed, axis, mouse, endFrame, keys };
+  function press(code) { pressed.add(code); }
+  return { attach, setScale, isDown, wasPressed, axis, mouse, touch, press, endFrame, keys };
 })();
 
 /* ---------- Engine : canvas, boucle à pas fixe ---------- */
@@ -247,8 +277,7 @@ const Engine = (() => {
     ctx.imageSmoothingEnabled = false;
     Input.setScale(s, 0, 0);
     document.documentElement.style.setProperty('--ui-scale', s.toFixed(3));
-    const ui = document.getElementById('ui');
-    if (ui) { ui.style.width = cw + 'px'; ui.style.height = ch + 'px'; ui.style.left = canvas.style.left; ui.style.top = canvas.style.top; }
+    for (const id of ['ui', 'touch']) { const el = document.getElementById(id); if (el) { el.style.width = cw + 'px'; el.style.height = ch + 'px'; el.style.left = canvas.style.left; el.style.top = canvas.style.top; } }
   }
   function loop(t) {
     rafId = requestAnimationFrame(loop);
@@ -266,7 +295,7 @@ const Engine = (() => {
     if (steps === maxStepsPerFrame) acc = 0;
     stats.steps = steps;
     if (!headless) renderFn(ctx, acc / FIXED_DT);
-    Input.endFrame();
+    if (steps > 0 || G.paused) Input.endFrame();   // ne pas perdre un appui entre deux pas (écrans 120/144 Hz)
   }
   function start(u, r) { updateFn = u; renderFn = r; if (!running) { running = true; last = 0; rafId = requestAnimationFrame(loop); } }
   function stop() { running = false; cancelAnimationFrame(rafId); }
@@ -2985,7 +3014,13 @@ class Player {
     /* --- intentions : humain ou bot --- */
     let mv, aim, firing, wantSkill;
     if (this.bot) { const c = this.bot(this); mv = c.move; aim = c.aim; firing = c.fire; wantSkill = c.skill; }
-    else {
+    else if (Input.touch.active) {
+      const t = Input.touch; mv = { x: t.move.x, y: t.move.y };
+      /* visée automatique : l'ennemi le plus proche, sinon la direction du joystick, sinon la dernière visée */
+      const tgt = nearestEnemy(this.x, this.y, 720);
+      aim = tgt ? angleTo(this.x, this.y, tgt.x, tgt.y) : (mv.x || mv.y ? Math.atan2(mv.y, mv.x) : this.aim);
+      firing = t.fire || (t.autoFire && !!tgt); wantSkill = Input.wasPressed('skill'); if (t.interact) { Input.press('KeyE'); t.interact = false; }
+    } else {
       mv = Input.axis(); aim = angleTo(this.x, this.y, Input.mouse.x, Input.mouse.y);
       firing = Input.mouse.down || Input.isDown('fire'); wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
     }
@@ -3991,7 +4026,7 @@ const UI = (() => {
           <button class="btn ghost" id="btn-credits">Crédits</button>
           <button class="btn ghost" id="btn-reset">Réinitialiser la sauvegarde</button>
         </div>
-        <p class="muted tiny">ZQSD / WASD : déplacement · souris : visée · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause${G.mode === 'test' ? ' · F1 : debug' : ''}</p>
+        <p class="muted tiny">ZQSD / WASD : déplacement · souris : visée · clic gauche : attaque · clic droit / Espace / Maj : compétence (dash…) · E : interagir · Échap : pause · tactile : joystick à gauche, boutons à droite${G.mode === 'test' ? ' · F1 : debug' : ''}</p>
         <p class="muted tiny">Sauvegarde : ${Meta.profile.runs} run(s), ${Meta.profile.wins} victoire(s), ${fmt(Meta.profile.coins)} crédits.</p>
       </div>`;
     s.querySelector('#btn-normal').onclick = () => { Meta.setMode('normal'); Debug.hide(); Run.toHub(); };
@@ -4094,7 +4129,7 @@ const UI = (() => {
           </div>
           <h3>${STR.chooseWeapon}</h3>
           <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div></div>`).join('')}</div>
-          <h3>${STR.chooseSkill}</h3>
+          <h3>${STR.chooseSkill} <span class="muted tiny">(en jeu : clic droit, Espace ou Maj${Input.touch.active ? ', bouton COMP.' : ''})</span></h3>
           <div class="cards" id="prep-skills">${r.skillChoices.map(sk => `<div class="card pick ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div><div class="muted tiny">Cooldown ${sk.cooldown} s</div></div>`).join('')}</div>
           <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${STR.enter}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
         </div>`;
@@ -4146,9 +4181,11 @@ const UI = (() => {
         <label>Master <input type="range" min="0" max="1" step="0.05" value="${v.master}" data-v="master"></label>
         <label>Effets <input type="range" min="0" max="1" step="0.05" value="${v.sfx}" data-v="sfx"></label>
         <label>Musique <input type="range" min="0" max="1" step="0.05" value="${v.music}" data-v="music"></label>
+        ${Input.touch.active ? `<label>Tir automatique (tactile) <input type="checkbox" id="pause-autofire" ${Input.touch.autoFire ? 'checked' : ''}></label>` : ''}
       </div>
       <div class="row"><button class="btn primary" id="pause-resume">${STR.resume}</button><button class="btn ghost" id="pause-quit">${STR.quit}</button></div></div>`;
     s.querySelectorAll('input[type=range]').forEach(i => i.oninput = () => { v[i.dataset.v] = +i.value; AudioEngine.setVolume(v); Meta.save(); });
+    const af = s.querySelector('#pause-autofire'); if (af) af.onchange = () => { Input.touch.autoFire = af.checked; Meta.profile.touchAutoFire = af.checked; Meta.save(); };
     s.querySelector('#pause-resume').onclick = togglePause;
     s.querySelector('#pause-quit').onclick = () => { hideAll(); Run.abort(); };
     show('pause');
@@ -4239,7 +4276,7 @@ const UI = (() => {
     ctx.fillStyle = '#1a2036'; ctx.beginPath(); ctx.arc(cx, sy, 14, 0, TAU); ctx.fill();
     ctx.fillStyle = ready ? '#7fff9a' : '#4fb3ff'; ctx.beginPath(); ctx.moveTo(cx, sy); ctx.arc(cx, sy, 14, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.fill();
     ctx.fillStyle = '#e8ecf7'; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(pl.skill.name + (pl.skillMaxCharges > 1 ? ` ×${pl.skillCharges}` : ''), cx + 22, sy - 7);
-    ctx.fillStyle = '#9aa4c4'; ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillText(ready ? STR.ready + ' · clic droit / Espace' : `${pl.skillCd.toFixed(1)} s`, cx + 22, sy + 9);
+    ctx.fillStyle = '#9aa4c4'; ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillText(ready ? STR.ready + (Input.touch.active ? ' · bouton COMP.' : ' · clic droit / Espace / Maj') : `${pl.skillCd.toFixed(1)} s`, cx + 22, sy + 9);
     /* greffes */
     ctx.textAlign = 'right'; let gx = W - 24; ctx.font = '11px "Segoe UI", system-ui, sans-serif';
     for (const u of r.upgrades.slice(-8).reverse()) { const t = u.def.name + (u.stacks > 1 ? ' ×' + u.stacks : ''); const w = ctx.measureText(t).width + 12; ctx.fillStyle = 'rgba(8,10,18,.7)'; roundRect(ctx, gx - w, sy - 10, w, 20, 6); ctx.fill(); ctx.strokeStyle = RARITY[u.def.rarity].color; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = RARITY[u.def.rarity].color; ctx.fillText(t, gx - 6, sy); gx -= w + 6; if (gx < 520) break; }
@@ -4263,6 +4300,70 @@ const UI = (() => {
     ctx.strokeStyle = 'rgba(110,231,255,.05)'; ctx.lineWidth = 1; for (let x = 0; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y < H; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   }
   return { init, show, hideAll, showMenu, showHub, showPrep, showChoice, hideChoice, togglePause, showEnd, showCredits, banner, toast, transition, update, renderHud, renderToasts, renderFade, renderBackdrop, state, esc, roundRect };
+})();
+
+</script>
+<script>
+/* ==== 55_touch.js ==== */
+/* =========================================================================
+   SUJET NEUF — 55_touch.js
+   Mode tactile : joystick virtuel à gauche (déplacement ; la visée est automatique sur l'ennemi le plus proche,
+   sinon la direction du joystick), boutons à droite (TIR maintenu, COMPÉTENCE, INTERAGIR), pause en haut à droite.
+   Activé automatiquement au premier contact tactile.
+   ========================================================================= */
+
+const Touch = (() => {
+  let layer, stick, knob, stickId = null, origin = { x: 0, y: 0 }, built = false;
+  const R = 70;   // rayon du joystick en px logiques
+  const isTouchDevice = () => ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0;
+
+  function build() {
+    if (built) return; built = true;
+    layer = document.getElementById('touch');
+    layer.innerHTML = `
+      <div class="tzone" id="t-zone"></div>
+      <div class="tstick" id="t-stick" hidden><div class="tknob" id="t-knob"></div></div>
+      <button class="tbtn fire" id="t-fire">TIR</button>
+      <button class="tbtn skill" id="t-skill">COMP.</button>
+      <button class="tbtn act" id="t-act">E</button>
+      <button class="tbtn pause" id="t-pause">II</button>`;
+    stick = document.getElementById('t-stick'); knob = document.getElementById('t-knob');
+    const zone = document.getElementById('t-zone');
+    const T = Input.touch;
+    const toLogical = e => { const r = layer.getBoundingClientRect(); const s = r.width / W; return { x: (e.clientX - r.left) / s, y: (e.clientY - r.top) / s }; };
+    zone.addEventListener('pointerdown', e => {
+      if (stickId != null) return; e.preventDefault(); zone.setPointerCapture(e.pointerId); stickId = e.pointerId;
+      origin = toLogical(e); stick.hidden = false; stick.style.left = origin.x + 'px'; stick.style.top = origin.y + 'px'; knob.style.transform = 'translate(-50%,-50%)'; T.move.x = 0; T.move.y = 0;
+    });
+    zone.addEventListener('pointermove', e => {
+      if (e.pointerId !== stickId) return; e.preventDefault(); const p = toLogical(e); let dx = p.x - origin.x, dy = p.y - origin.y; const d = Math.hypot(dx, dy);
+      if (d > R) { dx *= R / d; dy *= R / d; }
+      const dead = 10; const k = d < dead ? 0 : Math.min(1, (d - dead) / (R - dead)); const a = Math.atan2(dy, dx);
+      T.move.x = k ? Math.cos(a) * k : 0; T.move.y = k ? Math.sin(a) * k : 0;
+      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    });
+    const release = e => { if (e.pointerId !== stickId) return; stickId = null; stick.hidden = true; T.move.x = 0; T.move.y = 0; };
+    zone.addEventListener('pointerup', release); zone.addEventListener('pointercancel', release); zone.addEventListener('lostpointercapture', release);
+    const hold = (id, on, off) => { const b = document.getElementById(id); b.addEventListener('pointerdown', e => { e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add('on'); on(); }); const up = e => { b.classList.remove('on'); off && off(); }; b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up); b.addEventListener('contextmenu', e => e.preventDefault()); };
+    hold('t-fire', () => { T.fire = true; }, () => { T.fire = false; });
+    hold('t-skill', () => { Input.press('Space'); });
+    hold('t-act', () => { T.interact = true; });
+    hold('t-pause', () => { if (G.state === 'run') UI.togglePause(); });
+    layer.addEventListener('contextmenu', e => e.preventDefault());
+  }
+  function activate() {
+    if (Input.touch.active) return; Input.touch.active = true; build();
+    try { Input.touch.autoFire = !!Meta.profile.touchAutoFire; } catch (e) { /* */ }
+    document.body.classList.add('touch');
+  }
+  function init() {
+    window.addEventListener('touchstart', activate, { once: true, passive: true });
+    window.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') activate(); }, { passive: true });
+    if (isTouchDevice() && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) activate();
+  }
+  /* visible seulement en jeu, sans écran superposé */
+  function sync() { if (!built) return; const show = Input.touch.active && G.state === 'run' && !G.overlay; layer.hidden = !show; if (!show && stickId != null) { stickId = null; stick.hidden = true; Input.touch.move.x = 0; Input.touch.move.y = 0; Input.touch.fire = false; } }
+  return { init, sync, activate, get active() { return Input.touch.active; } };
 })();
 
 </script>
@@ -4490,7 +4591,7 @@ const Debug = (() => {
    ========================================================================= */
 
 function update(dt, rawDt) {
-  UI.update(rawDt);
+  UI.update(rawDt); Touch.sync();
   if (G.state === 'run') Run.update(dt);
 }
 function render(ctx) {
@@ -4516,7 +4617,7 @@ async function boot() {
   Input.attach(canvas, wake);
   document.addEventListener('pointerdown', wake, { once: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
-  UI.init(); Debug.init();
+  UI.init(); Debug.init(); Touch.init();
   await Sprites.load();
   UI.showMenu();
   Engine.start(update, render);

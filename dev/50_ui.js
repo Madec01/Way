@@ -40,7 +40,7 @@ const UI = (() => {
           <button class="btn ghost" id="btn-credits">Crédits</button>
           <button class="btn ghost" id="btn-reset">Réinitialiser la sauvegarde</button>
         </div>
-        <p class="muted tiny">ZQSD / WASD : déplacement · souris : visée · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause${G.mode === 'test' ? ' · F1 : debug' : ''}</p>
+        <p class="muted tiny">ZQSD / WASD : déplacement · souris : visée · clic gauche : attaque · clic droit / Espace / Maj : compétence (dash…) · E : interagir · Échap : pause · tactile : joystick à gauche, boutons à droite${G.mode === 'test' ? ' · F1 : debug' : ''}</p>
         <p class="muted tiny">Sauvegarde : ${Meta.profile.runs} run(s), ${Meta.profile.wins} victoire(s), ${fmt(Meta.profile.coins)} crédits.</p>
       </div>`;
     s.querySelector('#btn-normal').onclick = () => { Meta.setMode('normal'); Debug.hide(); Run.toHub(); };
@@ -143,7 +143,7 @@ const UI = (() => {
           </div>
           <h3>${STR.chooseWeapon}</h3>
           <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div></div>`).join('')}</div>
-          <h3>${STR.chooseSkill}</h3>
+          <h3>${STR.chooseSkill} <span class="muted tiny">(en jeu : clic droit, Espace ou Maj${Input.touch.active ? ', bouton COMP.' : ''})</span></h3>
           <div class="cards" id="prep-skills">${r.skillChoices.map(sk => `<div class="card pick ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div><div class="muted tiny">Cooldown ${sk.cooldown} s</div></div>`).join('')}</div>
           <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${STR.enter}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
         </div>`;
@@ -195,9 +195,11 @@ const UI = (() => {
         <label>Master <input type="range" min="0" max="1" step="0.05" value="${v.master}" data-v="master"></label>
         <label>Effets <input type="range" min="0" max="1" step="0.05" value="${v.sfx}" data-v="sfx"></label>
         <label>Musique <input type="range" min="0" max="1" step="0.05" value="${v.music}" data-v="music"></label>
+        ${Input.touch.active ? `<label>Tir automatique (tactile) <input type="checkbox" id="pause-autofire" ${Input.touch.autoFire ? 'checked' : ''}></label>` : ''}
       </div>
       <div class="row"><button class="btn primary" id="pause-resume">${STR.resume}</button><button class="btn ghost" id="pause-quit">${STR.quit}</button></div></div>`;
     s.querySelectorAll('input[type=range]').forEach(i => i.oninput = () => { v[i.dataset.v] = +i.value; AudioEngine.setVolume(v); Meta.save(); });
+    const af = s.querySelector('#pause-autofire'); if (af) af.onchange = () => { Input.touch.autoFire = af.checked; Meta.profile.touchAutoFire = af.checked; Meta.save(); };
     s.querySelector('#pause-resume').onclick = togglePause;
     s.querySelector('#pause-quit').onclick = () => { hideAll(); Run.abort(); };
     show('pause');
@@ -288,7 +290,7 @@ const UI = (() => {
     ctx.fillStyle = '#1a2036'; ctx.beginPath(); ctx.arc(cx, sy, 14, 0, TAU); ctx.fill();
     ctx.fillStyle = ready ? '#7fff9a' : '#4fb3ff'; ctx.beginPath(); ctx.moveTo(cx, sy); ctx.arc(cx, sy, 14, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.fill();
     ctx.fillStyle = '#e8ecf7'; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(pl.skill.name + (pl.skillMaxCharges > 1 ? ` ×${pl.skillCharges}` : ''), cx + 22, sy - 7);
-    ctx.fillStyle = '#9aa4c4'; ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillText(ready ? STR.ready + ' · clic droit / Espace' : `${pl.skillCd.toFixed(1)} s`, cx + 22, sy + 9);
+    ctx.fillStyle = '#9aa4c4'; ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillText(ready ? STR.ready + (Input.touch.active ? ' · bouton COMP.' : ' · clic droit / Espace / Maj') : `${pl.skillCd.toFixed(1)} s`, cx + 22, sy + 9);
     /* greffes */
     ctx.textAlign = 'right'; let gx = W - 24; ctx.font = '11px "Segoe UI", system-ui, sans-serif';
     for (const u of r.upgrades.slice(-8).reverse()) { const t = u.def.name + (u.stacks > 1 ? ' ×' + u.stacks : ''); const w = ctx.measureText(t).width + 12; ctx.fillStyle = 'rgba(8,10,18,.7)'; roundRect(ctx, gx - w, sy - 10, w, 20, 6); ctx.fill(); ctx.strokeStyle = RARITY[u.def.rarity].color; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = RARITY[u.def.rarity].color; ctx.fillText(t, gx - 6, sy); gx -= w + 6; if (gx < 520) break; }

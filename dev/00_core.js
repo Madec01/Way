@@ -91,6 +91,7 @@ const Time = { scale: 1, slow: 1, slowUntil: 0, now: 0, frame: 0 };
 const Input = (() => {
   const keys = new Set(), pressed = new Set();
   const mouse = { x: W / 2, y: H / 2, down: false, right: false, moved: 0 };
+  const touch = { active: false, move: { x: 0, y: 0 }, fire: false, skill: false, interact: false, autoFire: false };
   let canvas = null, scale = 1, offX = 0, offY = 0;
   const KEYMAP = {
     up: ['KeyW', 'KeyZ', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'KeyQ', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
@@ -110,8 +111,8 @@ const Input = (() => {
     window.addEventListener('keyup', e => keys.delete(e.code));
     window.addEventListener('blur', () => { keys.clear(); mouse.down = false; mouse.right = false; });
     const toLogical = e => { const r = canvas.getBoundingClientRect(); mouse.x = clamp((e.clientX - r.left) / scale, 0, W); mouse.y = clamp((e.clientY - r.top) / scale, 0, H); mouse.moved = Time.now; };
-    canvas.addEventListener('mousemove', toLogical);
-    canvas.addEventListener('mousedown', e => { firstInt(); toLogical(e); if (e.button === 0) mouse.down = true; if (e.button === 2) { mouse.right = true; pressed.add('Mouse2'); } });
+    canvas.addEventListener('mousemove', e => { if (!touch.active) toLogical(e); });
+    canvas.addEventListener('mousedown', e => { firstInt(); if (touch.active) return; toLogical(e); if (e.button === 0) mouse.down = true; if (e.button === 2) { mouse.right = true; pressed.add('Mouse2'); } });
     window.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; if (e.button === 2) mouse.right = false; });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
   }
@@ -126,7 +127,8 @@ const Input = (() => {
   }
   /* Gamepad : abstraction prévue, non branchée en phase 1. */
   function endFrame() { pressed.clear(); }
-  return { attach, setScale, isDown, wasPressed, axis, mouse, endFrame, keys };
+  function press(code) { pressed.add(code); }
+  return { attach, setScale, isDown, wasPressed, axis, mouse, touch, press, endFrame, keys };
 })();
 
 /* ---------- Engine : canvas, boucle à pas fixe ---------- */
@@ -154,8 +156,7 @@ const Engine = (() => {
     ctx.imageSmoothingEnabled = false;
     Input.setScale(s, 0, 0);
     document.documentElement.style.setProperty('--ui-scale', s.toFixed(3));
-    const ui = document.getElementById('ui');
-    if (ui) { ui.style.width = cw + 'px'; ui.style.height = ch + 'px'; ui.style.left = canvas.style.left; ui.style.top = canvas.style.top; }
+    for (const id of ['ui', 'touch']) { const el = document.getElementById(id); if (el) { el.style.width = cw + 'px'; el.style.height = ch + 'px'; el.style.left = canvas.style.left; el.style.top = canvas.style.top; } }
   }
   function loop(t) {
     rafId = requestAnimationFrame(loop);
@@ -173,7 +174,7 @@ const Engine = (() => {
     if (steps === maxStepsPerFrame) acc = 0;
     stats.steps = steps;
     if (!headless) renderFn(ctx, acc / FIXED_DT);
-    Input.endFrame();
+    if (steps > 0 || G.paused) Input.endFrame();   // ne pas perdre un appui entre deux pas (écrans 120/144 Hz)
   }
   function start(u, r) { updateFn = u; renderFn = r; if (!running) { running = true; last = 0; rafId = requestAnimationFrame(loop); } }
   function stop() { running = false; cancelAnimationFrame(rafId); }
