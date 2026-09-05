@@ -127,4 +127,4 @@ Moi : architecture, moteur, intégration, arbitrage, cohérence.
 
 **Prévu, non implémenté** (architecture en place) : salles 6-9 (`ROOM_TYPES` phase 2, `modular[]` par salle, crochet `Modular.update`), boss revanche (`bosses[].revenge`), *Mémoire sélective* (n'agit qu'au coffre 8), manette (`Input` abstrait), mobile.
 
-**Comment tester** : `cd salle-zero && python3 -m http.server 8765`, ouvrir `http://localhost:8765/`, Mode Test, F1. Sources dans `dev/`, assemblage `node dev/build.js`.
+**Comment tester** : `python3 -m http.server 8765`, ouvrir `http://localhost:8765/`, Mode Test, F1. Sources dans `dev/`, assemblage `node dev/build.js`.
