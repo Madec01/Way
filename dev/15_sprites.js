@@ -31,6 +31,15 @@ const SPRITE_DEFS = {
   enemy_dasher2:   { idle: [432, 144, 16, 16], run: [432, 144, 16, 16], n: 4 },
   boss2:           { idle: [16, 320, 32, 32],  run: [144, 320, 32, 32], n: 4, foot: true },
   npc_ally:        { idle: [368, 80, 16, 16],  run: [432, 80, 16, 16],  n: 4 },
+  /* biome 3 (western) : wogol → coyote, lizard → bandit, big_zombie → bison, wizzard → croque-mort, big_demon → Marshal ; baril, scorpions et crotale = icônes rastérisées */
+  enemy_rusher3:   { idle: [368, 300, 16, 20], run: [432, 300, 16, 20], n: 4, tint: 'rgba(216,162,90,.55)' },
+  enemy_shooter3:  { idle: [128, 228, 16, 28], run: [192, 228, 16, 28], hit: [256, 228, 16, 28], n: 4, foot: true, tint: 'rgba(120,80,40,.45)' },
+  enemy_tank3:     { idle: [16, 270, 32, 34],  run: [144, 270, 32, 34], n: 4, foot: true, tint: 'rgba(110,70,30,.55)' },
+  enemy_kamikaze3: { prop: 'barrel', size: 34, roll: true },
+  enemy_summoner3: { idle: [128, 164, 16, 28], run: [192, 164, 16, 28], hit: [256, 164, 16, 28], n: 4, foot: true, tint: 'rgba(30,25,45,.55)' },
+  enemy_swarm3:    { prop: 'scorpion', size: 22 },
+  enemy_dasher3:   { prop: 'rattlesnake', size: 30 },
+  boss3:           { idle: [16, 364, 32, 36],  run: [144, 364, 32, 36], n: 4, foot: true, tint: 'rgba(224,176,96,.5)' },
 };
 const TILES = { floor: [[16, 64], [32, 64], [48, 64], [16, 80], [32, 80], [48, 80], [16, 96], [32, 96]], wallTop: [32, 0], wallFace: [32, 16], wallLeft: [0, 128], wallRight: [16, 128], cornerTL: [32, 112], cornerTR: [48, 112], cornerBL: [32, 144], cornerBR: [48, 144], column: [[80, 80], [80, 96], [80, 112]], banner: [32, 32], hole: [48, 32], goo: [64, 80] };
 
@@ -45,10 +54,50 @@ const Sprites = (() => {
       sheet.src = SHEET_URL;
     });
   }
+  /* ---- accessoires western : icônes SVG (game-icons.net, CC BY 3.0) rastérisées en 20 px puis agrandies sans lissage = pixel art ---- */
+  const PROP_DEFS = {
+    cactus: { color: '#4f9a4f', px: 22 }, rock: { color: '#8a7a66', px: 20 }, barrel: { color: '#8b5a2b', px: 18 }, 'wooden-crate': { color: '#a0744a', px: 18 },
+    'old-wagon': { color: '#6e4a2e', px: 26 }, 'mine-wagon': { color: '#5a5a5a', px: 22 }, windmill: { color: '#c9a27a', px: 26 }, 'rail-road': { color: '#6a5a4a', px: 20 },
+    'desert-skull': { color: '#e8e2cf', px: 16 }, 'animal-skull': { color: '#e8e2cf', px: 18 }, tumbleweed: { color: '#b39a5a', px: 18 }, 'saloon-doors': { color: '#a0744a', px: 22 },
+    'wanted-reward': { color: '#e0d2a8', px: 18 }, rattlesnake: { color: '#9a9a3a', px: 20 }, scorpion: { color: '#3a2a1a', px: 18 }, vulture: { color: '#3a3a3a', px: 20 },
+    bull: { color: '#4a2e1a', px: 26 }, dynamite: { color: '#c0392b', px: 16 }, 'cellar-barrels': { color: '#8b5a2b', px: 22 },
+  };
+  const props = {};
+  /* charge chaque SVG, remplace currentColor par la couleur du décor, rastérise en petit dans un canvas (pixel art) */
+  function loadProps() {
+    if (typeof fetch !== 'function') return;
+    for (const name of Object.keys(PROP_DEFS)) {
+      const pd = PROP_DEFS[name];
+      fetch(ASSET_BASE + 'sprites/western/' + name + '.svg').then(r => r.ok ? r.text() : null).then(txt => {
+        if (!txt) return; const svg = txt.replace(/currentColor/g, pd.color); const img = new Image();
+        img.onload = () => { const c = document.createElement('canvas'); c.width = pd.px; c.height = pd.px; const g = c.getContext('2d'); g.drawImage(img, 0, 0, pd.px, pd.px); props[name] = c; };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      }).catch(() => {});
+    }
+  }
+  /* dessine un accessoire rastérisé, centré, ajusté dans w×h (ratio conservé), sans lissage */
+  function drawProp(ctx, name, x, y, w, h, opts = {}) {
+    const c = props[name]; if (!c) return false;
+    const s = Math.min(w / c.width, h / c.height); const dw = c.width * s, dh = c.height * s;
+    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y); if (opts.flip) ctx.scale(-1, 1); if (opts.rot) ctx.rotate(opts.rot); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+    if (opts.flash || opts.tint) { const fx = flashCanvas(dw, dh); const g = fx.getContext('2d'); g.imageSmoothingEnabled = false; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, dw, dh); g.drawImage(c, 0, 0, dw, dh); g.globalCompositeOperation = 'source-atop'; g.fillStyle = opts.flash ? 'rgba(255,255,255,.8)' : opts.tint; g.fillRect(0, 0, dw, dh); ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2, dw, dh); }
+    else ctx.drawImage(c, -dw / 2, -dh / 2, dw, dh);
+    ctx.restore(); return true;
+  }
+  const DECO_KIND = { skull: 'desert-skull', tumbleweed: 'tumbleweed', rails: 'rail-road', wanted: 'wanted-reward', saloon: 'saloon-doors', windmill: 'windmill', barrels: 'cellar-barrels' };
+  /* décor au sol sans collision (salles du biome 3) */
+  function drawDeco(ctx, d) { const name = DECO_KIND[d.kind] || d.kind; const x = ROOM_X + (d.x + 0.5) * TILE, y = ROOM_Y + (d.y + 0.5) * TILE; ctx.save(); ctx.globalAlpha = 0.85; if (!drawProp(ctx, name, x, y, TILE * 0.9, TILE * 0.9)) { ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fillRect(x - 10, y - 10, 20, 20); } ctx.restore(); }
   /* dessine un sprite nommé centré en (x, y) ; opts : flip, walk (temps de marche, anim run si > 0), flash, scale, fallback() */
   function draw(ctx, key, x, y, opts = {}) {
     const d = SPRITE_DEFS[key];
+    if (d && d.prop) {   // ennemi « accessoire » (baril, scorpion, crotale) : image rastérisée, roulis ou balancement selon la marche
+      const s = (d.size || 32) * (opts.scale || 1); const moving = opts.walk != null && opts.walk > 0; const t = opts.walk != null ? opts.walk : Time.now;
+      const rot = d.roll ? t * 7 : (moving ? Math.sin(t * 14) * 0.12 : Math.sin(t * 3) * 0.04);
+      if (drawProp(ctx, d.prop, x, y - (moving && !d.roll ? Math.abs(Math.sin(t * 14)) * 3 : 0), s, s, { flip: opts.flip, rot, flash: opts.flash, tint: opts.tint, alpha: opts.alpha })) return true;
+      if (opts.fallback) opts.fallback(); return false;
+    }
     if (!ready || !d) { if (opts.fallback) opts.fallback(); return false; }   // TODO_SPRITE : fallback Canvas
+    if (!opts.tint && d.tint) opts = Object.assign({}, opts, { tint: d.tint });   // teinte propre au sprite (variantes de biome)
     const moving = opts.walk != null && opts.walk > 0 && (opts.walkFrame == null); const set = opts.flash && d.hit ? d.hit : (moving ? d.run : d.idle);
     const frame = opts.flash && d.hit ? 0 : Math.floor(((opts.walk != null ? opts.walk : Time.now) * (moving ? 10 : 6)) % d.n);
     const [sx, sy, sw, sh] = set; const s = SCALE * (opts.scale || 1); const dw = sw * s, dh = sh * s;
@@ -105,7 +154,18 @@ const Sprites = (() => {
     }
     ctx.drawImage(c, 0, 0);
   }
+  const BLOCK_KIND = { cactus: 'cactus', rock: 'rock', barrel: 'barrel', crate: 'wooden-crate', wagon: 'old-wagon', cart: 'mine-wagon', barrels: 'cellar-barrels', skull: 'animal-skull', windmill: 'windmill' };
   function drawBlock(ctx, o) {
+    if (o.kind && BLOCK_KIND[o.kind] && props[BLOCK_KIND[o.kind]]) {
+      /* accessoire western : ombre, halo sombre pour la lisibilité, image ajustée à l'emprise (déborde un peu vers le haut) */
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.ellipse(o.px + o.pw / 2, o.py + o.ph - 4, o.pw * 0.5, Math.min(14, o.ph * 0.28), 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(o.px + 2, o.py + 2, o.pw - 4, o.ph - 4);
+      ctx.strokeStyle = 'rgba(255,209,102,.35)'; ctx.lineWidth = 1.5; ctx.strokeRect(o.px + 1.5, o.py + 1.5, o.pw - 3, o.ph - 3);
+      const over = o.kind === 'cactus' ? 14 : 8;
+      drawProp(ctx, BLOCK_KIND[o.kind], o.px + o.pw / 2, o.py + o.ph / 2 - over / 2, o.pw + 6, o.ph + over);
+      ctx.restore(); return;
+    }
     ctx.save();
     /* ombre portée au sol */
     ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(o.px + 6, o.py + 8, o.pw, o.ph);
@@ -185,7 +245,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

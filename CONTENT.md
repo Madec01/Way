@@ -528,3 +528,35 @@ Tenue par le bot (autoplay, 4 armes, difficulté 1) : les 4 bots atteignent la s
 | Musique | boss1.mp3 : 129 BPM en ré majeur, même tempo que le biome ; sans piste, métronome interne 120 BPM. Désactivable pour les tests : `G.debug.noRhythm = true` avant le spawn (ancien séquenceur à recharges en secondes). |
 
 Tenue par le bot (balayage 4 armes, difficulté 1) inchangée : pistolet, chaîne et boomerang atteignent la salle 9 (le boomerang gagne), l'arc meurt en 5.
+
+---
+
+## 21. Biome 3 — LA CONCESSION (niveau 3, western)
+
+Mine abandonnée en plein désert. Difficulté ×1,55 PV, ×1,35 dégâts, ×1,12 vitesse. Débloqué après la salle 9 de LA SERRE. Musiques : `biome3-1.mp3`, `biome3-2.mp3`, `boss3.mp3`.
+
+| Ennemi | Archétype | Sprite | Particularité |
+|---|---|---|---|
+| Coyote | rusher | wogol teinté sable | Ruée courte et rapide, recharge 1,1 s |
+| Bandit | shooter | lizard teinté | Salve de 2 balles rapides, garde ses distances |
+| Bison | tank | big_zombie teinté | Charge de 380 px, ×1,6 dégâts, sonné 1 s contre un mur |
+| Baril de poudre | kamikaze | icône barrel (roule) | Explose au contact et à la mort, rayon 105 |
+| Croque-mort | summoner | wizzard teinté | Lâche des scorpions par 3, jusqu'à 6 |
+| Scorpions | swarm | icône scorpion | Nuée de 5, piqûre rapide |
+| Crotale | dasher | icône rattlesnake | Sonne 0,45 s puis fond, pause 0,6 s |
+
+| Piège | Kind | Note |
+|---|---|---|
+| Moulin | laser_rotate | 3 pales de bois, 5 tuiles, pause 1 s / 6 s |
+| Wagonnet fou | saw_rail | 8 tuiles de rails, 6 tuiles/s |
+| Tireur embusqué | turret_fixed | 1 balle / 2,2 s |
+| Nuage de poudre | gas_zone | 10 dégâts/s, −30 % vitesse |
+| Pièges à ours | spike_tiles | damier 0,8 s |
+| Dynamite | wall_fireball | 1 bâton / 2,5 s |
+| Barbelés | laser_grid | fils tous les 4 tuiles |
+
+**Boss : Étalon 19, dit « le Marshal »** (3000 PV, big_demon teinté sable). Phase 1 : barillet (éventail de 6), tacle, dynamite (onde), meute de coyotes. Sous 55 % : tir en rond, lasso (balayage), tacle, barillet de 8, barils de poudre. Faiblesse `during_reload` : ×1,8 pendant 1 s après chaque attaque. Revanche : PV ×1,35, recharge 0,7 s, phase 3 sous 30 % (mitraille en spirale, anneau tournant, tacle à 900).
+
+**Salles** : mêmes types que les autres biomes. Obstacles avec `kind` (cactus, rock, barrel, crate, wagon, cart, barrels, skull, windmill) dessinés par `Sprites.drawBlock` à partir des icônes ; décor au sol sans collision via `deco: [{ x, y, kind }]` (skull, tumbleweed, rails, wanted, saloon, windmill, barrels). Salle 7 (tempo) : pièges à ours sur le 1 et le 3, dynamite en éventail toutes les 2 mesures, nuages de poudre alternés, tireurs embusqués alternés.
+
+**Accessoires** : `assets/sprites/western/*.svg`, icônes game-icons.net (CC BY 3.0, voir CREDITS.md) rastérisées en 16 à 26 px puis agrandies sans lissage (`Sprites.loadProps` / `drawProp`).

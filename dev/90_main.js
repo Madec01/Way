@@ -42,7 +42,7 @@ async function boot() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
   UI.init(); Debug.init(); Touch.init();
   Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));
-  await Sprites.load(); Beat.load();
+  await Sprites.load(); Sprites.loadProps(); Beat.load();
   UI.showMenu();
   Engine.start(update, render);
   Attract.start();

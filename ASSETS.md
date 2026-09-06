@@ -227,3 +227,8 @@ Musique : "Basement Floor", "Latin Industries", "In a Heartbeat", "Ouroboros" Ke
           Licensed under Creative Commons: By Attribution 4.0 License http://creativecommons.org/licenses/by/4.0/
 Polices : Silkscreen, VT323, Pixelify Sans (SIL Open Font License 1.1)
 ```
+
+### 1.8 Accessoires western — `assets/sprites/western/` (124 Ko, 30 SVG)
+- Source : **game-icons.net** via le paquet npm `@iconify-json/game-icons@1.2.4` (corps SVG, viewBox 512). Auteurs : Lorc, Delapouite, Skoll et contributeurs — Licence : **CC BY 3.0** (attribution dans `CREDITS.md`).
+- Fichiers : cactus, cactus-pot, tumbleweed, barrel, wooden-crate, cargo-crate, old-wagon, mine-wagon, coal-wagon, windmill, dynamite, rail-road, railway, desert-skull, animal-skull, rock, saloon-doors, wanted-reward, land-mine, rattlesnake, scorpion, vulture, bull, horse-head, revolver, lasso, cowboy-boot, cellar-barrels, gold-mine, desert.
+- Usage : `Sprites.loadProps()` remplace `currentColor` par la couleur du décor (`PROP_DEFS`), rastérise chaque icône dans un canvas de 16 à 26 px et l'agrandit sans lissage → rendu pixel art. Obstacles `kind` (biome 3), décor `deco`, et sprites des ennemis baril / scorpions / crotale.

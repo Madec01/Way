@@ -23,7 +23,7 @@ const Room = {
   create(def) {
     const r = {
       def, index: def.index, type: def.type, state: 'intro', time: 0, stateT: 0, refTime: def.refTime || 45,
-      obstacles: (def.obstacles || []).map(o => ({ x: o.x, y: o.y, w: o.w, h: o.h, px: ROOM_X + o.x * TILE, py: ROOM_Y + o.y * TILE, pw: o.w * TILE, ph: o.h * TILE })),
+      obstacles: (def.obstacles || []).map(o => ({ x: o.x, y: o.y, w: o.w, h: o.h, kind: o.kind, px: ROOM_X + o.x * TILE, py: ROOM_Y + o.y * TILE, pw: o.w * TILE, ph: o.h * TILE })), deco: def.deco || [],
       colliders: [], lastDamageT: 0, traps: [], waves: (def.waves || []).map(w => Object.assign({ done: false }, w)), waveIdx: 0,
       fragmentsDef: (def.fragments || []).slice(), fragmentsSpawned: 0, fragments: 0,
       hits: 0, kills: 0, combo: 0, comboUntil: 0, bestCombo: 0, comboTarget: 8, died: false,
@@ -160,6 +160,7 @@ const Room = {
   render(ctx) {
     const r = G.room; if (!r) return;
     Sprites.drawFloor(ctx, r);
+    for (const d of r.deco) Sprites.drawDeco(ctx, d);
     /* obstacles */
     if (r.challenge) Challenge.renderFloor(ctx, r);
     if (r.tempo) Tempo.renderFloor(ctx, r);
