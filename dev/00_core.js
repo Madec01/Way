@@ -89,7 +89,7 @@ const Camera = {
   x: W / 2, y: H / 2, zoom: 1,
   snap(x, y) { this.x = x; this.y = y; this.clamp(); },
   follow(x, y, dt) { const k = Math.min(1, 6 * dt); this.x = lerp(this.x, x, k); this.y = lerp(this.y, y, k); this.clamp(); },
-  clamp() { const hw = W / (2 * this.zoom), hh = H / (2 * this.zoom); this.x = clamp(this.x, hw, W - hw); this.y = clamp(this.y, hh, H - hh); },
+  clamp() { const v = Engine.view; const hw = v.w / (2 * this.zoom), hh = v.h / (2 * this.zoom); this.x = hw >= W / 2 ? W / 2 : clamp(this.x, hw, W - hw); this.y = hh >= H / 2 ? H / 2 : clamp(this.y, hh, H - hh); },
   apply(ctx) { ctx.translate(W / 2, H / 2); ctx.scale(this.zoom, this.zoom); ctx.translate(-this.x, -this.y); },
   toWorld(sx, sy) { return { x: this.x + (sx - W / 2) / this.zoom, y: this.y + (sy - H / 2) / this.zoom }; },
   setZoom(z) { this.zoom = clamp(z || 1, 1, 2.5); this.clamp(); },
@@ -132,7 +132,7 @@ const Input = (() => {
     });
     window.addEventListener('keyup', e => keys.delete(e.code));
     window.addEventListener('blur', () => { keys.clear(); mouse.down = false; mouse.right = false; });
-    const toLogical = e => { const r = canvas.getBoundingClientRect(); mouse.x = clamp((e.clientX - r.left) / scale, 0, W); mouse.y = clamp((e.clientY - r.top) / scale, 0, H); mouse.moved = Time.now; };
+    const toLogical = e => { const r = canvas.getBoundingClientRect(); mouse.x = clamp((e.clientX - r.left) / scale - offX, -offX, W + offX); mouse.y = clamp((e.clientY - r.top) / scale - offY, -offY, H + offY); mouse.moved = Time.now; };
     canvas.addEventListener('mousemove', e => { if (!touch.active) toLogical(e); });
     canvas.addEventListener('mousedown', e => { firstInt(); if (touch.active) return; toLogical(e); if (e.button === 0) mouse.down = true; if (e.button === 2) { mouse.right = true; pressed.add('Mouse2'); } });
     window.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; if (e.button === 2) mouse.right = false; });
@@ -166,19 +166,21 @@ const Engine = (() => {
     ctx.imageSmoothingEnabled = false;
     resize(); window.addEventListener('resize', resize);
   }
+  /* Le canvas couvre toute la fenêtre. La salle (1280×720 logiques) reste entièrement visible et centrée ;
+     la fenêtre plus large ou plus haute montre du décor autour (vue logique étendue : view.w × view.h, décalage view.ox/oy). */
+  const view = { w: W, h: H, ox: 0, oy: 0, scale: 1 };
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const s = Math.min(window.innerWidth / W, window.innerHeight / H);
-    const cw = Math.floor(W * s), ch = Math.floor(H * s);
-    canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px';
-    canvas.style.left = Math.floor((window.innerWidth - cw) / 2) + 'px';
-    canvas.style.top = Math.floor((window.innerHeight - ch) / 2) + 'px';
-    canvas.width = Math.floor(W * dpr * s); canvas.height = Math.floor(H * dpr * s);
-    ctx.setTransform(dpr * s, 0, 0, dpr * s, 0, 0);
+    const ww = window.innerWidth, wh = window.innerHeight;
+    const s = Math.min(ww / W, wh / H);
+    view.scale = s; view.w = ww / s; view.h = wh / s; view.ox = (view.w - W) / 2; view.oy = (view.h - H) / 2;
+    canvas.style.width = ww + 'px'; canvas.style.height = wh + 'px'; canvas.style.left = '0px'; canvas.style.top = '0px';
+    canvas.width = Math.floor(ww * dpr); canvas.height = Math.floor(wh * dpr);
+    ctx.setTransform(dpr * s, 0, 0, dpr * s, view.ox * dpr * s, view.oy * dpr * s);
     ctx.imageSmoothingEnabled = false;
-    Input.setScale(s, 0, 0);
+    Input.setScale(s, view.ox, view.oy);
     document.documentElement.style.setProperty('--ui-scale', s.toFixed(3));
-    for (const id of ['ui', 'touch']) { const el = document.getElementById(id); if (el) { el.style.width = cw + 'px'; el.style.height = ch + 'px'; el.style.left = canvas.style.left; el.style.top = canvas.style.top; } }
+    for (const id of ['ui', 'touch']) { const el = document.getElementById(id); if (el) { el.style.width = ww + 'px'; el.style.height = wh + 'px'; el.style.left = '0px'; el.style.top = '0px'; } }
   }
   function loop(t) {
     rafId = requestAnimationFrame(loop);
@@ -201,5 +203,5 @@ const Engine = (() => {
   function start(u, r) { updateFn = u; renderFn = r; if (!running) { running = true; last = 0; rafId = requestAnimationFrame(loop); } }
   function stop() { running = false; cancelAnimationFrame(rafId); }
   function setHeadless(h) { headless = h; maxStepsPerFrame = h ? 400 : 8; }
-  return { init, start, stop, stats, get ctx() { return ctx; }, get canvas() { return canvas; }, setHeadless };
+  return { init, start, stop, stats, view, get ctx() { return ctx; }, get canvas() { return canvas; }, setHeadless };
 })();

@@ -24,17 +24,17 @@ const Touch = (() => {
     stick = document.getElementById('t-stick'); knob = document.getElementById('t-knob');
     const zone = document.getElementById('t-zone');
     const T = Input.touch;
-    const toLogical = e => { const r = layer.getBoundingClientRect(); const s = r.width / W; return { x: (e.clientX - r.left) / s, y: (e.clientY - r.top) / s }; };
+    const toLogical = e => { const r = layer.getBoundingClientRect(); const s = Engine.view.scale; return { x: (e.clientX - r.left) / s, y: (e.clientY - r.top) / s }; };   // px logiques de la couche (origine = coin de la fenêtre)
     zone.addEventListener('pointerdown', e => {
       if (stickId != null) return; e.preventDefault(); zone.setPointerCapture(e.pointerId); stickId = e.pointerId;
-      origin = toLogical(e); stick.hidden = false; stick.style.left = origin.x + 'px'; stick.style.top = origin.y + 'px'; knob.style.transform = 'translate(-50%,-50%)'; T.move.x = 0; T.move.y = 0;
+      origin = toLogical(e); const sc = Engine.view.scale; stick.hidden = false; stick.style.left = (origin.x * sc) + 'px'; stick.style.top = (origin.y * sc) + 'px'; knob.style.transform = 'translate(-50%,-50%)'; T.move.x = 0; T.move.y = 0;
     });
     zone.addEventListener('pointermove', e => {
       if (e.pointerId !== stickId) return; e.preventDefault(); const p = toLogical(e); let dx = p.x - origin.x, dy = p.y - origin.y; const d = Math.hypot(dx, dy);
       if (d > R) { dx *= R / d; dy *= R / d; }
       const dead = 10; const k = d < dead ? 0 : Math.min(1, (d - dead) / (R - dead)); const a = Math.atan2(dy, dx);
       T.move.x = k ? Math.cos(a) * k : 0; T.move.y = k ? Math.sin(a) * k : 0;
-      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      const sc = Engine.view.scale; knob.style.transform = `translate(calc(-50% + ${dx * sc}px), calc(-50% + ${dy * sc}px))`;
     });
     const release = e => { if (e.pointerId !== stickId) return; stickId = null; stick.hidden = true; T.move.x = 0; T.move.y = 0; };
     zone.addEventListener('pointerup', release); zone.addEventListener('pointercancel', release); zone.addEventListener('lostpointercapture', release);

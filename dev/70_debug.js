@@ -50,7 +50,7 @@ const Debug = (() => {
   function hide() { open = false; if (panel) panel.hidden = true; G.debug.open = false; }
   function gotoRoom(n) {
     const wantBiome = (panel && $('#d-biome') && $('#d-biome').value) || Content.biomes()[0].id;
-    if (!G.run || G.run.biome.id !== wantBiome) { Meta.setMode('test'); UI.hideAll(); Run.start({ character: Meta.profile.character, biome: wantBiome, weapon: Content.weapons()[0].id, skill: Content.skills()[0].id }); }
+    if (!G.run || G.run.attract || G.run.biome.id !== wantBiome) { Meta.setMode('test'); UI.hideAll(); Run.start({ character: Meta.profile.character, biome: wantBiome, weapon: Content.weapons()[0].id, skill: Content.skills()[0].id }); }
     if (!G.player.weapon) Run.equip(Content.weapons()[0].id, Content.skills()[0].id);
     UI.hideAll(); G.paused = false; if (Room.load(n)) Room.begin();
   }

@@ -5,7 +5,7 @@
    ========================================================================= */
 
 const Attract = (() => {
-  let running = false, spawnT = 0, weaponT = 0, savedVol = null, savedInvuln = false, wIdx = 0;
+  let running = false, spawnT = 0, weaponT = 0, savedVol = null, savedInvuln = false, wIdx = 0; const muted = {};
   const WEAPONS = ['weapon_pistol', 'weapon_chain', 'weapon_boomerang', 'weapon_flame', 'weapon_bow', 'weapon_blade', 'weapon_orb', 'weapon_hammer'];
   const SHOW_UPGRADES = ['upg_balles_incendiaires', 'upg_balles_electriques', 'upg_satellite', 'upg_detonation', 'upg_tir_guide'];
   function pool() { const out = []; for (const b of Content.biomes()) for (const id of b.enemyPool) out.push(id); return out; }
@@ -28,7 +28,9 @@ const Attract = (() => {
     G.player.recompute();
     G.player.bot = Debug.botControl;
     savedInvuln = G.debug.invuln; G.debug.invuln = true;
-    savedVol = Object.assign({}, Meta.profile.volume); AudioEngine.setVolume(Object.assign({}, savedVol, { sfx: savedVol.sfx * 0.35 }));
+    /* bruitages de combat coupés pendant l'attraction : on remplace les fonctions de son hors interface par des no-op */
+    for (const name of (AudioEngine.list ? AudioEngine.list() : [])) { if (/^ui/.test(name) || typeof AudioEngine[name] !== 'function') continue; muted[name] = AudioEngine[name]; AudioEngine[name] = () => {}; }
+    if (AudioEngine.startFlame && !muted.startFlame) { muted.startFlame = AudioEngine.startFlame; AudioEngine.startFlame = () => {}; }
     spawnT = 0.5; weaponT = 18;
   }
   function equip() { const w = Content.weapon(WEAPONS[wIdx % WEAPONS.length]); const sk = Content.skills()[Math.floor(VFX_RNG() * Content.skills().length)]; G.player.weapon = w; G.player.skill = sk; G.player.skillCharges = 1; G.player.orbs = null; G.player.recompute(); }
@@ -48,7 +50,7 @@ const Attract = (() => {
   }
   function stop() {
     if (!running) return; running = false; G.attract = false;
-    G.debug.invuln = savedInvuln; if (savedVol) AudioEngine.setVolume(savedVol);
+    G.debug.invuln = savedInvuln; for (const k in muted) AudioEngine[k] = muted[k]; for (const k in muted) delete muted[k];
     G.run = null; G.player = null; G.enemies = []; G.room = null; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
     Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));
   }

@@ -72,6 +72,7 @@ const Sprites = (() => {
       c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       const rng = makeRng(room.floorSeed);
       g.fillStyle = '#07080d'; g.fillRect(0, 0, W, H);
+      /* décor des bandes hors salle (fenêtres larges) : dessiné à la volée dans drawFloor, voir plus bas */
       for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
         const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE;
         if (!tile(g, rng.chance(0.9) ? TILES.floor[0] : rng.pick(TILES.floor), x, y)) { g.fillStyle = (tx + ty) % 2 ? '#141826' : '#161b2b'; g.fillRect(x, y, TILE, TILE); }
@@ -89,6 +90,17 @@ const Sprites = (() => {
       for (let i = 0; i < 5; i++) { const x = ROOM_X + (i + 0.5) * ROOM_W / 5; g.fillStyle = i % 2 ? pal.neon[0] : pal.neon[1]; g.shadowColor = g.fillStyle; g.shadowBlur = 16; g.fillRect(x - 30, ROOM_Y - 8, 60, 3); g.shadowBlur = 0; }
       g.strokeStyle = 'rgba(110,231,255,.35)'; g.lineWidth = 2; g.strokeRect(ROOM_X - 1, ROOM_Y - 1, ROOM_W + 2, ROOM_H + 2);
       floorCache.set(cacheKey, c); if (floorCache.size > 12) floorCache.delete(floorCache.keys().next().value);
+    }
+    /* bandes hors 1280×720 : murs sombres répétés, pour les fenêtres plus larges ou plus hautes que 16:9 */
+    const V = Engine.view;
+    if (V.ox > 0 || V.oy > 0) {
+      ctx.save(); ctx.fillStyle = '#05060a'; ctx.fillRect(-V.ox, -V.oy, V.w, V.h);
+      ctx.globalAlpha = 0.55;
+      const band = (x0, y0, w, h) => { for (let y = Math.floor(y0 / TILE) * TILE; y < y0 + h; y += TILE) for (let x = Math.floor(x0 / TILE) * TILE; x < x0 + w; x += TILE) { if (!tile(ctx, TILES.wallFace, x, y)) { ctx.fillStyle = '#12162a'; ctx.fillRect(x, y, TILE, TILE); } } };
+      if (V.ox > 0) { band(-V.ox, -V.oy, V.ox, V.h); band(W, -V.oy, V.ox, V.h); }
+      if (V.oy > 0) { band(-V.ox, -V.oy, V.w, V.oy); band(-V.ox, H, V.w, V.oy); }
+      ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(4,5,9,.55)'; if (V.ox > 0) { ctx.fillRect(-V.ox, -V.oy, V.ox, V.h); ctx.fillRect(W, -V.oy, V.ox, V.h); } if (V.oy > 0) { ctx.fillRect(-V.ox, -V.oy, V.w, V.oy); ctx.fillRect(-V.ox, H, V.w, V.oy); }
+      ctx.restore();
     }
     ctx.drawImage(c, 0, 0);
   }

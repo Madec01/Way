@@ -335,20 +335,20 @@ const UI = (() => {
     ctx.restore();
   }
   function renderAttractVeil(ctx) {
-    ctx.save();
-    const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(4,5,9,.86)'); g.addColorStop(0.5, 'rgba(4,5,9,.55)'); g.addColorStop(1, 'rgba(4,5,9,.35)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    const v = ctx.createLinearGradient(0, 0, 0, H); v.addColorStop(0, 'rgba(4,5,9,.7)'); v.addColorStop(0.25, 'rgba(4,5,9,0)'); v.addColorStop(0.8, 'rgba(4,5,9,0)'); v.addColorStop(1, 'rgba(4,5,9,.8)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    ctx.save(); const V = Engine.view; const x0 = -V.ox, y0 = -V.oy, vw = V.w, vh = V.h;
+    const g = ctx.createLinearGradient(x0, 0, x0 + vw, 0); g.addColorStop(0, 'rgba(4,5,9,.86)'); g.addColorStop(0.5, 'rgba(4,5,9,.5)'); g.addColorStop(1, 'rgba(4,5,9,.3)'); ctx.fillStyle = g; ctx.fillRect(x0, y0, vw, vh);
+    const v = ctx.createLinearGradient(0, y0, 0, y0 + vh); v.addColorStop(0, 'rgba(4,5,9,.7)'); v.addColorStop(0.25, 'rgba(4,5,9,0)'); v.addColorStop(0.8, 'rgba(4,5,9,0)'); v.addColorStop(1, 'rgba(4,5,9,.85)'); ctx.fillStyle = v; ctx.fillRect(x0, y0, vw, vh);
     /* lignes de balayage */
-    ctx.globalAlpha = 0.06; ctx.fillStyle = '#6ee7ff'; for (let y = (Time.now * 40) % 6; y < H; y += 6) ctx.fillRect(0, y, W, 1);
+    ctx.globalAlpha = 0.06; ctx.fillStyle = '#6ee7ff'; for (let y = y0 + (Time.now * 40) % 6; y < y0 + vh; y += 6) ctx.fillRect(x0, y, vw, 1);
     ctx.restore();
   }
-  function renderFade(ctx) { if (fade.t > 0) { ctx.fillStyle = `rgba(4,5,9,${fade.t})`; ctx.fillRect(0, 0, W, H); } }
+  function renderFade(ctx) { if (fade.t > 0) { const V = Engine.view; ctx.fillStyle = `rgba(4,5,9,${fade.t})`; ctx.fillRect(-V.ox, -V.oy, V.w, V.h); } }
   function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
   /* fond animé pour menu/hub */
   function renderBackdrop(ctx) {
-    ctx.fillStyle = '#07080d'; ctx.fillRect(0, 0, W, H);
+    const V = Engine.view; ctx.fillStyle = '#07080d'; ctx.fillRect(-V.ox, -V.oy, V.w, V.h);
     ctx.save(); ctx.globalAlpha = 0.5; for (let i = 0; i < 14; i++) { const t = Time.now * 0.05 + i * 0.37; const x = ((i * 137.5) % W + Math.sin(t) * 40 + W) % W, y = ((i * 91.7) % H + Math.cos(t * 1.3) * 30 + H) % H; const g = ctx.createRadialGradient(x, y, 0, x, y, 160); g.addColorStop(0, i % 3 ? 'rgba(110,231,255,.10)' : 'rgba(255,154,60,.08)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 160, y - 160, 320, 320); } ctx.restore();
-    ctx.strokeStyle = 'rgba(110,231,255,.05)'; ctx.lineWidth = 1; for (let x = 0; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y < H; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(110,231,255,.05)'; ctx.lineWidth = 1; for (let x = -V.ox + ((V.ox) % 48); x < W + V.ox; x += 48) { ctx.beginPath(); ctx.moveTo(x, -V.oy); ctx.lineTo(x, H + V.oy); ctx.stroke(); } for (let y = -V.oy + (V.oy % 48); y < H + V.oy; y += 48) { ctx.beginPath(); ctx.moveTo(-V.ox, y); ctx.lineTo(W + V.ox, y); ctx.stroke(); }
   }
   return { init, show, hideAll, showMenu, showHub, renderAttractVeil, showPrep, showChoice, hideChoice, togglePause, showEnd, showCredits, banner, toast, transition, update, renderHud, renderToasts, renderFade, renderBackdrop, state, esc, roundRect };
 })();
