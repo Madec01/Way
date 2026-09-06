@@ -16,7 +16,7 @@ CONTENT.biomes.push({
   enemyPool: ['enemy_coyote', 'enemy_bandit', 'enemy_bison', 'enemy_baril', 'enemy_croquemort', 'enemy_scorpions', 'enemy_crotale'],
   trapPool: ['trap_moulin', 'trap_wagonnet', 'trap_embuscade', 'trap_poudre', 'trap_ours', 'trap_dynamite', 'trap_barbeles'],
   miniboss: 'boss_marshal',
-  difficulty: { hpMul: 1.55, damageMul: 1.35, speedMul: 1.12 },
+  difficulty: { hpMul: 1.45, damageMul: 1.28, speedMul: 1.1 },
   unlockAfter: 'biome_2',
 });
 
@@ -109,7 +109,7 @@ CONTENT.rooms.push(
       { at: 'start', spawns: [ { enemy: 'enemy_coyote', count: 4, x: 20, y: 6 }, { enemy: 'enemy_bandit', count: 2, x: 21, y: 2 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_bison', count: 1, x: 21, y: 6 }, { enemy: 'enemy_coyote', count: 3, x: -1, y: -1 }, { enemy: 'enemy_baril', count: 2, x: 2, y: 11 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_baril', count: 3, x: 2, y: 1 }, { enemy: 'enemy_bandit', count: 3, x: 21, y: 10 }, { enemy: 'enemy_scorpions', count: 1, x: 21, y: 2 } ] },
-      { at: 'clear', spawns: [ { enemy: 'enemy_crotale', count: 2, x: 21, y: 6 }, { enemy: 'enemy_coyote', count: 3, x: -1, y: -1 }, { enemy: 'enemy_bison', count: 1, x: 12, y: 11, elite: true } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_crotale', count: 2, x: 21, y: 6 }, { enemy: 'enemy_coyote', count: 2, x: -1, y: -1 }, { enemy: 'enemy_bison', count: 1, x: 12, y: 11 } ] },
     ],
     traps: [
       { trap: 'trap_moulin', x: 11, y: 6, phase: 0 },

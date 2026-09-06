@@ -31,6 +31,22 @@
   "duration": 183.3,
   "stable": true
  },
+ "biome3-1.mp3": {
+  "bpm": 112.35,
+  "offset": 0.407,
+  "key": "D",
+  "mode": "minor",
+  "duration": 154.7,
+  "stable": true
+ },
+ "biome3-2.mp3": {
+  "bpm": 107.67,
+  "offset": 0.382,
+  "key": "D",
+  "mode": "minor",
+  "duration": 177.7,
+  "stable": true
+ },
  "boss1.mp3": {
   "bpm": 129.2,
   "offset": 0.403,
@@ -45,6 +61,14 @@
   "key": "D",
   "mode": "major",
   "duration": 182.8,
+  "stable": true
+ },
+ "boss3.mp3": {
+  "bpm": 107.67,
+  "offset": 0.471,
+  "key": "D",
+  "mode": "minor",
+  "duration": 192.7,
   "stable": true
  },
  "menu.mp3": {
