@@ -166,7 +166,7 @@ class Enemy {
     if (this.elite) { ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.x, this.y, this.r + 3, 0, TAU); ctx.stroke(); }
     const flash = this.flash > 0;
     const tint = this.status && this.status.burn ? 'rgba(255,110,30,.45)' : this.status && this.status.poison ? 'rgba(120,255,90,.4)' : this.enraged ? 'rgba(255,40,40,.35)' : null;
-    Sprites.draw(ctx, this.def.sprite || (this.isBoss ? 'boss' : 'enemy_' + this.archetype), this.x, this.y, { flip: this.facing < 0, walk: this.anim, flash, tint, scale: this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5), fallback: () => {
+    Sprites.draw(ctx, this.def.sprite || (this.isBoss ? 'boss' : 'enemy_' + this.archetype), this.x, this.y, { flip: this.facing < 0, walk: this.anim, flash, tint, scale: (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (this.beatLock ? 1 + 0.12 * Math.max(0, 1 - Beat.phase() * 3) : 1), fallback: () => {
       ctx.fillStyle = flash ? '#fff' : this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 10; ctx.beginPath();
       switch (this.archetype) {
         case 'tank': ctx.rect(this.x - this.r, this.y - this.r, this.r * 2, this.r * 2); break;

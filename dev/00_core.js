@@ -88,11 +88,11 @@ const STR = {
 
 /* ---------- Caméra (zoom + suivi du joueur ; le HUD n'est pas affecté) ---------- */
 const Camera = {
-  x: W / 2, y: H / 2, zoom: 1,
+  x: W / 2, y: H / 2, zoom: 1, pulse: 0,   // pulse : impulsion de zoom (salle du tempo), remise à 0 à chaque salle
   snap(x, y) { this.x = x; this.y = y; this.clamp(); },
   follow(x, y, dt) { const k = Math.min(1, 6 * dt); this.x = lerp(this.x, x, k); this.y = lerp(this.y, y, k); this.clamp(); },
   clamp() { const v = Engine.view; const hw = v.w / (2 * this.zoom), hh = v.h / (2 * this.zoom); this.x = hw >= W / 2 ? W / 2 : clamp(this.x, hw, W - hw); this.y = hh >= H / 2 ? H / 2 : clamp(this.y, hh, H - hh); },
-  apply(ctx) { ctx.translate(W / 2, H / 2); ctx.scale(this.zoom, this.zoom); ctx.translate(-this.x, -this.y); },
+  apply(ctx) { const z = this.zoom * (1 + (this.pulse || 0)); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-this.x, -this.y); },
   toWorld(sx, sy) { return { x: this.x + (sx - W / 2) / this.zoom, y: this.y + (sy - H / 2) / this.zoom }; },
   setZoom(z) { this.zoom = clamp(z || 1, 1, 2.5); this.clamp(); },
 };

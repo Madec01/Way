@@ -53,7 +53,9 @@ const Tempo = {
   /* appelé chaque pas de simulation (Room.update) */
   update(room, dt) {
     const tp = room.tempo; const crossed = Beat.crossedFrame(1); const down = crossed && Beat.beatInBar() === 0;
-    if (crossed) { tp.pulses.push({ t: 0 }); if (tp.pulses.length > 6) tp.pulses.shift(); }
+    if (crossed) { tp.pulses.push({ t: 0, down: Beat.beatInBar() === 0 }); if (tp.pulses.length > 6) tp.pulses.shift(); }
+    const kd = Beat.beatInBar() === 0 ? Math.max(0, 1 - Beat.phase() * 2.5) : 0; Camera.pulse = tp.started ? 0.012 * kd : 0;
+    if (down && tp.started) { for (const o of room.obstacles) { if (o.dyn) continue; Particles.spawn(o.x + o.w / 2, o.y + 4, { count: 5, color: Tempo.COLOR, glow: true, speedMin: 40, speedMax: 120, life: 0.5, size: 2 }); } }
     for (let i = tp.pulses.length - 1; i >= 0; i--) { tp.pulses[i].t += dt; if (tp.pulses[i].t > 1.2) tp.pulses.splice(i, 1); }
     for (let i = tp.flashes.length - 1; i >= 0; i--) { tp.flashes[i].t += dt; if (tp.flashes[i].t > 0.35) tp.flashes.splice(i, 1); }
     tp.countT += dt; tp.goT += dt;
@@ -88,22 +90,42 @@ const Tempo = {
     tp.lastIdx = idx; tp.combo++; tp.best = Math.max(tp.best, tp.combo); tp.onBeat++; tp.lastAction = Beat.t;
     const mul = 1.25 + Math.min(0.25, tp.combo * 0.025); tp.lastMul = mul;
     Floaters.add(pl.x, pl.y - pl.r - 26, 'TEMPO ×' + tp.combo, Tempo.COLOR, 15);
+    if (tp.combo === 5 || tp.combo === 10 || tp.combo === 20 || tp.combo === 30 || tp.combo === 50) { Particles.spawn(pl.x, pl.y, { count: 28, color: tp.combo >= 20 ? '#fff' : Tempo.COLOR, glow: true, speedMin: 120, speedMax: 320, life: 0.7, size: 3 }); UI.banner('SÉRIE ×' + tp.combo, Tempo.COLOR); AudioEngine.tempoTick({ intensity: 1 }); }
     AudioEngine.tempoNote({ intensity: 0.75, hz: Beat.noteHz(tp.combo - 1) });
     tp.flashes.push({ t: 0 });
     return mul;
   },
   /* sol : flash sur chaque temps + ondes qui partent du centre */
   renderFloor(ctx, room) {
-    const tp = room.tempo; const ph = Beat.phase(); ctx.save();
+    const tp = room.tempo; const ph = Beat.phase(); const idx = Beat.index(); ctx.save();
     ctx.beginPath(); ctx.rect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H); ctx.clip();
-    ctx.globalAlpha = 0.07 * Math.max(0, 1 - ph * 2.5); ctx.fillStyle = Tempo.COLOR; ctx.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
-    ctx.strokeStyle = Tempo.COLOR; ctx.lineWidth = 3;
-    for (const p of tp.pulses) { const k = p.t / 1.2; ctx.globalAlpha = 0.22 * (1 - k); ctx.beginPath(); ctx.arc(ROOM_X + ROOM_W / 2, ROOM_Y + ROOM_H / 2, 20 + k * 720, 0, TAU); ctx.stroke(); }
+    ctx.globalAlpha = 0.06 * Math.max(0, 1 - ph * 2.5); ctx.fillStyle = Tempo.COLOR; ctx.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
+    /* dancefloor : damier qui bascule à chaque temps + anneaux de dalles qui partent du centre (or sur le temps fort, cyan sinon) */
+    const cols = ROOM_W / TILE, rows = ROOM_H / TILE, cx = cols / 2, cy = rows / 2;
+    for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
+      const d = Math.hypot(tx + 0.5 - cx, (ty + 0.5 - cy) * 1.25); let a = 0, gold = 0;
+      for (const p of tp.pulses) { const r = p.t * 10; const w = Math.abs(d - r); if (w < 1.1) { const v = (1 - w / 1.1) * (1 - p.t / 1.2) * (p.down ? 0.42 : 0.26); if (v > a) { a = v; gold = p.down ? 1 : 0; } } }
+      if ((tx + ty + idx) % 2 === 0) a = Math.max(a, 0.035);
+      if (a <= 0.01) continue;
+      ctx.globalAlpha = a; ctx.fillStyle = gold ? Tempo.COLOR : '#6ee7ff'; ctx.fillRect(ROOM_X + tx * TILE + 2, ROOM_Y + ty * TILE + 2, TILE - 4, TILE - 4);
+    }
+    ctx.restore();
+  },
+  /* égaliseur le long des murs haut et bas : vrai spectre de la musique (AudioEngine.spectrum), sinon pseudo-spectre calé sur le temps */
+  renderEq(ctx, room) {
+    const n = ROOM_W / TILE; let sp = AudioEngine.spectrum ? AudioEngine.spectrum(n) : null; const k = Math.max(0, 1 - Beat.phase() * 2.5);
+    if (!sp || sp.every(v => v === 0)) { sp = new Float32Array(n); for (let i = 0; i < n; i++) sp[i] = k * (0.25 + 0.75 * Math.abs(Math.sin(i * 1.7 + Beat.index()))); }
+    ctx.save(); ctx.beginPath(); ctx.rect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H); ctx.clip();
+    for (let i = 0; i < n; i++) {
+      const h = 6 + sp[i] * 44; const x = ROOM_X + i * TILE + 6; const gold = i % 4 === 0;
+      ctx.globalAlpha = 0.16 + 0.34 * sp[i]; ctx.fillStyle = gold ? Tempo.COLOR : '#6ee7ff';
+      ctx.fillRect(x, ROOM_Y, TILE - 12, h); ctx.fillRect(x, ROOM_Y + ROOM_H - h, TILE - 12, h);
+    }
     ctx.restore();
   },
   /* au-dessus des entités : anneau du joueur, éclats « en rythme », compte à rebours */
   renderOverlay(ctx, room) {
-    const tp = room.tempo; const pl = G.player; const ph = Beat.phase(); ctx.save();
+    const tp = room.tempo; const pl = G.player; const ph = Beat.phase(); Tempo.renderEq(ctx, room); ctx.save();
     if (pl && !pl.dead) {
       ctx.strokeStyle = Tempo.COLOR; ctx.shadowColor = Tempo.COLOR; ctx.shadowBlur = 10; ctx.lineWidth = 2; ctx.globalAlpha = 0.25 + 0.55 * Math.max(0, 1 - ph * 2);
       ctx.beginPath(); ctx.arc(pl.x, pl.y, pl.r + 8 + (1 - ph) * 8, 0, TAU); ctx.stroke();
@@ -114,12 +136,14 @@ const Tempo = {
       const txt = tp.phase === 'count' ? String(tp.count) : 'GO'; const k = tp.phase === 'count' ? clamp(tp.countT / Beat.beatLen(), 0, 1) : clamp(tp.goT / 0.5, 0, 1);
       ctx.globalAlpha = 1 - k * 0.8; ctx.fillStyle = Tempo.COLOR; ctx.shadowColor = Tempo.COLOR; ctx.shadowBlur = 24; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = `bold ${Math.round(150 - k * 40)}px "Segoe UI", system-ui, sans-serif`; ctx.fillText(txt, ROOM_X + ROOM_W / 2, ROOM_Y + ROOM_H / 2);
+      ctx.strokeStyle = Tempo.COLOR; ctx.lineWidth = 4; ctx.globalAlpha = 0.7 * (1 - k); ctx.beginPath(); ctx.arc(ROOM_X + ROOM_W / 2, ROOM_Y + ROOM_H / 2, 90 + (1 - k) * 260, 0, TAU); ctx.stroke();
     }
     ctx.restore();
   },
   /* HUD (coordonnées écran) : barre de mesure en haut au centre + combo */
   renderHud(ctx, room) {
     const tp = room.tempo; const ph = Beat.phase(); const bib = Beat.beatInBar(); ctx.save();
+    if (tp.started && bib === 0) { const kd = Math.max(0, 1 - ph * 2.5); const V = Engine.view; const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(V.w, V.h) * 0.3, W / 2, H / 2, Math.max(V.w, V.h) * 0.75); g.addColorStop(0, 'rgba(255,209,102,0)'); g.addColorStop(1, `rgba(255,209,102,${0.16 * kd})`); ctx.fillStyle = g; ctx.fillRect(-V.ox, -V.oy, V.w, V.h); }
     const cx = W / 2, y = 66, sp = 30;   // sous le cartouche « Salle 7/9 » du HUD
     ctx.fillStyle = 'rgba(8,10,18,.7)'; ctx.fillRect(cx - 88, y - 14, 176, tp.combo > 0 ? 46 : 28);
     for (let i = 0; i < 4; i++) {

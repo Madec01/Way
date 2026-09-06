@@ -26,7 +26,7 @@
   /* ------------------------------------------------------------------ */
   let ctx = null;
   let sr = 44100;
-  let master, comp, sfxBus, musicBus, musicDuck, reverbIn, convolver, reverbReturn, limiter;
+  let master, comp, sfxBus, musicBus, musicDuck, reverbIn, convolver, reverbReturn, limiter, analyser, specBuf;
   const noiseBuf = { white: null, pink: null, brown: null };
   const vol = { master: 0.8, sfx: 1.0, music: 0.7 };
   const MAX_VOICES = 24;
@@ -157,12 +157,16 @@
     comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 4;
     comp.attack.value = 0.003; comp.release.value = 0.18;
-    limiter = ctx.createDynamicsCompressor();   // brickwall doux : la somme des voix ne dépasse jamais 0 dBFS
-    limiter.threshold.value = -4; limiter.knee.value = 2; limiter.ratio.value = 20; limiter.attack.value = 0.001; limiter.release.value = 0.08;
-    master.connect(comp); comp.connect(limiter); limiter.connect(ctx.destination);
+    /* Routage : effets → compresseur (colle les SFX entre eux) → master ; musique → master directement. La musique ne passe
+       JAMAIS par le compresseur des effets : avec une piste MP3 forte, chaque transitoire d'effet (ramassage, survol) faisait
+       chuter le gain en 3 ms sur la musique aussi = clic audible à chaque son, perçu comme un crépitement. */
+    limiter = ctx.createDynamicsCompressor();   // sécurité en sortie : seuls les vrais pics sont rabotés, relâchement lent (pas de distorsion des basses)
+    limiter.threshold.value = -1.5; limiter.knee.value = 1; limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.25;
+    master.connect(limiter); limiter.connect(ctx.destination);
 
-    sfxBus = ctx.createGain(); sfxBus.gain.value = vol.sfx; sfxBus.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = vol.sfx; sfxBus.connect(comp); comp.connect(master);
     musicBus = ctx.createGain(); musicBus.gain.value = vol.music; musicBus.connect(master);
+    analyser = ctx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.55; musicBus.connect(analyser);   // spectre de la musique (visuels de la salle du tempo)
     musicDuck = ctx.createGain(); musicDuck.gain.value = 1; musicDuck.connect(musicBus);
 
     // Bus réverbe : convolution avec IR générée, retour vers le master
@@ -1182,6 +1186,14 @@
   api.duckMusic = duckMusic;
   /* position de lecture de la piste courante (salle du tempo) : { t, paused } ou null */
   api.musicTime = () => music.cur && music.cur.el ? { t: music.cur.el.currentTime, paused: music.cur.el.paused } : null;
+  /* spectre de la musique en n bandes (0..1), espacement logarithmique ; null sans contexte */
+  api.spectrum = (n) => {
+    if (!analyser) return null; n = n || 24;
+    if (!specBuf) specBuf = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(specBuf);
+    const bins = specBuf.length, out = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const a = Math.floor(Math.pow(bins, i / n)), b = Math.max(a + 1, Math.floor(Math.pow(bins, (i + 1) / n))); let m = 0; for (let k = a; k < b && k < bins; k++) m = Math.max(m, specBuf[k]); out[i] = m / 255; }
+    return out;
+  };
   api.musicState = () => ({ hasTrack: !!music.cur, gain: music.cur ? music.cur.g.gain.value : null, el: music.cur && music.cur.el ? { paused: music.cur.el.paused, t: music.cur.el.currentTime, ready: music.cur.el.readyState, net: music.cur.el.networkState, err: music.cur.el.error && music.cur.el.error.code, src: music.cur.el.currentSrc.slice(-24) } : null, generative: !!gen, ctxState: ctx ? ctx.state : null, ctxTime: ctx ? ctx.currentTime : null });
   api.startGenerativeMusic = startGenerativeMusic;
   api.stopGenerativeMusic = stopGenerativeMusic;
