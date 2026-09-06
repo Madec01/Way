@@ -14,7 +14,8 @@ const G = {
 };
 function applyDifficulty() {
   const d = G.debug.difficulty; const b = (G.run && G.run.biome && G.run.biome.difficulty) || {};
-  G.difficulty = { hpMul: d * (b.hpMul || 1), damageMul: d * (b.damageMul || 1), speedMul: (0.7 + 0.3 * d) * (b.speedMul || 1), fireRateMul: 0.75 + 0.25 * d };
+  const idx = (G.run && G.run.roomIndex) || 1; const ramp = 1 + (b.rampPerRoom != null ? b.rampPerRoom : BALANCE.rampPerRoom) * Math.max(0, idx - 1);   // salle 1 → ×1, salle 9 → ×1.48 par défaut
+  G.difficulty = { hpMul: d * (b.hpMul || 1) * ramp, damageMul: d * (b.damageMul || 1) * ramp, speedMul: (0.7 + 0.3 * d) * (b.speedMul || 1), fireRateMul: 0.75 + 0.25 * d, ramp };
 }
 
 /* ---------- Room ---------- */
@@ -37,7 +38,7 @@ const Room = {
   load(index) {
     const def = G.run.rooms.find(r => r.index === index);
     if (!def) { console.error('Salle absente', index); return false; }
-    applyDifficulty();
+    G.run.roomIndex = index; applyDifficulty();
     G.enemies = []; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
     G.room = Room.create(def);
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.snap(pl.x, pl.y);
@@ -241,7 +242,7 @@ const Run = {
     const r = G.room; const s = Room.score();
     G.run.scores.push({ index: r.index, score: s, hits: r.hits, time: r.time, died: r.died });
     G.run.stats.roomTimes.push({ room: r.index, time: Math.round(r.time * 10) / 10, hits: r.hits, score: Math.round(s * 100) / 100, level: G.run.level });
-    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(20 * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
+    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(BALANCE.xpPerfectTrapRoom * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
     if (r.index === 3) Meta.unlockLore('room3_done');
     if (r.index === 5) { Meta.unlockLore('room5_reached'); if (r.hits === 0) Meta.unlockLore('boss_no_hit'); }
     if (r.index === 9 && r.hits === 0) Meta.unlockLore('boss_no_hit');
@@ -264,7 +265,7 @@ const Run = {
   },
   endLevel(victory) {
     const r = G.run; if (r.ended || r.attract) return; r.ended = true;
-    const bonus = Math.round(150 * G.player.stats.coinGain * G.debug.coinMul); const total = r.coinsValidated + r.coinsPending + bonus; Meta.addCoins(total); Meta.recordRun(true);
+    const bonus = Math.round(BALANCE.levelEndBonus * G.player.stats.coinGain * G.debug.coinMul); const total = r.coinsValidated + r.coinsPending + bonus; Meta.addCoins(total); Meta.recordRun(true);
     G.paused = true; UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
     Music.play('hub');
   },

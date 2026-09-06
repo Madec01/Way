@@ -408,6 +408,30 @@ const Engine = (() => {
 
 </script>
 <script>
+/* ==== 05_balance.js ==== */
+/* =========================================================================
+   WAY — 05_balance.js — constantes d'équilibrage (données, modifiables sans toucher au moteur)
+   ========================================================================= */
+const BALANCE = {
+  /* XP nécessaire pour passer du niveau N au suivant : a + b·N + c·N² */
+  xp: { a: 30, b: 20, c: 3.4 },
+  xpPerfectTrapRoom: 15,          // bonus XP d'une salle de pièges traversée sans dégât
+  /* poids de base des raretés à chance 0 */
+  rarity: { common: 68, rare: 24, epic: 7, colossal: 1 },
+  /* +1 chance retire luckShift % au commun, réparti epicShare / (1-epicShare) entre épique et colossal ; plafonné à luckMax */
+  luck: { shift: 0.6, epicShare: 0.7, max: 20 },
+  /* planchers de coffre selon le score moyen de la fenêtre */
+  chest: { colossalAt: 0.999, epicAt: 0.85, rareAt: 0.6, shiftEpicCommonMul: 0.5, shiftEpicEpicMul: 1.8, shiftEpicColossalMul: 1.2 },
+  /* montée de difficulté à l'intérieur d'un palier : multiplicateur (1 + rampPerRoom·(salle-1)) sur PV et dégâts des ennemis/pièges */
+  rampPerRoom: 0.06,
+  /* foudre ambiante : intervalle réel = every × [jitterMin, jitterMax] */
+  lightningJitter: { min: 0.75, max: 1.6 },
+  /* prime de fin de palier (crédits) */
+  levelEndBonus: 150,
+};
+
+</script>
+<script>
 /* ==== AudioEngine.js ==== */
 /* =====================================================================
    SALLE ZÉRO — AudioEngine
@@ -2706,10 +2730,10 @@ const Progression = (() => {
 
   /* --- Raretés --- */
   function rarityWeights(luck, opts = {}) {
-    const w = { common: 62, rare: 27, epic: 9, colossal: 2 };
-    const shift = clamp(luck, -30, 40);       // +1 luck ≈ +1 % retiré au commun
-    w.common -= shift; w.epic += shift * 0.6; w.colossal += shift * 0.4;
-    if (opts.shiftEpic) { w.common *= 0.4; w.rare *= 0.8; w.epic *= 2.2; w.colossal *= 1.5; }
+    const w = Object.assign({}, BALANCE.rarity);
+    const shift = clamp(luck, -BALANCE.luck.max, BALANCE.luck.max) * BALANCE.luck.shift;
+    w.common -= shift; w.epic += shift * BALANCE.luck.epicShare; w.colossal += shift * (1 - BALANCE.luck.epicShare);
+    if (opts.shiftEpic) { w.common *= BALANCE.chest.shiftEpicCommonMul; w.epic *= BALANCE.chest.shiftEpicEpicMul; w.colossal *= BALANCE.chest.shiftEpicColossalMul; }
     if (opts.noColossal) w.colossal = 0;
     if (opts.force && RARITY[opts.force]) { for (const k in w) w[k] = 0; w[opts.force] = 1; }
     for (const k in w) w[k] = Math.max(0, w[k]);
@@ -2740,14 +2764,14 @@ const Progression = (() => {
   /* Plancher de coffre selon score moyen */
   function chestOptions(avgScore, diedInWindow) {
     if (diedInWindow) return { noColossal: true, label: 'Sujet perdu : tirage dégradé' };
-    if (avgScore >= 0.999) return { guarantee: 'colossal', shiftEpic: true, label: 'Sans dégât : Colossal garanti' };
-    if (avgScore >= 0.8) return { guarantee: 'epic', shiftEpic: true, label: 'Épique garanti' };
-    if (avgScore >= 0.5) return { guarantee: 'rare', label: 'Rare garanti' };
+    if (avgScore >= BALANCE.chest.colossalAt) return { guarantee: 'colossal', shiftEpic: true, label: 'Sans dégât : Colossal garanti' };
+    if (avgScore >= BALANCE.chest.epicAt) return { guarantee: 'epic', shiftEpic: true, label: 'Épique garanti' };
+    if (avgScore >= BALANCE.chest.rareAt) return { guarantee: 'rare', label: 'Rare garanti' };
     return { label: 'Tirage normal' };
   }
 
   /* --- XP --- */
-  const xpForLevel = lvl => Math.round(24 + 16 * lvl + 2.6 * lvl * lvl);   // rééquilibré : ~niveau 10 en fin de palier au lieu de 13
+  const xpForLevel = lvl => Math.round(BALANCE.xp.a + BALANCE.xp.b * lvl + BALANCE.xp.c * lvl * lvl);
 
   /* --- Score de salle --- */
   function roomScore(r) {
@@ -3358,7 +3382,7 @@ class Player {
     if (this.buffs.length && this.buffs.some(b => Time.now > b.until)) { this.buffs = this.buffs.filter(b => Time.now <= b.until); this.recompute(); }
     /* foudre ambiante */
     const storm = Progression.hasPassive(this.hooks, 'lightning_storm');
-    if (storm) { this.stormT += dt; const every = (storm.every || 2) / Math.max(1, storm.stacks || 1); if (this.stormT >= every) { this.stormT = 0; const tgt = nearestEnemy(this.x, this.y, (storm.radius || 320) * this.stats.range); if (tgt) { G.room.beams.push({ ax: tgt.x + VFX_RNG.range(-30, 30), ay: ROOM_Y - 20, bx: tgt.x, by: tgt.y, t: 0, life: 0.18, color: '#b3e5ff', width: 4, jag: true }); Combat.hitEnemy(tgt, (storm.damage || 18) * this.stats.damage, { x: tgt.x, y: tgt.y, knockback: 0.3, silent: true }); if (storm.jumps) Combat.chain(tgt, (storm.damage || 18) * this.stats.damage * 0.6, storm.jumps, 160); AudioEngine.shootChain({ intensity: 0.5 }); } } }
+    if (storm) { this.stormT += dt; if (this.stormNext == null) this.stormNext = (storm.every || 2) * RNG.range(BALANCE.lightningJitter.min, BALANCE.lightningJitter.max); const every = this.stormNext / Math.sqrt(Math.max(1, storm.stacks || 1)); if (this.stormT >= every) { this.stormT = 0; this.stormNext = (storm.every || 2) * RNG.range(BALANCE.lightningJitter.min, BALANCE.lightningJitter.max); const tgt = nearestEnemy(this.x, this.y, (storm.radius || 320) * this.stats.range); if (tgt) { G.room.beams.push({ ax: tgt.x + VFX_RNG.range(-30, 30), ay: ROOM_Y - 20, bx: tgt.x, by: tgt.y, t: 0, life: 0.18, color: '#b3e5ff', width: 4, jag: true }); Combat.hitEnemy(tgt, (storm.damage || 18) * this.stats.damage, { x: tgt.x, y: tgt.y, knockback: 0.3, silent: true }); if (storm.jumps) Combat.chain(tgt, (storm.damage || 18) * this.stats.damage * 0.6, storm.jumps, 160); AudioEngine.shootChain({ intensity: 0.5 }); } } }
     /* aura brûlante */
     const aura = Progression.hasPassive(this.hooks, 'burn_aura');
     if (aura) { const R = (aura.radius || 90) * this.stats.areaSize; for (const e of G.enemies) { if (e.dead || dist(this.x, this.y, e.x, e.y) > R + e.r) continue; const last = this.auraCd.get(e) || -9; if (Time.now - last < 0.25) continue; this.auraCd.set(e, Time.now); Combat.hitEnemy(e, (aura.dps || 12) * (aura.stacks || 1) * this.stats.damage * 0.25, { dot: true, x: e.x, y: e.y }); if (RNG.chance(0.3)) applyStatus(e, 'burn', { dps: 4, duration: 1.5 }); } if (VFX_RNG.chance(0.4)) { const a = VFX_RNG.range(0, TAU); Particles.spawn(this.x + Math.cos(a) * R, this.y + Math.sin(a) * R, { count: 1, color: '#ff8c42', size: 2, speedMax: 30, life: 0.4, glow: true }); } }
@@ -4046,7 +4070,8 @@ const G = {
 };
 function applyDifficulty() {
   const d = G.debug.difficulty; const b = (G.run && G.run.biome && G.run.biome.difficulty) || {};
-  G.difficulty = { hpMul: d * (b.hpMul || 1), damageMul: d * (b.damageMul || 1), speedMul: (0.7 + 0.3 * d) * (b.speedMul || 1), fireRateMul: 0.75 + 0.25 * d };
+  const idx = (G.run && G.run.roomIndex) || 1; const ramp = 1 + (b.rampPerRoom != null ? b.rampPerRoom : BALANCE.rampPerRoom) * Math.max(0, idx - 1);   // salle 1 → ×1, salle 9 → ×1.48 par défaut
+  G.difficulty = { hpMul: d * (b.hpMul || 1) * ramp, damageMul: d * (b.damageMul || 1) * ramp, speedMul: (0.7 + 0.3 * d) * (b.speedMul || 1), fireRateMul: 0.75 + 0.25 * d, ramp };
 }
 
 /* ---------- Room ---------- */
@@ -4069,7 +4094,7 @@ const Room = {
   load(index) {
     const def = G.run.rooms.find(r => r.index === index);
     if (!def) { console.error('Salle absente', index); return false; }
-    applyDifficulty();
+    G.run.roomIndex = index; applyDifficulty();
     G.enemies = []; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
     G.room = Room.create(def);
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.snap(pl.x, pl.y);
@@ -4273,7 +4298,7 @@ const Run = {
     const r = G.room; const s = Room.score();
     G.run.scores.push({ index: r.index, score: s, hits: r.hits, time: r.time, died: r.died });
     G.run.stats.roomTimes.push({ room: r.index, time: Math.round(r.time * 10) / 10, hits: r.hits, score: Math.round(s * 100) / 100, level: G.run.level });
-    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(20 * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
+    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(BALANCE.xpPerfectTrapRoom * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
     if (r.index === 3) Meta.unlockLore('room3_done');
     if (r.index === 5) { Meta.unlockLore('room5_reached'); if (r.hits === 0) Meta.unlockLore('boss_no_hit'); }
     if (r.index === 9 && r.hits === 0) Meta.unlockLore('boss_no_hit');
@@ -4296,7 +4321,7 @@ const Run = {
   },
   endLevel(victory) {
     const r = G.run; if (r.ended || r.attract) return; r.ended = true;
-    const bonus = Math.round(150 * G.player.stats.coinGain * G.debug.coinMul); const total = r.coinsValidated + r.coinsPending + bonus; Meta.addCoins(total); Meta.recordRun(true);
+    const bonus = Math.round(BALANCE.levelEndBonus * G.player.stats.coinGain * G.debug.coinMul); const total = r.coinsValidated + r.coinsPending + bonus; Meta.addCoins(total); Meta.recordRun(true);
     G.paused = true; UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
     Music.play('hub');
   },

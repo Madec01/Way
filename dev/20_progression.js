@@ -60,10 +60,10 @@ const Progression = (() => {
 
   /* --- Raretés --- */
   function rarityWeights(luck, opts = {}) {
-    const w = { common: 62, rare: 27, epic: 9, colossal: 2 };
-    const shift = clamp(luck, -30, 40);       // +1 luck ≈ +1 % retiré au commun
-    w.common -= shift; w.epic += shift * 0.6; w.colossal += shift * 0.4;
-    if (opts.shiftEpic) { w.common *= 0.4; w.rare *= 0.8; w.epic *= 2.2; w.colossal *= 1.5; }
+    const w = Object.assign({}, BALANCE.rarity);
+    const shift = clamp(luck, -BALANCE.luck.max, BALANCE.luck.max) * BALANCE.luck.shift;
+    w.common -= shift; w.epic += shift * BALANCE.luck.epicShare; w.colossal += shift * (1 - BALANCE.luck.epicShare);
+    if (opts.shiftEpic) { w.common *= BALANCE.chest.shiftEpicCommonMul; w.epic *= BALANCE.chest.shiftEpicEpicMul; w.colossal *= BALANCE.chest.shiftEpicColossalMul; }
     if (opts.noColossal) w.colossal = 0;
     if (opts.force && RARITY[opts.force]) { for (const k in w) w[k] = 0; w[opts.force] = 1; }
     for (const k in w) w[k] = Math.max(0, w[k]);
@@ -94,14 +94,14 @@ const Progression = (() => {
   /* Plancher de coffre selon score moyen */
   function chestOptions(avgScore, diedInWindow) {
     if (diedInWindow) return { noColossal: true, label: 'Sujet perdu : tirage dégradé' };
-    if (avgScore >= 0.999) return { guarantee: 'colossal', shiftEpic: true, label: 'Sans dégât : Colossal garanti' };
-    if (avgScore >= 0.8) return { guarantee: 'epic', shiftEpic: true, label: 'Épique garanti' };
-    if (avgScore >= 0.5) return { guarantee: 'rare', label: 'Rare garanti' };
+    if (avgScore >= BALANCE.chest.colossalAt) return { guarantee: 'colossal', shiftEpic: true, label: 'Sans dégât : Colossal garanti' };
+    if (avgScore >= BALANCE.chest.epicAt) return { guarantee: 'epic', shiftEpic: true, label: 'Épique garanti' };
+    if (avgScore >= BALANCE.chest.rareAt) return { guarantee: 'rare', label: 'Rare garanti' };
     return { label: 'Tirage normal' };
   }
 
   /* --- XP --- */
-  const xpForLevel = lvl => Math.round(24 + 16 * lvl + 2.6 * lvl * lvl);   // rééquilibré : ~niveau 10 en fin de palier au lieu de 13
+  const xpForLevel = lvl => Math.round(BALANCE.xp.a + BALANCE.xp.b * lvl + BALANCE.xp.c * lvl * lvl);
 
   /* --- Score de salle --- */
   function roomScore(r) {
