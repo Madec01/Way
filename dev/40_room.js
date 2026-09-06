@@ -95,7 +95,7 @@ const Room = {
   alive() { return G.enemies.filter(e => !e.dead).length; },
   update(dt) {
     const r = G.room; const pl = G.player;
-    r.time += dt; r.stateT += dt; Beat.update();
+    r.time += dt; r.stateT += dt;
     if (r.combo > 0 && Time.now > r.comboUntil) r.combo = 0;
     if (r.state === 'intro') { if (r.stateT >= 0.8) Room.begin(); return; }
     /* vagues */

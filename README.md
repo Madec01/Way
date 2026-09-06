@@ -25,7 +25,7 @@ Salle 2 : salle aléatoire avec un défi garanti ; salle 6 : un défi peut s'ajo
 La salle 7 de chaque palier joue en rythme : compte à rebours sur une mesure, pièges qui frappent sur les temps, ennemis qui n'attaquent que sur les temps (noires en vague 1, croches ensuite) avec un voyant qui bat, vagues qui entrent sur le premier temps d'une mesure, porte qui s'ouvre sur la mesure. Tirer ou lancer sa compétence sur un temps donne +25 % (jusqu'à +50 % en série), une note de la gamme du morceau et un combo affiché ; jamais de malus hors rythme. Bonus d'XP à la fin selon le nombre d'actions en rythme, et « sans fausse note » si aucun coup reçu. Détails dans `CONTENT.md` §20.
 
 ## Menu, hub et histoire
-Le menu principal et le hub sont joués sur une scène d'attraction : le sujet, piloté par le bot, combat des ennemis des deux paliers derrière l'interface. Le menu se navigue au clavier (flèches, Entrée) ou à la souris.
+Le menu principal et le hub sont joués sur une scène d'attraction : le sujet, piloté par le bot, combat des ennemis des deux paliers derrière l'interface. Le menu se navigue au clavier (flèches, Entrée) ou à la souris. Les deux écrans battent avec `menu.mp3` : titre, cartouche, bouton principal, portrait et crédits pulsent sur chaque temps (temps fort plus marqué), et une onde part du centre de la scène à chaque mesure. Sans musique, ils battent à 120 BPM.
 
 ## Modes
 - **Normal** : sauvegarde locale, 1 sujet et 2 armes débloqués, économie normale.

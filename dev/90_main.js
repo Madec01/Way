@@ -3,7 +3,7 @@
    ========================================================================= */
 
 function update(dt, rawDt) {
-  UI.update(rawDt); Touch.sync();
+  Beat.update(); UI.update(rawDt); Touch.sync();
   if (G.state === 'run') { Run.update(dt); if (G.player) Camera.follow(G.player.x, G.player.y, rawDt); }
   else if (G.attract) Attract.update(dt);
 }
