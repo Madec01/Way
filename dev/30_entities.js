@@ -371,8 +371,10 @@ const Combat = {
   },
   collect(p) {
     const pl = G.player;
-    if (p.kind === 'xp') { Run.addXp(p.value); AudioEngine.pickupXp({ x: (p.x - W / 2) / (W / 2) }); }
-    else if (p.kind === 'coin') { G.run.coinsPending += p.value; G.run.stats.coins += p.value; AudioEngine.pickupCoin({}); }
+    /* série de ramassages : la hauteur monte d'un cran à chaque orbe pris dans la demi-seconde (cascade), au lieu d'empiler 30 fois le même son */
+    const streak = Time.now - (Pickups.lastT || -9) < 0.5 ? Math.min((Pickups.streak || 0) + 1, 12) : 0; Pickups.lastT = Time.now; Pickups.streak = streak; const pitch = Math.pow(2, streak / 12);
+    if (p.kind === 'xp') { Run.addXp(p.value); AudioEngine.pickupXp({ x: (p.x - W / 2) / (W / 2), pitch }); }
+    else if (p.kind === 'coin') { G.run.coinsPending += p.value; G.run.stats.coins += p.value; AudioEngine.pickupCoin({ pitch }); }
     else if (p.kind === 'fragment') {
       const mul = Progression.hasPassive(pl.hooks, 'fragments_double') ? 2 : 1;
       const xp = Math.round(p.value * mul * pl.stats.xpGain * G.debug.xpMul); Run.addXp(xp); G.room.fragments++;

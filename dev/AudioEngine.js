@@ -26,7 +26,7 @@
   /* ------------------------------------------------------------------ */
   let ctx = null;
   let sr = 44100;
-  let master, comp, sfxBus, musicBus, musicDuck, reverbIn, convolver, reverbReturn;
+  let master, comp, sfxBus, musicBus, musicDuck, reverbIn, convolver, reverbReturn, limiter;
   const noiseBuf = { white: null, pink: null, brown: null };
   const vol = { master: 0.8, sfx: 1.0, music: 0.7 };
   const MAX_VOICES = 24;
@@ -49,7 +49,7 @@
     return {
       x: isNum(o.x) ? clamp(o.x, -1, 1) : 0,
       I,
-      p: 1 + rnd(-0.07, 0.07),                       // jitter de hauteur ±7 %
+      p: (isNum(o.pitch) ? o.pitch : 1) * (1 + rnd(-0.07, 0.07)),   // jitter de hauteur ±7 %, × hauteur demandée (cascade de ramassage)
       g: (1 + rnd(-0.1, 0.1)) * (0.55 + 0.45 * I),   // jitter de gain ±10 %, pondéré par l'intensité
       hz: isNum(o.hz) ? o.hz : 0,                    // hauteur imposée (Hz) pour les sons musicaux (salle du tempo)
     };
@@ -157,7 +157,9 @@
     comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 4;
     comp.attack.value = 0.003; comp.release.value = 0.18;
-    master.connect(comp); comp.connect(ctx.destination);
+    limiter = ctx.createDynamicsCompressor();   // brickwall doux : la somme des voix ne dépasse jamais 0 dBFS
+    limiter.threshold.value = -4; limiter.knee.value = 2; limiter.ratio.value = 20; limiter.attack.value = 0.001; limiter.release.value = 0.08;
+    master.connect(comp); comp.connect(limiter); limiter.connect(ctx.destination);
 
     sfxBus = ctx.createGain(); sfxBus.gain.value = vol.sfx; sfxBus.connect(master);
     musicBus = ctx.createGain(); musicBus.gain.value = vol.music; musicBus.connect(master);
@@ -274,7 +276,7 @@
     v.add = (n) => { v.nodes.push(n); return n; };
     v.gain = (val) => { const g = ctx.createGain(); g.gain.value = isNum(val) ? val : 1; return v.add(g); };
     v.filter = (type, f, q) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (isNum(q)) b.Q.value = q; return v.add(b); };
-    v.shaper = (drive) => { const s = ctx.createWaveShaper(); s.curve = tanhCurve(drive || 2); s.oversample = '2x'; return v.add(s); };
+    v.shaper = (drive) => { const s = ctx.createWaveShaper(); s.curve = tanhCurve(drive || 2); s.oversample = 'none'; return v.add(s); };
     v.src = (s, t0, t1) => { s.start(t0); if (isFinite(t1)) s.stop(t1); v.sources.push(s); v.nodes.push(s); return s; };
     v.noise = (type, t0, t1) => {
       const s = ctx.createBufferSource(); s.buffer = noiseBuf[type] || noiseBuf.white; s.loop = true;
@@ -305,12 +307,15 @@
     };
     v.chain = function () { for (let i = 0; i < arguments.length - 1; i++) arguments[i].connect(arguments[i + 1]); return arguments[arguments.length - 1]; };
     v.reverb = (amt) => { v.send.gain.value = amt; };
-    v.kill = () => {
+    const fin = () => { for (const s of v.sources) { try { s.stop(); } catch (e) { /* déjà arrêtée */ } } for (const n of v.nodes) { try { n.disconnect(); } catch (e) { /* */ } } };
+    /* fin de voix : fondu de 20 ms avant de couper (une coupure sèche sur une voix encore audible fait un clic, audible en rafale de ramassages) */
+    v.kill = (hard) => {
       if (v.dead) return; v.dead = true;
-      for (const s of v.sources) { try { s.stop(); } catch (e) { /* déjà arrêtée */ } }
-      for (const n of v.nodes) { try { n.disconnect(); } catch (e) { /* */ } }
       const i = voices.indexOf(v); if (i >= 0) voices.splice(i, 1);
       if (v.timer) clearTimeout(v.timer);
+      if (hard || !ctx || ctx.state !== 'running' || v.end < ctx.currentTime - 0.3) { fin(); return; }
+      try { const t0 = ctx.currentTime; v.out.gain.cancelScheduledValues(t0); v.out.gain.setValueAtTime(v.out.gain.value, t0); v.out.gain.linearRampToValueAtTime(0, t0 + 0.02); } catch (e) { fin(); return; }
+      setTimeout(fin, 45);
     };
     if (pooled) voices.push(v);
     if (isFinite(dur) && typeof setTimeout === 'function') v.timer = setTimeout(v.kill, (dur + 0.15) * 1000);
@@ -357,12 +362,20 @@
     pickupXp: 5, pickupCoin: 5, pickupFragment: 3, trapWarn: 3, trapSpike: 5, uiHover: 6, uiClick: 4, uiConfirm: 1.5,
     chestOpen: 1.5, bossRoar: 0.8, playerDie: 0.8,
   };
+  /* Espacement minimal entre deux déclenchements du même son (s) : au-delà de la polyphonie utile, les rafales (ramassage
+     de 30 orbes, survol rapide des boutons) ne font que saturer et crépiter. Par défaut 25 ms. */
+  const GAPS = { pickupXp: 0.05, pickupCoin: 0.05, pickupFragment: 0.08, hitEnemy: 0.03, uiHover: 0.09, uiClick: 0.06, tempoNote: 0.08, trapWarn: 0.1, trapSpike: 0.1 };
+  const lastAt = {};
   function def(name, prio, fn) {
     NAMES.push(name);
     const trim = LEVELS[name] || 1;
     api[name] = function (opts) {
       if (!ctx) return;
-      try { const o = norm(opts); o.g *= trim; fn(o, ctx.currentTime + 0.005); } catch (e) { console.warn('[AudioEngine] ' + name, e); }
+      const now = ctx.currentTime; const gap = GAPS[name] != null ? GAPS[name] : 0.025; const prev = lastAt[name];
+      if (prev != null && now - prev.t < gap) return;                       // trop rapproché : ignoré
+      const burst = prev != null && now - prev.t < 0.25 ? Math.min(prev.n + 1, 6) : 0;   // rafale : chaque répétition rapprochée est un peu plus douce
+      lastAt[name] = { t: now, n: burst };
+      try { const o = norm(opts); o.g *= trim * Math.pow(0.88, burst); fn(o, now + 0.005); } catch (e) { console.warn('[AudioEngine] ' + name, e); }
     };
   }
 
