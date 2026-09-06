@@ -1,18 +1,18 @@
 /* =========================================================================
    WAY — 38_challenges.js
-   Défis de salle, tirés au sort sur les salles 2, 3, 6 et 7 :
+   Défis de salle : salle 2 (« salle aléatoire », toujours un défi), salles 6 et 7 (60 %) :
    capture (tenir 3 zones), collapse (le sol s'effondre, tenir jusqu'à 40 % de surface),
    switches (3 interrupteurs dans l'ordre, récompense), lights (lumières coupées), timer (chrono, enragés après).
    ========================================================================= */
 
 const CHALLENGE_DEFS = {
-  capture:  { name: 'Capture de zone', desc: 'Tenez la zone pour remplir la jauge. Trois zones. Les kills dans la zone rapportent +50 % d\'XP.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR', 'PREP_COMBAT'], color: '#7fff9a' },
-  collapse: { name: 'Sol qui s\'effondre', desc: 'Des dalles tombent par paquets, de plus en plus vite. Tenez jusqu\'à ce qu\'il reste 40 % du sol. Les ennemis tombent aussi.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR', 'TRAP'], color: '#ffb347', replacesTraps: true },
-  switches: { name: 'Séquence', desc: 'Activez les 3 interrupteurs dans l\'ordre affiché. Récompense à la clé, décharge en cas d\'erreur.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR', 'TRAP'], color: '#c9a3ff' },
-  lights:   { name: 'Lumières coupées', desc: 'Seule votre lampe éclaire. Les ennemis se trahissent par leurs yeux. XP +25 %.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR', 'TRAP'], color: '#9fd8ff' },
-  timer:    { name: 'Chrono', desc: 'Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s\'enrage.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ff5e7a' },
+  capture:  { name: 'Capture de zone', desc: 'Tenez la zone pour remplir la jauge. Trois zones. Les kills dans la zone rapportent +50 % d\'XP.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#7fff9a' },
+  collapse: { name: 'Sol qui s\'effondre', desc: 'Des dalles tombent par paquets, de plus en plus vite. Tenez jusqu\'à ce qu\'il reste 40 % du sol. Les ennemis tombent aussi.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ffb347', replacesTraps: true },
+  switches: { name: 'Séquence', desc: 'Activez les 3 interrupteurs dans l\'ordre affiché. Récompense à la clé, décharge en cas d\'erreur.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#c9a3ff' },
+  lights:   { name: 'Lumières coupées', desc: 'Seule votre lampe éclaire. Les ennemis se trahissent par leurs yeux. XP +25 %.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#9fd8ff' },
+  timer:    { name: 'Chrono', desc: 'Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s\'enrage.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ff5e7a' },
 };
-const CHALLENGE_ROOMS = [2, 3, 6, 7];
+const CHALLENGE_ROOMS = [2, 6, 7];   // salle 2 : toujours un défi ; 6 et 7 : 60 % de chance
 const CHALLENGE_CHANCE = 0.6;
 
 const Challenge = (() => {
@@ -23,8 +23,9 @@ const Challenge = (() => {
   function pick(def, rng, used) {
     if (!CHALLENGE_ROOMS.includes(def.index)) return null;
     if (G.debug.forceChallenge) return G.debug.forceChallenge === 'none' ? null : G.debug.forceChallenge;
-    if (!rng.chance(CHALLENGE_CHANCE)) return null;
-    const ids = Object.keys(CHALLENGE_DEFS).filter(id => CHALLENGE_DEFS[id].rooms.includes(def.type) && !used.includes(id));
+    if (def.type !== 'COMBAT_CHALLENGE' && !rng.chance(CHALLENGE_CHANCE)) return null;
+    let ids = Object.keys(CHALLENGE_DEFS).filter(id => CHALLENGE_DEFS[id].rooms.includes(def.type) && !used.includes(id));
+    if (!ids.length && def.type === 'COMBAT_CHALLENGE') ids = Object.keys(CHALLENGE_DEFS).filter(id => CHALLENGE_DEFS[id].rooms.includes(def.type));
     return ids.length ? rng.pick(ids) : null;
   }
   function create(id, room) {

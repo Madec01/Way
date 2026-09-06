@@ -526,34 +526,14 @@ const CONTENT = {
       traps: [], fragments: [], modular: [] },
 
     // ---------- SALLE 2 : PIÈGES + FRAGMENTS D'ÉNERGIE ----------
-    { id: 'room_b1_2', biome: 'biome_1', index: 2, type: 'TRAP', refTime: 60,
-      obstacles: [
-        { x: 9, y: 0, w: 1, h: 3 }, { x: 9, y: 10, w: 1, h: 3 },
-        { x: 15, y: 0, w: 1, h: 3 }, { x: 15, y: 10, w: 1, h: 3 }
+    { id: 'room_b1_2', biome: 'biome_1', index: 2, type: 'COMBAT_CHALLENGE', refTime: 70,
+      obstacles: [ { x: 6, y: 4, w: 1, h: 1 }, { x: 17, y: 4, w: 1, h: 1 }, { x: 6, y: 8, w: 1, h: 1 }, { x: 17, y: 8, w: 1, h: 1 } ],
+      waves: [
+        { at: 'start', spawns: [ { enemy: 'enemy_rodeur', count: 3, x: 20, y: 4 }, { enemy: 'enemy_sentinelle', count: 1, x: 21, y: 8 } ] },
+        { at: 'clear', spawns: [ { enemy: 'enemy_nuee', count: 1, x: 21, y: 2 }, { enemy: 'enemy_rodeur', count: 2, x: -1, y: -1 }, { enemy: 'enemy_meche', count: 1, x: 2, y: 11 } ] },
+        { at: 'clear', spawns: [ { enemy: 'enemy_sentinelle', count: 2, x: 21, y: 6 }, { enemy: 'enemy_rodeur', count: 3, x: -1, y: -1 }, { enemy: 'enemy_eclipse', count: 1, x: 12, y: 1 } ] }
       ],
-      waves: [],
-      traps: [
-        // Zone A (x 3..8) : damier de pointes, on avance en suivant les cases éteintes
-        { trap: 'trap_dalles', x: 3, y: 3, w: 6, h: 7, phase: 0 },
-        // Zone B (x 10..14) : deux balayages verticaux décalés d'un demi-cycle
-        { trap: 'trap_balayage', x: 10, y: 0, w: 5, h: 13, phase: 0 },
-        { trap: 'trap_balayage', x: 10, y: 0, w: 5, h: 13, phase: 2.0 },
-        // Zone C (x 16..21) : bouches de feu depuis le haut + scie en travers
-        { trap: 'trap_bouche', x: 16, y: 0, phase: 0 },
-        { trap: 'trap_bouche', x: 18, y: 0, phase: 0.8 },
-        { trap: 'trap_bouche', x: 20, y: 0, phase: 1.6 },
-        { trap: 'trap_rail', x: 16, y: 6, w: 6, h: 1, phase: 0 },
-        // Sortie : tourniquet devant la porte
-        { trap: 'trap_tourniquet', x: 21, y: 6, phase: 0 }
-      ],
-      fragments: [
-        { x: 5, y: 6, at: 0 },     // au milieu du damier de pointes
-        { x: 12, y: 6, at: 0 },    // au centre du double balayage
-        { x: 18, y: 2, at: 8 },    // juste sous une bouche de feu
-        { x: 19, y: 6, at: 16 },   // sur le rail de la scie
-        { x: 21, y: 4, at: 24 }    // dans le rayon du tourniquet
-      ],
-      modular: [] },
+      traps: [], fragments: [], modular: [] },
 
     // ---------- SALLE 3 : COMBAT + PIÈGES ----------
     { id: 'room_b1_3', biome: 'biome_1', index: 3, type: 'COMBAT_TRAP', refTime: 75,

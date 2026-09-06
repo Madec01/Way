@@ -17,7 +17,7 @@ Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (
 Bourses, arme d'essai (une par palier), allié temporaire et reliques d'une salle tombent des élites ou sont posés au sol. Le Passeur commence nu et s'habille avec ses greffes jusqu'au chevalier complet. Détails dans `CONTENT.md` §19.
 
 ## Défis de salle
-Salles 2, 3, 6 et 7 : un défi peut s'ajouter à la salle (capture de zone, sol qui s'effondre, séquence d'interrupteurs, lumières coupées, chrono). Détails dans `CONTENT.md` §18.
+Salle 2 : salle aléatoire avec un défi garanti ; salles 6 et 7 : un défi peut s'ajouter (capture de zone, sol qui s'effondre, séquence d'interrupteurs, lumières coupées, chrono). Détails dans `CONTENT.md` §18.
 
 ## Menu, hub et histoire
 Le menu principal et le hub sont joués sur une scène d'attraction : le sujet, piloté par le bot, combat des ennemis des deux paliers derrière l'interface. Le menu se navigue au clavier (flèches, Entrée) ou à la souris.

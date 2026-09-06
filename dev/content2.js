@@ -75,19 +75,14 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_spore', count: 2, x: 21, y: 2 }, { enemy: 'enemy_pollinisateur', count: 2, x: 21, y: 10 }, { enemy: 'enemy_ronce', count: 2, x: 2, y: 1 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_ronce', count: 1, x: -1, y: -1, elite: true }, { enemy: 'enemy_liane', count: 1, x: 12, y: 1 }, { enemy: 'enemy_ronce', count: 2, x: 2, y: 11 }, { enemy: 'enemy_pollinisateur', count: 1, x: 21, y: 6 } ] },
     ], traps: [], fragments: [], modular: [] },
-  { id: 'room_b2_2', biome: 'biome_2', index: 2, type: 'TRAP', refTime: 70,
-    obstacles: [ { x: 8, y: 0, w: 1, h: 4 }, { x: 8, y: 9, w: 1, h: 4 }, { x: 16, y: 0, w: 1, h: 4 }, { x: 16, y: 9, w: 1, h: 4 } ],
-    waves: [],
-    traps: [
-      { trap: 'trap_dalles', x: 2, y: 2, w: 6, h: 9, phase: 0, params: { pattern: 'checker' } },
-      { trap: 'trap_grille', x: 9, y: 1, w: 7, h: 11, phase: 0.5 },
-      { trap: 'trap_balayage', x: 9, y: 0, w: 7, h: 13, phase: 2.5 },
-      { trap: 'trap_bouche', x: 17, y: 0, phase: 0 }, { trap: 'trap_bouche', x: 19, y: 0, phase: 0.6 }, { trap: 'trap_bouche', x: 21, y: 0, phase: 1.2 },
-      { trap: 'trap_bouche', x: 18, y: 12, phase: 0.3, params: { dir: 'up' } }, { trap: 'trap_bouche', x: 20, y: 12, phase: 0.9, params: { dir: 'up' } },
-      { trap: 'trap_rail', x: 17, y: 4, w: 6, h: 1, phase: 0 }, { trap: 'trap_rail', x: 17, y: 8, w: 6, h: 1, phase: 1.6 },
-      { trap: 'trap_tourniquet', x: 20, y: 6, phase: 0, params: { arms: 3 } },
+  { id: 'room_b2_2', biome: 'biome_2', index: 2, type: 'COMBAT_CHALLENGE', refTime: 75,
+    obstacles: [ { x: 6, y: 4, w: 1, h: 1 }, { x: 17, y: 4, w: 1, h: 1 }, { x: 6, y: 8, w: 1, h: 1 }, { x: 17, y: 8, w: 1, h: 1 } ],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_ronce', count: 3, x: 20, y: 4 }, { enemy: 'enemy_pollinisateur', count: 1, x: 21, y: 8 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_spore', count: 2, x: 21, y: 2 }, { enemy: 'enemy_ronce', count: 2, x: -1, y: -1 }, { enemy: 'enemy_liane', count: 1, x: 2, y: 11 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_pollinisateur', count: 2, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_moucherons', count: 1, x: 12, y: 1 } ] }
     ],
-    fragments: [ { x: 4, y: 6, at: 0 }, { x: 12, y: 3, at: 0 }, { x: 12, y: 9, at: 6 }, { x: 19, y: 6, at: 12 }, { x: 22, y: 2, at: 18 }, { x: 22, y: 10, at: 24 } ], modular: [] },
+    traps: [], fragments: [], modular: [] },
   { id: 'room_b2_3', biome: 'biome_2', index: 3, type: 'COMBAT_TRAP', refTime: 85,
     obstacles: [ { x: 4, y: 3, w: 2, h: 1 }, { x: 4, y: 9, w: 2, h: 1 }, { x: 18, y: 3, w: 2, h: 1 }, { x: 18, y: 9, w: 2, h: 1 }, { x: 11, y: 1, w: 2, h: 1 }, { x: 11, y: 11, w: 2, h: 1 } ],
     waves: [

@@ -23,6 +23,7 @@ const RARITY_ORDER = ['common', 'rare', 'epic', 'colossal'];
 const ROOM_TYPES = {
   PREP_COMBAT: { label: 'Préparation + Combat', phase: 1 },
   TRAP: { label: 'Pièges', phase: 1 },
+  COMBAT_CHALLENGE: { label: 'Salle aléatoire', phase: 1 },
   COMBAT_TRAP: { label: 'Combat + Pièges', phase: 1 },
   CHEST: { label: 'Coffre', phase: 1 },
   MINIBOSS: { label: 'Mini-boss', phase: 1 },

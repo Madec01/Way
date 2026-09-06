@@ -57,7 +57,7 @@ Tout dans `index.html`, en IIFE nommées pour garder des frontières nettes. Auc
 | Module | Responsabilité |
 |---|---|
 | `Engine` | Boucle à **pas fixe** (accumulateur, `dt = 1/60`), rendu découplé avec interpolation légère, gestion du canvas 1280×720 mis à l'échelle, `Input` (clavier + souris, abstraction manette), `Time.scale` (pour le ralenti et pour `__autoplay`). |
-| `Room` | `RoomType` enum complet (PREP_COMBAT, TRAP, COMBAT_TRAP, CHEST, MINIBOSS, COMBAT_MODULAR, COMBAT_TRAP_MODULAR, CHEST_FINAL, BOSS_REVENGE). Chargement d'une définition de salle (layout en tuiles, spawns, pièges, `modularElements[]`), transitions (portes, fondu), vagues. Les types 6-9 sont déclarés et refusent de se charger avec un message clair. |
+| `Room` | `RoomType` enum complet (PREP_COMBAT, COMBAT_CHALLENGE (salle aléatoire : combat + défi garanti), COMBAT_TRAP, CHEST, MINIBOSS, COMBAT_MODULAR, COMBAT_TRAP_MODULAR, CHEST_FINAL, BOSS_REVENGE). Chargement d'une définition de salle (layout en tuiles, spawns, pièges, `modularElements[]`), transitions (portes, fondu), vagues. Les types 6-9 sont déclarés et refusent de se charger avec un message clair. |
 | `Entities` | `Player`, `Enemy` (machine à états par archétype, télégraphie), `Projectile`, `Trap` (pattern déterministe piloté par le temps de salle), `Pickup` (XP, pièces, fragments), `Decor` (éléments animés avec collision, pour les salles modulaires). Collisions cercle/cercle et cercle/AABB, grille spatiale uniforme. |
 | `Content` | Toutes les données §5-6 en objets déclaratifs avec `id` stable : `CHARACTERS`, `WEAPONS`, `SKILLS`, `UPGRADES`, `META_PASSIVES`, `BIOMES` (passifs de niveau), `ENEMIES`, `BOSSES`, `TRAPS`, `ROOMS`. Les effets sont exprimés comme des **modificateurs de stats** (`{stat:'damage', mul:1.15}`) ou des **hooks nommés** (`onDash`, `onKill`, `onHit`, `onTrapDamage`) que le moteur appelle. Aucune logique de gameplay ne vit dans `Content`. |
 | `Progression` | XP et courbe de niveaux, tirage pondéré des raretés (avec passif *Chance*), plancher des coffres, **score de salle** (dégâts subis / temps / combo) et moyenne pour les coffres, forçage de rareté (debug). |
@@ -78,7 +78,7 @@ Déterminisme : les pièges lisent `room.time` (temps écoulé depuis l'entrée,
 | 1 | **Ce plan** | Validation. |
 | 2 | Agents Lore + Contenu en parallèle | `LORE.md`, `CONTENT.md` avec toutes les tables chiffrées → **validation**. |
 | 3 | Moteur minimal | Salle vide, joueur, arme de base, 1 ennemi rusher, HUD. Jouable au clavier. |
-| 4 | Salles 1-3 | 6 ennemis + 6 pièges du biome 1, vagues, level-up à 3 choix, fragments d'énergie en salle 2. |
+| 4 | Salles 1-3 | 6 ennemis + 6 pièges du biome 1, vagues, level-up à 3 choix, salle 2 = salle aléatoire (défi garanti), salle 3 = pièges + ennemis. |
 | 5 | Salles 4-5 | Score de salle, coffre avec plancher de rareté, mini-boss à 2-3 patterns + faiblesse. |
 | 6 | Méta | Hub, argent, 15+ passifs méta, 2 personnages, modes Normal/Test, panneau debug, sauvegarde. |
 | 7 | Audio + assets | `AudioEngine` + écran de test audio, sprites intégrés, musiques, `CREDITS.md`. |
