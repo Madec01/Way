@@ -474,9 +474,9 @@ La salle 2 est une « salle aléatoire » : combat à 3 vagues avec un défi gar
 
 | Défi | Salles | Règle | Récompense / sanction |
 |---|---|---|---|
-| Capture de zone | 2, 6, 7 | Trois zones successives (rayon 3 tuiles) : tenir dedans remplit la jauge en 6 s, sortir la vide en 12 s. Renforts toutes les 7 s tant que ce n'est pas fini. La porte n'ouvre qu'après la 3e zone. | Kills dans la zone : XP +50 % |
-| Sol qui s'effondre | 2, 6, 7 | Les pièges et éléments modulaires de la salle sont retirés. Des paquets de 3 à 6 dalles (7 au biome 2) se fissurent 1,3 s puis tombent, de plus en plus vite ; jamais sous le joueur, jamais aux portes, jamais en coupant la salle en deux. Tomber : 12 dégâts, retour sur la dalle sûre la plus proche, 1 s d'invulnérabilité. Les ennemis tombent et meurent (XP ÷2). Fin à 40 % de sol restant (~100 s). | — |
-| Séquence | 2, 6, 7 | Trois interrupteurs I, II, III ; l'ordre s'affiche 4 s au début puis dans le HUD. Marcher dessus dans l'ordre ; erreur = décharge de 8 et remise à zéro. Optionnel. | 40 XP, 25 crédits, une relique |
+| Capture de zone | 2, 6 | Trois zones successives (rayon 3 tuiles) : tenir dedans remplit la jauge en 6 s, sortir la vide en 12 s. Renforts toutes les 6 s (3 à 4 ennemis, à 80 % au corps à corps) tant que ce n'est pas fini. La porte n'ouvre qu'après la 3e zone. | Kills dans la zone : XP +50 % |
+| Sol qui s'effondre | 2, 6 | Les pièges et éléments modulaires de la salle sont retirés. Des paquets de 3 à 6 dalles se fissurent 1,3 s puis tombent, de plus en plus vite, pendant tout le combat, jusqu'à 55 % du sol restant. Le joueur qui tombe : 12 dégâts et retour sur la dalle sûre la plus proche ; les ennemis tombent et meurent. Fin de salle par les vagues, comme d'habitude ; une passerelle se déploie alors vers la porte si le chemin est coupé. | Aucune pénalité, le sol est le danger |
+| Séquence | 2, 6 | Trois interrupteurs I, II, III ; l'ordre s'affiche 4 s au début puis dans le HUD. Marcher dessus dans l'ordre ; erreur = décharge de 8 et remise à zéro. **Obligatoire** : la porte ne s'ouvre qu'avec les trois interrupteurs ET les vagues tuées. | 40 XP, 20 crédits |
 | Lumières coupées | 2, 6, 7 | Seule une lampe de 210 px autour du joueur éclaire ; les ennemis se trahissent par leurs yeux (jaunes quand ils télégraphient). | XP +25 % |
 | Chrono | 2, 6, 7 | 60 s pour vider la salle. Après, tout ce qui reste et tout ce qui arrive est enragé (vitesse et dégâts +30 %, teinte rouge). | 30 crédits si tenu |
 

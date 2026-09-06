@@ -6,9 +6,9 @@
    ========================================================================= */
 
 const CHALLENGE_DEFS = {
-  capture:  { name: 'Capture de zone', desc: 'Tenez la zone pour remplir la jauge. Trois zones. Les kills dans la zone rapportent +50 % d\'XP.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#7fff9a' },
-  collapse: { name: 'Sol qui s\'effondre', desc: 'Des dalles tombent par paquets, de plus en plus vite. Tenez jusqu\'à ce qu\'il reste 40 % du sol. Les ennemis tombent aussi.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ffb347', replacesTraps: true },
-  switches: { name: 'Séquence', desc: 'Activez les 3 interrupteurs dans l\'ordre affiché. Récompense à la clé, décharge en cas d\'erreur.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#c9a3ff' },
+  capture:  { name: 'Capture de zone', desc: 'Tenez la zone pour remplir la jauge, trois zones de suite. Porte fermée tant que les zones ne sont pas prises. Renforts au corps à corps. Kills dans la zone : +50 % d\'XP.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#7fff9a' },
+  collapse: { name: 'Sol qui s\'effondre', desc: 'Des dalles tombent par paquets pendant tout le combat, jusqu\'à la moitié du sol. Les ennemis tombent aussi. Tuez les vagues : la porte s\'ouvre et une passerelle se déploie.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ffb347', replacesTraps: true },
+  switches: { name: 'Séquence', desc: 'Activez les 3 interrupteurs dans l\'ordre affiché ET tuez les vagues : la porte ne s\'ouvre qu\'avec les deux. Décharge en cas d\'erreur.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#c9a3ff' },
   lights:   { name: 'Lumières coupées', desc: 'Seule votre lampe éclaire. Les ennemis se trahissent par leurs yeux. XP +25 %.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#9fd8ff' },
   timer:    { name: 'Chrono', desc: 'Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s\'enrage.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ff5e7a' },
 };
@@ -33,9 +33,9 @@ const Challenge = (() => {
     const rng = RNG;
     if (id === 'capture') {
       c.zones = []; for (let i = 0; i < 3; i++) { let p; for (let k = 0; k < 20; k++) { p = randFreeTile(room, rng, 3); if (!c.zones.some(z => dist(z.x, z.y, tileX(p.x), tileY(p.y)) < 300)) break; } c.zones.push({ x: tileX(p.x), y: tileY(p.y) }); }
-      c.zi = 0; c.gauge = 0; c.r = 3 * TILE; c.reinforceT = 6; c.reinforceEvery = 7;
+      c.zi = 0; c.gauge = 0; c.r = 3 * TILE; c.reinforceT = 5; c.reinforceEvery = 6;
     } else if (id === 'collapse') {
-      c.holes = new Set(); c.warn = new Map(); c.nextT = 3; c.every0 = Math.max(2.0, 3.0 - 0.3 * ((G.run.biome.order || 1) - 1)); c.total = ROOM_COLS * ROOM_ROWS; c.target = Math.round(c.total * 0.4); c.fallen = 0; c.reinforceT = 8; c.reinforceEvery = 9;
+      c.holes = new Set(); c.warn = new Map(); c.nextT = 3; c.every0 = Math.max(2.0, 3.0 - 0.3 * ((G.run.biome.order || 1) - 1)); c.total = ROOM_COLS * ROOM_ROWS; c.target = Math.round(c.total * 0.55); c.fallen = 0; c.reinforceT = 8; c.reinforceEvery = 9;
     } else if (id === 'switches') {
       c.sw = []; const order = rng.shuffle([0, 1, 2]);
       for (let i = 0; i < 3; i++) { let p; for (let k = 0; k < 20; k++) { p = randFreeTile(room, rng, 2); if (!c.sw.some(s => dist(s.tx, s.ty, p.x, p.y) < 5)) break; } c.sw.push({ tx: p.x, ty: p.y, x: tileX(p.x), y: tileY(p.y), on: false, label: ['I', 'II', 'III'][i] }); }
@@ -44,7 +44,8 @@ const Challenge = (() => {
     else if (id === 'timer') { c.limit = 60; c.enraged = false; }
     return c;
   }
-  const spawnReinforcement = (n) => { const pool = G.run.biome.enemyPool.filter(id => { const e = Content.enemy(id); return e && e.archetype !== 'summoner'; }); if (Room.alive() >= 8) return; for (let i = 0; i < n; i++) Room.spawnAt({ enemy: RNG.pick(pool), count: 1, x: -1, y: -1 }); UI.banner('Renforts', '#ff6b6b'); };
+  /* renforts : de préférence au corps à corps (rôdeurs, chargeurs, kamikazes, dashers) — les tireurs laissent tenir une zone trop facilement */
+  const spawnReinforcement = (n, melee) => { const all = G.run.biome.enemyPool.filter(id => { const e = Content.enemy(id); return e && e.archetype !== 'summoner'; }); const cc = all.filter(id => ['rusher', 'tank', 'kamikaze', 'dasher'].includes(Content.enemy(id).archetype)); if (Room.alive() >= 9) return; for (let i = 0; i < n; i++) { const pool = melee && cc.length && RNG.chance(0.8) ? cc : all; Room.spawnAt({ enemy: RNG.pick(pool), count: 1, x: -1, y: -1 }); } UI.banner('Renforts', '#ff6b6b'); };
 
   /* ---------- update ---------- */
   function update(room, dt) {
@@ -52,7 +53,7 @@ const Challenge = (() => {
     if (c.id === 'capture') {
       const z = c.zones[c.zi]; const inside = dist(pl.x, pl.y, z.x, z.y) < c.r;
       c.gauge = clamp(c.gauge + (inside ? dt / 6 : -dt / 12), 0, 1);
-      c.reinforceT -= dt; if (c.reinforceT <= 0) { c.reinforceT = c.reinforceEvery; spawnReinforcement(2 + Math.floor(RNG() * 2)); }
+      c.reinforceT -= dt; if (c.reinforceT <= 0) { c.reinforceT = c.reinforceEvery; spawnReinforcement(3 + Math.floor(RNG() * 2), true); }
       if (c.gauge >= 1) { c.zi++; c.gauge = 0; AudioEngine.roomClear({ intensity: 0.6 }); Particles.spawn(z.x, z.y, { count: 30, color: '#7fff9a', glow: true, speedMax: 300 }); if (c.zi >= c.zones.length) { c.done = true; UI.banner('Zones capturées', '#7fff9a'); room.challengeOk = true; } else UI.banner(`Zone ${c.zi + 1} / 3`, '#7fff9a'); }
       c.hud = `Zone ${Math.min(c.zi + 1, 3)}/3 · ${Math.round(c.gauge * 100)} %`;
     } else if (c.id === 'collapse') {
@@ -61,14 +62,15 @@ const Challenge = (() => {
       c.nextT -= dt;
       const safe = c.total - c.holes.size - c.warn.size;
       if (c.nextT <= 0 && safe > c.target) { c.nextT = Math.max(1.3, c.every0 - c.t * 0.014); scheduleCluster(room, c); if (c.t > 25 && RNG.chance(0.5)) scheduleCluster(room, c); AudioEngine.trapSpike({ intensity: 0.7 }); }   // accélère avec le temps, parfois deux paquets
-      c.reinforceT -= dt; if (c.reinforceT <= 0 && Room.alive() < 5) { c.reinforceT = c.reinforceEvery; spawnReinforcement(2); }
+      c.reinforceT -= dt; if (c.reinforceT <= 0 && Room.alive() < 5 && !room.waves.every(w => w.done)) { c.reinforceT = c.reinforceEvery; spawnReinforcement(2); }
       /* chutes */
       const tileOf = e => `${Math.floor((e.x - ROOM_X) / TILE)},${Math.floor((e.y - ROOM_Y) / TILE)}`;
       if (!pl.dead && !pl.dashing && c.holes.has(tileOf(pl))) fallPlayer(room, c);
       for (const e of G.enemies) { if (e.dead || e.isBoss || e.state === 'dash' || e.state === 'lunge' || e.state === 'charge') continue; if (c.holes.has(tileOf(e))) { e.xp = Math.round(e.xp * 0.5); e.coins = 0; Floaters.add(e.x, e.y - 10, 'tombé', '#9aa4c4', 12); Combat.killEnemy(e, { silent: true }); } }
       const pct = Math.round(100 * (c.total - c.holes.size) / c.total);
-      c.hud = `Sol ${pct} % · objectif 40 %`;
-      if (c.total - c.holes.size <= c.target) { c.done = true; room.challengeOk = true; c.warn.clear(); buildPlanks(room, c); UI.banner('Surface atteinte : une passerelle se déploie', '#ffb347'); Room.clear(); }
+      c.hud = `Sol ${pct} % · tuez les vagues`;
+      /* la salle se termine par les vagues, pas par le sol : à la fin, une passerelle se déploie si le chemin vers la porte est coupé */
+      if (room.state === 'clear' && !c.done) { c.done = true; room.challengeOk = true; c.warn.clear(); buildPlanks(room, c); UI.banner('Une passerelle se déploie vers la sortie', '#ffb347'); }
     } else if (c.id === 'switches') {
       c.showT -= dt;
       for (const s of c.sw) {

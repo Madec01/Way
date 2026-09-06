@@ -555,15 +555,13 @@ const CONTENT = {
         { at: 'clear', spawns: [
           { enemy: 'enemy_eclipse', count: 1, x: 21, y: 6 },
           { enemy: 'enemy_rodeur', count: 3, x: -1, y: -1 },
-          { enemy: 'enemy_incubateur', count: 1, x: 2, y: 6 },
           { enemy: 'enemy_sentinelle', count: 1, x: 12, y: 11 } ] }
       ],
       traps: [
         { trap: 'trap_tourniquet', x: 11, y: 6, phase: 0 },
         { trap: 'trap_dalles', x: 1, y: 1, w: 3, h: 3, phase: 0 },
         { trap: 'trap_dalles', x: 20, y: 9, w: 3, h: 3, phase: 1.0 },
-        { trap: 'trap_tourelle', x: 8, y: 0, phase: 0 },
-        { trap: 'trap_tourelle', x: 15, y: 0, phase: 1.2 }
+        { trap: 'trap_tourelle', x: 11, y: 0, phase: 0 }
       ],
       fragments: [], modular: [] },
 

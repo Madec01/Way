@@ -113,7 +113,7 @@ const Room = {
       for (const f of r.fragmentsDef) { if (!f.spawned && r.stateT >= (f.at || 0)) { f.spawned = true; Pickups.spawn(tileX(f.x), tileY(f.y), 'fragment', f.xp || 12); r.fragmentsSpawned++; } }
       /* condition de fin */
       const allWaves = r.waves.every(w => w.done);
-      const ch = r.challenge; const holdsDoor = ch && !ch.done && (ch.id === 'capture' || ch.id === 'collapse');
+      const ch = r.challenge; const holdsDoor = ch && !ch.done && (ch.id === 'capture' || ch.id === 'switches');   // zones à prendre / interrupteurs : la porte attend, en plus des vagues
       if (r.type === 'CHEST' || r.type === 'CHEST_FINAL') { /* fin par interaction */ }
       else if (r.type === 'TRAP') { /* porte ouverte dès le début (sauf effondrement) */ }
       else if (r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') { if (r.bossDead && Room.alive() === 0) Room.clear(); }
