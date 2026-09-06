@@ -122,7 +122,15 @@ const Sprites = (() => {
     if (near) { ctx.fillStyle = '#fff'; ctx.font = 'bold 14px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(STR.interact, ch.x, ch.y - 36); }
     ctx.restore();
   }
-  return { load, draw, tile, drawFloor, drawBlock, drawChest, get ready() { return ready; }, get failed() { return failed; } };
+  /* portrait DOM (canvas) d'un sprite, pour le hub */
+  function portrait(key, scale = 4) {
+    const d = SPRITE_DEFS[key]; if (!ready || !d) return null;
+    const [sx, sy, sw, sh] = d.idle; const c = document.createElement('canvas'); c.width = sw * scale; c.height = sh * scale; c.className = 'portrait-canvas';
+    const g = c.getContext('2d'); g.imageSmoothingEnabled = false; let f = 0;
+    const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
+    draw(); return c;
+  }
+  return { load, draw, tile, drawFloor, drawBlock, drawChest, portrait, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

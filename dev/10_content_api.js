@@ -31,6 +31,7 @@ const Content = (() => {
   const get = (k, id) => byId(k)[id] || null;
   function validate() {
     const warn = (...a) => console.warn('[Content]', ...a);
+    CONTENT.characters.forEach((c, i) => { if (!c.sprite) c.sprite = i === 0 ? 'player' : 'player2'; });
     for (const c of CONTENT.characters) if (!get('weapons', c.startWeapon)) warn('arme de départ inconnue', c.id, c.startWeapon);
     for (const b of CONTENT.biomes) { if (!get('bosses', b.miniboss)) warn('mini-boss inconnu', b.miniboss); for (const e of b.enemyPool) if (!get('enemies', e)) warn('ennemi inconnu', e); for (const t of b.trapPool) if (!get('traps', t)) warn('piège inconnu', t); }
     for (const r of CONTENT.rooms) { if (!ROOM_TYPES[r.type]) warn('type de salle inconnu', r.id, r.type); for (const w of (r.waves || [])) for (const s of w.spawns) if (!get('enemies', s.enemy) && !get('bosses', s.enemy)) warn('spawn inconnu', r.id, s.enemy); for (const t of (r.traps || [])) if (!get('traps', t.trap)) warn('piège inconnu', r.id, t.trap); }

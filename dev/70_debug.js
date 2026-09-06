@@ -91,7 +91,7 @@ const Debug = (() => {
   /* ---------- Bot ---------- */
   const DIRS = [{ x: 0, y: 0 }]; for (let i = 0; i < 16; i++) DIRS.push({ x: Math.cos(i * TAU / 16), y: Math.sin(i * TAU / 16) });
   function botControl(pl) {
-    const rm = G.room; const rng = G.autoplay.rng; const w = pl.weapon; const isMelee = w && (w.type === 'melee' || w.type === 'area' || w.type === 'orbital');
+    const rm = G.room; const rng = (G.autoplay && G.autoplay.rng) || RNG; const w = pl.weapon; const isMelee = w && (w.type === 'melee' || w.type === 'area' || w.type === 'orbital');
     const enemy = nearestEnemy(pl.x, pl.y);
     /* objectif */
     let goal = null;

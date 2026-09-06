@@ -168,6 +168,7 @@ const Room = {
 /* ---------- Run : un niveau du début à la fin ---------- */
 const Run = {
   start({ character, biome, weapon, skill, seed }) {
+    Attract.stop();
     if (seed != null) RNG.reseed(seed);
     const charDef = Content.character(character); const biomeDef = Content.biome(biome);
     const rooms = Content.roomsOf(biomeDef.id);
@@ -195,7 +196,7 @@ const Run = {
     G.run.weapon = pl.weapon.id; G.run.skill = pl.skill.id;
   },
   addXp(n) {
-    const r = G.run; if (r.ended) return; r.xp += n;
+    const r = G.run; if (r.ended || r.attract) return; r.xp += n;
     while (r.xp >= r.xpNext) { r.xp -= r.xpNext; r.level++; r.xpNext = Progression.xpForLevel(r.level); r.pendingLevelUps++; r.stats.levelReached = r.level; }
     if (r.pendingLevelUps > 0 && !G.overlay) Run.levelUp();
   },
@@ -253,7 +254,7 @@ const Run = {
     UI.transition(() => { Room.load(next); });
   },
   onPlayerDeath() {
-    const r = G.run; if (r.ended) return; r.ended = true;
+    const r = G.run; if (r.ended || r.attract) return; r.ended = true;
     G.room.died = true; r.stats.deathRoom = G.room.index; r.stats.deathCause = Run.lastDamageSource || 'inconnu';
     const kept = Progression.coinsKeptOnDeath(r.coinsPending, G.room.index, r.lastCheckpoint);
     const total = r.coinsValidated + kept; Meta.addCoins(total); Meta.recordRun(false);
@@ -262,13 +263,13 @@ const Run = {
     Music.play('hub');
   },
   endLevel(victory) {
-    const r = G.run; if (r.ended) return; r.ended = true;
+    const r = G.run; if (r.ended || r.attract) return; r.ended = true;
     const bonus = Math.round(150 * G.player.stats.coinGain * G.debug.coinMul); const total = r.coinsValidated + r.coinsPending + bonus; Meta.addCoins(total); Meta.recordRun(true);
     G.paused = true; UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
     Music.play('hub');
   },
   abort() { const r = G.run; if (!r || r.ended) return; r.ended = true; const kept = Progression.coinsKeptOnDeath(r.coinsPending, G.room.index, r.lastCheckpoint); Meta.addCoins(r.coinsValidated + kept); Meta.recordRun(false); Run.toHub(); },
-  toHub() { G.state = 'hub'; G.paused = false; G.overlay = null; G.run = null; G.player = null; G.enemies = []; G.room = null; Projectiles.list = []; Pickups.list = []; UI.showHub(); Music.play('hub'); },
+  toHub() { G.state = 'hub'; G.paused = false; G.overlay = null; G.run = null; G.player = null; G.enemies = []; G.room = null; Projectiles.list = []; Pickups.list = []; UI.showHub(); Music.play('hub'); Attract.start(); },
   qualityAvg() { const r = G.run; if (!r) return 1; const vals = r.scores.map(s => s.score); const cur = G.room && G.room.state !== 'clear' ? [Room.score()] : []; return Progression.avgScore(vals.concat(cur)); },
 
   update(dt) {

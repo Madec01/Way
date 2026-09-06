@@ -111,6 +111,83 @@ body.touch .prep h2{font-size:1.2em}
 body.touch .prep .passives .tiny{display:none}
 #touch .tbtn.fs{right:calc(68px*var(--ui-scale));top:calc(56px*var(--ui-scale));width:calc(44px*var(--ui-scale));height:calc(44px*var(--ui-scale));font-size:calc(16px*var(--ui-scale))}
 
+/* ================= Direction artistique : menu et hub ================= */
+@font-face{font-family:"Silkscreen";src:url("assets/fonts/Silkscreen-Regular.ttf") format("truetype");font-display:swap}
+@font-face{font-family:"Pixelify Sans";src:url("assets/fonts/PixelifySans-Regular.ttf") format("truetype");font-display:swap}
+@font-face{font-family:"VT323";src:url("assets/fonts/VT323-Regular.ttf") format("truetype");font-display:swap}
+#ui #screen-menu,#ui #screen-hub{background:transparent;backdrop-filter:none;padding:0;align-items:stretch;justify-content:stretch}
+.stamp{display:inline-flex;gap:.6em;align-items:center;font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:.85em;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);opacity:.85;border:1px solid rgba(110,231,255,.35);padding:.3em .8em;border-radius:4px;background:rgba(8,10,18,.55)}
+.stamp .sep{opacity:.5}
+/* ---- menu ---- */
+.menu2{position:absolute;inset:0;display:grid;grid-template-rows:auto 1fr auto;padding:calc(28px*var(--ui-scale)) calc(56px*var(--ui-scale));box-sizing:border-box}
+.menu2 .titlebox{align-self:start;margin-top:calc(8px*var(--ui-scale))}
+.bigtitle{font-family:"Silkscreen","Segoe UI",sans-serif;font-size:calc(74px*var(--ui-scale));line-height:.95;letter-spacing:.06em;margin:.2em 0 .1em;position:relative;color:#f4f7ff;text-shadow:0 0 12px rgba(110,231,255,.65),0 0 42px rgba(110,231,255,.35),4px 4px 0 #0b1230;animation:titleIn 1.1s cubic-bezier(.2,.9,.2,1) both,flicker 7s 2s infinite}
+.bigtitle .accent{color:#ffb347;text-shadow:0 0 12px rgba(255,179,71,.7),0 0 44px rgba(255,154,60,.4),4px 4px 0 #2a1608}
+.bigtitle::after{content:attr(data-text);position:absolute;left:0;top:0;color:rgba(110,231,255,.35);clip-path:inset(0 0 55% 0);transform:translate(-3px,0);pointer-events:none;animation:glitch 6s 3s infinite;mix-blend-mode:screen}
+.tagline{font-family:"VT323","Segoe UI",monospace;font-size:calc(26px*var(--ui-scale));color:var(--muted);letter-spacing:.08em;animation:fadeUp .9s .3s both}
+@keyframes titleIn{from{opacity:0;transform:translateY(18px) scale(.98);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes flicker{0%,93%,100%{opacity:1}94%{opacity:.75}95%{opacity:1}97%{opacity:.6}98%{opacity:1}}
+@keyframes glitch{0%,88%,100%{opacity:0}89%{opacity:1;transform:translate(-6px,0);clip-path:inset(10% 0 60% 0)}91%{opacity:1;transform:translate(5px,0);clip-path:inset(50% 0 20% 0)}93%{opacity:0}}
+.menunav{display:flex;flex-direction:column;gap:calc(6px*var(--ui-scale));align-self:center;max-width:calc(520px*var(--ui-scale))}
+.mbtn{display:grid;grid-template-columns:2.6em 1fr;grid-template-rows:auto auto;column-gap:.6em;align-items:center;text-align:left;font:inherit;color:var(--text);background:linear-gradient(90deg,rgba(16,20,34,.72),rgba(16,20,34,.35));border:1px solid rgba(110,231,255,.18);border-left:3px solid rgba(110,231,255,.35);border-radius:6px;padding:.55em 1em;cursor:pointer;position:relative;overflow:hidden;transition:transform .15s,border-color .15s,background .2s;animation:fadeUp .6s both}
+.mbtn:nth-child(1){animation-delay:.35s}.mbtn:nth-child(2){animation-delay:.42s}.mbtn:nth-child(3){animation-delay:.49s}.mbtn:nth-child(4){animation-delay:.56s}.mbtn:nth-child(5){animation-delay:.63s}.mbtn:nth-child(6){animation-delay:.7s}
+.mbtn .k{grid-row:1/3;font-family:"Silkscreen",monospace;font-size:.85em;color:var(--accent);opacity:.8}
+.mbtn .l{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.35em;letter-spacing:.06em}
+.mbtn .d{font-size:.78em;color:var(--muted)}
+.mbtn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,rgba(110,231,255,.28),rgba(110,231,255,0));transition:width .25s}
+.mbtn:hover,.mbtn:focus{outline:none;transform:translateX(8px);border-color:var(--accent);border-left-color:#fff;box-shadow:0 0 22px rgba(110,231,255,.25)}
+.mbtn:hover::before,.mbtn:focus::before{width:100%}
+.mbtn.primary{border-left-color:#ffb347}.mbtn.primary .k{color:#ffb347}
+.mbtn.primary:hover,.mbtn.primary:focus{border-color:#ffb347;box-shadow:0 0 22px rgba(255,179,71,.3)}
+.mbtn.primary::before{background:linear-gradient(90deg,rgba(255,179,71,.28),rgba(255,179,71,0))}
+.mbtn.ghost{opacity:.7}
+.menufoot{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;font-size:.8em;color:var(--muted);font-family:"VT323",monospace;font-size:calc(19px*var(--ui-scale));animation:fadeUp .8s .9s both}
+/* ---- histoire / intro ---- */
+.storybox,.introbox{position:absolute;inset:0;margin:auto;max-width:calc(1040px*var(--ui-scale));max-height:calc(100% - 40px*var(--ui-scale));overflow:auto;background:rgba(8,10,18,.82);border:1px solid var(--line);border-radius:14px;padding:1.4em 2em;box-shadow:0 0 60px rgba(0,0,0,.6);backdrop-filter:blur(8px);height:fit-content}
+.storytitle{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:2em;margin:.3em 0 .2em;letter-spacing:.04em}
+.storycols{display:grid;grid-template-columns:1fr 1fr;gap:1.5em}
+.storycol p{line-height:1.5;margin:.2em 0 .8em}
+.storycol h3{margin:.4em 0 .2em}
+.r-common{color:#cfd6e6}.r-rare{color:#4fb3ff}.r-epic{color:#b46bff}.r-colossal{color:#ffb347}
+.fraglist{display:flex;flex-direction:column;gap:.3em}
+.frag{border:1px solid var(--line);border-radius:8px;padding:.4em .8em;background:rgba(10,13,24,.6)}
+.frag summary{cursor:pointer;font-weight:600}
+.frag.locked summary{color:var(--muted);cursor:default}
+.fragtext{margin:.5em 0 .2em;line-height:1.45;font-family:"VT323",monospace;font-size:1.25em;color:#dfe6ff}
+.introbox{max-width:calc(760px*var(--ui-scale));font-family:"VT323",monospace;font-size:calc(26px*var(--ui-scale))}
+.introtext{min-height:8em;margin:1em 0}
+.introtext p{margin:.3em 0;line-height:1.35}
+.introtext p::after{content:"▌";animation:blink 1s steps(1) infinite;color:var(--accent)}
+.introtext p:not(:last-child)::after{content:""}
+@keyframes blink{50%{opacity:0}}
+/* ---- hub ---- */
+.hub2{position:absolute;inset:0;display:grid;grid-template-columns:minmax(16em,22em) minmax(18em,1fr) minmax(20em,30em);grid-template-rows:auto 1fr;gap:calc(12px*var(--ui-scale));padding:calc(16px*var(--ui-scale)) calc(24px*var(--ui-scale));box-sizing:border-box}
+.hubhead{grid-column:1/4;display:flex;justify-content:space-between;align-items:center;gap:1em;background:rgba(8,10,18,.6);border:1px solid var(--line);border-radius:12px;padding:.6em 1.2em;backdrop-filter:blur(6px);animation:fadeUp .5s both}
+.hubid{display:flex;flex-direction:column;gap:.3em}
+.intercom{font-family:"VT323",monospace;font-size:1.35em;color:#dfe6ff}
+.hubcoins{text-align:right}.hubcoins .big{font-family:"Silkscreen",monospace;font-size:1.5em;color:var(--gold);text-shadow:0 0 14px rgba(255,209,102,.5)}
+.hubactions{display:flex;gap:.4em}
+.hubcol{background:rgba(8,10,18,.62);border:1px solid var(--line);border-radius:12px;padding:.9em 1em;overflow:auto;backdrop-filter:blur(6px);display:flex;flex-direction:column;gap:.5em;animation:fadeUp .6s .1s both}
+.hubcol.center{animation-delay:.2s}.hubcol.shopcol{animation-delay:.3s}
+.hubcol h3{margin:.4em 0 .2em}
+.portraitbox{display:flex;gap:.8em;align-items:center}
+.portrait{width:calc(96px*var(--ui-scale));height:calc(140px*var(--ui-scale));flex:none;display:flex;align-items:flex-end;justify-content:center;background:radial-gradient(circle at 50% 70%,rgba(110,231,255,.25),rgba(110,231,255,0) 70%);border:1px solid rgba(110,231,255,.25);border-radius:10px}
+.portrait-canvas{image-rendering:pixelated;width:calc(80px*var(--ui-scale));height:auto;margin-bottom:8px;filter:drop-shadow(0 0 10px rgba(110,231,255,.5))}
+.subjname{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.4em;letter-spacing:.04em}
+.hubcol .card{max-width:none;min-width:0}
+.card.mini{padding:.5em .8em}
+.card.level.selected{border-color:#ffb347;box-shadow:0 0 24px rgba(255,179,71,.3)}
+.cta{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:.2em;font:inherit;color:#0b0d14;background:linear-gradient(90deg,#ffd166,#ffb347);border:0;border-radius:10px;padding:.8em 1.2em;cursor:pointer;text-align:left;box-shadow:0 0 26px rgba(255,179,71,.35);transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
+.cta .l{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.35em;letter-spacing:.05em}
+.cta .d{font-size:.8em;opacity:.8}
+.cta::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:sheen 3s 1s infinite}
+@keyframes sheen{0%{left:-60%}40%,100%{left:120%}}
+.cta:hover{transform:translateY(-2px);box-shadow:0 0 36px rgba(255,179,71,.55)}
+body.touch .hub2{grid-template-columns:minmax(12em,16em) minmax(14em,1fr) minmax(14em,22em);padding:calc(8px*var(--ui-scale))}
+body.touch .bigtitle{font-size:calc(56px*var(--ui-scale))}
+body.touch .menu2{padding:calc(16px*var(--ui-scale)) calc(28px*var(--ui-scale))}
+
 </style>
 </head>
 <body>
@@ -2341,6 +2418,7 @@ const Content = (() => {
   const get = (k, id) => byId(k)[id] || null;
   function validate() {
     const warn = (...a) => console.warn('[Content]', ...a);
+    CONTENT.characters.forEach((c, i) => { if (!c.sprite) c.sprite = i === 0 ? 'player' : 'player2'; });
     for (const c of CONTENT.characters) if (!get('weapons', c.startWeapon)) warn('arme de départ inconnue', c.id, c.startWeapon);
     for (const b of CONTENT.biomes) { if (!get('bosses', b.miniboss)) warn('mini-boss inconnu', b.miniboss); for (const e of b.enemyPool) if (!get('enemies', e)) warn('ennemi inconnu', e); for (const t of b.trapPool) if (!get('traps', t)) warn('piège inconnu', t); }
     for (const r of CONTENT.rooms) { if (!ROOM_TYPES[r.type]) warn('type de salle inconnu', r.id, r.type); for (const w of (r.waves || [])) for (const s of w.spawns) if (!get('enemies', s.enemy) && !get('bosses', s.enemy)) warn('spawn inconnu', r.id, s.enemy); for (const t of (r.traps || [])) if (!get('traps', t.trap)) warn('piège inconnu', r.id, t.trap); }
@@ -2493,7 +2571,15 @@ const Sprites = (() => {
     if (near) { ctx.fillStyle = '#fff'; ctx.font = 'bold 14px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(STR.interact, ch.x, ch.y - 36); }
     ctx.restore();
   }
-  return { load, draw, tile, drawFloor, drawBlock, drawChest, get ready() { return ready; }, get failed() { return failed; } };
+  /* portrait DOM (canvas) d'un sprite, pour le hub */
+  function portrait(key, scale = 4) {
+    const d = SPRITE_DEFS[key]; if (!ready || !d) return null;
+    const [sx, sy, sw, sh] = d.idle; const c = document.createElement('canvas'); c.width = sw * scale; c.height = sh * scale; c.className = 'portrait-canvas';
+    const g = c.getContext('2d'); g.imageSmoothingEnabled = false; let f = 0;
+    const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
+    draw(); return c;
+  }
+  return { load, draw, tile, drawFloor, drawBlock, drawChest, portrait, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */
@@ -3216,6 +3302,7 @@ class Player {
   die() {
     const sc = Progression.hasPassive(this.hooks, 'second_chance') || Meta.resurrectAvailable();
     if (sc && !this.secondChanceUsed) { this.secondChanceUsed = true; this.hp = Math.round(this.stats.maxHp * (sc.hpFraction || 0.5)); this.invulnUntil = Time.now + 2; G.room.died = true; Combat.playerShockwave({ radius: 220, damage: 30, knockback: 4 }); Floaters.add(this.x, this.y - 40, 'RÉIMPRESSION', '#ffb347', 20); AudioEngine.levelUp({}); return; }
+    if (G.run && G.run.attract) { this.hp = this.stats.maxHp; return; }
     this.dead = true; this.hp = 0; AudioEngine.playerDie({}); Run.onPlayerDeath();
   }
   update(dt) {
@@ -4098,6 +4185,7 @@ const Room = {
 /* ---------- Run : un niveau du début à la fin ---------- */
 const Run = {
   start({ character, biome, weapon, skill, seed }) {
+    Attract.stop();
     if (seed != null) RNG.reseed(seed);
     const charDef = Content.character(character); const biomeDef = Content.biome(biome);
     const rooms = Content.roomsOf(biomeDef.id);
@@ -4125,7 +4213,7 @@ const Run = {
     G.run.weapon = pl.weapon.id; G.run.skill = pl.skill.id;
   },
   addXp(n) {
-    const r = G.run; if (r.ended) return; r.xp += n;
+    const r = G.run; if (r.ended || r.attract) return; r.xp += n;
     while (r.xp >= r.xpNext) { r.xp -= r.xpNext; r.level++; r.xpNext = Progression.xpForLevel(r.level); r.pendingLevelUps++; r.stats.levelReached = r.level; }
     if (r.pendingLevelUps > 0 && !G.overlay) Run.levelUp();
   },
@@ -4183,7 +4271,7 @@ const Run = {
     UI.transition(() => { Room.load(next); });
   },
   onPlayerDeath() {
-    const r = G.run; if (r.ended) return; r.ended = true;
+    const r = G.run; if (r.ended || r.attract) return; r.ended = true;
     G.room.died = true; r.stats.deathRoom = G.room.index; r.stats.deathCause = Run.lastDamageSource || 'inconnu';
     const kept = Progression.coinsKeptOnDeath(r.coinsPending, G.room.index, r.lastCheckpoint);
     const total = r.coinsValidated + kept; Meta.addCoins(total); Meta.recordRun(false);
@@ -4192,13 +4280,13 @@ const Run = {
     Music.play('hub');
   },
   endLevel(victory) {
-    const r = G.run; if (r.ended) return; r.ended = true;
+    const r = G.run; if (r.ended || r.attract) return; r.ended = true;
     const bonus = Math.round(150 * G.player.stats.coinGain * G.debug.coinMul); const total = r.coinsValidated + r.coinsPending + bonus; Meta.addCoins(total); Meta.recordRun(true);
     G.paused = true; UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
     Music.play('hub');
   },
   abort() { const r = G.run; if (!r || r.ended) return; r.ended = true; const kept = Progression.coinsKeptOnDeath(r.coinsPending, G.room.index, r.lastCheckpoint); Meta.addCoins(r.coinsValidated + kept); Meta.recordRun(false); Run.toHub(); },
-  toHub() { G.state = 'hub'; G.paused = false; G.overlay = null; G.run = null; G.player = null; G.enemies = []; G.room = null; Projectiles.list = []; Pickups.list = []; UI.showHub(); Music.play('hub'); },
+  toHub() { G.state = 'hub'; G.paused = false; G.overlay = null; G.run = null; G.player = null; G.enemies = []; G.room = null; Projectiles.list = []; Pickups.list = []; UI.showHub(); Music.play('hub'); Attract.start(); },
   qualityAvg() { const r = G.run; if (!r) return 1; const vals = r.scores.map(s => s.score); const cur = G.room && G.room.state !== 'clear' ? [Room.score()] : []; return Progression.avgScore(vals.concat(cur)); },
 
   update(dt) {
@@ -4238,6 +4326,12 @@ const UI = (() => {
       if (e.code === 'F1' && G.mode === 'test') { e.preventDefault(); Debug.toggle(); }
       if (G.state === 'run' && (e.code === 'Escape' || e.code === 'KeyP') && !G.overlay) togglePause();
       else if (G.state === 'run' && e.code === 'Escape' && G.overlay === 'pause') togglePause();
+      if (G.overlay === 'menu') {
+        const btns = [...screens[G.overlay].querySelectorAll('.mbtn, .btn')].filter(b => !b.disabled && b.offsetParent !== null); if (!btns.length) return;
+        let i = btns.indexOf(document.activeElement);
+        if (e.code === 'ArrowDown' || e.code === 'ArrowUp' || (e.code === 'Tab' && G.overlay === 'menu')) { e.preventDefault(); i = (i + (e.code === 'ArrowUp' || (e.code === 'Tab' && e.shiftKey) ? -1 : 1) + btns.length) % btns.length; btns[i].focus(); AudioEngine.uiHover({ intensity: 0.25 }); }
+        else if ((e.code === 'Enter' || e.code === 'Space') && i >= 0) { e.preventDefault(); btns[i].click(); }
+      }
       if (G.overlay === 'choice' && state.choice) { const k = parseInt(e.key); if (k >= 1 && k <= state.choice.choices.length) state.choice.pick(state.choice.choices[k - 1]); if (e.code === 'KeyR') state.choice.reroll && state.choice.reroll(); }
     });
   }
@@ -4247,30 +4341,35 @@ const UI = (() => {
   /* ---------- Menu ---------- */
   function showMenu() {
     G.state = 'menu'; G.paused = false;
-    const s = screens.menu; s.innerHTML = `
-      <div class="panel center menu">
-        <div class="eyebrow">${esc(LORE.subtitle)}</div>
-        <h1 class="title">${esc(LORE.title)}</h1>
-        <p class="muted synopsis">${esc(LORE.synopsis)}</p>
-        <div class="row">
-          <button class="btn primary" id="btn-normal">Mode Normal</button>
-          <button class="btn" id="btn-test">Mode Test</button>
+    const s = screens.menu; const p = Meta.profile; const nb = Meta.mode === 'test' ? '' : '';
+    s.innerHTML = `
+      <div class="menu2">
+        <div class="stamp"><span>Bureau d'Homologation</span><span class="sep">·</span><span>Protocole H-9</span><span class="sep">·</span><span>Rév. 3</span></div>
+        <div class="titlebox">
+          <h1 class="bigtitle" data-text="SUJET NEUF"><span>SUJET</span> <span class="accent">NEUF</span></h1>
+          <div class="tagline">Neuf salles. Un formulaire. Une sortie.</div>
         </div>
-        <div class="row small">
-          <button class="btn ghost" id="btn-credits">Crédits</button>
-          <button class="btn ghost" id="btn-fs">Plein écran</button>
-          <button class="btn ghost" id="btn-reset">Réinitialiser la sauvegarde</button>
+        <nav class="menunav">
+          <button class="mbtn primary" id="btn-normal"><span class="k">01</span><span class="l">Mode Normal</span><span class="d">Progression réelle, sauvegarde locale</span></button>
+          <button class="mbtn" id="btn-test"><span class="k">02</span><span class="l">Mode Test</span><span class="d">Tout débloqué, panneau debug F1</span></button>
+          <button class="mbtn" id="btn-credits"><span class="k">03</span><span class="l">Crédits</span><span class="d">Sprites, musiques, licences</span></button>
+          <button class="mbtn" id="btn-fs"><span class="k">04</span><span class="l">Plein écran</span><span class="d">${Fullscreen.active ? 'Quitter le plein écran' : 'Recommandé sur téléphone'}</span></button>
+          <button class="mbtn ghost" id="btn-reset"><span class="k">—</span><span class="l">Réinitialiser</span><span class="d">Effacer la sauvegarde du mode Normal</span></button>
+        </nav>
+        <div class="menufoot">
+          <div class="hint">${Input.touch.active ? 'Joystick à gauche · TIR / COMP. / E à droite' : 'ZQSD · souris · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause'}</div>
+          <div class="save">Sauvegarde : ${p.runs} run(s) · ${p.wins} case(s) 9 cochée(s) · ◈ ${fmt(p.coins)}</div>
         </div>
-        <p class="muted tiny">ZQSD / WASD : déplacement · souris : visée · clic gauche : attaque · clic droit / Espace / Maj : compétence (dash…) · E : interagir · Échap : pause · tactile : joystick à gauche, boutons à droite${G.mode === 'test' ? ' · F1 : debug' : ''}</p>
-        <p class="muted tiny">Sauvegarde : ${Meta.profile.runs} run(s), ${Meta.profile.wins} victoire(s), ${fmt(Meta.profile.coins)} crédits.</p>
       </div>`;
-    s.querySelector('#btn-normal').onclick = () => { Meta.setMode('normal'); Debug.hide(); Run.toHub(); };
-    s.querySelector('#btn-test').onclick = () => { Meta.setMode('test'); Run.toHub(); toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5); };
+    const go = mode => { Attract.stop(); Meta.setMode(mode); Debug.hide(); Run.toHub(); if (mode === 'test') toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5); };
+    s.querySelector('#btn-normal').onclick = () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); go('normal'); };
+    s.querySelector('#btn-test').onclick = () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); go('test'); };
     s.querySelector('#btn-credits').onclick = showCredits;
-    s.querySelector('#btn-fs').onclick = () => Fullscreen.toggle();
-    if (Input.touch.active) for (const id of ['#btn-normal', '#btn-test']) { const b = s.querySelector(id); const f = b.onclick; b.onclick = () => { if (!Fullscreen.active) Fullscreen.enter(); f(); }; }
+    s.querySelector('#btn-fs').onclick = () => { Fullscreen.toggle(); setTimeout(showMenu, 400); };
     s.querySelector('#btn-reset').onclick = () => { if (confirm('Effacer la sauvegarde du mode Normal ?')) { Meta.reset(); showMenu(); } };
     show('menu'); Music.play('menu');
+    if (!Attract.running) Attract.start();
+    setTimeout(() => { const b = s.querySelector('#btn-normal'); if (b && !Input.touch.active) b.focus({ preventScroll: true }); }, 50);
   }
 
   /* ---------- Hub ---------- */
@@ -4280,42 +4379,50 @@ const UI = (() => {
     const chars = Content.characters(); const cur = Content.character(p.character);
     const biomes = Content.biomes(); if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id; const biome = biomes.find(b => b.id === p.biome);
     const tabs = ['passifs', 'armes', 'sujets', 'fragments'];
+    const meta = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).length;
     s.innerHTML = `
-      <div class="hub">
-        <header class="hubbar panel">
-          <div><div class="eyebrow">Salle Zéro — hub</div><div class="muted small">${esc(Content.pick('hub'))}</div></div>
-          <div class="coins">◈ ${fmt(p.coins)} <span class="muted small">crédits</span> ${G.mode === 'test' ? '<span class="tag test">MODE TEST</span>' : ''}</div>
-          <div class="row small"><button class="btn ghost" id="hub-menu">Menu</button></div>
+      <div class="hub2">
+        <header class="hubhead">
+          <div class="hubid"><div class="stamp"><span>Salle Zéro</span><span class="sep">·</span><span>Stockage</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
+          <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits consignés${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
+          <div class="hubactions"><button class="btn ghost small" id="hub-menu">Menu</button></div>
         </header>
-        <section class="panel col left">
-          <h3>Sujet</h3>
+        <section class="hubcol subject">
+          <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
+          <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
+          <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
+          <h3>Dossiers de réactivation</h3>
           <div class="cards vertical" id="hub-chars"></div>
-          <h3>Palier</h3>
-          <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
-            <div class="cardtitle">${esc(b.name)} <span class="tag">palier -${b.order}${done ? ' · ' + done + '×' : ''}</span></div>
-            <div class="muted small">${esc(b.desc)}</div>
-            ${ok ? `<div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span> <span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Scellé : terminer ${esc((Content.biome(b.unlockAfter) || {}).name || 'le palier précédent')} (case 9).</div>`}
-          </div>`; }).join('')}</div>
-          <button class="btn primary big" id="hub-enter">Entrer dans ${esc(biome.name)}</button>
         </section>
-        <section class="panel col right">
+        <section class="hubcol center">
+          <h3>Paliers du Protocole</h3>
+          <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
+            <div class="cardtitle"><span>${esc(b.name)}</span><span class="tag">palier -${b.order}${done ? ' · ' + done + '×' : ''}</span></div>
+            <div class="muted small">${esc(b.desc)}</div>
+            ${ok ? `<div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Scellé : terminer ${esc((Content.biome(b.unlockAfter) || {}).name || 'le palier précédent')} (case 9).</div>`}
+          </div>`; }).join('')}</div>
+          <button class="cta" id="hub-enter"><span class="l">Entrer dans ${esc(biome.name)}</span><span class="d">Salle 1 : rappel des conditions, choix de l'outillage et d'une compétence</span></button>
+        </section>
+        <section class="hubcol shopcol">
           <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</nav>
           <div id="hub-shop" class="shop"></div>
         </section>
       </div>`;
     const cc = s.querySelector('#hub-chars');
-    for (const c of chars) {
+    chars.forEach((c, i) => {
       const owned = Meta.characterUnlocked(c.id); const sel = c.id === p.character;
-      const card = el('div', 'card char' + (sel ? ' selected' : '') + (owned ? '' : ' locked'), `<div class="cardtitle">${esc(c.name)}</div><div class="muted small">${esc(c.desc)}</div><div class="trait"><b>${esc(c.trait.name)}</b> — ${esc(c.trait.desc)}</div><div class="stats muted tiny">PV ${c.stats.maxHp} · vitesse ${c.stats.speed} · chance ${c.stats.luck}</div>${owned ? '' : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Réactiver — ◈ ${c.price}</button>`}`);
-      card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); showHub(); } };
+      const card = el('div', 'card char mini' + (sel ? ' selected' : '') + (owned ? '' : ' locked'), `<div class="cardtitle"><span>${esc(c.name)}</span>${sel ? '<span class="tag">actif</span>' : ''}</div><div class="muted tiny">${esc(c.trait.name)} · PV ${c.stats.maxHp} · vit. ${c.stats.speed}</div>${owned ? '' : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Réactiver — ◈ ${c.price}</button>`}`);
+      card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
       cc.appendChild(card);
-    }
+    });
+    const pb = s.querySelector('#hub-portrait'); const pc = Sprites.portrait(cur.sprite || 'player', 5); if (pc) pb.appendChild(pc);
     s.querySelectorAll('[data-biome]').forEach(c => c.onclick = () => { const b = Content.biome(c.dataset.biome); if (!Meta.biomeUnlocked(b)) { toast('Palier scellé.'); return; } p.biome = b.id; Meta.save(); AudioEngine.uiClick({}); showHub(); });
-    s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; showHub(); });
-    s.querySelector('#hub-menu').onclick = showMenu;
+    s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; AudioEngine.uiClick({}); showHub(); });
+    s.querySelector('#hub-menu').onclick = () => { showMenu(); };
     s.querySelector('#hub-enter').onclick = () => { hideAll(); Run.start({ character: p.character, biome: biome.id }); };
     renderShop(s.querySelector('#hub-shop'));
     show('hub');
+    if (!Attract.running) Attract.start();
   }
   function renderShop(box) {
     const p = Meta.profile; box.innerHTML = '';
@@ -4532,6 +4639,14 @@ const UI = (() => {
     toasts.forEach((t, i) => { const a = Math.min(1, t.t * 3, (t.life - t.t) * 2); ctx.globalAlpha = clamp(a, 0, 1); const w = ctx.measureText(t.text).width + 24; const y = H - 110 - i * 30; ctx.fillStyle = 'rgba(8,10,18,.85)'; roundRect(ctx, W / 2 - w / 2, y - 12, w, 24, 8); ctx.fill(); ctx.strokeStyle = '#6ee7ff88'; ctx.stroke(); ctx.fillStyle = '#e8ecf7'; ctx.fillText(t.text, W / 2, y); });
     ctx.restore();
   }
+  function renderAttractVeil(ctx) {
+    ctx.save();
+    const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(4,5,9,.86)'); g.addColorStop(0.5, 'rgba(4,5,9,.55)'); g.addColorStop(1, 'rgba(4,5,9,.35)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const v = ctx.createLinearGradient(0, 0, 0, H); v.addColorStop(0, 'rgba(4,5,9,.7)'); v.addColorStop(0.25, 'rgba(4,5,9,0)'); v.addColorStop(0.8, 'rgba(4,5,9,0)'); v.addColorStop(1, 'rgba(4,5,9,.8)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    /* lignes de balayage */
+    ctx.globalAlpha = 0.06; ctx.fillStyle = '#6ee7ff'; for (let y = (Time.now * 40) % 6; y < H; y += 6) ctx.fillRect(0, y, W, 1);
+    ctx.restore();
+  }
   function renderFade(ctx) { if (fade.t > 0) { ctx.fillStyle = `rgba(4,5,9,${fade.t})`; ctx.fillRect(0, 0, W, H); } }
   function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
   /* fond animé pour menu/hub */
@@ -4540,7 +4655,7 @@ const UI = (() => {
     ctx.save(); ctx.globalAlpha = 0.5; for (let i = 0; i < 14; i++) { const t = Time.now * 0.05 + i * 0.37; const x = ((i * 137.5) % W + Math.sin(t) * 40 + W) % W, y = ((i * 91.7) % H + Math.cos(t * 1.3) * 30 + H) % H; const g = ctx.createRadialGradient(x, y, 0, x, y, 160); g.addColorStop(0, i % 3 ? 'rgba(110,231,255,.10)' : 'rgba(255,154,60,.08)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 160, y - 160, 320, 320); } ctx.restore();
     ctx.strokeStyle = 'rgba(110,231,255,.05)'; ctx.lineWidth = 1; for (let x = 0; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y < H; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   }
-  return { init, show, hideAll, showMenu, showHub, showPrep, showChoice, hideChoice, togglePause, showEnd, showCredits, banner, toast, transition, update, renderHud, renderToasts, renderFade, renderBackdrop, state, esc, roundRect };
+  return { init, show, hideAll, showMenu, showHub, renderAttractVeil, showPrep, showChoice, hideChoice, togglePause, showEnd, showCredits, banner, toast, transition, update, renderHud, renderToasts, renderFade, renderBackdrop, state, esc, roundRect };
 })();
 
 </script>
@@ -4608,6 +4723,66 @@ const Touch = (() => {
   /* visible seulement en jeu, sans écran superposé */
   function sync() { if (!built) return; const show = Input.touch.active && G.state === 'run' && !G.overlay; layer.hidden = !show; if (!show && stickId != null) { stickId = null; stick.hidden = true; Input.touch.move.x = 0; Input.touch.move.y = 0; Input.touch.fire = false; } }
   return { init, sync, activate, get active() { return Input.touch.active; } };
+})();
+
+</script>
+<script>
+/* ==== 57_attract.js ==== */
+/* =========================================================================
+   SUJET NEUF — 57_attract.js
+   Scène d'attraction : derrière le menu et le hub, le sujet (piloté par le bot, invulnérable) combat
+   des vagues d'ennemis des deux biomes, en changeant d'arme régulièrement. Utilise le vrai moteur.
+   ========================================================================= */
+
+const Attract = (() => {
+  let running = false, spawnT = 0, weaponT = 0, savedVol = null, savedInvuln = false, wIdx = 0;
+  const WEAPONS = ['weapon_pistol', 'weapon_chain', 'weapon_boomerang', 'weapon_flame', 'weapon_bow', 'weapon_blade', 'weapon_orb', 'weapon_hammer'];
+  const SHOW_UPGRADES = ['upg_balles_incendiaires', 'upg_balles_electriques', 'upg_satellite', 'upg_detonation', 'upg_tir_guide'];
+  function pool() { const out = []; for (const b of Content.biomes()) for (const id of b.enemyPool) out.push(id); return out; }
+  function start() {
+    if (running || G.state === 'run') return; running = true;
+    G.attract = true;   // ne change pas de profil : rien n'est sauvegardé pendant l'attraction
+    RNG.reseed((Date.now() & 0xffff) | 1);
+    const charDef = Content.characters()[Math.floor(VFX_RNG() * Content.characters().length)];
+    const biome = Content.biomes()[0];
+    G.run = { biome, char: charDef, rooms: [], roomIndex: 0, levelPassive: null, level: 1, xp: 0, xpNext: 1e9, upgrades: [], pendingLevelUps: 0, rerolls: 0, scores: [], coinsPending: 0, coinsValidated: 0, lastCheckpoint: 0, startedAt: Time.now, ended: false,
+      stats: { kills: 0, damageDealt: 0, damageTaken: 0, hitsTaken: 0, shots: 0, skillUses: 0, coins: 0, roomsEntered: 0, roomTimes: [], bossKilled: false, deathCause: null, deathRoom: null, levelReached: 1 }, skillChoices: [], attract: true };
+    G.player = new Player(charDef); G.player.hp = 0; G.player.recompute(); G.player.hp = G.player.stats.maxHp;
+    applyDifficulty();
+    G.enemies = []; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
+    G.room = Room.create({ id: 'room_attract', biome: biome.id, index: 0, type: 'PREP_COMBAT', refTime: 999, obstacles: [{ x: 5, y: 3, w: 1, h: 1 }, { x: 18, y: 3, w: 1, h: 1 }, { x: 5, y: 9, w: 1, h: 1 }, { x: 18, y: 9, w: 1, h: 1 }], waves: [], traps: [], fragments: [], modular: [] });
+    G.room.state = 'fight'; G.room.label = ''; G.room.doorOpen = false;
+    G.player.x = W / 2; G.player.y = H / 2; Camera.setZoom(1.12); Camera.snap(G.player.x, G.player.y);
+    wIdx = Math.floor(VFX_RNG() * WEAPONS.length); equip();
+    for (const id of SHOW_UPGRADES) { const u = Content.upgrade(id); if (u) G.run.upgrades.push({ def: u, stacks: 1 }); }
+    G.player.recompute();
+    G.player.bot = Debug.botControl;
+    savedInvuln = G.debug.invuln; G.debug.invuln = true;
+    savedVol = Object.assign({}, Meta.profile.volume); AudioEngine.setVolume(Object.assign({}, savedVol, { sfx: savedVol.sfx * 0.35 }));
+    spawnT = 0.5; weaponT = 18;
+  }
+  function equip() { const w = Content.weapon(WEAPONS[wIdx % WEAPONS.length]); const sk = Content.skills()[Math.floor(VFX_RNG() * Content.skills().length)]; G.player.weapon = w; G.player.skill = sk; G.player.skillCharges = 1; G.player.orbs = null; G.player.recompute(); }
+  function spawn() {
+    const alive = G.enemies.filter(e => !e.dead).length; if (alive >= 7) return;
+    const ids = pool(); const n = 2 + Math.floor(VFX_RNG() * 3);
+    for (let i = 0; i < n; i++) { const def = Content.enemy(ids[Math.floor(VFX_RNG() * ids.length)]); if (!def || def.archetype === 'summoner') continue; Room.spawnAt({ enemy: def.id, count: 1, x: -1, y: -1, elite: VFX_RNG() < 0.15 }); }
+  }
+  function update(dt) {
+    if (!running || !G.run || !G.run.attract) return;
+    spawnT -= dt; if (spawnT <= 0) { spawn(); spawnT = 4 + VFX_RNG() * 3; }
+    weaponT -= dt; if (weaponT <= 0) { wIdx++; equip(); weaponT = 16 + VFX_RNG() * 8; }
+    if (G.player.hp < G.player.stats.maxHp * 0.5) G.player.hp = G.player.stats.maxHp;
+    if (Pickups.list.length > 60) Pickups.list.splice(0, Pickups.list.length - 60);
+    Run.update(dt);
+    Camera.follow(G.player.x, G.player.y, dt);
+  }
+  function stop() {
+    if (!running) return; running = false; G.attract = false;
+    G.debug.invuln = savedInvuln; if (savedVol) AudioEngine.setVolume(savedVol);
+    G.run = null; G.player = null; G.enemies = []; G.room = null; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
+    Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));
+  }
+  return { start, stop, update, get running() { return running; } };
 })();
 
 </script>
@@ -4771,7 +4946,7 @@ const Debug = (() => {
   /* ---------- Bot ---------- */
   const DIRS = [{ x: 0, y: 0 }]; for (let i = 0; i < 16; i++) DIRS.push({ x: Math.cos(i * TAU / 16), y: Math.sin(i * TAU / 16) });
   function botControl(pl) {
-    const rm = G.room; const rng = G.autoplay.rng; const w = pl.weapon; const isMelee = w && (w.type === 'melee' || w.type === 'area' || w.type === 'orbital');
+    const rm = G.room; const rng = (G.autoplay && G.autoplay.rng) || RNG; const w = pl.weapon; const isMelee = w && (w.type === 'melee' || w.type === 'area' || w.type === 'orbital');
     const enemy = nearestEnemy(pl.x, pl.y);
     /* objectif */
     let goal = null;
@@ -4840,10 +5015,11 @@ const Debug = (() => {
 function update(dt, rawDt) {
   UI.update(rawDt); Touch.sync();
   if (G.state === 'run') { Run.update(dt); if (G.player) Camera.follow(G.player.x, G.player.y, rawDt); }
+  else if (G.attract) Attract.update(dt);
 }
 function render(ctx) {
   ctx.setTransform(ctx.getTransform());
-  if (G.state === 'run' && G.room) {
+  if ((G.state === 'run' || G.attract) && G.room) {
     ctx.save();
     Camera.apply(ctx);
     if (G.shake > 0) ctx.translate(VFX_RNG.range(-G.shake, G.shake), VFX_RNG.range(-G.shake, G.shake));
@@ -4855,7 +5031,7 @@ function render(ctx) {
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx); Floaters.render(ctx);
     Debug.renderOverlay(ctx);
     ctx.restore();
-    UI.renderHud(ctx);
+    if (G.attract) { UI.renderAttractVeil(ctx); } else UI.renderHud(ctx);
   } else UI.renderBackdrop(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);
 }
@@ -4872,6 +5048,7 @@ async function boot() {
   await Sprites.load();
   UI.showMenu();
   Engine.start(update, render);
+  Attract.start();
   window.__autoplay = Debug.autoplay;
   window.__G = G;
 }

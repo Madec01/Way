@@ -129,6 +129,8 @@ Moi : architecture, moteur, intégration, arbitrage, cohérence.
 
 **Biome 2 LA SERRE — implémenté** (`dev/content2.js`, CONTENT.md §16) : 7 variantes d'ennemis, Étalon 12, 9 salles, déblocage après ADMISSION.
 
+**Interface — refonte** : menu plein écran avec scène d'attraction (`dev/57_attract.js`), titre néon, boutons animés et navigation clavier ; hub en trois colonnes avec portrait animé, paliers en cartes et appel à l'action (le lore reste dans LORE.md, pas d'écran dédié à la demande de l'auteur).
+
 **Reste pour la suite** : biome 3 (LES ARCHIVES) : nouveaux ennemis, pièges, passifs de niveau, armes ; manette (`Input` abstrait) ; mobile ; playtest humain pour l'équilibrage des salles 6-9.
 
 **Comment tester** : `python3 -m http.server 8765`, ouvrir `http://localhost:8765/`, Mode Test, F1. Sources dans `dev/`, assemblage `node dev/build.js`.

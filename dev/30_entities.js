@@ -541,6 +541,7 @@ class Player {
   die() {
     const sc = Progression.hasPassive(this.hooks, 'second_chance') || Meta.resurrectAvailable();
     if (sc && !this.secondChanceUsed) { this.secondChanceUsed = true; this.hp = Math.round(this.stats.maxHp * (sc.hpFraction || 0.5)); this.invulnUntil = Time.now + 2; G.room.died = true; Combat.playerShockwave({ radius: 220, damage: 30, knockback: 4 }); Floaters.add(this.x, this.y - 40, 'RÉIMPRESSION', '#ffb347', 20); AudioEngine.levelUp({}); return; }
+    if (G.run && G.run.attract) { this.hp = this.stats.maxHp; return; }
     this.dead = true; this.hp = 0; AudioEngine.playerDie({}); Run.onPlayerDeath();
   }
   update(dt) {

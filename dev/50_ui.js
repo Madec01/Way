@@ -21,6 +21,12 @@ const UI = (() => {
       if (e.code === 'F1' && G.mode === 'test') { e.preventDefault(); Debug.toggle(); }
       if (G.state === 'run' && (e.code === 'Escape' || e.code === 'KeyP') && !G.overlay) togglePause();
       else if (G.state === 'run' && e.code === 'Escape' && G.overlay === 'pause') togglePause();
+      if (G.overlay === 'menu') {
+        const btns = [...screens[G.overlay].querySelectorAll('.mbtn, .btn')].filter(b => !b.disabled && b.offsetParent !== null); if (!btns.length) return;
+        let i = btns.indexOf(document.activeElement);
+        if (e.code === 'ArrowDown' || e.code === 'ArrowUp' || (e.code === 'Tab' && G.overlay === 'menu')) { e.preventDefault(); i = (i + (e.code === 'ArrowUp' || (e.code === 'Tab' && e.shiftKey) ? -1 : 1) + btns.length) % btns.length; btns[i].focus(); AudioEngine.uiHover({ intensity: 0.25 }); }
+        else if ((e.code === 'Enter' || e.code === 'Space') && i >= 0) { e.preventDefault(); btns[i].click(); }
+      }
       if (G.overlay === 'choice' && state.choice) { const k = parseInt(e.key); if (k >= 1 && k <= state.choice.choices.length) state.choice.pick(state.choice.choices[k - 1]); if (e.code === 'KeyR') state.choice.reroll && state.choice.reroll(); }
     });
   }
@@ -30,30 +36,35 @@ const UI = (() => {
   /* ---------- Menu ---------- */
   function showMenu() {
     G.state = 'menu'; G.paused = false;
-    const s = screens.menu; s.innerHTML = `
-      <div class="panel center menu">
-        <div class="eyebrow">${esc(LORE.subtitle)}</div>
-        <h1 class="title">${esc(LORE.title)}</h1>
-        <p class="muted synopsis">${esc(LORE.synopsis)}</p>
-        <div class="row">
-          <button class="btn primary" id="btn-normal">Mode Normal</button>
-          <button class="btn" id="btn-test">Mode Test</button>
+    const s = screens.menu; const p = Meta.profile; const nb = Meta.mode === 'test' ? '' : '';
+    s.innerHTML = `
+      <div class="menu2">
+        <div class="stamp"><span>Bureau d'Homologation</span><span class="sep">·</span><span>Protocole H-9</span><span class="sep">·</span><span>Rév. 3</span></div>
+        <div class="titlebox">
+          <h1 class="bigtitle" data-text="SUJET NEUF"><span>SUJET</span> <span class="accent">NEUF</span></h1>
+          <div class="tagline">Neuf salles. Un formulaire. Une sortie.</div>
         </div>
-        <div class="row small">
-          <button class="btn ghost" id="btn-credits">Crédits</button>
-          <button class="btn ghost" id="btn-fs">Plein écran</button>
-          <button class="btn ghost" id="btn-reset">Réinitialiser la sauvegarde</button>
+        <nav class="menunav">
+          <button class="mbtn primary" id="btn-normal"><span class="k">01</span><span class="l">Mode Normal</span><span class="d">Progression réelle, sauvegarde locale</span></button>
+          <button class="mbtn" id="btn-test"><span class="k">02</span><span class="l">Mode Test</span><span class="d">Tout débloqué, panneau debug F1</span></button>
+          <button class="mbtn" id="btn-credits"><span class="k">03</span><span class="l">Crédits</span><span class="d">Sprites, musiques, licences</span></button>
+          <button class="mbtn" id="btn-fs"><span class="k">04</span><span class="l">Plein écran</span><span class="d">${Fullscreen.active ? 'Quitter le plein écran' : 'Recommandé sur téléphone'}</span></button>
+          <button class="mbtn ghost" id="btn-reset"><span class="k">—</span><span class="l">Réinitialiser</span><span class="d">Effacer la sauvegarde du mode Normal</span></button>
+        </nav>
+        <div class="menufoot">
+          <div class="hint">${Input.touch.active ? 'Joystick à gauche · TIR / COMP. / E à droite' : 'ZQSD · souris · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause'}</div>
+          <div class="save">Sauvegarde : ${p.runs} run(s) · ${p.wins} case(s) 9 cochée(s) · ◈ ${fmt(p.coins)}</div>
         </div>
-        <p class="muted tiny">ZQSD / WASD : déplacement · souris : visée · clic gauche : attaque · clic droit / Espace / Maj : compétence (dash…) · E : interagir · Échap : pause · tactile : joystick à gauche, boutons à droite${G.mode === 'test' ? ' · F1 : debug' : ''}</p>
-        <p class="muted tiny">Sauvegarde : ${Meta.profile.runs} run(s), ${Meta.profile.wins} victoire(s), ${fmt(Meta.profile.coins)} crédits.</p>
       </div>`;
-    s.querySelector('#btn-normal').onclick = () => { Meta.setMode('normal'); Debug.hide(); Run.toHub(); };
-    s.querySelector('#btn-test').onclick = () => { Meta.setMode('test'); Run.toHub(); toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5); };
+    const go = mode => { Attract.stop(); Meta.setMode(mode); Debug.hide(); Run.toHub(); if (mode === 'test') toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5); };
+    s.querySelector('#btn-normal').onclick = () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); go('normal'); };
+    s.querySelector('#btn-test').onclick = () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); go('test'); };
     s.querySelector('#btn-credits').onclick = showCredits;
-    s.querySelector('#btn-fs').onclick = () => Fullscreen.toggle();
-    if (Input.touch.active) for (const id of ['#btn-normal', '#btn-test']) { const b = s.querySelector(id); const f = b.onclick; b.onclick = () => { if (!Fullscreen.active) Fullscreen.enter(); f(); }; }
+    s.querySelector('#btn-fs').onclick = () => { Fullscreen.toggle(); setTimeout(showMenu, 400); };
     s.querySelector('#btn-reset').onclick = () => { if (confirm('Effacer la sauvegarde du mode Normal ?')) { Meta.reset(); showMenu(); } };
     show('menu'); Music.play('menu');
+    if (!Attract.running) Attract.start();
+    setTimeout(() => { const b = s.querySelector('#btn-normal'); if (b && !Input.touch.active) b.focus({ preventScroll: true }); }, 50);
   }
 
   /* ---------- Hub ---------- */
@@ -63,42 +74,50 @@ const UI = (() => {
     const chars = Content.characters(); const cur = Content.character(p.character);
     const biomes = Content.biomes(); if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id; const biome = biomes.find(b => b.id === p.biome);
     const tabs = ['passifs', 'armes', 'sujets', 'fragments'];
+    const meta = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).length;
     s.innerHTML = `
-      <div class="hub">
-        <header class="hubbar panel">
-          <div><div class="eyebrow">Salle Zéro — hub</div><div class="muted small">${esc(Content.pick('hub'))}</div></div>
-          <div class="coins">◈ ${fmt(p.coins)} <span class="muted small">crédits</span> ${G.mode === 'test' ? '<span class="tag test">MODE TEST</span>' : ''}</div>
-          <div class="row small"><button class="btn ghost" id="hub-menu">Menu</button></div>
+      <div class="hub2">
+        <header class="hubhead">
+          <div class="hubid"><div class="stamp"><span>Salle Zéro</span><span class="sep">·</span><span>Stockage</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
+          <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits consignés${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
+          <div class="hubactions"><button class="btn ghost small" id="hub-menu">Menu</button></div>
         </header>
-        <section class="panel col left">
-          <h3>Sujet</h3>
+        <section class="hubcol subject">
+          <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
+          <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
+          <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
+          <h3>Dossiers de réactivation</h3>
           <div class="cards vertical" id="hub-chars"></div>
-          <h3>Palier</h3>
-          <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
-            <div class="cardtitle">${esc(b.name)} <span class="tag">palier -${b.order}${done ? ' · ' + done + '×' : ''}</span></div>
-            <div class="muted small">${esc(b.desc)}</div>
-            ${ok ? `<div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span> <span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Scellé : terminer ${esc((Content.biome(b.unlockAfter) || {}).name || 'le palier précédent')} (case 9).</div>`}
-          </div>`; }).join('')}</div>
-          <button class="btn primary big" id="hub-enter">Entrer dans ${esc(biome.name)}</button>
         </section>
-        <section class="panel col right">
+        <section class="hubcol center">
+          <h3>Paliers du Protocole</h3>
+          <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
+            <div class="cardtitle"><span>${esc(b.name)}</span><span class="tag">palier -${b.order}${done ? ' · ' + done + '×' : ''}</span></div>
+            <div class="muted small">${esc(b.desc)}</div>
+            ${ok ? `<div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Scellé : terminer ${esc((Content.biome(b.unlockAfter) || {}).name || 'le palier précédent')} (case 9).</div>`}
+          </div>`; }).join('')}</div>
+          <button class="cta" id="hub-enter"><span class="l">Entrer dans ${esc(biome.name)}</span><span class="d">Salle 1 : rappel des conditions, choix de l'outillage et d'une compétence</span></button>
+        </section>
+        <section class="hubcol shopcol">
           <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</nav>
           <div id="hub-shop" class="shop"></div>
         </section>
       </div>`;
     const cc = s.querySelector('#hub-chars');
-    for (const c of chars) {
+    chars.forEach((c, i) => {
       const owned = Meta.characterUnlocked(c.id); const sel = c.id === p.character;
-      const card = el('div', 'card char' + (sel ? ' selected' : '') + (owned ? '' : ' locked'), `<div class="cardtitle">${esc(c.name)}</div><div class="muted small">${esc(c.desc)}</div><div class="trait"><b>${esc(c.trait.name)}</b> — ${esc(c.trait.desc)}</div><div class="stats muted tiny">PV ${c.stats.maxHp} · vitesse ${c.stats.speed} · chance ${c.stats.luck}</div>${owned ? '' : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Réactiver — ◈ ${c.price}</button>`}`);
-      card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); showHub(); } };
+      const card = el('div', 'card char mini' + (sel ? ' selected' : '') + (owned ? '' : ' locked'), `<div class="cardtitle"><span>${esc(c.name)}</span>${sel ? '<span class="tag">actif</span>' : ''}</div><div class="muted tiny">${esc(c.trait.name)} · PV ${c.stats.maxHp} · vit. ${c.stats.speed}</div>${owned ? '' : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Réactiver — ◈ ${c.price}</button>`}`);
+      card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
       cc.appendChild(card);
-    }
+    });
+    const pb = s.querySelector('#hub-portrait'); const pc = Sprites.portrait(cur.sprite || 'player', 5); if (pc) pb.appendChild(pc);
     s.querySelectorAll('[data-biome]').forEach(c => c.onclick = () => { const b = Content.biome(c.dataset.biome); if (!Meta.biomeUnlocked(b)) { toast('Palier scellé.'); return; } p.biome = b.id; Meta.save(); AudioEngine.uiClick({}); showHub(); });
-    s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; showHub(); });
-    s.querySelector('#hub-menu').onclick = showMenu;
+    s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; AudioEngine.uiClick({}); showHub(); });
+    s.querySelector('#hub-menu').onclick = () => { showMenu(); };
     s.querySelector('#hub-enter').onclick = () => { hideAll(); Run.start({ character: p.character, biome: biome.id }); };
     renderShop(s.querySelector('#hub-shop'));
     show('hub');
+    if (!Attract.running) Attract.start();
   }
   function renderShop(box) {
     const p = Meta.profile; box.innerHTML = '';
@@ -315,6 +334,14 @@ const UI = (() => {
     toasts.forEach((t, i) => { const a = Math.min(1, t.t * 3, (t.life - t.t) * 2); ctx.globalAlpha = clamp(a, 0, 1); const w = ctx.measureText(t.text).width + 24; const y = H - 110 - i * 30; ctx.fillStyle = 'rgba(8,10,18,.85)'; roundRect(ctx, W / 2 - w / 2, y - 12, w, 24, 8); ctx.fill(); ctx.strokeStyle = '#6ee7ff88'; ctx.stroke(); ctx.fillStyle = '#e8ecf7'; ctx.fillText(t.text, W / 2, y); });
     ctx.restore();
   }
+  function renderAttractVeil(ctx) {
+    ctx.save();
+    const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(4,5,9,.86)'); g.addColorStop(0.5, 'rgba(4,5,9,.55)'); g.addColorStop(1, 'rgba(4,5,9,.35)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const v = ctx.createLinearGradient(0, 0, 0, H); v.addColorStop(0, 'rgba(4,5,9,.7)'); v.addColorStop(0.25, 'rgba(4,5,9,0)'); v.addColorStop(0.8, 'rgba(4,5,9,0)'); v.addColorStop(1, 'rgba(4,5,9,.8)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    /* lignes de balayage */
+    ctx.globalAlpha = 0.06; ctx.fillStyle = '#6ee7ff'; for (let y = (Time.now * 40) % 6; y < H; y += 6) ctx.fillRect(0, y, W, 1);
+    ctx.restore();
+  }
   function renderFade(ctx) { if (fade.t > 0) { ctx.fillStyle = `rgba(4,5,9,${fade.t})`; ctx.fillRect(0, 0, W, H); } }
   function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
   /* fond animé pour menu/hub */
@@ -323,5 +350,5 @@ const UI = (() => {
     ctx.save(); ctx.globalAlpha = 0.5; for (let i = 0; i < 14; i++) { const t = Time.now * 0.05 + i * 0.37; const x = ((i * 137.5) % W + Math.sin(t) * 40 + W) % W, y = ((i * 91.7) % H + Math.cos(t * 1.3) * 30 + H) % H; const g = ctx.createRadialGradient(x, y, 0, x, y, 160); g.addColorStop(0, i % 3 ? 'rgba(110,231,255,.10)' : 'rgba(255,154,60,.08)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 160, y - 160, 320, 320); } ctx.restore();
     ctx.strokeStyle = 'rgba(110,231,255,.05)'; ctx.lineWidth = 1; for (let x = 0; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y < H; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   }
-  return { init, show, hideAll, showMenu, showHub, showPrep, showChoice, hideChoice, togglePause, showEnd, showCredits, banner, toast, transition, update, renderHud, renderToasts, renderFade, renderBackdrop, state, esc, roundRect };
+  return { init, show, hideAll, showMenu, showHub, renderAttractVeil, showPrep, showChoice, hideChoice, togglePause, showEnd, showCredits, banner, toast, transition, update, renderHud, renderToasts, renderFade, renderBackdrop, state, esc, roundRect };
 })();

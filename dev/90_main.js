@@ -5,10 +5,11 @@
 function update(dt, rawDt) {
   UI.update(rawDt); Touch.sync();
   if (G.state === 'run') { Run.update(dt); if (G.player) Camera.follow(G.player.x, G.player.y, rawDt); }
+  else if (G.attract) Attract.update(dt);
 }
 function render(ctx) {
   ctx.setTransform(ctx.getTransform());
-  if (G.state === 'run' && G.room) {
+  if ((G.state === 'run' || G.attract) && G.room) {
     ctx.save();
     Camera.apply(ctx);
     if (G.shake > 0) ctx.translate(VFX_RNG.range(-G.shake, G.shake), VFX_RNG.range(-G.shake, G.shake));
@@ -20,7 +21,7 @@ function render(ctx) {
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx); Floaters.render(ctx);
     Debug.renderOverlay(ctx);
     ctx.restore();
-    UI.renderHud(ctx);
+    if (G.attract) { UI.renderAttractVeil(ctx); } else UI.renderHud(ctx);
   } else UI.renderBackdrop(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);
 }
@@ -37,6 +38,7 @@ async function boot() {
   await Sprites.load();
   UI.showMenu();
   Engine.start(update, render);
+  Attract.start();
   window.__autoplay = Debug.autoplay;
   window.__G = G;
 }
