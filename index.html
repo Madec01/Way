@@ -1285,8 +1285,9 @@ const Engine = (() => {
     src.connect(g); g.connect(musicDuck); src.start();
     return { g, stop: () => { try { src.stop(); } catch (e) { /* */ } try { src.disconnect(); g.disconnect(); } catch (e) { /* */ } } };
   }
-  function makeTrackFromElement(url, loop) {
+  function makeTrackFromElement(url, loop, offset) {
     const el = new Audio(); el.crossOrigin = 'anonymous'; el.loop = !!loop; el.preload = 'auto'; el.src = url;
+    if (offset > 0) { const seek = () => { try { el.currentTime = offset; } catch (e) { /* */ } }; if (el.readyState >= 1) seek(); else el.addEventListener('loadedmetadata', seek, { once: true }); }
     const node = ctx.createMediaElementSource(el);
     const g = ctx.createGain(); g.gain.value = 0;
     node.connect(g); g.connect(musicDuck);
@@ -1317,7 +1318,7 @@ const Engine = (() => {
       fadeTrack(track, 1, fadeIn, false);
       return true;
     };
-    const viaElement = () => { try { return start(makeTrackFromElement(url, loop)); } catch (e) { console.warn('[AudioEngine] playMusic', e); return false; } };
+    const viaElement = () => { try { return start(makeTrackFromElement(url, loop, isNum(opts.offset) ? opts.offset : 0)); } catch (e) { console.warn('[AudioEngine] playMusic', e); return false; } };
     if (opts.stream || typeof fetch !== 'function') return Promise.resolve(viaElement());   // stream : lecture immédiate via <audio>, sans télécharger tout le fichier
     return fetch(url)
       .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
@@ -1503,8 +1504,8 @@ const CONTENT = {
       stats: { maxHp: 100, speed: 260, damage: 1.0, luck: 2 },
       trait: {
         id: 'trait_tolerance_tissulaire', name: 'Tolérance tissulaire',
-        desc: 'Les greffes prennent mieux : +20 % XP, +2 chance. Cicatrise 10 % des PV max à chaque nouvelle salle.',
-        mods: [{ stat: 'xpGain', mul: 1.2 }, { stat: 'luck', add: 2 }],
+        desc: 'Les greffes prennent mieux : +15 % XP, +2 chance. Cicatrise 10 % des PV max à chaque nouvelle salle.',
+        mods: [{ stat: 'xpGain', mul: 1.15 }, { stat: 'luck', add: 2 }],
         hooks: { onRoomStart: [{ effect: 'heal_on_room', fraction: 0.1 }] }
       },
       startWeapon: 'weapon_blade', unlocked: true, price: 0
@@ -1636,10 +1637,10 @@ const CONTENT = {
   // =====================================================================
   upgrades: [
     // ---- COMMUNES (20) ----
-    { id: 'upg_tranchant', name: 'Tranchant', desc: '+15 % dégâts.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 5,
-      mods: [{ stat: 'damage', mul: 1.15 }], hooks: {} },
-    { id: 'upg_gachette', name: 'Gâchette', desc: '+12 % cadence d\'attaque.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 5,
-      mods: [{ stat: 'fireRate', mul: 1.12 }], hooks: {} },
+    { id: 'upg_tranchant', name: 'Tranchant', desc: '+10 % dégâts.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 5,
+      mods: [{ stat: 'damage', mul: 1.10 }], hooks: {} },
+    { id: 'upg_gachette', name: 'Gâchette', desc: '+8 % cadence d\'attaque.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 4,
+      mods: [{ stat: 'fireRate', mul: 1.08 }], hooks: {} },
     { id: 'upg_oeil_vif', name: 'Œil vif', desc: '+6 % chance de critique.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 5,
       mods: [{ stat: 'critChance', add: 0.06 }], hooks: {} },
     { id: 'upg_coup_critique', name: 'Coup critique', desc: '+40 % dégâts des critiques (×1,5 → ×1,9).', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 3,
@@ -1678,10 +1679,10 @@ const CONTENT = {
       mods: [], hooks: { onHit: [{ effect: 'poison', chance: 0.15, dps: 3, duration: 4, stacks: 3 }] } },
 
     // ---- RARES (15) ----
-    { id: 'upg_frappe_lourde', name: 'Frappe lourde', desc: '+30 % dégâts, -8 % cadence.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 3,
-      mods: [{ stat: 'damage', mul: 1.3 }, { stat: 'fireRate', mul: 0.92 }], hooks: {} },
-    { id: 'upg_double_canon', name: 'Double canon', desc: '+1 projectile, -15 % dégâts.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 2,
-      mods: [{ stat: 'projectiles', add: 1 }, { stat: 'damage', mul: 0.85 }], hooks: {} },
+    { id: 'upg_frappe_lourde', name: 'Frappe lourde', desc: '+22 % dégâts, -8 % cadence.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 3,
+      mods: [{ stat: 'damage', mul: 1.22 }, { stat: 'fireRate', mul: 0.92 }], hooks: {} },
+    { id: 'upg_double_canon', name: 'Double canon', desc: '+1 projectile, -25 % dégâts.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 2,
+      mods: [{ stat: 'projectiles', add: 1 }, { stat: 'damage', mul: 0.75 }], hooks: {} },
     { id: 'upg_perforation', name: 'Perforation', desc: '+1 ennemi traversé par les tirs.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 3,
       mods: [{ stat: 'pierce', add: 1 }], hooks: {} },
     { id: 'upg_rebond', name: 'Rebond', desc: '+1 rebond sur les murs.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 3,
@@ -1741,25 +1742,25 @@ const CONTENT = {
     { id: 'upg_balles_incendiaires', name: 'Balles incendiaires', desc: '35 % de chance d\'enflammer : 8 dégâts/s pendant 2,5 s.', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { onHit: [{ effect: 'burn', chance: 0.35, dps: 8, duration: 2.5 }] } },
     { id: 'upg_balles_electriques', name: 'Balles électriques', desc: '30 % de chance d\'électriser : saute sur 2 ennemis (60 % des dégâts).', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { onHit: [{ effect: 'chain', chance: 0.3, jumps: 2, radius: 170, damageMul: 0.6 }] } },
     { id: 'upg_balles_givrantes', name: 'Balles givrantes', desc: '30 % de chance de geler 1,5 s (vitesse -60 %).', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { onHit: [{ effect: 'freeze', chance: 0.3, duration: 1.5, slow: 0.6 }] } },
-    { id: 'upg_second_canon', name: 'Second canon', desc: '+1 projectile par tir.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 2, mods: [{ stat: 'projectiles', add: 1 }], hooks: {} },
-    { id: 'upg_salve', name: 'Salve', desc: '+2 projectiles par tir, -15 % dégâts.', rarity: 'epic', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [{ stat: 'projectiles', add: 2 }, { stat: 'damage', mul: 0.85 }], hooks: {} },
-    { id: 'upg_satellite', name: 'Satellite', desc: 'Un orbe tourne autour de vous : 14 dégâts au contact, bloque les tirs.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 3, mods: [], hooks: { passive: [{ effect: 'orbit_shield', count: 1, damage: 14, radius: 64 }] } },
+    { id: 'upg_second_canon', name: 'Second canon', desc: '+1 projectile par tir, -12 % dégâts.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 2, mods: [{ stat: 'projectiles', add: 1 }, { stat: 'damage', mul: 0.88 }], hooks: {} },
+    { id: 'upg_salve', name: 'Salve', desc: '+2 projectiles par tir, -30 % dégâts.', rarity: 'epic', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [{ stat: 'projectiles', add: 2 }, { stat: 'damage', mul: 0.7 }], hooks: {} },
+    { id: 'upg_satellite', name: 'Satellite', desc: 'Un orbe tourne autour de vous : 10 dégâts au contact, bloque les tirs.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 2, mods: [], hooks: { passive: [{ effect: 'orbit_shield', count: 1, damage: 10, radius: 64 }] } },
     { id: 'upg_ceinture', name: 'Ceinture d\'astéroïdes', desc: '+3 orbes en orbite, 18 dégâts au contact.', rarity: 'epic', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'orbit_shield', count: 3, damage: 18, radius: 80 }] } },
     { id: 'upg_tir_guide', name: 'Tir guidé', desc: 'Vos projectiles se dirigent vers l\'ennemi le plus proche.', rarity: 'epic', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'homing', turn: 2.5 }] } },
     { id: 'upg_eclats', name: 'Éclats', desc: 'Chaque impact libère 2 éclats (40 % des dégâts).', rarity: 'epic', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { onHit: [{ effect: 'split_on_hit', chance: 1, count: 2, damageMul: 0.4 }] } },
     { id: 'upg_tir_arriere', name: 'Tir arrière', desc: 'Chaque tir envoie aussi un projectile derrière vous (50 %).', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'rear_shot', damageMul: 0.5 }] } },
     { id: 'upg_balles_explosives', name: 'Balles explosives', desc: '25 % de chance qu\'un impact explose (60 px, 70 % des dégâts).', rarity: 'epic', category: 'special', weaponFamily: null, maxStacks: 1, mods: [], hooks: { onHit: [{ effect: 'hit_explode', chance: 0.25, radius: 60, damageMul: 0.7 }] } },
-    { id: 'upg_foudre_ambiante', name: 'Foudre ambiante', desc: 'Toutes les 2 s, la foudre frappe l\'ennemi le plus proche (22 dégâts).', rarity: 'epic', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { passive: [{ effect: 'lightning_storm', every: 2, damage: 22, radius: 320 }] } },
-    { id: 'upg_aura_brulante', name: 'Aura brûlante', desc: 'Les ennemis à moins de 90 px brûlent : 12 dégâts/s.', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { passive: [{ effect: 'burn_aura', radius: 90, dps: 12 }] } },
-    { id: 'upg_drone', name: 'Drone d\'appoint', desc: 'Un drone vous suit et tire 2 fois/s (8 dégâts).', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 3, mods: [], hooks: { passive: [{ effect: 'drone', count: 1, damage: 8, fireRate: 2, range: 340 }] } },
+    { id: 'upg_foudre_ambiante', name: 'Foudre ambiante', desc: 'Toutes les 2,5 s, la foudre frappe l\'ennemi le plus proche (18 dégâts).', rarity: 'epic', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { passive: [{ effect: 'lightning_storm', every: 2.5, damage: 18, radius: 320 }] } },
+    { id: 'upg_aura_brulante', name: 'Aura brûlante', desc: 'Les ennemis à moins de 90 px brûlent : 8 dégâts/s.', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 2, mods: [], hooks: { passive: [{ effect: 'burn_aura', radius: 90, dps: 8 }] } },
+    { id: 'upg_drone', name: 'Drone d\'appoint', desc: 'Un drone vous suit et tire 2 fois/s (6 dégâts).', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 2, mods: [], hooks: { passive: [{ effect: 'drone', count: 1, damage: 6, fireRate: 2, range: 340 }] } },
     { id: 'upg_execution', name: 'Exécution', desc: 'Les ennemis (hors boss) sous 15 % de PV meurent au prochain coup.', rarity: 'rare', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'execute', threshold: 0.15 }] } },
     { id: 'upg_gel_profond', name: 'Gel profond', desc: 'Les ennemis gelés subissent +35 % de dégâts.', rarity: 'rare', category: 'special', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'frost_bonus', mul: 1.35 }] } },
     { id: 'upg_rafale', name: 'Rafale', desc: 'Après une compétence : cadence +45 % pendant 3 s.', rarity: 'rare', category: 'mobility', weaponFamily: null, maxStacks: 1, mods: [], hooks: { onSkill: [{ effect: 'fire_frenzy', fireRateMul: 1.45, duration: 3 }] } },
     { id: 'upg_projectiles_lourds', name: 'Projectiles lourds', desc: '+15 % zone d\'effet et recul.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 3, mods: [{ stat: 'areaSize', mul: 1.15 }, { stat: 'knockback', mul: 1.2 }], hooks: {} },
-    { id: 'upg_munitions', name: 'Munitions', desc: '+10 % dégâts, +8 % cadence.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 4, mods: [{ stat: 'damage', mul: 1.1 }, { stat: 'fireRate', mul: 1.08 }], hooks: {} },
+    { id: 'upg_munitions', name: 'Munitions', desc: '+6 % dégâts, +5 % cadence.', rarity: 'common', category: 'offense', weaponFamily: null, maxStacks: 3, mods: [{ stat: 'damage', mul: 1.06 }, { stat: 'fireRate', mul: 1.05 }], hooks: {} },
     { id: 'upg_conducteur', name: 'Conducteur', desc: 'Les coups critiques électrisent toujours (3 sauts).', rarity: 'epic', category: 'special', weaponFamily: null, maxStacks: 1, mods: [{ stat: 'critChance', add: 0.05 }], hooks: { onHit: [{ effect: 'chain', chance: 0.45, jumps: 3, radius: 190, damageMul: 0.7 }] } },
     { id: 'upg_tempete', name: 'Tempête', desc: 'La foudre frappe toutes les 0,7 s et saute sur 3 ennemis.', rarity: 'colossal', category: 'special', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'lightning_storm', every: 0.7, damage: 26, radius: 380, jumps: 3 }] } },
-    { id: 'upg_mitraille', name: 'Mitraille', desc: '+3 projectiles, +25 % cadence, tirs guidés.', rarity: 'colossal', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [{ stat: 'projectiles', add: 3 }, { stat: 'fireRate', mul: 1.25 }], hooks: { passive: [{ effect: 'homing', turn: 3 }] } },
+    { id: 'upg_mitraille', name: 'Mitraille', desc: '+3 projectiles, tirs guidés, -20 % dégâts.', rarity: 'colossal', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [{ stat: 'projectiles', add: 3 }, { stat: 'damage', mul: 0.8 }], hooks: { passive: [{ effect: 'homing', turn: 3 }] } },
     { id: 'upg_noyau', name: 'Noyau', desc: '5 orbes en orbite (22 dégâts) et une aura brûlante de 120 px.', rarity: 'colossal', category: 'offense', weaponFamily: null, maxStacks: 1, mods: [], hooks: { passive: [{ effect: 'orbit_shield', count: 5, damage: 22, radius: 96 }, { effect: 'burn_aura', radius: 120, dps: 16 }] } },
     { id: 'upg_rappel', name: 'Rappel', desc: 'Vos projectiles reviennent vers vous : un second passage sur tout.', rarity: 'colossal', category: 'special', weaponFamily: null, maxStacks: 1,
       mods: [], hooks: { passive: [{ effect: 'projectiles_return' }] } },
@@ -2148,6 +2149,164 @@ const CONTENT = {
 
 </script>
 <script>
+/* ==== content2.js ==== */
+/* =========================================================================
+   SUJET NEUF — content2.js — Biome 2 : LA SERRE (palier -2). Un cran au-dessus d'ADMISSION.
+   Variantes d'ennemis plus rapides et plus résistantes, salves, élites, boss ÉTALON 12 « la Serriste ».
+   ========================================================================= */
+
+CONTENT.biomes.push({
+  id: 'biome_2', name: 'LA SERRE', order: 2,
+  desc: 'Palier -2. L\'ancienne unité de culture des greffons : cuves éclatées, végétation qui a pris le contrôle des cellules d\'essai, sol humide qui conduit tout. Le Bureau y a laissé pousser ce qu\'il ne comprenait pas. Taux de perte : 84 %.',
+  palette: { tint: 'rgba(40,120,70,.30)', neon: ['#7ed957', '#ffd166'], wall: 'rgba(30,90,60,.4)' },
+  levelPassives: [
+    { bonus: { name: 'Photosynthèse', desc: 'Régénération +1,5 PV/s.', mods: [{ stat: 'regen', add: 1.5 }], hooks: {} }, malus: { name: 'Air lourd', desc: '-15 % vitesse de déplacement.', mods: [{ stat: 'speed', mul: 0.85 }], hooks: {} } },
+    { bonus: { name: 'Greffon sauvage', desc: '+1 projectile par tir.', mods: [{ stat: 'projectiles', add: 1 }], hooks: {} }, malus: { name: 'Sève corrosive', desc: 'Les pièges infligent +50 % de dégâts, armure -1.', mods: [{ stat: 'trapDamageMul', mul: 1.5 }, { stat: 'armor', add: -1 }], hooks: {} } },
+    { bonus: { name: 'Récolte', desc: '+40 % pièces, +20 % XP.', mods: [{ stat: 'coinGain', mul: 1.4 }, { stat: 'xpGain', mul: 1.2 }], hooks: {} }, malus: { name: 'Serre chaude', desc: '-20 % PV max, invulnérabilité après un coup -0,15 s.', mods: [{ stat: 'maxHp', mul: 0.8 }, { stat: 'invulnTime', add: -0.15 }], hooks: {} } },
+  ],
+  enemyPool: ['enemy_ronce', 'enemy_pollinisateur', 'enemy_racine', 'enemy_spore', 'enemy_bourgeon', 'enemy_moucherons', 'enemy_liane'],
+  trapPool: ['trap_balayage', 'trap_tourniquet', 'trap_grille', 'trap_bouche', 'trap_dalles', 'trap_nappe', 'trap_rail', 'trap_tourelle'],
+  miniboss: 'boss_serriste',
+  difficulty: { hpMul: 1.3, damageMul: 1.2, speedMul: 1.08 },
+  unlockAfter: 'biome_1',
+});
+
+CONTENT.enemies.push(
+  { id: 'enemy_ronce', name: 'Ronce', archetype: 'rusher', desc: 'Rôdeur envahi par les lianes : plus vif, ruée plus longue.', hp: 46, speed: 215, damage: 11, radius: 14, xp: 6, coins: 2, color: '#7ed957', sprite: 'enemy_rusher2',
+    behavior: { lungeRange: 115, lungeWindup: 0.32, lungeSpeed: 600, lungeDuration: 0.3, lungeCooldown: 1.3 }, telegraph: { time: 0.3, color: '#b7ff7a' } },
+  { id: 'enemy_pollinisateur', name: 'Pollinisateur', archetype: 'shooter', desc: 'Tire une salve de 3 spores en éventail. Reste à distance.', hp: 36, speed: 140, damage: 8, radius: 14, xp: 8, coins: 3, color: '#c9a3ff', projColor: '#e2c6ff', sprite: 'enemy_shooter2',
+    behavior: { fireRate: 0.8, projSpeed: 340, projDamage: 9, projSize: 7, keepDistance: 320, aimTime: 0.45, burst: 3, spread: 0.4 }, telegraph: { time: 0.45, color: '#e2c6ff' } },
+  { id: 'enemy_racine', name: 'Racine', archetype: 'tank', desc: 'Bloc végétal : charge plus vite, encaisse beaucoup.', hp: 240, speed: 95, damage: 16, radius: 26, xp: 18, coins: 5, color: '#5aa06a', sprite: 'enemy_tank2',
+    behavior: { chargeWindup: 0.7, chargeSpeed: 620, chargeDuration: 0.8, chargeCooldown: 2.6, stunOnWallHit: 1.0, chargeDamageMul: 1.5 }, telegraph: { time: 0.7, color: '#ffd166' } },
+  { id: 'enemy_spore', name: 'Spore', archetype: 'kamikaze', desc: 'Explose dans un rayon plus large et laisse un nuage.', hp: 24, speed: 260, damage: 6, radius: 12, xp: 6, coins: 2, color: '#b7ff7a', sprite: 'enemy_kamikaze2',
+    behavior: { fuse: 0.8, radius: 100, explosionDamage: 26, triggerRange: 70, explodeOnDeath: true }, telegraph: { time: 0.8, color: '#eaffb0' } },
+  { id: 'enemy_bourgeon', name: 'Bourgeon', archetype: 'summoner', desc: 'Libère des moucherons par paquets de 3, jusqu\'à 6.', hp: 110, speed: 65, damage: 8, radius: 20, xp: 24, coins: 6, color: '#ff9adb', sprite: 'enemy_summoner2',
+    behavior: { summon: 'enemy_moucherons', every: 3.5, max: 6, count: 3, keepDistance: 360, summonWindup: 0.6 }, telegraph: { time: 0.6, color: '#ffc4ea' } },
+  { id: 'enemy_moucherons', name: 'Moucherons', archetype: 'swarm', desc: 'Nuée de 5, plus rapide.', hp: 10, speed: 300, damage: 5, radius: 8, xp: 3, coins: 1, color: '#9cff57', sprite: 'enemy_swarm2',
+    behavior: { groupSize: 5, jitter: 45, biteWindup: 0.2, biteCooldown: 0.7 }, telegraph: { time: 0.2, color: '#d0ff9a' } },
+  { id: 'enemy_liane', name: 'Liane', archetype: 'dasher', desc: 'Fonce plus loin, plus souvent.', hp: 55, speed: 190, damage: 13, radius: 14, xp: 12, coins: 4, color: '#66e0c8', sprite: 'enemy_dasher2',
+    behavior: { blinkRange: 300, blinkWindup: 0.4, blinkCooldown: 1.7, dashSpeed: 780, dashDuration: 0.32, postDashPause: 0.5 }, telegraph: { time: 0.4, color: '#a8fff0' } },
+);
+
+CONTENT.bosses.push({
+  id: 'boss_serriste', name: 'Étalon 12, dite « la Serriste »', subtitle: 'Elle a fait pousser ce que vous portez.',
+  desc: 'Sujet de référence de LA SERRE, greffée jusqu\'à l\'os de matériel végétal. Vaporise, enracine, et charge quand on la croit lente : après une charge, ses racines mettent 1,2 s à se rétracter.',
+  hp: 2600, speed: 130, radius: 36, damage: 20, xp: 180, coins: 60, color: '#7ed957', sprite: 'boss2',
+  phases: [
+    { hpBelow: 1, patterns: [
+      { kind: 'spiral', telegraph: 0.7, duration: 2.6, cooldown: 4.5, arms: 3, rate: 14, angularSpeed: 2.4, projSpeed: 230, projDamage: 12, projSize: 7, color: '#b7ff7a' },
+      { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 8, enemy: 'enemy_spore', count: 2 },
+      { kind: 'charge', telegraph: 0.8, duration: 0.8, cooldown: 4.5, speed: 680, damage: 24, stunTime: 1.2 },
+      { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 5.5, radius: 150, damage: 28 },
+    ] },
+    { hpBelow: 0.55, patterns: [
+      { kind: 'fan', telegraph: 0.5, duration: 0.6, cooldown: 2.2, count: 9, spread: 1.4, projSpeed: 320, projDamage: 13, projSize: 8, color: '#e2c6ff' },
+      { kind: 'laser_sweep', telegraph: 1.0, duration: 2.2, cooldown: 7, length: 700, damage: 22, color: '#b7ff7a' },
+      { kind: 'charge', telegraph: 0.6, duration: 0.8, cooldown: 4, speed: 760, damage: 26, stunTime: 1.2 },
+      { kind: 'ring', telegraph: 0.6, duration: 0.3, cooldown: 3, count: 16, projSpeed: 280, projDamage: 13, projSize: 8, color: '#b7ff7a' },
+      { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 9, enemy: 'enemy_moucherons', count: 1 },
+    ] },
+  ],
+  weakness: { desc: 'Après chaque charge, ses racines restent plantées 1,2 s : dégâts ×1,8 pendant qu\'elle se rétracte.', rule: 'after_charge', damageMul: 1.8, window: 1.2 },
+  revenge: { hpMul: 1.5, window: 0.8, name: 'Étalon 12 / rév. B', phaseText: 'DONNÉES CHARGÉES', mimic: true,
+    extraPhases: [ { hpBelow: 0.3, patterns: [
+      { kind: 'ring', telegraph: 0.5, duration: 1.2, cooldown: 2.5, count: 14, rate: 3, rotate: 0.35, projSpeed: 300, projDamage: 15, projSize: 8, color: '#b7ff7a' },
+      { kind: 'spiral', telegraph: 0.6, duration: 3, cooldown: 5, arms: 4, rate: 16, angularSpeed: 3, projSpeed: 250, projDamage: 13, projSize: 7, color: '#e2c6ff' },
+      { kind: 'charge', telegraph: 0.45, duration: 0.7, cooldown: 3, speed: 860, damage: 30, stunTime: 0.8 },
+    ] } ],
+    desc: 'Salle 9 : rév. B, PV ×1,5, rétraction plus courte (0,8 s), phase 3 sous 30 %.' },
+});
+
+/* Salles du biome 2 : mêmes types que le biome 1, plus d'ennemis, des élites, pièges plus serrés. */
+CONTENT.rooms.push(
+  { id: 'room_b2_1', biome: 'biome_2', index: 1, type: 'PREP_COMBAT', refTime: 55,
+    obstacles: [ { x: 5, y: 2, w: 1, h: 2 }, { x: 18, y: 2, w: 1, h: 2 }, { x: 5, y: 9, w: 1, h: 2 }, { x: 18, y: 9, w: 1, h: 2 }, { x: 11, y: 6, w: 2, h: 1 } ],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_ronce', count: 2, x: 20, y: 3 }, { enemy: 'enemy_ronce', count: 2, x: 20, y: 9 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_pollinisateur', count: 1, x: 21, y: 6 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_spore', count: 2, x: 21, y: 2 }, { enemy: 'enemy_pollinisateur', count: 2, x: 21, y: 10 }, { enemy: 'enemy_ronce', count: 2, x: 2, y: 1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_ronce', count: 1, x: -1, y: -1, elite: true }, { enemy: 'enemy_liane', count: 1, x: 12, y: 1 }, { enemy: 'enemy_ronce', count: 2, x: 2, y: 11 }, { enemy: 'enemy_pollinisateur', count: 1, x: 21, y: 6 } ] },
+    ], traps: [], fragments: [], modular: [] },
+  { id: 'room_b2_2', biome: 'biome_2', index: 2, type: 'TRAP', refTime: 70,
+    obstacles: [ { x: 8, y: 0, w: 1, h: 4 }, { x: 8, y: 9, w: 1, h: 4 }, { x: 16, y: 0, w: 1, h: 4 }, { x: 16, y: 9, w: 1, h: 4 } ],
+    waves: [],
+    traps: [
+      { trap: 'trap_dalles', x: 2, y: 2, w: 6, h: 9, phase: 0, params: { pattern: 'checker' } },
+      { trap: 'trap_grille', x: 9, y: 1, w: 7, h: 11, phase: 0.5 },
+      { trap: 'trap_balayage', x: 9, y: 0, w: 7, h: 13, phase: 2.5 },
+      { trap: 'trap_bouche', x: 17, y: 0, phase: 0 }, { trap: 'trap_bouche', x: 19, y: 0, phase: 0.6 }, { trap: 'trap_bouche', x: 21, y: 0, phase: 1.2 },
+      { trap: 'trap_bouche', x: 18, y: 12, phase: 0.3, params: { dir: 'up' } }, { trap: 'trap_bouche', x: 20, y: 12, phase: 0.9, params: { dir: 'up' } },
+      { trap: 'trap_rail', x: 17, y: 4, w: 6, h: 1, phase: 0 }, { trap: 'trap_rail', x: 17, y: 8, w: 6, h: 1, phase: 1.6 },
+      { trap: 'trap_tourniquet', x: 20, y: 6, phase: 0, params: { arms: 3 } },
+    ],
+    fragments: [ { x: 4, y: 6, at: 0 }, { x: 12, y: 3, at: 0 }, { x: 12, y: 9, at: 6 }, { x: 19, y: 6, at: 12 }, { x: 22, y: 2, at: 18 }, { x: 22, y: 10, at: 24 } ], modular: [] },
+  { id: 'room_b2_3', biome: 'biome_2', index: 3, type: 'COMBAT_TRAP', refTime: 85,
+    obstacles: [ { x: 4, y: 3, w: 2, h: 1 }, { x: 4, y: 9, w: 2, h: 1 }, { x: 18, y: 3, w: 2, h: 1 }, { x: 18, y: 9, w: 2, h: 1 }, { x: 11, y: 1, w: 2, h: 1 }, { x: 11, y: 11, w: 2, h: 1 } ],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_ronce', count: 4, x: 20, y: 6 }, { enemy: 'enemy_pollinisateur', count: 2, x: 21, y: 2 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_racine', count: 1, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 4, x: -1, y: -1 }, { enemy: 'enemy_spore', count: 2, x: 2, y: 11 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_spore', count: 3, x: 2, y: 1 }, { enemy: 'enemy_pollinisateur', count: 3, x: 21, y: 10 }, { enemy: 'enemy_moucherons', count: 1, x: 21, y: 2 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_liane', count: 2, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_bourgeon', count: 1, x: 2, y: 6 }, { enemy: 'enemy_racine', count: 1, x: 12, y: 11, elite: true } ] },
+    ],
+    traps: [
+      { trap: 'trap_tourniquet', x: 11, y: 6, phase: 0, params: { arms: 3, lengthTiles: 5, angularSpeed: 1.4 } },
+      { trap: 'trap_dalles', x: 1, y: 1, w: 3, h: 3, phase: 0 }, { trap: 'trap_dalles', x: 20, y: 9, w: 3, h: 3, phase: 1 }, { trap: 'trap_dalles', x: 1, y: 9, w: 3, h: 3, phase: 0.5 }, { trap: 'trap_dalles', x: 20, y: 1, w: 3, h: 3, phase: 1.5 },
+      { trap: 'trap_tourelle', x: 7, y: 0, phase: 0 }, { trap: 'trap_tourelle', x: 16, y: 0, phase: 1.2 }, { trap: 'trap_tourelle', x: 11, y: 12, phase: 0.6, params: { count: 3, spread: 0.6 } },
+      { trap: 'trap_nappe', x: 6, y: 6, phase: 2 }, { trap: 'trap_nappe', x: 17, y: 6, phase: 5 },
+    ], fragments: [], modular: [] },
+  { id: 'room_b2_4', biome: 'biome_2', index: 4, type: 'CHEST', refTime: 20,
+    obstacles: [ { x: 8, y: 4, w: 1, h: 1 }, { x: 8, y: 8, w: 1, h: 1 }, { x: 15, y: 4, w: 1, h: 1 }, { x: 15, y: 8, w: 1, h: 1 } ], waves: [], traps: [], fragments: [], modular: [] },
+  { id: 'room_b2_5', biome: 'biome_2', index: 5, type: 'MINIBOSS', refTime: 130,
+    obstacles: [ { x: 5, y: 3, w: 2, h: 2 }, { x: 17, y: 3, w: 2, h: 2 }, { x: 5, y: 8, w: 2, h: 2 }, { x: 17, y: 8, w: 2, h: 2 }, { x: 11, y: 6, w: 2, h: 1 } ],
+    waves: [ { at: 'start', spawns: [ { enemy: 'boss_serriste', count: 1, x: 18, y: 6 } ] } ],
+    traps: [ { trap: 'trap_nappe', x: 3, y: 6, phase: 3 }, { trap: 'trap_nappe', x: 20, y: 6, phase: 7 } ], fragments: [], modular: [] },
+  { id: 'room_b2_6', biome: 'biome_2', index: 6, type: 'COMBAT_MODULAR', refTime: 90,
+    obstacles: [ { x: 11, y: 5, w: 2, h: 3 } ],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_liane', count: 2, x: -1, y: -1 }, { enemy: 'enemy_pollinisateur', count: 3, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_bourgeon', count: 1, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 5, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_racine', count: 2, x: -1, y: -1 }, { enemy: 'enemy_spore', count: 4, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_liane', count: 2, x: -1, y: -1, elite: true }, { enemy: 'enemy_pollinisateur', count: 2, x: -1, y: -1 }, { enemy: 'enemy_moucherons', count: 2, x: -1, y: -1 } ] },
+    ],
+    traps: [ { trap: 'trap_tourelle', x: 0, y: 3, phase: 0 }, { trap: 'trap_tourelle', x: 23, y: 9, phase: 1 } ], fragments: [],
+    modular: [
+      { kind: 'slide_wall', x: 3, y: 1, w: 1, h: 5, dx: 0, dy: 6, period: 7, phase: 0 },
+      { kind: 'slide_wall', x: 20, y: 7, w: 1, h: 5, dx: 0, dy: -6, period: 7, phase: 3.5 },
+      { kind: 'rotor', cx: 12, cy: 6.5, arms: 3, length: 4, angularSpeed: 0.7 },
+      { kind: 'floor_cycle', period: 8, telegraph: 1.5, configs: [
+        [ { x: 7, y: 3, w: 1, h: 1 }, { x: 16, y: 3, w: 1, h: 1 }, { x: 7, y: 9, w: 1, h: 1 }, { x: 16, y: 9, w: 1, h: 1 }, { x: 11, y: 1, w: 2, h: 1 } ],
+        [ { x: 5, y: 6, w: 2, h: 1 }, { x: 17, y: 6, w: 2, h: 1 }, { x: 9, y: 2, w: 1, h: 2 }, { x: 14, y: 9, w: 1, h: 2 } ]
+      ] },
+    ] },
+  { id: 'room_b2_7', biome: 'biome_2', index: 7, type: 'COMBAT_TRAP_MODULAR', refTime: 100,
+    obstacles: [ { x: 6, y: 6, w: 1, h: 1 }, { x: 17, y: 6, w: 1, h: 1 } ],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_bourgeon', count: 1, x: 21, y: 3 }, { enemy: 'enemy_liane', count: 2, x: -1, y: -1 }, { enemy: 'enemy_ronce', count: 2, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_racine', count: 1, x: 21, y: 6, elite: true }, { enemy: 'enemy_pollinisateur', count: 3, x: -1, y: -1 }, { enemy: 'enemy_moucherons', count: 2, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_spore', count: 5, x: -1, y: -1 }, { enemy: 'enemy_liane', count: 2, x: -1, y: -1 }, { enemy: 'enemy_bourgeon', count: 1, x: 2, y: 9 } ] },
+    ],
+    traps: [
+      { trap: 'trap_grille', x: 2, y: 1, w: 20, h: 11, phase: 0, params: { spacingTiles: 3 } },
+      { trap: 'trap_nappe', x: 11, y: 6, phase: 0 }, { trap: 'trap_nappe', x: 5, y: 2, phase: 4 }, { trap: 'trap_nappe', x: 18, y: 10, phase: 2 },
+      { trap: 'trap_tourelle', x: 0, y: 6, phase: 0.6 }, { trap: 'trap_tourelle', x: 23, y: 6, phase: 1.8 },
+      { trap: 'trap_bouche', x: 11, y: 12, phase: 0.4, params: { dir: 'up', pattern: 'fan', count: 3 } },
+    ], fragments: [],
+    modular: [
+      { kind: 'safe_zone', radius: 2.6, period: 8, telegraph: 2.0, damage: 18, speed: 1.9, path: [ { x: 4, y: 3 }, { x: 19, y: 3 }, { x: 19, y: 9 }, { x: 4, y: 9 } ] },
+      { kind: 'slide_wall', x: 11, y: 0, w: 2, h: 3, dx: 0, dy: 8, period: 9, phase: 2 },
+      { kind: 'slide_wall', x: 2, y: 5, w: 3, h: 1, dx: 8, dy: 0, period: 11, phase: 5 },
+    ] },
+  { id: 'room_b2_8', biome: 'biome_2', index: 8, type: 'CHEST_FINAL', refTime: 20,
+    obstacles: [ { x: 8, y: 4, w: 1, h: 1 }, { x: 8, y: 8, w: 1, h: 1 }, { x: 15, y: 4, w: 1, h: 1 }, { x: 15, y: 8, w: 1, h: 1 } ], waves: [], traps: [], fragments: [], modular: [] },
+  { id: 'room_b2_9', biome: 'biome_2', index: 9, type: 'BOSS_REVENGE', refTime: 160,
+    obstacles: [ { x: 5, y: 3, w: 2, h: 2 }, { x: 17, y: 3, w: 2, h: 2 }, { x: 5, y: 8, w: 2, h: 2 }, { x: 17, y: 8, w: 2, h: 2 } ],
+    waves: [ { at: 'start', spawns: [ { enemy: 'boss_serriste', count: 1, x: 18, y: 6 } ] } ],
+    traps: [ { trap: 'trap_tourelle', x: 11, y: 0, phase: 0 }, { trap: 'trap_tourelle', x: 12, y: 12, phase: 1.2 }, { trap: 'trap_nappe', x: 3, y: 6, phase: 4 }, { trap: 'trap_nappe', x: 20, y: 6, phase: 8 } ],
+    fragments: [], modular: [] },
+);
+
+</script>
+<script>
 /* ==== 10_content_api.js ==== */
 /* =========================================================================
    SALLE ZÉRO — 10_content_api.js
@@ -2233,6 +2392,15 @@ const SPRITE_DEFS = {
   chest:           { idle: [304, 304, 16, 16], run: [304, 304, 16, 16], n: 3 },
   coin:            { idle: [288, 272, 8, 8],   run: [288, 272, 8, 8],   n: 4 },
   npc_doc:         { idle: [128, 100, 16, 28], run: [128, 100, 16, 28], n: 4, foot: true },
+  /* biome 2 */
+  enemy_rusher2:   { idle: [368, 80, 16, 16],  run: [432, 80, 16, 16],  n: 4 },
+  enemy_shooter2:  { idle: [368, 300, 16, 20], run: [432, 300, 16, 20], n: 4 },
+  enemy_tank2:     { idle: [368, 204, 16, 20], run: [432, 204, 16, 20], n: 4 },
+  enemy_kamikaze2: { idle: [368, 144, 16, 16], run: [368, 144, 16, 16], n: 4 },
+  enemy_summoner2: { idle: [368, 328, 16, 24], run: [432, 328, 16, 24], n: 4 },
+  enemy_swarm2:    { idle: [368, 112, 16, 16], run: [368, 112, 16, 16], n: 4 },
+  enemy_dasher2:   { idle: [432, 144, 16, 16], run: [432, 144, 16, 16], n: 4 },
+  boss2:           { idle: [16, 320, 32, 32],  run: [144, 320, 32, 32], n: 4, foot: true },
 };
 const TILES = { floor: [[16, 64], [32, 64], [48, 64], [16, 80], [32, 80], [48, 80], [16, 96], [32, 96]], wallTop: [32, 0], wallFace: [32, 16], wallLeft: [0, 128], wallRight: [16, 128], cornerTL: [32, 112], cornerTR: [48, 112], cornerBL: [32, 144], cornerBR: [48, 144], column: [[80, 80], [80, 96], [80, 112]], banner: [32, 32], hole: [48, 32], goo: [64, 80] };
 
@@ -2268,7 +2436,9 @@ const Sprites = (() => {
   function tile(ctx, t, dx, dy, w = TILE, h = TILE) { if (!ready) return false; ctx.drawImage(sheet, t[0], t[1], 16, 16, dx, dy, w, h); return true; }
   /* sol + murs, mis en cache par salle dans un canvas hors écran */
   function drawFloor(ctx, room) {
-    let c = floorCache.get(room.floorSeed);
+    const pal = (G.run && G.run.biome && G.run.biome.palette) || { tint: 'rgba(40,70,110,.28)', neon: ['#6ee7ff', '#ff9a3c'], wall: 'rgba(40,70,110,.35)' };
+    const cacheKey = room.floorSeed + ':' + (G.run && G.run.biome ? G.run.biome.id : '');
+    let c = floorCache.get(cacheKey);
     if (!c) {
       c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       const rng = makeRng(room.floorSeed);
@@ -2278,18 +2448,18 @@ const Sprites = (() => {
         if (!tile(g, rng.chance(0.9) ? TILES.floor[0] : rng.pick(TILES.floor), x, y)) { g.fillStyle = (tx + ty) % 2 ? '#141826' : '#161b2b'; g.fillRect(x, y, TILE, TILE); }
       }
       /* teinte froide (labo) + vignette */
-      g.fillStyle = 'rgba(40,70,110,.28)'; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
+      g.fillStyle = pal.tint; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
       const v = g.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, 760); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)'); g.fillStyle = v; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
       /* grille discrète */
       g.strokeStyle = 'rgba(110,231,255,.035)'; g.lineWidth = 1; for (let tx = 0; tx <= ROOM_COLS; tx++) { g.beginPath(); g.moveTo(ROOM_X + tx * TILE, ROOM_Y); g.lineTo(ROOM_X + tx * TILE, ROOM_Y + ROOM_H); g.stroke(); } for (let ty = 0; ty <= ROOM_ROWS; ty++) { g.beginPath(); g.moveTo(ROOM_X, ROOM_Y + ty * TILE); g.lineTo(ROOM_X + ROOM_W, ROOM_Y + ty * TILE); g.stroke(); }
       /* murs */
       for (let tx = -1; tx <= ROOM_COLS; tx++) { const x = ROOM_X + tx * TILE; if (!tile(g, TILES.wallFace, x, ROOM_Y - TILE)) { g.fillStyle = '#232a44'; g.fillRect(x, ROOM_Y - TILE, TILE, TILE); } if (!tile(g, TILES.wallTop, x, ROOM_Y + ROOM_H)) { g.fillStyle = '#1a2036'; g.fillRect(x, ROOM_Y + ROOM_H, TILE, TILE); } }
       for (let ty = 0; ty < ROOM_ROWS; ty++) { const y = ROOM_Y + ty * TILE; if (!tile(g, TILES.wallLeft, ROOM_X - TILE, y)) { g.fillStyle = '#1a2036'; g.fillRect(ROOM_X - TILE, y, TILE, TILE); } if (!tile(g, TILES.wallRight, ROOM_X + ROOM_W, y)) { g.fillStyle = '#1a2036'; g.fillRect(ROOM_X + ROOM_W, y, TILE, TILE); } }
-      g.fillStyle = 'rgba(40,70,110,.35)'; g.fillRect(ROOM_X - TILE, ROOM_Y - TILE, ROOM_W + 2 * TILE, TILE); g.fillRect(ROOM_X - TILE, ROOM_Y + ROOM_H, ROOM_W + 2 * TILE, TILE); g.fillRect(ROOM_X - TILE, ROOM_Y, TILE, ROOM_H); g.fillRect(ROOM_X + ROOM_W, ROOM_Y, TILE, ROOM_H);
+      g.fillStyle = pal.wall; g.fillRect(ROOM_X - TILE, ROOM_Y - TILE, ROOM_W + 2 * TILE, TILE); g.fillRect(ROOM_X - TILE, ROOM_Y + ROOM_H, ROOM_W + 2 * TILE, TILE); g.fillRect(ROOM_X - TILE, ROOM_Y, TILE, ROOM_H); g.fillRect(ROOM_X + ROOM_W, ROOM_Y, TILE, ROOM_H);
       /* néons sur le mur du haut */
-      for (let i = 0; i < 5; i++) { const x = ROOM_X + (i + 0.5) * ROOM_W / 5; g.fillStyle = i % 2 ? '#6ee7ff' : '#ff9a3c'; g.shadowColor = g.fillStyle; g.shadowBlur = 16; g.fillRect(x - 30, ROOM_Y - 8, 60, 3); g.shadowBlur = 0; }
+      for (let i = 0; i < 5; i++) { const x = ROOM_X + (i + 0.5) * ROOM_W / 5; g.fillStyle = i % 2 ? pal.neon[0] : pal.neon[1]; g.shadowColor = g.fillStyle; g.shadowBlur = 16; g.fillRect(x - 30, ROOM_Y - 8, 60, 3); g.shadowBlur = 0; }
       g.strokeStyle = 'rgba(110,231,255,.35)'; g.lineWidth = 2; g.strokeRect(ROOM_X - 1, ROOM_Y - 1, ROOM_W + 2, ROOM_H + 2);
-      floorCache.set(room.floorSeed, c); if (floorCache.size > 12) floorCache.delete(floorCache.keys().next().value);
+      floorCache.set(cacheKey, c); if (floorCache.size > 12) floorCache.delete(floorCache.keys().next().value);
     }
     ctx.drawImage(c, 0, 0);
   }
@@ -2344,6 +2514,8 @@ const Music = (() => {
     resolved[key] = null; return null;
   }
   let current = null, currentUrl = null, generative = false, enabled = true, armed = false; const preloaded = {};
+  const positions = {};   // position de lecture mémorisée par piste : la musique du biome reprend en salle 6 là où elle s'était arrêtée, idem pour le boss en salle 9
+  function remember() { try { if (currentUrl && AudioEngine.musicState) { const st = AudioEngine.musicState(); if (st.el && st.el.t > 0) positions[currentUrl] = st.el.t; } } catch (e) { /* */ } }
   /* précharge (cache navigateur) les pistes d'un biome pour un démarrage immédiat en salle */
   function preload(kinds) { for (const k of kinds) { const key = keyFor(k); resolve(key).then(url => { if (!url || preloaded[url]) return; preloaded[url] = { ready: false }; fetch(url).then(r => r.ok ? r.blob() : null).then(b => { if (b) { preloaded[url].blobUrl = URL.createObjectURL(b); preloaded[url].ready = true; } }).catch(() => {}); }); } }
   function play(kind) {
@@ -2353,15 +2525,15 @@ const Music = (() => {
     resolve(key).then(url => {
       if (current !== key) return;
       const mood = key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome';
-      if (!url) { generative = true; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
+      if (!url) { remember(); generative = true; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
       if (url === currentUrl && !generative && AudioEngine.musicState && AudioEngine.musicState().hasTrack) return;   // même piste déjà en cours : on continue sans coupure
-      generative = false; currentUrl = url;
+      remember(); generative = false; currentUrl = url;
       const src = preloaded[url] && preloaded[url].ready ? preloaded[url].blobUrl : url;   // déjà téléchargé → lecture locale immédiate
-      const p = AudioEngine.playMusic(src, { fadeIn: 0.6, fadeOut: 0.8, loop: true, stream: true });
+      const p = AudioEngine.playMusic(src, { fadeIn: 0.6, fadeOut: 0.8, loop: true, stream: true, offset: positions[url] || 0 });
       if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome'); } });
     });
   }
-  function stop() { current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
+  function stop() { remember(); current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
   function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); preload(['biome', 'boss']); }
@@ -2433,7 +2605,7 @@ const Progression = (() => {
 
   /* --- Raretés --- */
   function rarityWeights(luck, opts = {}) {
-    const w = { common: 60, rare: 27, epic: 10, colossal: 3 };
+    const w = { common: 62, rare: 27, epic: 9, colossal: 2 };
     const shift = clamp(luck, -30, 40);       // +1 luck ≈ +1 % retiré au commun
     w.common -= shift; w.epic += shift * 0.6; w.colossal += shift * 0.4;
     if (opts.shiftEpic) { w.common *= 0.4; w.rare *= 0.8; w.epic *= 2.2; w.colossal *= 1.5; }
@@ -2474,7 +2646,7 @@ const Progression = (() => {
   }
 
   /* --- XP --- */
-  const xpForLevel = lvl => Math.round(14 + 9 * lvl + 1.3 * lvl * lvl);
+  const xpForLevel = lvl => Math.round(24 + 16 * lvl + 2.6 * lvl * lvl);   // rééquilibré : ~niveau 10 en fin de palier au lieu de 13
 
   /* --- Score de salle --- */
   function roomScore(r) {
@@ -2589,7 +2761,8 @@ const Projectiles = {
   update(dt) {
     const pl = G.player;
     for (let i = this.list.length - 1; i >= 0; i--) {
-      let p = this.list[i]; p.t += dt;
+      let p = this.list[i]; if (!p) continue;   // la liste peut avoir été raccourcie par une onde de choc pendant la boucle
+      p.t += dt;
       if (p.homing && p.owner === 'player') {
         const tgt = nearestEnemy(p.x, p.y, 400);
         if (tgt) { const a = angleTo(p.x, p.y, tgt.x, tgt.y), sp = Math.hypot(p.vx, p.vy), cur = Math.atan2(p.vy, p.vx); const na = cur + clamp(wrapAngle(a - cur), -p.homing * dt, p.homing * dt); p.vx = Math.cos(na) * sp; p.vy = Math.sin(na) * sp; }
@@ -3996,8 +4169,8 @@ const Run = {
   finishRoom() {
     const r = G.room; const s = Room.score();
     G.run.scores.push({ index: r.index, score: s, hits: r.hits, time: r.time, died: r.died });
-    G.run.stats.roomTimes.push({ room: r.index, time: Math.round(r.time * 10) / 10, hits: r.hits, score: Math.round(s * 100) / 100 });
-    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(30 * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
+    G.run.stats.roomTimes.push({ room: r.index, time: Math.round(r.time * 10) / 10, hits: r.hits, score: Math.round(s * 100) / 100, level: G.run.level });
+    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(20 * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
     if (r.index === 3) Meta.unlockLore('room3_done');
     if (r.index === 5) { Meta.unlockLore('room5_reached'); if (r.hits === 0) Meta.unlockLore('boss_no_hit'); }
     if (r.index === 9 && r.hits === 0) Meta.unlockLore('boss_no_hit');
@@ -4105,7 +4278,7 @@ const UI = (() => {
   function showHub() {
     G.state = 'hub'; const p = Meta.profile; const s = screens.hub;
     const chars = Content.characters(); const cur = Content.character(p.character);
-    const biome = Content.biomes()[0];
+    const biomes = Content.biomes(); if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id; const biome = biomes.find(b => b.id === p.biome);
     const tabs = ['passifs', 'armes', 'sujets', 'fragments'];
     s.innerHTML = `
       <div class="hub">
@@ -4118,12 +4291,11 @@ const UI = (() => {
           <h3>Sujet</h3>
           <div class="cards vertical" id="hub-chars"></div>
           <h3>Palier</h3>
-          <div class="card level">
-            <div class="cardtitle">${esc(biome.name)}</div>
-            <div class="muted small">${esc(biome.desc)}</div>
-            <div class="muted tiny">À l'entrée, une variable stimulée et une variable inhibée sont tirées parmi ${biome.levelPassives.length} paires.</div>
-            <div class="pairs">${biome.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span> <span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>
-          </div>
+          <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
+            <div class="cardtitle">${esc(b.name)} <span class="tag">palier -${b.order}${done ? ' · ' + done + '×' : ''}</span></div>
+            <div class="muted small">${esc(b.desc)}</div>
+            ${ok ? `<div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span> <span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Scellé : terminer ${esc((Content.biome(b.unlockAfter) || {}).name || 'le palier précédent')} (case 9).</div>`}
+          </div>`; }).join('')}</div>
           <button class="btn primary big" id="hub-enter">Entrer dans ${esc(biome.name)}</button>
         </section>
         <section class="panel col right">
@@ -4138,6 +4310,7 @@ const UI = (() => {
       card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); showHub(); } };
       cc.appendChild(card);
     }
+    s.querySelectorAll('[data-biome]').forEach(c => c.onclick = () => { const b = Content.biome(c.dataset.biome); if (!Meta.biomeUnlocked(b)) { toast('Palier scellé.'); return; } p.biome = b.id; Meta.save(); AudioEngine.uiClick({}); showHub(); });
     s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; showHub(); });
     s.querySelector('#hub-menu').onclick = showMenu;
     s.querySelector('#hub-enter').onclick = () => { hideAll(); Run.start({ character: p.character, biome: biome.id }); };
@@ -4447,7 +4620,7 @@ const Touch = (() => {
 
 const SAVE_KEY = 'sujet_neuf_save_v1';
 const Meta = (() => {
-  const fresh = () => ({ v: 1, coins: 0, metaTiers: {}, weapons: [], characters: [], skills: [], lore: [], runs: 0, wins: 0, deaths: 0, bestLevel: 0, character: null, volume: { master: 0.8, sfx: 0.9, music: 0.6 } });
+  const fresh = () => ({ v: 1, coins: 0, metaTiers: {}, weapons: [], characters: [], skills: [], lore: [], cleared: {}, runs: 0, wins: 0, deaths: 0, bestLevel: 0, character: null, volume: { master: 0.8, sfx: 0.9, music: 0.6 } });
   let normal = fresh(); let test = null; let profile = normal;
   function load() {
     try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const d = JSON.parse(raw); if (d && d.v === 1) normal = Object.assign(fresh(), d); } } catch (e) { console.warn('[Meta] sauvegarde illisible', e); }
@@ -4490,7 +4663,7 @@ const Meta = (() => {
   const fourthChoice = () => !!special('fourth_choice');
   function rerolls() { let n = 0; for (const m of Content.metaPassives()) { const t = tierOf(m.id); for (let i = 0; i < t; i++) if (m.tiers[i].special === 'reroll') n++; } return n; }
   function addCoins(n) { profile.coins += Math.max(0, Math.round(n)); save(); }
-  function recordRun(win) { profile.runs++; if (win) profile.wins++; else profile.deaths++; if (G.run) profile.bestLevel = Math.max(profile.bestLevel, G.run.level); save(); }
+  function recordRun(win) { profile.runs++; if (win) { profile.wins++; if (G.run && G.run.biome) { profile.cleared = profile.cleared || {}; profile.cleared[G.run.biome.id] = (profile.cleared[G.run.biome.id] || 0) + 1; } } else profile.deaths++; if (G.run) profile.bestLevel = Math.max(profile.bestLevel, G.run.level); save(); }
   function unlockLore(id) {
     if (id === 'deaths_3' && profile.deaths < 3) return;
     if (!LORE.fragments.find(f => f.id === id) || profile.lore.includes(id)) return;
@@ -4498,6 +4671,7 @@ const Meta = (() => {
   }
   return { load, save, reset, setMode, tierOf, setTier, buy, buyWeapon, buyCharacter, activeSources, special, resurrectAvailable, selectiveMemory, chestPreview, fourthChoice, rerolls, addCoins, recordRun, unlockLore,
     get profile() { return profile; }, get coins() { return profile.coins; },
+    biomeUnlocked: b => G.mode === 'test' || !b.unlockAfter || !!((profile.cleared || {})[b.unlockAfter]),
     weaponUnlocked: id => profile.weapons.includes(id), characterUnlocked: id => profile.characters.includes(id), skillUnlocked: () => true, loreUnlocked: id => profile.lore.includes(id) };
 })();
 
@@ -4521,6 +4695,7 @@ const Debug = (() => {
       <label>Crédits <span id="d-coin-v">1×</span><input type="range" min="0.25" max="10" step="0.25" value="1" id="d-coin"></label>
       <label>Rareté forcée <select id="d-rarity"><option value="">aucune</option>${RARITY_ORDER.map(r => `<option value="${r}">${RARITY[r].label}</option>`).join('')}</select></label>
       <div class="drow"><label class="chk"><input type="checkbox" id="d-invuln"> Invulnérable</label><label class="chk"><input type="checkbox" id="d-hit"> Hitboxes</label><label class="chk"><input type="checkbox" id="d-scores"> Scores</label></div>
+      <div class="drow"><label>Biome <select id="d-biome">${Content.biomes().map(b => `<option value="${b.id}">${b.name}</option>`).join('')}</select></label></div>
       <div class="drow"><label>Salle <select id="d-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => `<option value="${i}">${i}</option>`).join('')}</select></label><button class="btn small" id="d-goto">Aller</button><button class="btn small" id="d-kill">Tuer tout</button><button class="btn small" id="d-lvl">+ niveau</button><button class="btn small" id="d-heal">Soigner</button></div>
       <div class="drow"><label>Ennemi <select id="d-enemy">${Content.enemies().map(e => `<option value="${e.id}">${e.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawn">Spawn</button><label class="chk"><input type="checkbox" id="d-elite"> élite</label></div>
       <div class="drow"><label>Piège <select id="d-trap">${Content.traps().map(t => `<option value="${t.id}">${t.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawntrap">Poser</button><button class="btn small" id="d-cleartraps">Retirer pièges</button></div>
@@ -4554,7 +4729,8 @@ const Debug = (() => {
   function show() { if (G.mode !== 'test') { UI.toast('Panneau debug : mode Test uniquement'); return; } open = true; panel.hidden = false; G.debug.open = true; }
   function hide() { open = false; if (panel) panel.hidden = true; G.debug.open = false; }
   function gotoRoom(n) {
-    if (!G.run) { Meta.setMode('test'); UI.hideAll(); Run.start({ character: Meta.profile.character, biome: Content.biomes()[0].id, weapon: Content.weapons()[0].id, skill: Content.skills()[0].id }); }
+    const wantBiome = (panel && $('#d-biome') && $('#d-biome').value) || Content.biomes()[0].id;
+    if (!G.run || G.run.biome.id !== wantBiome) { Meta.setMode('test'); UI.hideAll(); Run.start({ character: Meta.profile.character, biome: wantBiome, weapon: Content.weapons()[0].id, skill: Content.skills()[0].id }); }
     if (!G.player.weapon) Run.equip(Content.weapons()[0].id, Content.skills()[0].id);
     UI.hideAll(); G.paused = false; if (Room.load(n)) Room.begin();
   }
@@ -4645,7 +4821,7 @@ const Debug = (() => {
       const rng = makeRng(c.seed); G.autoplay = { config: c, resolve, rng, startedAt: Time.now };
       Engine.setHeadless(!c.render); Time.scale = c.timeScale;
       const character = c.character || Meta.profile.character;
-      Run.start({ character, biome: Content.biomes()[0].id, seed: c.seed, weapon: c.weapon, skill: c.skill });
+      Run.start({ character, biome: c.biome || Content.biomes()[0].id, seed: c.seed, weapon: c.weapon, skill: c.skill });
       if (!G.run) { finishAuto('error'); return; }
       G.player.bot = botControl;
       const watchdog = () => { if (!G.autoplay) return; if (Time.now - G.autoplay.startedAt > c.maxSeconds) { finishAuto('timeout'); return; } if (G.run && G.room && G.room.index > c.maxRooms) { finishAuto('maxRooms'); return; } setTimeout(watchdog, 200); }; setTimeout(watchdog, 200);

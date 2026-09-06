@@ -5,7 +5,7 @@
 
 const SAVE_KEY = 'sujet_neuf_save_v1';
 const Meta = (() => {
-  const fresh = () => ({ v: 1, coins: 0, metaTiers: {}, weapons: [], characters: [], skills: [], lore: [], runs: 0, wins: 0, deaths: 0, bestLevel: 0, character: null, volume: { master: 0.8, sfx: 0.9, music: 0.6 } });
+  const fresh = () => ({ v: 1, coins: 0, metaTiers: {}, weapons: [], characters: [], skills: [], lore: [], cleared: {}, runs: 0, wins: 0, deaths: 0, bestLevel: 0, character: null, volume: { master: 0.8, sfx: 0.9, music: 0.6 } });
   let normal = fresh(); let test = null; let profile = normal;
   function load() {
     try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const d = JSON.parse(raw); if (d && d.v === 1) normal = Object.assign(fresh(), d); } } catch (e) { console.warn('[Meta] sauvegarde illisible', e); }
@@ -48,7 +48,7 @@ const Meta = (() => {
   const fourthChoice = () => !!special('fourth_choice');
   function rerolls() { let n = 0; for (const m of Content.metaPassives()) { const t = tierOf(m.id); for (let i = 0; i < t; i++) if (m.tiers[i].special === 'reroll') n++; } return n; }
   function addCoins(n) { profile.coins += Math.max(0, Math.round(n)); save(); }
-  function recordRun(win) { profile.runs++; if (win) profile.wins++; else profile.deaths++; if (G.run) profile.bestLevel = Math.max(profile.bestLevel, G.run.level); save(); }
+  function recordRun(win) { profile.runs++; if (win) { profile.wins++; if (G.run && G.run.biome) { profile.cleared = profile.cleared || {}; profile.cleared[G.run.biome.id] = (profile.cleared[G.run.biome.id] || 0) + 1; } } else profile.deaths++; if (G.run) profile.bestLevel = Math.max(profile.bestLevel, G.run.level); save(); }
   function unlockLore(id) {
     if (id === 'deaths_3' && profile.deaths < 3) return;
     if (!LORE.fragments.find(f => f.id === id) || profile.lore.includes(id)) return;
@@ -56,5 +56,6 @@ const Meta = (() => {
   }
   return { load, save, reset, setMode, tierOf, setTier, buy, buyWeapon, buyCharacter, activeSources, special, resurrectAvailable, selectiveMemory, chestPreview, fourthChoice, rerolls, addCoins, recordRun, unlockLore,
     get profile() { return profile; }, get coins() { return profile.coins; },
+    biomeUnlocked: b => G.mode === 'test' || !b.unlockAfter || !!((profile.cleared || {})[b.unlockAfter]),
     weaponUnlocked: id => profile.weapons.includes(id), characterUnlocked: id => profile.characters.includes(id), skillUnlocked: () => true, loreUnlocked: id => profile.lore.includes(id) };
 })();

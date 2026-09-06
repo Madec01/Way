@@ -21,6 +21,15 @@ const SPRITE_DEFS = {
   chest:           { idle: [304, 304, 16, 16], run: [304, 304, 16, 16], n: 3 },
   coin:            { idle: [288, 272, 8, 8],   run: [288, 272, 8, 8],   n: 4 },
   npc_doc:         { idle: [128, 100, 16, 28], run: [128, 100, 16, 28], n: 4, foot: true },
+  /* biome 2 */
+  enemy_rusher2:   { idle: [368, 80, 16, 16],  run: [432, 80, 16, 16],  n: 4 },
+  enemy_shooter2:  { idle: [368, 300, 16, 20], run: [432, 300, 16, 20], n: 4 },
+  enemy_tank2:     { idle: [368, 204, 16, 20], run: [432, 204, 16, 20], n: 4 },
+  enemy_kamikaze2: { idle: [368, 144, 16, 16], run: [368, 144, 16, 16], n: 4 },
+  enemy_summoner2: { idle: [368, 328, 16, 24], run: [432, 328, 16, 24], n: 4 },
+  enemy_swarm2:    { idle: [368, 112, 16, 16], run: [368, 112, 16, 16], n: 4 },
+  enemy_dasher2:   { idle: [432, 144, 16, 16], run: [432, 144, 16, 16], n: 4 },
+  boss2:           { idle: [16, 320, 32, 32],  run: [144, 320, 32, 32], n: 4, foot: true },
 };
 const TILES = { floor: [[16, 64], [32, 64], [48, 64], [16, 80], [32, 80], [48, 80], [16, 96], [32, 96]], wallTop: [32, 0], wallFace: [32, 16], wallLeft: [0, 128], wallRight: [16, 128], cornerTL: [32, 112], cornerTR: [48, 112], cornerBL: [32, 144], cornerBR: [48, 144], column: [[80, 80], [80, 96], [80, 112]], banner: [32, 32], hole: [48, 32], goo: [64, 80] };
 
@@ -56,7 +65,9 @@ const Sprites = (() => {
   function tile(ctx, t, dx, dy, w = TILE, h = TILE) { if (!ready) return false; ctx.drawImage(sheet, t[0], t[1], 16, 16, dx, dy, w, h); return true; }
   /* sol + murs, mis en cache par salle dans un canvas hors écran */
   function drawFloor(ctx, room) {
-    let c = floorCache.get(room.floorSeed);
+    const pal = (G.run && G.run.biome && G.run.biome.palette) || { tint: 'rgba(40,70,110,.28)', neon: ['#6ee7ff', '#ff9a3c'], wall: 'rgba(40,70,110,.35)' };
+    const cacheKey = room.floorSeed + ':' + (G.run && G.run.biome ? G.run.biome.id : '');
+    let c = floorCache.get(cacheKey);
     if (!c) {
       c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       const rng = makeRng(room.floorSeed);
@@ -66,18 +77,18 @@ const Sprites = (() => {
         if (!tile(g, rng.chance(0.9) ? TILES.floor[0] : rng.pick(TILES.floor), x, y)) { g.fillStyle = (tx + ty) % 2 ? '#141826' : '#161b2b'; g.fillRect(x, y, TILE, TILE); }
       }
       /* teinte froide (labo) + vignette */
-      g.fillStyle = 'rgba(40,70,110,.28)'; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
+      g.fillStyle = pal.tint; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
       const v = g.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, 760); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)'); g.fillStyle = v; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
       /* grille discrète */
       g.strokeStyle = 'rgba(110,231,255,.035)'; g.lineWidth = 1; for (let tx = 0; tx <= ROOM_COLS; tx++) { g.beginPath(); g.moveTo(ROOM_X + tx * TILE, ROOM_Y); g.lineTo(ROOM_X + tx * TILE, ROOM_Y + ROOM_H); g.stroke(); } for (let ty = 0; ty <= ROOM_ROWS; ty++) { g.beginPath(); g.moveTo(ROOM_X, ROOM_Y + ty * TILE); g.lineTo(ROOM_X + ROOM_W, ROOM_Y + ty * TILE); g.stroke(); }
       /* murs */
       for (let tx = -1; tx <= ROOM_COLS; tx++) { const x = ROOM_X + tx * TILE; if (!tile(g, TILES.wallFace, x, ROOM_Y - TILE)) { g.fillStyle = '#232a44'; g.fillRect(x, ROOM_Y - TILE, TILE, TILE); } if (!tile(g, TILES.wallTop, x, ROOM_Y + ROOM_H)) { g.fillStyle = '#1a2036'; g.fillRect(x, ROOM_Y + ROOM_H, TILE, TILE); } }
       for (let ty = 0; ty < ROOM_ROWS; ty++) { const y = ROOM_Y + ty * TILE; if (!tile(g, TILES.wallLeft, ROOM_X - TILE, y)) { g.fillStyle = '#1a2036'; g.fillRect(ROOM_X - TILE, y, TILE, TILE); } if (!tile(g, TILES.wallRight, ROOM_X + ROOM_W, y)) { g.fillStyle = '#1a2036'; g.fillRect(ROOM_X + ROOM_W, y, TILE, TILE); } }
-      g.fillStyle = 'rgba(40,70,110,.35)'; g.fillRect(ROOM_X - TILE, ROOM_Y - TILE, ROOM_W + 2 * TILE, TILE); g.fillRect(ROOM_X - TILE, ROOM_Y + ROOM_H, ROOM_W + 2 * TILE, TILE); g.fillRect(ROOM_X - TILE, ROOM_Y, TILE, ROOM_H); g.fillRect(ROOM_X + ROOM_W, ROOM_Y, TILE, ROOM_H);
+      g.fillStyle = pal.wall; g.fillRect(ROOM_X - TILE, ROOM_Y - TILE, ROOM_W + 2 * TILE, TILE); g.fillRect(ROOM_X - TILE, ROOM_Y + ROOM_H, ROOM_W + 2 * TILE, TILE); g.fillRect(ROOM_X - TILE, ROOM_Y, TILE, ROOM_H); g.fillRect(ROOM_X + ROOM_W, ROOM_Y, TILE, ROOM_H);
       /* néons sur le mur du haut */
-      for (let i = 0; i < 5; i++) { const x = ROOM_X + (i + 0.5) * ROOM_W / 5; g.fillStyle = i % 2 ? '#6ee7ff' : '#ff9a3c'; g.shadowColor = g.fillStyle; g.shadowBlur = 16; g.fillRect(x - 30, ROOM_Y - 8, 60, 3); g.shadowBlur = 0; }
+      for (let i = 0; i < 5; i++) { const x = ROOM_X + (i + 0.5) * ROOM_W / 5; g.fillStyle = i % 2 ? pal.neon[0] : pal.neon[1]; g.shadowColor = g.fillStyle; g.shadowBlur = 16; g.fillRect(x - 30, ROOM_Y - 8, 60, 3); g.shadowBlur = 0; }
       g.strokeStyle = 'rgba(110,231,255,.35)'; g.lineWidth = 2; g.strokeRect(ROOM_X - 1, ROOM_Y - 1, ROOM_W + 2, ROOM_H + 2);
-      floorCache.set(room.floorSeed, c); if (floorCache.size > 12) floorCache.delete(floorCache.keys().next().value);
+      floorCache.set(cacheKey, c); if (floorCache.size > 12) floorCache.delete(floorCache.keys().next().value);
     }
     ctx.drawImage(c, 0, 0);
   }
@@ -132,6 +143,8 @@ const Music = (() => {
     resolved[key] = null; return null;
   }
   let current = null, currentUrl = null, generative = false, enabled = true, armed = false; const preloaded = {};
+  const positions = {};   // position de lecture mémorisée par piste : la musique du biome reprend en salle 6 là où elle s'était arrêtée, idem pour le boss en salle 9
+  function remember() { try { if (currentUrl && AudioEngine.musicState) { const st = AudioEngine.musicState(); if (st.el && st.el.t > 0) positions[currentUrl] = st.el.t; } } catch (e) { /* */ } }
   /* précharge (cache navigateur) les pistes d'un biome pour un démarrage immédiat en salle */
   function preload(kinds) { for (const k of kinds) { const key = keyFor(k); resolve(key).then(url => { if (!url || preloaded[url]) return; preloaded[url] = { ready: false }; fetch(url).then(r => r.ok ? r.blob() : null).then(b => { if (b) { preloaded[url].blobUrl = URL.createObjectURL(b); preloaded[url].ready = true; } }).catch(() => {}); }); } }
   function play(kind) {
@@ -141,15 +154,15 @@ const Music = (() => {
     resolve(key).then(url => {
       if (current !== key) return;
       const mood = key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome';
-      if (!url) { generative = true; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
+      if (!url) { remember(); generative = true; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
       if (url === currentUrl && !generative && AudioEngine.musicState && AudioEngine.musicState().hasTrack) return;   // même piste déjà en cours : on continue sans coupure
-      generative = false; currentUrl = url;
+      remember(); generative = false; currentUrl = url;
       const src = preloaded[url] && preloaded[url].ready ? preloaded[url].blobUrl : url;   // déjà téléchargé → lecture locale immédiate
-      const p = AudioEngine.playMusic(src, { fadeIn: 0.6, fadeOut: 0.8, loop: true, stream: true });
+      const p = AudioEngine.playMusic(src, { fadeIn: 0.6, fadeOut: 0.8, loop: true, stream: true, offset: positions[url] || 0 });
       if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome'); } });
     });
   }
-  function stop() { current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
+  function stop() { remember(); current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
   function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); preload(['biome', 'boss']); }

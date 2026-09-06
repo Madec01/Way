@@ -86,7 +86,8 @@ const Projectiles = {
   update(dt) {
     const pl = G.player;
     for (let i = this.list.length - 1; i >= 0; i--) {
-      let p = this.list[i]; p.t += dt;
+      let p = this.list[i]; if (!p) continue;   // la liste peut avoir été raccourcie par une onde de choc pendant la boucle
+      p.t += dt;
       if (p.homing && p.owner === 'player') {
         const tgt = nearestEnemy(p.x, p.y, 400);
         if (tgt) { const a = angleTo(p.x, p.y, tgt.x, tgt.y), sp = Math.hypot(p.vx, p.vy), cur = Math.atan2(p.vy, p.vx); const na = cur + clamp(wrapAngle(a - cur), -p.homing * dt, p.homing * dt); p.vx = Math.cos(na) * sp; p.vy = Math.sin(na) * sp; }

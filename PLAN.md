@@ -127,6 +127,8 @@ Moi : architecture, moteur, intégration, arbitrage, cohérence.
 
 **Phase 2 (salles 6-9) — implémentée** : module `Modular` (murs coulissants, rotor à collider segment, sol à configurations alternées, zone sûre mobile à impulsions), coffre final avec *Mémoire sélective*, checkpoint salle 8, boss revanche (PV ×1,6, phase 3, plaque dorsale à 6 coups, mimétisme de la compétence du joueur), fin de niveau après la salle 9 avec prime. Voir SCHEMA.md §6-7 et CONTENT.md §14.
 
-**Reste pour la suite** : biome 2 (LA SERRE) et 3 (LES ARCHIVES) : nouveaux ennemis, pièges, passifs de niveau, armes ; manette (`Input` abstrait) ; mobile ; playtest humain pour l'équilibrage des salles 6-9.
+**Biome 2 LA SERRE — implémenté** (`dev/content2.js`, CONTENT.md §16) : 7 variantes d'ennemis, Étalon 12, 9 salles, déblocage après ADMISSION.
+
+**Reste pour la suite** : biome 3 (LES ARCHIVES) : nouveaux ennemis, pièges, passifs de niveau, armes ; manette (`Input` abstrait) ; mobile ; playtest humain pour l'équilibrage des salles 6-9.
 
 **Comment tester** : `python3 -m http.server 8765`, ouvrir `http://localhost:8765/`, Mode Test, F1. Sources dans `dev/`, assemblage `node dev/build.js`.

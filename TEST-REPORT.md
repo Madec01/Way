@@ -245,3 +245,15 @@ Balayage headless après implémentation (6 armes, 1 seed chacune, `maxRooms: 9`
 Bugs trouvés et corrigés pendant la passe : ennemis ballottés entre les blocs carrés du rotor et inaccessibles (rotor réécrit en colliders segment, relocalisation automatique d'un ennemi immobile 6 s ou enfermé dans un mur 1,5 s, le bot resserre sa distance après 8 s sans dégât infligé) ; teinte d'alerte de la zone sûre qui effaçait le sol (tracé en règle `evenodd`) ; Éclipse qui n'attaquait jamais hors de portée (dash forcé après 3 temps d'attente).
 
 À évaluer en playtest humain : durée des salles 6-7 avec le sol changeant, dégâts de l'impulsion de la salle 7 (15) cumulés à la grille laser, lisibilité de la plaque dorsale (compteur affiché à chaque coup), difficulté de la phase 3 de la revanche.
+
+---
+
+## 9. Rééquilibrage de la progression et biome 2 (balayages de l'agent principal)
+
+Progression (mode test, biome 1, 4 armes, seeds fixes) avant → après : niveau après la salle 1 : 4-5 → 3-4 ; au mini-boss : 9-10 → 6-7 ; en salle 9 : 13 → 9-10. Détail des changements en CONTENT.md §17.
+
+Biome 2 LA SERRE (mode test, 4 armes) : pistolet, arc, foudre et boomerang atteignent la salle 9 (2 victoires, 2 morts sur la revanche) ; la lame meurt en salle 3 (limite du bot mêlée, déjà observée en biome 1 en mode normal). Dégâts subis 2 à 3 fois plus élevés qu'en biome 1 : le cran de difficulté est net. Premier réglage appliqué : multiplicateurs 1,45/1,3/1,1 → 1,3/1,2/1,08, Ronce et Moucherons adoucis, salle 1 sans Moucherons.
+
+Bug corrigé pendant la passe : `Projectiles.update` lisait un élément indéfini quand une onde de choc supprimait des projectiles pendant la boucle.
+
+Musique : reprise à la position mémorisée vérifiée (biome1 reprend en salle 6 à 5,5 s après 4 s en salle 1 ; boss1 reprend en salle 9 à 4,4 s après 3 s en salle 5).

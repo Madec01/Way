@@ -15,6 +15,7 @@ const Debug = (() => {
       <label>Crédits <span id="d-coin-v">1×</span><input type="range" min="0.25" max="10" step="0.25" value="1" id="d-coin"></label>
       <label>Rareté forcée <select id="d-rarity"><option value="">aucune</option>${RARITY_ORDER.map(r => `<option value="${r}">${RARITY[r].label}</option>`).join('')}</select></label>
       <div class="drow"><label class="chk"><input type="checkbox" id="d-invuln"> Invulnérable</label><label class="chk"><input type="checkbox" id="d-hit"> Hitboxes</label><label class="chk"><input type="checkbox" id="d-scores"> Scores</label></div>
+      <div class="drow"><label>Biome <select id="d-biome">${Content.biomes().map(b => `<option value="${b.id}">${b.name}</option>`).join('')}</select></label></div>
       <div class="drow"><label>Salle <select id="d-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => `<option value="${i}">${i}</option>`).join('')}</select></label><button class="btn small" id="d-goto">Aller</button><button class="btn small" id="d-kill">Tuer tout</button><button class="btn small" id="d-lvl">+ niveau</button><button class="btn small" id="d-heal">Soigner</button></div>
       <div class="drow"><label>Ennemi <select id="d-enemy">${Content.enemies().map(e => `<option value="${e.id}">${e.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawn">Spawn</button><label class="chk"><input type="checkbox" id="d-elite"> élite</label></div>
       <div class="drow"><label>Piège <select id="d-trap">${Content.traps().map(t => `<option value="${t.id}">${t.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawntrap">Poser</button><button class="btn small" id="d-cleartraps">Retirer pièges</button></div>
@@ -48,7 +49,8 @@ const Debug = (() => {
   function show() { if (G.mode !== 'test') { UI.toast('Panneau debug : mode Test uniquement'); return; } open = true; panel.hidden = false; G.debug.open = true; }
   function hide() { open = false; if (panel) panel.hidden = true; G.debug.open = false; }
   function gotoRoom(n) {
-    if (!G.run) { Meta.setMode('test'); UI.hideAll(); Run.start({ character: Meta.profile.character, biome: Content.biomes()[0].id, weapon: Content.weapons()[0].id, skill: Content.skills()[0].id }); }
+    const wantBiome = (panel && $('#d-biome') && $('#d-biome').value) || Content.biomes()[0].id;
+    if (!G.run || G.run.biome.id !== wantBiome) { Meta.setMode('test'); UI.hideAll(); Run.start({ character: Meta.profile.character, biome: wantBiome, weapon: Content.weapons()[0].id, skill: Content.skills()[0].id }); }
     if (!G.player.weapon) Run.equip(Content.weapons()[0].id, Content.skills()[0].id);
     UI.hideAll(); G.paused = false; if (Room.load(n)) Room.begin();
   }
@@ -139,7 +141,7 @@ const Debug = (() => {
       const rng = makeRng(c.seed); G.autoplay = { config: c, resolve, rng, startedAt: Time.now };
       Engine.setHeadless(!c.render); Time.scale = c.timeScale;
       const character = c.character || Meta.profile.character;
-      Run.start({ character, biome: Content.biomes()[0].id, seed: c.seed, weapon: c.weapon, skill: c.skill });
+      Run.start({ character, biome: c.biome || Content.biomes()[0].id, seed: c.seed, weapon: c.weapon, skill: c.skill });
       if (!G.run) { finishAuto('error'); return; }
       G.player.bot = botControl;
       const watchdog = () => { if (!G.autoplay) return; if (Time.now - G.autoplay.startedAt > c.maxSeconds) { finishAuto('timeout'); return; } if (G.run && G.room && G.room.index > c.maxRooms) { finishAuto('maxRooms'); return; } setTimeout(watchdog, 200); }; setTimeout(watchdog, 200);

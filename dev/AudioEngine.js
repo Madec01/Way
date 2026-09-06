@@ -954,8 +954,9 @@
     src.connect(g); g.connect(musicDuck); src.start();
     return { g, stop: () => { try { src.stop(); } catch (e) { /* */ } try { src.disconnect(); g.disconnect(); } catch (e) { /* */ } } };
   }
-  function makeTrackFromElement(url, loop) {
+  function makeTrackFromElement(url, loop, offset) {
     const el = new Audio(); el.crossOrigin = 'anonymous'; el.loop = !!loop; el.preload = 'auto'; el.src = url;
+    if (offset > 0) { const seek = () => { try { el.currentTime = offset; } catch (e) { /* */ } }; if (el.readyState >= 1) seek(); else el.addEventListener('loadedmetadata', seek, { once: true }); }
     const node = ctx.createMediaElementSource(el);
     const g = ctx.createGain(); g.gain.value = 0;
     node.connect(g); g.connect(musicDuck);
@@ -986,7 +987,7 @@
       fadeTrack(track, 1, fadeIn, false);
       return true;
     };
-    const viaElement = () => { try { return start(makeTrackFromElement(url, loop)); } catch (e) { console.warn('[AudioEngine] playMusic', e); return false; } };
+    const viaElement = () => { try { return start(makeTrackFromElement(url, loop, isNum(opts.offset) ? opts.offset : 0)); } catch (e) { console.warn('[AudioEngine] playMusic', e); return false; } };
     if (opts.stream || typeof fetch !== 'function') return Promise.resolve(viaElement());   // stream : lecture immédiate via <audio>, sans télécharger tout le fichier
     return fetch(url)
       .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })

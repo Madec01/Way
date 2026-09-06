@@ -239,8 +239,8 @@ const Run = {
   finishRoom() {
     const r = G.room; const s = Room.score();
     G.run.scores.push({ index: r.index, score: s, hits: r.hits, time: r.time, died: r.died });
-    G.run.stats.roomTimes.push({ room: r.index, time: Math.round(r.time * 10) / 10, hits: r.hits, score: Math.round(s * 100) / 100 });
-    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(30 * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
+    G.run.stats.roomTimes.push({ room: r.index, time: Math.round(r.time * 10) / 10, hits: r.hits, score: Math.round(s * 100) / 100, level: G.run.level });
+    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(20 * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
     if (r.index === 3) Meta.unlockLore('room3_done');
     if (r.index === 5) { Meta.unlockLore('room5_reached'); if (r.hits === 0) Meta.unlockLore('boss_no_hit'); }
     if (r.index === 9 && r.hits === 0) Meta.unlockLore('boss_no_hit');

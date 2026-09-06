@@ -60,7 +60,7 @@ const Progression = (() => {
 
   /* --- Raretés --- */
   function rarityWeights(luck, opts = {}) {
-    const w = { common: 60, rare: 27, epic: 10, colossal: 3 };
+    const w = { common: 62, rare: 27, epic: 9, colossal: 2 };
     const shift = clamp(luck, -30, 40);       // +1 luck ≈ +1 % retiré au commun
     w.common -= shift; w.epic += shift * 0.6; w.colossal += shift * 0.4;
     if (opts.shiftEpic) { w.common *= 0.4; w.rare *= 0.8; w.epic *= 2.2; w.colossal *= 1.5; }
@@ -101,7 +101,7 @@ const Progression = (() => {
   }
 
   /* --- XP --- */
-  const xpForLevel = lvl => Math.round(14 + 9 * lvl + 1.3 * lvl * lvl);
+  const xpForLevel = lvl => Math.round(24 + 16 * lvl + 2.6 * lvl * lvl);   // rééquilibré : ~niveau 10 en fin de palier au lieu de 13
 
   /* --- Score de salle --- */
   function roomScore(r) {

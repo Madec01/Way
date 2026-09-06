@@ -61,7 +61,7 @@ const UI = (() => {
   function showHub() {
     G.state = 'hub'; const p = Meta.profile; const s = screens.hub;
     const chars = Content.characters(); const cur = Content.character(p.character);
-    const biome = Content.biomes()[0];
+    const biomes = Content.biomes(); if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id; const biome = biomes.find(b => b.id === p.biome);
     const tabs = ['passifs', 'armes', 'sujets', 'fragments'];
     s.innerHTML = `
       <div class="hub">
@@ -74,12 +74,11 @@ const UI = (() => {
           <h3>Sujet</h3>
           <div class="cards vertical" id="hub-chars"></div>
           <h3>Palier</h3>
-          <div class="card level">
-            <div class="cardtitle">${esc(biome.name)}</div>
-            <div class="muted small">${esc(biome.desc)}</div>
-            <div class="muted tiny">À l'entrée, une variable stimulée et une variable inhibée sont tirées parmi ${biome.levelPassives.length} paires.</div>
-            <div class="pairs">${biome.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span> <span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>
-          </div>
+          <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
+            <div class="cardtitle">${esc(b.name)} <span class="tag">palier -${b.order}${done ? ' · ' + done + '×' : ''}</span></div>
+            <div class="muted small">${esc(b.desc)}</div>
+            ${ok ? `<div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span> <span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Scellé : terminer ${esc((Content.biome(b.unlockAfter) || {}).name || 'le palier précédent')} (case 9).</div>`}
+          </div>`; }).join('')}</div>
           <button class="btn primary big" id="hub-enter">Entrer dans ${esc(biome.name)}</button>
         </section>
         <section class="panel col right">
@@ -94,6 +93,7 @@ const UI = (() => {
       card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); showHub(); } };
       cc.appendChild(card);
     }
+    s.querySelectorAll('[data-biome]').forEach(c => c.onclick = () => { const b = Content.biome(c.dataset.biome); if (!Meta.biomeUnlocked(b)) { toast('Palier scellé.'); return; } p.biome = b.id; Meta.save(); AudioEngine.uiClick({}); showHub(); });
     s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; showHub(); });
     s.querySelector('#hub-menu').onclick = showMenu;
     s.querySelector('#hub-enter').onclick = () => { hideAll(); Run.start({ character: p.character, biome: biome.id }); };

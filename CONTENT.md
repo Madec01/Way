@@ -436,3 +436,32 @@ Compétences de base renforcées d'environ 20 % (dash 250 px / 5 s, bouclier 55 
 | Rare | Balles incendiaires, Balles électriques, Balles givrantes, Second canon (+1 projectile), Satellite (orbe), Tir arrière, Aura brûlante, Drone d'appoint, Exécution, Gel profond, Rafale |
 | Épique | Salve (+2 projectiles), Ceinture d'astéroïdes (+3 orbes), Tir guidé, Éclats, Balles explosives, Foudre ambiante, Conducteur |
 | Colossal | Tempête (foudre toutes les 0,7 s à 3 sauts), Mitraille (+3 projectiles guidés), Noyau (5 orbes + aura) |
+
+---
+
+## 16. Biome 2 — LA SERRE (palier -2)
+
+Débloqué en mode Normal après la case 9 d'ADMISSION. Multiplicateurs de palier : PV ennemis ×1,3, dégâts ×1,2, vitesse ×1,08. Sol teinté vert, néons verts et ambre. Musiques `biome2.mp3` / `boss2.mp3`.
+
+| Ennemi | Archétype | PV | Vitesse | Particularité |
+|---|---|---|---|---|
+| Ronce | rusher | 46 | 230 | ruée plus longue et plus rapide (640 px/s) |
+| Pollinisateur | shooter | 36 | 140 | salve de 3 spores en éventail |
+| Racine | tank | 240 | 95 | charge 620 px/s, étourdi 1 s au mur |
+| Spore | kamikaze | 24 | 260 | explosion 100 px, 26 dégâts |
+| Bourgeon | summoner | 110 | 65 | 3 moucherons toutes les 3,5 s, jusqu'à 6 |
+| Moucherons | swarm | 10 | 300 | nuée de 5 |
+| Liane | dasher | 55 | 190 | fonce à 780 px/s toutes les 1,7 s |
+
+**Étalon 12, dite « la Serriste »** : 2600 PV (×1,3 = 3380), 2 phases (spirale à 3 bras, invocation de spores, charge, écrasement ; puis éventail de 9, balayage laser, charge, anneau de 16, moucherons). Faiblesse : après chaque charge, ses racines restent plantées 1,2 s (dégâts ×1,8). Revanche en salle 9 : PV ×1,5, phase 3 sous 30 %, mimétisme de la compétence.
+
+Passifs de palier : Photosynthèse / Air lourd · Greffon sauvage / Sève corrosive · Récolte / Serre chaude.
+
+Salles : 4 vagues avec élites dès la salle 1, salle 2 à 12 pièges et 6 fragments, salle 3 avec tourniquet à 3 bras et nappes de gaz, salle 6 avec rotor à 3 bras, salle 7 avec zone sûre plus petite et deux murs coulissants.
+
+## 17. Rééquilibrage de la progression (retour joueur : « trop fort trop vite »)
+
+Mesure bot (mode test, biome 1) avant → après : niveau après la salle 1 : 5 → 3-4 ; au mini-boss : 9-10 → 6-7 ; en salle 9 : 13 → 9-10.
+- Courbe d'XP : `24 + 16·N + 2,6·N²` (au lieu de `14 + 9·N + 1,3·N²`), bonus de traversée parfaite 30 → 20 XP, trait de Neuf +20 % → +15 % XP.
+- Poids de rareté : commun 62, rare 27, épique 9, colossal 2.
+- Greffes offensives revues : Tranchant +10 %, Gâchette +8 % (4 paliers), Munitions +6 %/+5 % (3 paliers), Frappe lourde +22 %, Double canon -25 % dégâts, Second canon -12 %, Salve -30 %, Mitraille -20 % sans bonus de cadence, Satellite 10 dégâts (2 paliers), Drone 6 dégâts (2 paliers), Foudre ambiante 18 dégâts / 2,5 s, Aura brûlante 8 dégâts/s.
