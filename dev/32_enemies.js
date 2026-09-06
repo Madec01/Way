@@ -257,7 +257,7 @@ class Boss extends Enemy {
     if (this.intro > 0) { this.intro -= dt; return; }
     /* changement de phase */
     const next = this.phases[this.phaseIdx + 1];
-    if (next && this.hp / this.maxHp <= (next.hpBelow || 0.5)) { this.phaseIdx++; this.phase = next; this.patternIdx = 0; this.cur = null; this.patternCd = 1.2; this.stunUntil = Time.now + 1; this.invulnPhase = Time.now + 1; Particles.spawn(this.x, this.y, { count: 30, color: this.color, glow: true, speedMax: 300 }); G.shake = 10; AudioEngine.bossPhase({}); UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color); }
+    if (next && this.hp / this.maxHp <= (next.hpBelow || 0.5)) { this.phaseIdx++; this.phase = next; this.patternIdx = 0; this.cur = null; this.patternCd = 1.2; this.stunUntil = Time.now + 1; this.invulnPhase = Time.now + 1; Particles.spawn(this.x, this.y, { count: 30, color: this.color, glow: true, speedMax: 300 }); G.shake = 10; AudioEngine.bossPhase({}); Music.tapeStop(); UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color); }
     /* faiblesse temporelle */
     if (this.weakActive && Time.now > this.weakUntil) this.weakActive = false;
     if (this.rhythm) { const rb = this.rb; const bt = Beat.t / Beat.beatLen() + this.beatOffset; const bi = Math.floor(bt); rb.crossed = bi !== rb.last; rb.last = bi; }   // suivi des temps même pendant un pattern (sinon un temps « en retard » déclenche hors rythme)
@@ -312,6 +312,7 @@ class Boss extends Enemy {
       if (!this.cur) {
         const bigs = this.phase.patterns.filter(q => Boss.patKind(q) === 'big'); const b = bigs.length ? bigs[rb.bigIdx++ % bigs.length] : this.phase.patterns[0];
         const tele = Math.max(0.35, (bigBeat - p) * L); this.startPattern(b, tele, t); rb.bigFired = true; rb.bigStage = 1;
+        if (hpk <= 0.3) setTimeout(() => { if (!this.dead && this.cur === this.cur) Music.tapeStop(); }, Math.max(0, tele * 1000 - 60));   // fin de combat : la bande cale au moment de l'impact
       }
     } else if (rb.bigFired && !this.cur && !this.weakPhrase && p >= bigBeat) {
       /* le boss souffle jusqu'à la phrase suivante */

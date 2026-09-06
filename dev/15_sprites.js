@@ -209,6 +209,8 @@ const Music = (() => {
     resolved[key] = null; return null;
   }
   let current = null, currentUrl = null, generative = false, enabled = true, armed = false; const preloaded = {};
+  let pending = null;   // bascule programmée (sur la mesure)
+  const st8 = { rate: 1, ramp: null, calmAt: null, cutoff: 20000, heart: 0 };   // état « la musique respire »
   const positions = {};   // position de lecture mémorisée par piste : la musique du biome reprend en salle 6 là où elle s'était arrêtée, idem pour le boss en salle 9
   function remember() { try { if (currentUrl && AudioEngine.musicState) { const st = AudioEngine.musicState(); if (st.el && st.el.t > 0) positions[currentUrl] = st.el.t; } } catch (e) { /* */ } }
   /* précharge (cache navigateur) les pistes d'un biome pour un démarrage immédiat en salle */
@@ -223,17 +225,59 @@ const Music = (() => {
       if (!url) { remember(); generative = true; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
       const st = AudioEngine.musicState ? AudioEngine.musicState() : null;
       if (url === currentUrl && !generative && st && st.hasTrack && st.el && !st.el.paused) return;   // même piste déjà en cours : on continue sans coupure (si elle est en pause — lecture refusée avant le premier geste — on relance)
-      remember(); generative = false; currentUrl = url;
-      const src = preloaded[url] && preloaded[url].ready ? preloaded[url].blobUrl : url;   // déjà téléchargé → lecture locale immédiate
-      const p = AudioEngine.playMusic(src, { fadeIn: 0.6, fadeOut: 0.8, loop: true, stream: true, offset: positions[url] || 0 });
-      if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome'); } });
+      const playing = !generative && st && st.hasTrack && st.el && !st.el.paused && st.el.t > 0.1 && !Beat.info.internal;
+      const doStart = (fadeIn, fadeOut, forceOffset) => {
+        if (current !== key) return;
+        remember(); generative = false; currentUrl = url;
+        const src = preloaded[url] && preloaded[url].ready ? preloaded[url].blobUrl : url;   // déjà téléchargé → lecture locale immédiate
+        const p = AudioEngine.playMusic(src, { fadeIn, fadeOut, loop: true, stream: true, offset: forceOffset != null ? forceOffset : alignedOffset(url) });
+        if (p && p.then) p.then(ok => { if (!ok && current === key) { generative = true; AudioEngine.startGenerativeMusic(key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome'); } });
+      };
+      if (pending) { clearTimeout(pending); pending = null; }
+      const bossEntry = key.startsWith('boss') && !(current || '').startsWith('boss');
+      if (!playing || G.attract) { doStart(0.6, 0.8); return; }
+      /* une piste joue : on attend la fin de la mesure ; entrée de boss = coupure nette, un souffle, puis le morceau de boss part sur son premier temps */
+      const wait = Math.min(2.2, Beat.timeToNextBar());
+      pending = setTimeout(() => {
+        pending = null; if (current !== key) return;
+        if (bossEntry) { remember(); AudioEngine.cutMusic(); AudioEngine.bossBreath({}); pending = setTimeout(() => { pending = null; doStart(0.08, 0.05, 0); }, 1050); }
+        else doStart(0.35, 0.35);
+      }, wait * 1000);
     });
   }
-  function stop() { remember(); current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
+  /* reprise d'une piste : position mémorisée recalée sur sa grille de temps, pour qu'elle reparte sur un temps */
+  function alignedOffset(url) { const p = positions[url] || 0; const info = Beat.trackInfo ? Beat.trackInfo(url) : null; if (!info || p <= 0) return p; const L = 60 / info.bpm; return Math.max(0, info.offset + Math.round((p - info.offset) / L) * L); }
+  function stop() { if (pending) { clearTimeout(pending); pending = null; } remember(); current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
+  /* ---- la musique respire : appelé chaque pas par Run.update ---- */
+  function setState(o) {
+    if (!AudioEngine.isReady || !AudioEngine.isReady()) return;
+    const hp = o.hp01 == null ? 1 : o.hp01;
+    /* vie basse : filtre qui s'étouffe et cœur qui bat sous 30 % ; salle vidée : filtre fermé qui se rouvre en 4 s */
+    let cutoff = 20000;
+    if (hp < 0.3) cutoff = Math.min(cutoff, lerp(650, 5000, hp / 0.3));
+    if (st8.calmAt != null) { const k = clamp((Time.now - st8.calmAt) / 4, 0, 1); cutoff = Math.min(cutoff, lerp(1800, 20000, k * k)); }
+    if (Math.abs(cutoff - st8.cutoff) > st8.cutoff * 0.02) { st8.cutoff = cutoff; AudioEngine.setMusicTone(cutoff, 0.25); }
+    const heart = hp < 0.3 ? 1 - hp / 0.3 : 0; if (Math.abs(heart - st8.heart) > 0.03 || (heart === 0) !== (st8.heart === 0)) { st8.heart = heart; AudioEngine.setHeartbeat(heart); }
+    /* ralenti : la bande freine (hauteur qui descend) ; frénésie : légère accélération sans changer la hauteur */
+    if (!st8.ramp) { const rate = o.slow != null && o.slow < 1 ? Math.max(0.5, o.slow) : o.overdrive ? 1.05 : 1; if (rate !== st8.rate) { st8.rate = rate; AudioEngine.setMusicRate(rate, rate > 1); } }
+  }
+  function resetState() { st8.calmAt = null; if (st8.heart) { st8.heart = 0; AudioEngine.setHeartbeat(0); } if (st8.cutoff !== 20000) { st8.cutoff = 20000; AudioEngine.setMusicTone(20000, 0.3); } if (st8.rate !== 1 && !st8.ramp) { st8.rate = 1; AudioEngine.setMusicRate(1, false); } }
+  function calm() { st8.calmAt = Time.now; }
+  function uncalm() { st8.calmAt = null; }
+  /* rampe de vitesse (JS, playbackRate n'est pas un AudioParam) */
+  function rampRate(from, to, seconds, preservePitch, then) {
+    if (st8.ramp) cancelAnimationFrame(st8.ramp); const t0 = performance.now();
+    const step = () => { const k = clamp((performance.now() - t0) / (seconds * 1000), 0, 1); const r = from + (to - from) * k; AudioEngine.setMusicRate(r, preservePitch); if (k < 1) st8.ramp = requestAnimationFrame(step); else { st8.ramp = null; if (then) then(); } };
+    st8.ramp = requestAnimationFrame(step);
+  }
+  /* « tape stop » : la bande s'arrête un quart de seconde puis repart (grosse attaque de boss, paliers de combo) */
+  function tapeStop() { if (st8.ramp || generative || !currentUrl) return; rampRate(st8.rate, 0.08, 0.14, false, () => rampRate(0.3, st8.rate, 0.2, false)); }
+  /* mort : la bande ralentit et descend sur `seconds`, puis silence, puis `then` */
+  function dying(seconds, then) { if (generative || !currentUrl) { if (then) then(); return; } resetState(); rampRate(1, 0.25, seconds, false, () => { AudioEngine.stopMusic && AudioEngine.stopMusic(0.3); currentUrl = null; current = null; st8.rate = 1; if (then) setTimeout(then, 350); }); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à chaque geste tant que la musique ne joue pas (l'AudioContext et l'<audio> ne peuvent démarrer qu'après un geste) : relance la piste courante */
   function restart() { const k = current; current = null; if (k) play(k.replace(/\d+(-\d)?$/, '')); if (!armed) { armed = true; preload(['biome', 'boss', 'biome_b']); } }
   /* vrai si une piste fichier joue réellement, ou si la musique générative tourne sur un contexte actif */
   function isPlaying() { const st = AudioEngine.musicState ? AudioEngine.musicState() : null; if (!st) return false; if (st.hasTrack && st.el && !st.el.paused && st.el.t > 0.05) return true; return !!(st.generative && st.ctxState === 'running'); }
-  return { play, stop, setEnabled, restart, isPlaying, preload, keyFor, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
+  return { play, stop, setEnabled, restart, isPlaying, preload, keyFor, setState, resetState, calm, uncalm, tapeStop, dying, get rate() { return st8.rate; }, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
 })();

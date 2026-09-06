@@ -21,11 +21,13 @@ const Beat = (() => {
   }
   /* le temps musical avance avec l'horloge de simulation (Time.now : vitesse debug, autoplay accéléré et ralenti compris) et se recale
      sur la piste quand le jeu tourne en temps réel : recalage franc au-delà de 120 ms (démarrage, boucle, reprise), correction douce sinon */
+  let keySent = '';
   function update() {
     prevT = t; const m = readMusic(); const simT = anchorT + (Time.now - anchorNow);
+    const ks = cur.key + cur.mode; if (ks !== keySent && AudioEngine.setKey) { keySent = ks; AudioEngine.setKey(rootHz(), cur.mode); }   // les sons accordés suivent la piste
     if (m != null && Time.scale === 1 && !Engine.isHeadless()) {
-      const drift = m - simT;
-      if (Math.abs(drift) > 0.12) { anchorT = m; anchorNow = Time.now; t = m; }
+      const drift = m - simT; const rateOff = Music.rate !== 1;   // vitesse modifiée (ralenti, tape stop, mort) : on colle à la piste
+      if (Math.abs(drift) > 0.12 || rateOff) { anchorT = m; anchorNow = Time.now; t = m; }
       else { anchorT += drift * 0.05; t = anchorT + (Time.now - anchorNow); }
     } else t = simT;
   }
@@ -37,10 +39,13 @@ const Beat = (() => {
   const beatInBar = () => ((index() % 4) + 4) % 4;
   /* distance (s) au temps le plus proche */
   function distToBeat(div = 1) { const L = beatLen() / div; const p = ((t / L) % 1 + 1) % 1; return Math.min(p, 1 - p) * L; }
+  /* secondes avant le prochain temps fort (au moins 150 ms, sinon la mesure suivante) */
+  function timeToNextBar() { const L = beatLen(); const p = ((t / L) % 4 + 4) % 4; let s = (4 - p) * L; if (s < 0.15) s += 4 * L; return s; }
+  function trackInfo(url) { return trackFor(url); }
   function rootHz() { const semi = { C: -9, 'C#': -8, D: -7, 'D#': -6, E: -5, F: -4, 'F#': -3, G: -2, 'G#': -1, A: 0, 'A#': 1, B: 2 }[cur.key]; return 440 * Math.pow(2, (semi == null ? -7 : semi) / 12); }
   /* fréquence de la n-ième note de la pentatonique de la piste (mode mineur ou majeur) */
   function noteHz(n) { const deg = cur.mode === 'major' ? [0, 2, 4, 7, 9] : [0, 3, 5, 7, 10]; const i = Math.max(0, n | 0); return rootHz() * Math.pow(2, (deg[i % 5] + 12 * Math.min(2, Math.floor(i / 5))) / 12); }
-  return { load, update, beatLen, index, phase, crossedFrame, beatInBar, distToBeat, rootHz, noteHz, get info() { return cur; }, get t() { return t; } };
+  return { load, update, beatLen, index, phase, crossedFrame, beatInBar, distToBeat, timeToNextBar, trackInfo, rootHz, noteHz, get info() { return cur; }, get t() { return t; } };
 })();
 
 const Tempo = {
@@ -95,7 +100,7 @@ const Tempo = {
     tp.lastIdx = idx; tp.combo++; tp.best = Math.max(tp.best, tp.combo); tp.onBeat++; tp.lastAction = Beat.t;
     const mul = 1.25 + Math.min(0.25, tp.combo * 0.025); tp.lastMul = mul;
     Floaters.add(pl.x, pl.y - pl.r - 26, 'TEMPO ×' + tp.combo, Tempo.COLOR, 15);
-    if (tp.combo === 5 || tp.combo === 10 || tp.combo === 20 || tp.combo === 30 || tp.combo === 50) { Particles.spawn(pl.x, pl.y, { count: 28, color: tp.combo >= 20 ? '#fff' : Tempo.COLOR, glow: true, speedMin: 120, speedMax: 320, life: 0.7, size: 3 }); UI.banner('SÉRIE ×' + tp.combo, Tempo.COLOR); AudioEngine.tempoTick({ intensity: 1 }); }
+    if (tp.combo === 5 || tp.combo === 10 || tp.combo === 20 || tp.combo === 30 || tp.combo === 50) { Particles.spawn(pl.x, pl.y, { count: 28, color: tp.combo >= 20 ? '#fff' : Tempo.COLOR, glow: true, speedMin: 120, speedMax: 320, life: 0.7, size: 3 }); UI.banner('SÉRIE ×' + tp.combo, Tempo.COLOR); AudioEngine.tempoTick({ intensity: 1 }); if (tp.combo >= 10) Music.tapeStop(); }
     AudioEngine.tempoNote({ intensity: 0.75, hz: Beat.noteHz(tp.combo - 1) });
     tp.flashes.push({ t: 0 });
     return mul;

@@ -60,6 +60,7 @@ const Room = {
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Tempo.createBoss(G.room);
     UI.banner(G.room.label, '#6ee7ff'); AudioEngine.uiConfirm({});
     if (G.room.challenge) setTimeout(() => { if (G.room && G.room.challenge) { UI.banner('DÉFI : ' + G.room.challenge.def.name, G.room.challenge.def.color, G.room.challenge.def.desc); AudioEngine.trapWarn({ intensity: 0.8 }); } }, 900);
+    Music.uncalm();
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Music.play('boss'); else Music.play('biome');
     return true;
   },
@@ -148,7 +149,7 @@ const Room = {
   clear() {
     const r = G.room; if (r.state === 'clear') return; r.state = 'clear'; r.stateT = 0;
     if (r.tempo) { Tempo.onClear(r); return; }   // porte sur la mesure suivante
-    r.doorOpen = true; AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
+    r.doorOpen = true; AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a'); Music.calm();
     for (const p of Pickups.list) p.magnet = true;
   },
   /* score de la salle courante */
@@ -286,21 +287,22 @@ const Run = {
     const total = r.coinsValidated + kept; Meta.addCoins(total); Meta.recordRun(false);
     Meta.unlockLore('deaths_3');
     G.paused = true; UI.showEnd({ victory: false, kept, pending: r.coinsPending, validated: r.coinsValidated, total });
-    Music.play('hub');
+    Music.dying(2.2, () => { if (G.overlay === 'end' || G.state === 'hub') Music.play('hub'); });   // la bande ralentit et descend, puis le hub
   },
   endLevel(victory) {
     const r = G.run; if (r.ended || r.attract) return; r.ended = true;
     const bonus = Math.round(BALANCE.levelEndBonus * G.player.stats.coinGain * G.debug.coinMul); const total = r.coinsValidated + r.coinsPending + bonus; Meta.addCoins(total); Meta.recordRun(true);
     G.paused = true; UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
-    Music.play('hub');
+    Music.resetState(); Music.play('hub');
   },
   abort() { const r = G.run; if (!r || r.ended) return; r.ended = true; const kept = Progression.coinsKeptOnDeath(r.coinsPending, G.room.index, r.lastCheckpoint); Meta.addCoins(r.coinsValidated + kept); Meta.recordRun(false); Run.toHub(); },
-  toHub() { G.state = 'hub'; G.paused = false; G.overlay = null; G.run = null; G.player = null; G.enemies = []; G.room = null; Projectiles.list = []; Pickups.list = []; UI.showHub(); Music.play('hub'); Attract.start(); },
+  toHub() { G.state = 'hub'; G.paused = false; G.overlay = null; G.run = null; G.player = null; G.enemies = []; G.room = null; Projectiles.list = []; Pickups.list = []; UI.showHub(); Music.resetState(); Music.play('hub'); Attract.start(); },
   qualityAvg() { const r = G.run; if (!r) return 1; const vals = r.scores.map(s => s.score); const cur = G.room && G.room.state !== 'clear' ? [Room.score()] : []; return Progression.avgScore(vals.concat(cur)); },
 
   update(dt) {
     if (!G.run || G.paused) return;
     const pl = G.player;
+    if (!G.attract) Music.setState({ hp01: pl.hp / pl.stats.maxHp, slow: Time.now < Time.slowUntil ? Time.slow : 1, overdrive: pl.overdriveUntil > Time.now });
     pl.update(dt);
     for (const e of G.enemies) e.update(dt);
     G.enemies = G.enemies.filter(e => !e.dead);

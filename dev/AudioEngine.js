@@ -26,7 +26,10 @@
   /* ------------------------------------------------------------------ */
   let ctx = null;
   let sr = 44100;
-  let master, comp, sfxBus, musicBus, musicDuck, reverbIn, convolver, reverbReturn, limiter, analyser, specBuf;
+  let master, comp, sfxBus, musicBus, musicDuck, musicFilter, reverbIn, convolver, reverbReturn, limiter, analyser, specBuf;
+  /* tonalité courante (posée par Beat) : les sons « accordés » (TUNE) se calent sur la pentatonique de la piste */
+  const key = { root: 293.66, mode: 'minor' };
+  const heart = { timer: null, next: 0, k: 0 };
   const noiseBuf = { white: null, pink: null, brown: null };
   const vol = { master: 0.8, sfx: 1.0, music: 0.7 };
   const MAX_VOICES = 24;
@@ -52,6 +55,7 @@
       p: (isNum(o.pitch) ? o.pitch : 1) * (1 + rnd(-0.07, 0.07)),   // jitter de hauteur ±7 %, × hauteur demandée (cascade de ramassage)
       g: (1 + rnd(-0.1, 0.1)) * (0.55 + 0.45 * I),   // jitter de gain ±10 %, pondéré par l'intensité
       hz: isNum(o.hz) ? o.hz : 0,                    // hauteur imposée (Hz) pour les sons musicaux (salle du tempo)
+      step: isNum(o.step) ? o.step | 0 : 0,          // degré de gamme (cascade de ramassage) pour les sons accordés
     };
   }
 
@@ -167,7 +171,8 @@
     sfxBus = ctx.createGain(); sfxBus.gain.value = vol.sfx; sfxBus.connect(comp); comp.connect(master);
     musicBus = ctx.createGain(); musicBus.gain.value = vol.music; musicBus.connect(master);
     analyser = ctx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.55; musicBus.connect(analyser);   // spectre de la musique (visuels de la salle du tempo)
-    musicDuck = ctx.createGain(); musicDuck.gain.value = 1; musicDuck.connect(musicBus);
+    musicFilter = ctx.createBiquadFilter(); musicFilter.type = 'lowpass'; musicFilter.frequency.value = 20000; musicFilter.Q.value = 0.4; musicFilter.connect(musicBus);   // « la musique respire » : vie basse, salle vidée
+    musicDuck = ctx.createGain(); musicDuck.gain.value = 1; musicDuck.connect(musicFilter);
 
     // Bus réverbe : convolution avec IR générée, retour vers le master
     reverbIn = ctx.createGain(); reverbIn.gain.value = 1;
@@ -362,12 +367,22 @@
   /* ------------------------------------------------------------------ */
   /** Trim de niveau par son (équilibrage mesuré en rendu offline : pic visé ≈ 0,15-0,35, boss ≈ 0,6). */
   const LEVELS = {
-    shootBlade: 4, shootBow: 2.5, shootBoomerang: 3.5, shootChain: 5, hitEnemy: 2, dash: 3.5, skillTurret: 2,
-    pickupXp: 5, pickupCoin: 5, pickupFragment: 3, trapWarn: 3, trapSpike: 5, uiHover: 6, uiClick: 4, uiConfirm: 1.5,
-    chestOpen: 1.5, bossRoar: 0.8, playerDie: 0.8,
+    shootBlade: 2.6, shootBow: 1.8, shootBoomerang: 2.4, shootChain: 3.2, shootPistol: 0.75, hitEnemy: 1.3, dash: 2.6, skillTurret: 2,
+    pickupXp: 2.4, pickupCoin: 2.4, pickupFragment: 2, trapWarn: 2.4, trapSpike: 3.5, uiHover: 3, uiClick: 2.4, uiConfirm: 1.3,
+    chestOpen: 1.5, bossRoar: 0.8, playerDie: 0.8, tempoNote: 0.8,   // mix : effets répétitifs (tirs, coups, ramassages, interface) ≈ −6 dB sous la musique, impacts rares au niveau
   };
   /* Espacement minimal entre deux déclenchements du même son (s) : au-delà de la polyphonie utile, les rafales (ramassage
      de 30 orbes, survol rapide des boutons) ne font que saturer et crépiter. Par défaut 25 ms. */
+  /* Sons accordés : fréquence de référence (celle que le son multiplie par o.p) → ramenée sur la note de la pentatonique de la
+     piste la plus proche. Les tirs, coups et pièges restent libres (bruit, percussions). */
+  const TUNE = { pickupXp: 1200, pickupCoin: 1800, pickupFragment: 2400, uiHover: 1500, uiClick: 600, uiConfirm: 500, roomClear: 196, levelUp: 220, chestOpen: 165, skillShield: 220, skillBlink: 1400, skillMagnet: 110, skillSlowtime: 220, shootOrb: 300, hitCrit: 900, trapWarn: 900, bossPhase: 110 };
+  const DEGREES = { minor: [0, 3, 5, 7, 10], major: [0, 2, 4, 7, 9] };
+  function scaleRatio(step) { const d = DEGREES[key.mode] || DEGREES.minor; const i = Math.max(0, step | 0); return Math.pow(2, (d[i % 5] + 12 * Math.floor(i / 5)) / 12); }
+  function nearestScale(f) {
+    const d = DEGREES[key.mode] || DEGREES.minor; let best = f, bd = Infinity;
+    for (let oct = -4; oct <= 5; oct++) for (const s of d) { const c = key.root * Math.pow(2, oct + s / 12); const dist = Math.abs(Math.log2(c / f)); if (dist < bd) { bd = dist; best = c; } }
+    return best;
+  }
   const GAPS = { pickupXp: 0.05, pickupCoin: 0.05, pickupFragment: 0.08, hitEnemy: 0.03, uiHover: 0.09, uiClick: 0.06, tempoNote: 0.08, trapWarn: 0.1, trapSpike: 0.1 };
   const lastAt = {};
   function def(name, prio, fn) {
@@ -379,7 +394,11 @@
       if (prev != null && now - prev.t < gap) return;                       // trop rapproché : ignoré
       const burst = prev != null && now - prev.t < 0.25 ? Math.min(prev.n + 1, 6) : 0;   // rafale : chaque répétition rapprochée est un peu plus douce
       lastAt[name] = { t: now, n: burst };
-      try { const o = norm(opts); o.g *= trim * Math.pow(0.88, burst); fn(o, now + 0.005); } catch (e) { console.warn('[AudioEngine] ' + name, e); }
+      try {
+        const o = norm(opts); o.g *= trim * Math.pow(0.88, burst);
+        if (TUNE[name]) { const f0 = TUNE[name]; o.p = nearestScale(f0 * scaleRatio(o.step)) / f0 * (1 + rnd(-0.004, 0.004)); }   // accordé sur la piste
+        fn(o, now + 0.005);
+      } catch (e) { console.warn('[AudioEngine] ' + name, e); }
     };
   }
 
@@ -395,6 +414,7 @@
     sweep(bp.frequency, t, 3200 * o.p, 700 * o.p, 0.16);
     v.chain(n, bp, g, v.out); perc(g.gain, t, 0.55 * o.g, 0.012, 0.18);
     layerClick(v, t, o, 5000, 6, 0.25, 0.02);
+    layerThump(v, t, o, 150, 70, 0.35, 0.1, 3);   // corps : un peu de bois dans le fouet
     v.reverb(0.12);
   });
 
@@ -433,7 +453,8 @@
     const lp = v.filter('lowpass', 7000, 1.5); const sh = v.shaper(3); const g = v.gain(0);
     sweep(lp.frequency, t, 7000, 400, 0.08);
     v.chain(n, lp, sh, g, v.out); perc(g.gain, t, 0.9 * o.g, 0.002, 0.14);
-    layerThump(v, t, o, 130, 45, 0.7, 0.18, 4);
+    layerThump(v, t, o, 110, 42, 0.8, 0.2, 4);
+    const b = v.noise('brown', t, t + 0.3); const lb = v.filter('lowpass', 700, 1); const gb = v.gain(0); v.chain(b, lb, gb, v.out); perc(gb.gain, t, 0.35 * o.g, 0.004, 0.22);   // air chaud derrière la détonation
     v.reverb(0.3);
   });
 
@@ -529,11 +550,11 @@
   // hitEnemy : impact chair/métal → click bandpass 1.8 kHz + thump 180→80 Hz saturé + bruit rose lowpass court.
   def('hitEnemy', 3, (o, t) => {
     const v = voice(o, 0.3, 3); if (!v) return;
-    layerClick(v, t, o, 1800, 2.5, 0.6, 0.03);
-    layerThump(v, t, o, 180, 80, 0.5, 0.12, 3);
-    const n = v.noise('pink', t, t + 0.2);
-    const lp = v.filter('lowpass', 1200 * o.p, 1); const g = v.gain(0);
-    v.chain(n, lp, g, v.out); perc(g.gain, t, 0.4 * o.g, 0.003, 0.14);
+    layerClick(v, t, o, 1500, 2, 0.5, 0.03);
+    layerThump(v, t, o, 130, 58, 0.7, 0.14, 3);   // impact plus grave et plus « matière »
+    const n = v.noise('brown', t, t + 0.2);
+    const lp = v.filter('lowpass', 900 * o.p, 1); const g = v.gain(0);
+    v.chain(n, lp, g, v.out); perc(g.gain, t, 0.5 * o.g, 0.003, 0.14);
     v.reverb(0.12);
   });
 
@@ -931,10 +952,11 @@
   // uiHover : survol → bruit blanc bandpass 3 kHz Q6 25 ms + tick FM 1500 Hz bandpassé, très discret.
   def('uiHover', 1, (o, t) => {
     const v = voice(o, 0.12, 1); if (!v) return;
-    layerClick(v, t, o, 3000, 6, 0.18, 0.025);
-    const f = v.fm(1500 * o.p, 2200 * o.p, 300, t, t + 0.08);
+    layerClick(v, t, o, 1800, 5, 0.14, 0.02);   // plus boisé, moins de sinusoïde
+    layerThump(v, t, o, 260, 170, 0.12, 0.04, 2);
+    const f = v.fm(1500 * o.p, 2200 * o.p, 200, t, t + 0.07);
     const bp = v.filter('bandpass', 2000 * o.p, 4); const sh = v.shaper(1.3); const g = v.gain(0);
-    v.chain(f.car, bp, sh, g, v.out); perc(g.gain, t, 0.08 * o.g, 0.002, 0.05);
+    v.chain(f.car, bp, sh, g, v.out); perc(g.gain, t, 0.05 * o.g, 0.002, 0.045);
   });
 
   // uiClick : clic → bruit bandpass 1.2 kHz Q4 30 ms + sinus 600→300 Hz saturé lowpass 40 ms.
@@ -963,6 +985,16 @@
     v.chain(f.car, lp, sh, g, v.out); perc(g.gain, t, 0.3 * o.g, 0.004, 0.32);
     layerClick(v, t, o, 3000, 5, 0.1, 0.01);
     v.reverb(0.2);
+  });
+
+  // bossBreath : souffle avant le boss (silence entre la coupure de la musique et le morceau de boss) → brun lowpass balayé 150→1400 Hz, gonflement 0,9 s, réverbe.
+  def('bossBreath', 7, (o, t) => {
+    const v = voice(o, 1.4, 7); if (!v) return;
+    const b = v.noise('brown', t, t + 1.3); const lp = v.filter('lowpass', 150, 1.2); const g = v.gain(0);
+    sweep(lp.frequency, t, 150, 1400, 0.9);
+    v.chain(b, lp, g, v.out); adsr(g.gain, t, 0.7 * o.g, 0.75, 0.05, 0.9, 0.4, 0.2);
+    layerThump(v, t + 0.95, o, 60, 34, 0.5, 0.25, 4);
+    v.reverb(0.5);
   });
 
   // uiConfirm : validation → deux tons FM filtrés (500 puis 750 Hz) + souffle rose + petite réverbe.
@@ -1184,6 +1216,31 @@
   api.playMusic = playMusic;
   api.stopMusic = stopMusic;
   api.duckMusic = duckMusic;
+  /* tonalité des sons accordés (posée par Beat à partir de tempo.json) */
+  api.setKey = (rootHz, mode) => { if (isNum(rootHz) && rootHz > 20) key.root = rootHz; if (mode) key.mode = mode; };
+  /* filtre passe-bas sur la musique (Hz), atteint en `seconds` */
+  api.setMusicTone = (cutoff, seconds) => { if (!musicFilter) return; const t = ctx.currentTime; musicFilter.frequency.cancelScheduledValues(t); musicFilter.frequency.setTargetAtTime(clamp(cutoff, 120, 20000), t, Math.max(0.02, (seconds || 0.2) / 3)); };
+  /* vitesse de lecture de la piste courante ; preservePitch false = la hauteur suit (bande qui freine) */
+  api.setMusicRate = (rate, preservePitch) => { const el = music.cur && music.cur.el; if (!el) return; try { el.preservesPitch = !!preservePitch; el.mozPreservesPitch = !!preservePitch; el.webkitPreservesPitch = !!preservePitch; el.playbackRate = clamp(rate, 0.07, 3); } catch (e) { /* */ } };
+  api.musicRate = () => { const el = music.cur && music.cur.el; return el ? el.playbackRate : 1; };
+  /* coupure nette de la musique (entrée de boss) */
+  api.cutMusic = () => { if (music.cur) { fadeTrack(music.cur, 0.0001, 0.04, true); music.cur = null; } };
+  /* battement de cœur (vie basse) : k 0..1 → tempo 70→130 bpm et volume ; 0 = arrêt */
+  api.setHeartbeat = (k) => {
+    heart.k = clamp(k || 0, 0, 1);
+    if (heart.k <= 0) { if (heart.timer) { clearInterval(heart.timer); heart.timer = null; } return; }
+    if (heart.timer || !ctx) return;
+    heart.next = ctx.currentTime + 0.05;
+    heart.timer = setInterval(() => {
+      if (!ctx || heart.k <= 0) return; const now = ctx.currentTime;
+      while (heart.next < now + 0.3) {
+        const o = norm({ intensity: 0.6 + 0.4 * heart.k }); const v = voice(o, 0.5, 6, sfxBus, false); if (!v) break;
+        const g = 0.5 + 0.5 * heart.k; layerThump(v, heart.next, o, 62, 38, 0.9 * g, 0.16, 3); layerThump(v, heart.next + 0.16, o, 55, 34, 0.6 * g, 0.14, 3);
+        const b = v.noise('brown', heart.next, heart.next + 0.35); const lp = v.filter('lowpass', 140, 1); const gg = v.gain(0); v.chain(b, lp, gg, v.out); perc(gg.gain, heart.next, 0.25 * g * o.g, 0.01, 0.2);
+        heart.next += 60 / (70 + 60 * heart.k);
+      }
+    }, 100);
+  };
   /* position de lecture de la piste courante (salle du tempo) : { t, paused } ou null */
   api.musicTime = () => music.cur && music.cur.el ? { t: music.cur.el.currentTime, paused: music.cur.el.paused } : null;
   /* spectre de la musique en n bandes (0..1), espacement logarithmique ; null sans contexte */
