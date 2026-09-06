@@ -92,13 +92,15 @@ const UI = (() => {
           <div class="cards vertical" id="hub-chars"></div>
         </section>
         <section class="hubcol center">
-          <h3>Paliers du Protocole</h3>
-          <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
-            <div class="cardtitle"><span>${esc(b.name)}</span><span class="tag">palier -${b.order}${done ? ' · ' + done + '×' : ''}</span></div>
-            <div class="muted small">${esc(b.desc)}</div>
-            ${ok ? `<div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Scellé : terminer ${esc((Content.biome(b.unlockAfter) || {}).name || 'le palier précédent')} (case 9).</div>`}
+          <h3>Choisis ton niveau</h3>
+          <div class="muted tiny lvlhint">Clique sur un niveau pour le sélectionner, puis sur JOUER. Chaque niveau fait 9 salles : un boss en salle 5, sa revanche en salle 9.</div>
+          <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; const prev = b.unlockAfter ? Content.biome(b.unlockAfter) : null; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
+            <div class="lvlhead"><span class="lvlnum">Niveau ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
+            <div class="lvlmeta"><span class="tag">Difficulté ${'★'.repeat(Math.min(3, b.order))}${'☆'.repeat(Math.max(0, 3 - b.order))}</span>${done ? `<span class="tag ok">Terminé ${done}×</span>` : ok ? '<span class="tag">Jamais terminé</span>' : ''}</div>
+            <div class="muted small lvldesc">${esc(b.tagline || b.desc)}</div>
+            ${ok ? `<div class="muted tiny">Au départ, un bonus et un malus sont tirés au sort parmi ces paires :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : terminer le niveau ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
           </div>`; }).join('')}</div>
-          <button class="cta" id="hub-enter"><span class="l">Entrer dans ${esc(biome.name)}</span><span class="d">Salle 1 : rappel des conditions, choix de l'outillage et d'une compétence</span></button>
+          <button class="cta" id="hub-enter"><span class="l">JOUER — Niveau ${biome.order} · ${esc(biome.name)}</span><span class="d">Ensuite : choix de l'arme et de la compétence, puis salle 1</span></button>
         </section>
         <section class="hubcol shopcol">
           <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</nav>
@@ -160,21 +162,24 @@ const UI = (() => {
     let selR = state.testRoom || 1, selL = state.testLevel || 1;   // mode Test : salle et niveau de départ (mémorisés pour la session)
     const metaList = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).map(m => `${esc(m.name)} ${Meta.tierOf(m.id)}`).join(', ') || 'aucune calibration';
     const render = () => {
+      const wSel = weapons.find(w => w.id === selW); const sSel = r.skillChoices.find(sk => sk.id === selS); const touch = Input.touch.active;
       s.innerHTML = `
         <div class="panel prep">
-          <div class="eyebrow">Salle 1 — préparation</div>
-          <h2>${esc(Content.pick('levelEnter'))}</h2>
-          <div class="passives">
-            <div class="pair big"><span class="good">+ ${esc(lp.bonus.name)}</span> <span class="muted small">${esc(lp.bonus.desc)}</span></div>
-            <div class="pair big"><span class="bad">− ${esc(lp.malus.name)}</span> <span class="muted small">${esc(lp.malus.desc)}</span></div>
-            <div class="muted tiny">Trait : <b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)} · Calibrations : ${metaList}</div>
-          </div>
-          <h3>${STR.chooseWeapon}</h3>
-          <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div></div>`).join('')}</div>
-          <h3>${STR.chooseSkill} <span class="muted tiny">(en jeu : clic droit, Espace ou Maj${Input.touch.active ? ', bouton COMP.' : ''})</span></h3>
-          <div class="cards" id="prep-skills">${r.skillChoices.map(sk => `<div class="card pick ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div><div class="muted tiny">Cooldown ${sk.cooldown} s</div></div>`).join('')}</div>
-          ${G.mode === 'test' ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Salle de départ <select id="prep-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => { const d = r.rooms.find(x => x.index === i); const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : ''; return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`; }).join('')}</select></label><label class="muted small">Niveau de départ <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>` : ''}
-          <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${STR.enter}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
+          <div class="eyebrow">Avant d'entrer — niveau ${r.biome.order} · ${esc(r.biome.name)}</div>
+          <h2>Équipe-toi pour ce niveau</h2>
+          <div class="prepmods"><span class="chip good"><b>Bonus de départ</b> ${esc(lp.bonus.name)} — ${esc(lp.bonus.desc)}</span><span class="chip bad"><b>Malus de départ</b> ${esc(lp.malus.name)} — ${esc(lp.malus.desc)}</span></div>
+          <details class="prepdetails muted tiny"><summary>Trait du personnage et calibrations du hub</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Calibrations : ${metaList}</details>
+          <section class="prepstep weapon done">
+            <h3><span class="stepnum">1</span> Ton arme <span class="muted tiny">— l'attaque principale, en continu · clic gauche${touch ? ' ou bouton TIR' : ''}</span></h3>
+            <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick weapon ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div>${w.id === selW ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+          </section>
+          <section class="prepstep skill ${selS ? 'done' : 'todo'}">
+            <h3><span class="stepnum">2</span> Ta compétence <span class="muted tiny">— un pouvoir à recharge, à déclencher · clic droit, Espace ou Maj${touch ? ' ou bouton COMP.' : ''}</span></h3>
+            <div class="cards" id="prep-skills">${r.skillChoices.map(sk => `<div class="card pick skill ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="cardtitle">${esc(sk.name)} <span class="tag cd">recharge ${sk.cooldown} s</span></div><div class="muted small">${esc(sk.desc)}</div>${sk.id === selS ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+          </section>
+          <div class="prepsummary">${wSel ? esc(wSel.name) : '…'} <span class="muted">+</span> ${sSel ? esc(sSel.name) : '<span class="bad">choisis une compétence ci-dessus</span>'}</div>
+          ${G.mode === 'test' ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Commencer à la salle <select id="prep-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => { const d = r.rooms.find(x => x.index === i); const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : ''; return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`; }).join('')}</select></label><label class="muted small">avec le personnage au niveau <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>` : ''}
+          <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${selS ? `Entrer en salle 1 avec ${esc(wSel.name)} et ${esc(sSel.name)}` : 'Choisis une compétence pour entrer'}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
         </div>`;
       const pr = s.querySelector('#prep-room'), plv = s.querySelector('#prep-level');
       if (pr) pr.onchange = () => { selR = +pr.value; state.testRoom = selR; };

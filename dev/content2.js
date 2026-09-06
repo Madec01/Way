@@ -4,7 +4,7 @@
    ========================================================================= */
 
 CONTENT.biomes.push({
-  id: 'biome_2', name: 'LA SERRE', order: 2,
+  id: 'biome_2', name: 'LA SERRE', order: 2, tagline: 'Une serre envahie : végétation agressive, gaz, ennemis qui se multiplient. Un cran au-dessus.',
   desc: 'Palier -2. L\'ancienne unité de culture des greffons : cuves éclatées, végétation qui a pris le contrôle des cellules d\'essai, sol humide qui conduit tout. Le Bureau y a laissé pousser ce qu\'il ne comprenait pas. Taux de perte : 84 %.',
   palette: { tint: 'rgba(40,120,70,.30)', neon: ['#7ed957', '#ffd166'], wall: 'rgba(30,90,60,.4)' },
   levelPassives: [

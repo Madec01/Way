@@ -363,7 +363,7 @@ const CONTENT = {
   // =====================================================================
   biomes: [
     {
-      id: 'biome_1', name: 'ADMISSION', order: 1,
+      id: 'biome_1', name: 'ADMISSION', order: 1, tagline: 'Un hôpital désaffecté : couloirs étroits, néons, pièges mécaniques. Le niveau pour apprendre.',
       desc: 'Palier -1, Protocole H-9. L\'ancien service d\'accueil du Site réaménagé en parcours : guichets devenus couverts, bancs devenus obstacles, rails de brancards devenus rails de pièges. Néons qui clignotent, sols humides. Taux de perte : 71 %.',
       levelPassives: [
         { bonus: { name: 'Stimulant', desc: '+15 % vitesse de déplacement.', mods: [{ stat: 'speed', mul: 1.15 }], hooks: {} },
