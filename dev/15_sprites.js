@@ -221,7 +221,8 @@ const Music = (() => {
       if (current !== key) return;
       const mood = key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome';
       if (!url) { remember(); generative = true; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
-      if (url === currentUrl && !generative && AudioEngine.musicState && AudioEngine.musicState().hasTrack) return;   // même piste déjà en cours : on continue sans coupure
+      const st = AudioEngine.musicState ? AudioEngine.musicState() : null;
+      if (url === currentUrl && !generative && st && st.hasTrack && st.el && !st.el.paused) return;   // même piste déjà en cours : on continue sans coupure (si elle est en pause — lecture refusée avant le premier geste — on relance)
       remember(); generative = false; currentUrl = url;
       const src = preloaded[url] && preloaded[url].ready ? preloaded[url].blobUrl : url;   // déjà téléchargé → lecture locale immédiate
       const p = AudioEngine.playMusic(src, { fadeIn: 0.6, fadeOut: 0.8, loop: true, stream: true, offset: positions[url] || 0 });
@@ -230,7 +231,9 @@ const Music = (() => {
   }
   function stop() { remember(); current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
-  /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
-  function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+(-\d)?$/, '')); preload(['biome', 'boss', 'biome_b']); }
-  return { play, stop, setEnabled, restart, preload, keyFor, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
+  /* appelé à chaque geste tant que la musique ne joue pas (l'AudioContext et l'<audio> ne peuvent démarrer qu'après un geste) : relance la piste courante */
+  function restart() { const k = current; current = null; if (k) play(k.replace(/\d+(-\d)?$/, '')); if (!armed) { armed = true; preload(['biome', 'boss', 'biome_b']); } }
+  /* vrai si une piste fichier joue réellement, ou si la musique générative tourne sur un contexte actif */
+  function isPlaying() { const st = AudioEngine.musicState ? AudioEngine.musicState() : null; if (!st) return false; if (st.hasTrack && st.el && !st.el.paused && st.el.t > 0.05) return true; return !!(st.generative && st.ctxState === 'running'); }
+  return { play, stop, setEnabled, restart, isPlaying, preload, keyFor, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
 })();

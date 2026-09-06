@@ -4,6 +4,7 @@
 
 function update(dt, rawDt) {
   Beat.update(); UI.update(rawDt); Touch.sync();
+  if (!G.audioOk && Music.isPlaying()) { G.audioOk = true; document.body.classList.add('audio-on'); }   // le son tourne : l'invite du menu disparaît
   if (G.state === 'run') { Run.update(dt); if (G.player) Camera.follow(G.player.x, G.player.y, rawDt); }
   else if (G.attract) Attract.update(dt);
 }
@@ -32,9 +33,12 @@ async function boot() {
   const canvas = document.getElementById('c');
   Engine.init(canvas);
   Meta.load(); Content.validate();
-  const wake = () => { AudioEngine.init(); AudioEngine.resume && AudioEngine.resume(); AudioEngine.setVolume(Meta.profile.volume); Music.restart(); };
+  /* Le son ne peut démarrer qu'après un geste de l'utilisateur (règle des navigateurs) : clic, toucher ou touche du clavier.
+     On tente quand même un démarrage immédiat : Chrome l'autorise sur les sites où l'on a déjà joué du son (indice d'engagement). */
+  const wake = () => { if (G.audioOk) return; AudioEngine.init(); AudioEngine.resume && AudioEngine.resume(); AudioEngine.setVolume(Meta.profile.volume); Music.restart(); };
   Input.attach(canvas, wake);
-  document.addEventListener('pointerdown', wake, { once: true });
+  document.addEventListener('pointerdown', wake); document.addEventListener('keydown', wake);   // retentés à chaque geste tant que la musique ne joue pas vraiment
+  setTimeout(wake, 300);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
   UI.init(); Debug.init(); Touch.init();
   Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));

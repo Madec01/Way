@@ -203,6 +203,9 @@ body.touch .menu2{padding:calc(16px*var(--ui-scale)) calc(28px*var(--ui-scale))}
 .card.level.selected{box-shadow:0 0 calc(24px + 22px*var(--down)) rgba(255,179,71,calc(.3 + .3*var(--down)))}
 .cta{box-shadow:0 0 calc(10px + 28px*var(--down)) rgba(255,179,71,calc(.2 + .4*var(--down)))}
 .hubhead .stamp{transform:scale(calc(1 + .02*var(--beat)))}
+/* invite à lancer le son : visible tant que le navigateur n'a pas reçu de geste (règle d'autoplay) */
+.audiohint{position:absolute;left:50%;bottom:calc(64px*var(--ui-scale));transform:translateX(-50%);font-family:"VT323",monospace;font-size:calc(24px*var(--ui-scale));color:var(--accent);letter-spacing:.08em;padding:.3em 1em;border:1px solid rgba(110,231,255,.45);border-radius:8px;background:rgba(8,10,18,.7);animation:blink 1.6s infinite;pointer-events:none}
+.audio-on .audiohint{display:none}
 
 </style>
 </head>
@@ -2742,7 +2745,8 @@ const Music = (() => {
       if (current !== key) return;
       const mood = key.startsWith('boss') ? 'boss' : (key === 'hub' || key === 'menu') ? 'hub' : 'biome';
       if (!url) { remember(); generative = true; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.startGenerativeMusic(mood); return; }
-      if (url === currentUrl && !generative && AudioEngine.musicState && AudioEngine.musicState().hasTrack) return;   // même piste déjà en cours : on continue sans coupure
+      const st = AudioEngine.musicState ? AudioEngine.musicState() : null;
+      if (url === currentUrl && !generative && st && st.hasTrack && st.el && !st.el.paused) return;   // même piste déjà en cours : on continue sans coupure (si elle est en pause — lecture refusée avant le premier geste — on relance)
       remember(); generative = false; currentUrl = url;
       const src = preloaded[url] && preloaded[url].ready ? preloaded[url].blobUrl : url;   // déjà téléchargé → lecture locale immédiate
       const p = AudioEngine.playMusic(src, { fadeIn: 0.6, fadeOut: 0.8, loop: true, stream: true, offset: positions[url] || 0 });
@@ -2751,9 +2755,11 @@ const Music = (() => {
   }
   function stop() { remember(); current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
-  /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
-  function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+(-\d)?$/, '')); preload(['biome', 'boss', 'biome_b']); }
-  return { play, stop, setEnabled, restart, preload, keyFor, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
+  /* appelé à chaque geste tant que la musique ne joue pas (l'AudioContext et l'<audio> ne peuvent démarrer qu'après un geste) : relance la piste courante */
+  function restart() { const k = current; current = null; if (k) play(k.replace(/\d+(-\d)?$/, '')); if (!armed) { armed = true; preload(['biome', 'boss', 'biome_b']); } }
+  /* vrai si une piste fichier joue réellement, ou si la musique générative tourne sur un contexte actif */
+  function isPlaying() { const st = AudioEngine.musicState ? AudioEngine.musicState() : null; if (!st) return false; if (st.hasTrack && st.el && !st.el.paused && st.el.t > 0.05) return true; return !!(st.generative && st.ctxState === 'running'); }
+  return { play, stop, setEnabled, restart, isPlaying, preload, keyFor, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
 })();
 
 </script>
@@ -5005,6 +5011,7 @@ const UI = (() => {
           <button class="mbtn" id="btn-fs"><span class="k">04</span><span class="l">Plein écran</span><span class="d">${Fullscreen.active ? 'Quitter le plein écran' : 'Recommandé sur téléphone'}</span></button>
           <button class="mbtn ghost" id="btn-reset"><span class="k">—</span><span class="l">Réinitialiser</span><span class="d">Effacer la sauvegarde du mode Normal</span></button>
         </nav>
+        <div class="audiohint">▶ Cliquez ou appuyez sur une touche pour lancer le son</div>
         <div class="menufoot">
           <div class="hint">${Input.touch.active ? 'Joystick à gauche · TIR / COMP. / E à droite' : 'ZQSD · souris · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause'}</div>
           <div class="save">Sauvegarde : ${p.runs} run(s) · ${p.wins} case(s) 9 cochée(s) · ◈ ${fmt(p.coins)}</div>
@@ -5696,6 +5703,7 @@ const Debug = (() => {
 
 function update(dt, rawDt) {
   Beat.update(); UI.update(rawDt); Touch.sync();
+  if (!G.audioOk && Music.isPlaying()) { G.audioOk = true; document.body.classList.add('audio-on'); }   // le son tourne : l'invite du menu disparaît
   if (G.state === 'run') { Run.update(dt); if (G.player) Camera.follow(G.player.x, G.player.y, rawDt); }
   else if (G.attract) Attract.update(dt);
 }
@@ -5724,9 +5732,12 @@ async function boot() {
   const canvas = document.getElementById('c');
   Engine.init(canvas);
   Meta.load(); Content.validate();
-  const wake = () => { AudioEngine.init(); AudioEngine.resume && AudioEngine.resume(); AudioEngine.setVolume(Meta.profile.volume); Music.restart(); };
+  /* Le son ne peut démarrer qu'après un geste de l'utilisateur (règle des navigateurs) : clic, toucher ou touche du clavier.
+     On tente quand même un démarrage immédiat : Chrome l'autorise sur les sites où l'on a déjà joué du son (indice d'engagement). */
+  const wake = () => { if (G.audioOk) return; AudioEngine.init(); AudioEngine.resume && AudioEngine.resume(); AudioEngine.setVolume(Meta.profile.volume); Music.restart(); };
   Input.attach(canvas, wake);
-  document.addEventListener('pointerdown', wake, { once: true });
+  document.addEventListener('pointerdown', wake); document.addEventListener('keydown', wake);   // retentés à chaque geste tant que la musique ne joue pas vraiment
+  setTimeout(wake, 300);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
   UI.init(); Debug.init(); Touch.init();
   Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));

@@ -51,6 +51,7 @@ const UI = (() => {
           <button class="mbtn" id="btn-fs"><span class="k">04</span><span class="l">Plein écran</span><span class="d">${Fullscreen.active ? 'Quitter le plein écran' : 'Recommandé sur téléphone'}</span></button>
           <button class="mbtn ghost" id="btn-reset"><span class="k">—</span><span class="l">Réinitialiser</span><span class="d">Effacer la sauvegarde du mode Normal</span></button>
         </nav>
+        <div class="audiohint">▶ Cliquez ou appuyez sur une touche pour lancer le son</div>
         <div class="menufoot">
           <div class="hint">${Input.touch.active ? 'Joystick à gauche · TIR / COMP. / E à droite' : 'ZQSD · souris · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause'}</div>
           <div class="save">Sauvegarde : ${p.runs} run(s) · ${p.wins} case(s) 9 cochée(s) · ◈ ${fmt(p.coins)}</div>
