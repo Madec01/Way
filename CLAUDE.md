@@ -1,0 +1,23 @@
+# WAY — contexte de reprise
+
+Roguelite d'action 2D vue de dessus, navigateur, **un seul `index.html`** (Canvas 2D, JS vanilla, Web Audio, localStorage) + `assets/`. Français partout. Dépôt : `Madec01/Way`, branche `main`, publié sur GitHub Pages (madec01.github.io/Way). Tu es chef de projet + développeur principal ; l'auteur (Martin) donne carte blanche, veut un point court à chaque étape terminée, et **des propositions avant de coder quand il le demande**.
+
+## Sources et assemblage
+- Sources dans `dev/` (un module par fichier, ordre dans `dev/build.js`), assemblées par `node dev/build.js` → `index.html`. **Toujours éditer `dev/*.js` puis rebuild**, jamais `index.html` directement.
+- Modules : `00_core` (Engine, Input, Camera, Fullscreen), `05_balance` (constantes d'équilibrage), `AudioEngine`, `content.js` (biome 1 + tout le contenu) et `content2.js` (biome 2), `10_content_api`, `15_sprites` (sprites, corps du joueur, musique), `20_progression`, `30_entities` (joueur, armes, projectiles, pickups, combat), `32_enemies` (ennemis + boss), `34_traps`, `36_modular`, `38_challenges`, `40_room` (état G, Room, Run), `50_ui`, `55_touch`, `57_attract`, `60_meta`, `70_debug` (panneau F1 + bot + `window.__autoplay`), `90_main`.
+- Schéma des données : `SCHEMA.md`. Contenu chiffré : `CONTENT.md`. Rapports de test/équilibrage : `TEST-REPORT.md` (§10 = dernier rééquilibrage). Plan/état : `PLAN.md`.
+
+## Tester
+- `cd /home/user/way && python3 -m http.server 8766` puis Playwright/Chromium (`executablePath: '/opt/pw-browsers/chromium'`, ne jamais lancer `playwright install`) ; scripts de test dans le scratchpad de session (à recréer si absents) : balayage `__autoplay` par arme, test clavier/souris, test tactile, captures.
+- `await __autoplay({ seed, timeScale: 40, render: false, mode: 'normal'|'test', weapon, skill, biome, maxRooms: 9, difficulty })` renvoie les stats (salle atteinte, niveau, kills, dégâts, cause de mort, niveau par salle).
+- Avant chaque push : `node dev/build.js`, un balayage sans erreur JS, test clavier (8 OK) et tactile.
+
+## État (septembre 2026)
+Fait : 2 paliers (ADMISSION, LA SERRE) × 9 salles, 8 armes, 8 compétences, 74 greffes, 16 passifs méta, boss + revanche avec mimétisme, salles modulaires, défis aléatoires (salles 2/3/6/7 : capture, effondrement, séquence, lumières coupées, chrono), objets au sol (bourse, arme d'essai, allié, reliques), apparence évolutive (nu → vêtements → armure → chevalier), menu/hub refondus avec scène d'attraction, tactile + zoom caméra + plein écran, musiques par biome (`assets/music/menu|hub|biomeN|bossN.mp3`, repli génératif), rééquilibrage passe 2 (jeu difficile : bot normal ne bat plus le mini-boss).
+
+En attente de décision de l'auteur : **l'histoire**. L'ancien lore (`LORE.md`, « SUJET NEUF », Bureau d'Homologation) est **rejeté**. Le jeu s'appelle **WAY**. Proposition en cours (à valider, puis à intégrer dans les textes du jeu) : la Voie, route de montagne à Relais-machines construits par l'ingénieure Honorine Way ; le joueur est un Passeur portant le Pli ; ennemis = Détraqués ; Gardien du Relais = mini-boss qui revient avec la Fiche de voyageur ; jetons tamponnés au Poste 4 ; hub = Relais Zéro tenu par la Muletière ; Malle-poste qui ramène quand on tombe ; Relais 1 l'Accueil, Relais 2 les Jardins, Relais 3 les Cuisines ; Passeurs Marius et Léonie. Les textes en jeu portent encore l'ancien vocabulaire (Salle Zéro, greffes, crédits, Étalon…) tant que ce n'est pas validé.
+
+## Conventions
+- Contenu = données déclaratives avec `id` stables ; effets à hooks listés dans `SCHEMA.md` §2 ; pas de logique de gameplay dans `content*.js`.
+- Pas de son « oscillateur nu » ; pas de dépendance externe, pas de build step pour jouer.
+- Commits en français, un point court à l'auteur par étape, push sur `main`.
