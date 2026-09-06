@@ -4,7 +4,7 @@
    ========================================================================= */
 
 const LORE = {
-  title: 'SUJET NEUF', subtitle: 'Protocole H-9 · palier ADMISSION',
+  title: 'WAY', subtitle: 'Roguelite à salles',
   hub: [
     'Salle Zéro. Vous êtes en stockage. Reposez-vous, ça compte.',
     'Réimpression terminée. Aucun défaut visible. Les autres, on verra.',

@@ -1,4 +1,4 @@
-# SUJET NEUF — roguelite à salles
+# WAY — roguelite à salles
 
 Un roguelite d'action 2D vue de dessus, dans le navigateur. Deux paliers : ADMISSION et LA SERRE (débloquée après la case 9 d'ADMISSION), 9 salles chacun (préparation, pièges, combats, coffres, mini-boss, salles modulaires, boss revanche), en un seul fichier `index.html` (Canvas 2D, JS vanilla, Web Audio, localStorage) + un dossier `assets/` (sprites CC0, vos musiques).
 

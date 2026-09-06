@@ -39,10 +39,10 @@ const UI = (() => {
     const s = screens.menu; const p = Meta.profile; const nb = Meta.mode === 'test' ? '' : '';
     s.innerHTML = `
       <div class="menu2">
-        <div class="stamp"><span>Bureau d'Homologation</span><span class="sep">·</span><span>Protocole H-9</span><span class="sep">·</span><span>Rév. 3</span></div>
+        <div class="stamp"><span>Way</span><span class="sep">·</span><span>Roguelite à salles</span><span class="sep">·</span><span>Phase 2</span></div>
         <div class="titlebox">
-          <h1 class="bigtitle" data-text="SUJET NEUF"><span>SUJET</span> <span class="accent">NEUF</span></h1>
-          <div class="tagline">Neuf salles. Un formulaire. Une sortie.</div>
+          <h1 class="bigtitle" data-text="WAY"><span class="accent">W</span><span>AY</span></h1>
+          <div class="tagline">Neuf salles par palier. Une seule sortie.</div>
         </div>
         <nav class="menunav">
           <button class="mbtn primary" id="btn-normal"><span class="k">01</span><span class="l">Mode Normal</span><span class="d">Progression réelle, sauvegarde locale</span></button>
