@@ -465,3 +465,17 @@ Mesure bot (mode test, biome 1) avant → après : niveau après la salle 1 : 5 
 - Courbe d'XP : `24 + 16·N + 2,6·N²` (au lieu de `14 + 9·N + 1,3·N²`), bonus de traversée parfaite 30 → 20 XP, trait de Neuf +20 % → +15 % XP.
 - Poids de rareté : commun 62, rare 27, épique 9, colossal 2.
 - Greffes offensives revues : Tranchant +10 %, Gâchette +8 % (4 paliers), Munitions +6 %/+5 % (3 paliers), Frappe lourde +22 %, Double canon -25 % dégâts, Second canon -12 %, Salve -30 %, Mitraille -20 % sans bonus de cadence, Satellite 10 dégâts (2 paliers), Drone 6 dégâts (2 paliers), Foudre ambiante 18 dégâts / 2,5 s, Aura brûlante 8 dégâts/s.
+
+---
+
+## 18. Défis de salle (salles 2, 3, 6 et 7)
+
+À l'entrée d'une de ces salles, 60 % de chance de tirer un défi non encore vu dans la run (`dev/38_challenges.js`). Le HUD affiche le défi et sa jauge ; le panneau debug permet de forcer un défi.
+
+| Défi | Salles | Règle | Récompense / sanction |
+|---|---|---|---|
+| Capture de zone | combat | Trois zones successives (rayon 3 tuiles) : tenir dedans remplit la jauge en 6 s, sortir la vide en 12 s. Renforts toutes les 7 s tant que ce n'est pas fini. La porte n'ouvre qu'après la 3e zone. | Kills dans la zone : XP +50 % |
+| Sol qui s'effondre | combat, pièges | Les pièges et éléments modulaires de la salle sont retirés. Des paquets de 3 à 6 dalles (7 au biome 2) se fissurent 1,3 s puis tombent, de plus en plus vite ; jamais sous le joueur, jamais aux portes, jamais en coupant la salle en deux. Tomber : 12 dégâts, retour sur la dalle sûre la plus proche, 1 s d'invulnérabilité. Les ennemis tombent et meurent (XP ÷2). Fin à 40 % de sol restant (~100 s). | — |
+| Séquence | combat, pièges | Trois interrupteurs I, II, III ; l'ordre s'affiche 4 s au début puis dans le HUD. Marcher dessus dans l'ordre ; erreur = décharge de 8 et remise à zéro. Optionnel. | 40 XP, 25 crédits, une relique |
+| Lumières coupées | combat, pièges | Seule une lampe de 210 px autour du joueur éclaire ; les ennemis se trahissent par leurs yeux (jaunes quand ils télégraphient). | XP +25 % |
+| Chrono | combat | 60 s pour vider la salle. Après, tout ce qui reste et tout ce qui arrive est enragé (vitesse et dégâts +30 %, teinte rouge). | 30 crédits si tenu |

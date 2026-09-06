@@ -54,10 +54,10 @@ const Sprites = (() => {
     const oy = d.foot ? dh / 2 - 14 * (opts.scale || 1) * 1 : 0;   // ancrage au pied : le corps déborde vers le haut
     ctx.save(); ctx.translate(x, y - (d.foot ? oy * 0.5 : 0)); if (opts.flip) ctx.scale(-1, 1);
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
-    if (opts.flash) {
-      /* flash blanc limité aux pixels du sprite : on passe par un canvas hors écran (sinon le rectangle entier s'éclaire) */
+    if (opts.flash || opts.tint) {
+      /* flash blanc ou teinte de statut limités aux pixels du sprite : canvas hors écran (sinon le rectangle entier s'éclaire) */
       const fx = flashCanvas(dw, dh); const g = fx.getContext('2d'); g.imageSmoothingEnabled = false; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, dw, dh);
-      g.drawImage(sheet, sx + frame * sw, sy, sw, sh, 0, 0, dw, dh); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(0, 0, dw, dh);
+      g.drawImage(sheet, sx + frame * sw, sy, sw, sh, 0, 0, dw, dh); g.globalCompositeOperation = 'source-atop'; g.fillStyle = opts.flash ? 'rgba(255,255,255,.75)' : opts.tint; g.fillRect(0, 0, dw, dh);
       ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
     } else ctx.drawImage(sheet, sx + frame * sw, sy, sw, sh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
     ctx.restore(); return true;

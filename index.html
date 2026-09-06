@@ -2530,10 +2530,10 @@ const Sprites = (() => {
     const oy = d.foot ? dh / 2 - 14 * (opts.scale || 1) * 1 : 0;   // ancrage au pied : le corps déborde vers le haut
     ctx.save(); ctx.translate(x, y - (d.foot ? oy * 0.5 : 0)); if (opts.flip) ctx.scale(-1, 1);
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
-    if (opts.flash) {
-      /* flash blanc limité aux pixels du sprite : on passe par un canvas hors écran (sinon le rectangle entier s'éclaire) */
+    if (opts.flash || opts.tint) {
+      /* flash blanc ou teinte de statut limités aux pixels du sprite : canvas hors écran (sinon le rectangle entier s'éclaire) */
       const fx = flashCanvas(dw, dh); const g = fx.getContext('2d'); g.imageSmoothingEnabled = false; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, dw, dh);
-      g.drawImage(sheet, sx + frame * sw, sy, sw, sh, 0, 0, dw, dh); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(0, 0, dw, dh);
+      g.drawImage(sheet, sx + frame * sw, sy, sw, sh, 0, 0, dw, dh); g.globalCompositeOperation = 'source-atop'; g.fillStyle = opts.flash ? 'rgba(255,255,255,.75)' : opts.tint; g.fillRect(0, 0, dw, dh);
       ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
     } else ctx.drawImage(sheet, sx + frame * sw, sy, sw, sh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
     ctx.restore(); return true;
@@ -3038,7 +3038,7 @@ const Combat = {
       }
     }
     d = Math.max(1, Math.round(d));
-    e.hp -= d; e.flash = 0.12;
+    e.hp -= d; if (!info.dot) e.flash = 0.12;   // les brûlures/poisons ne font pas clignoter
     if (!info.dot) {
       const kb = (info.knockback || 1) * pl.stats.knockback * (e.isBoss ? 0.1 : 1) * 160 / Math.max(1, e.mass || 1);
       const a = info.vx != null ? Math.atan2(info.vy, info.vx) : angleTo(pl.x, pl.y, e.x, e.y);
@@ -3090,7 +3090,7 @@ const Combat = {
     G.room.combo++; G.room.comboUntil = Time.now + 2.5; G.room.bestCombo = Math.max(G.room.bestCombo, G.room.combo);
     /* drops */
     const xpMul = pl.stats.xpGain * G.debug.xpMul, coinMul = pl.stats.coinGain * G.debug.coinMul;
-    let xp = Math.round(e.xp * xpMul); let n = clamp(Math.ceil(xp / 5), 1, 6);
+    let xp = Math.round(e.xp * xpMul * Challenge.xpMul(G.room) * Challenge.killBonus(G.room, e)); let n = clamp(Math.ceil(xp / 5), 1, 6);
     for (let i = 0; i < n; i++) Pickups.spawn(e.x, e.y, 'xp', Math.max(1, Math.round(xp / n)));
     const coins = Math.round(e.coins * coinMul); for (let i = 0; i < coins; i++) Pickups.spawn(e.x, e.y, 'coin', 1);
     if (!e.isBoss && RNG.chance(0.03)) Pickups.spawn(e.x, e.y, 'heart', 15);
@@ -3592,7 +3592,8 @@ class Enemy {
     }
     if (this.elite) { ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.x, this.y, this.r + 3, 0, TAU); ctx.stroke(); }
     const flash = this.flash > 0;
-    Sprites.draw(ctx, this.def.sprite || (this.isBoss ? 'boss' : 'enemy_' + this.archetype), this.x, this.y, { flip: this.facing < 0, walk: this.anim, flash, scale: this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5), fallback: () => {
+    const tint = this.status && this.status.burn ? 'rgba(255,110,30,.45)' : this.status && this.status.poison ? 'rgba(120,255,90,.4)' : this.enraged ? 'rgba(255,40,40,.35)' : null;
+    Sprites.draw(ctx, this.def.sprite || (this.isBoss ? 'boss' : 'enemy_' + this.archetype), this.x, this.y, { flip: this.facing < 0, walk: this.anim, flash, tint, scale: this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5), fallback: () => {
       ctx.fillStyle = flash ? '#fff' : this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 10; ctx.beginPath();
       switch (this.archetype) {
         case 'tank': ctx.rect(this.x - this.r, this.y - this.r, this.r * 2, this.r * 2); break;
@@ -4053,6 +4054,187 @@ const Modular = (() => {
 
 </script>
 <script>
+/* ==== 38_challenges.js ==== */
+/* =========================================================================
+   WAY — 38_challenges.js
+   Défis de salle, tirés au sort sur les salles 2, 3, 6 et 7 :
+   capture (tenir 3 zones), collapse (le sol s'effondre, tenir jusqu'à 40 % de surface),
+   switches (3 interrupteurs dans l'ordre, récompense), lights (lumières coupées), timer (chrono, enragés après).
+   ========================================================================= */
+
+const CHALLENGE_DEFS = {
+  capture:  { name: 'Capture de zone', desc: 'Tenez la zone pour remplir la jauge. Trois zones. Les kills dans la zone rapportent +50 % d\'XP.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR', 'PREP_COMBAT'], color: '#7fff9a' },
+  collapse: { name: 'Sol qui s\'effondre', desc: 'Des dalles tombent par paquets, de plus en plus vite. Tenez jusqu\'à ce qu\'il reste 40 % du sol. Les ennemis tombent aussi.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR', 'TRAP'], color: '#ffb347', replacesTraps: true },
+  switches: { name: 'Séquence', desc: 'Activez les 3 interrupteurs dans l\'ordre affiché. Récompense à la clé, décharge en cas d\'erreur.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR', 'TRAP'], color: '#c9a3ff' },
+  lights:   { name: 'Lumières coupées', desc: 'Seule votre lampe éclaire. Les ennemis se trahissent par leurs yeux. XP +25 %.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR', 'TRAP'], color: '#9fd8ff' },
+  timer:    { name: 'Chrono', desc: 'Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s\'enrage.', rooms: ['COMBAT_TRAP', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ff5e7a' },
+};
+const CHALLENGE_ROOMS = [2, 3, 6, 7];
+const CHALLENGE_CHANCE = 0.6;
+
+const Challenge = (() => {
+  const tileFree = (tx, ty, room) => !room.obstacles.some(o => tx >= o.x && tx < o.x + o.w && ty >= o.y && ty < o.y + o.h);
+  const randFreeTile = (room, rng, margin = 2) => { for (let k = 0; k < 40; k++) { const tx = rng.int(margin, ROOM_COLS - 1 - margin), ty = rng.int(margin, ROOM_ROWS - 1 - margin); if (tileFree(tx, ty, room)) return { x: tx, y: ty }; } return { x: 12, y: 6 }; };
+
+  /* choix du défi pour une salle (null si aucun) */
+  function pick(def, rng, used) {
+    if (!CHALLENGE_ROOMS.includes(def.index)) return null;
+    if (G.debug.forceChallenge) return G.debug.forceChallenge === 'none' ? null : G.debug.forceChallenge;
+    if (!rng.chance(CHALLENGE_CHANCE)) return null;
+    const ids = Object.keys(CHALLENGE_DEFS).filter(id => CHALLENGE_DEFS[id].rooms.includes(def.type) && !used.includes(id));
+    return ids.length ? rng.pick(ids) : null;
+  }
+  function create(id, room) {
+    const d = CHALLENGE_DEFS[id]; const c = { id, def: d, done: false, t: 0, hud: '' };
+    const rng = RNG;
+    if (id === 'capture') {
+      c.zones = []; for (let i = 0; i < 3; i++) { let p; for (let k = 0; k < 20; k++) { p = randFreeTile(room, rng, 3); if (!c.zones.some(z => dist(z.x, z.y, tileX(p.x), tileY(p.y)) < 300)) break; } c.zones.push({ x: tileX(p.x), y: tileY(p.y) }); }
+      c.zi = 0; c.gauge = 0; c.r = 3 * TILE; c.reinforceT = 6; c.reinforceEvery = 7;
+    } else if (id === 'collapse') {
+      c.holes = new Set(); c.warn = new Map(); c.nextT = 3; c.every0 = Math.max(2.0, 3.0 - 0.3 * ((G.run.biome.order || 1) - 1)); c.total = ROOM_COLS * ROOM_ROWS; c.target = Math.round(c.total * 0.4); c.fallen = 0; c.reinforceT = 8; c.reinforceEvery = 9;
+    } else if (id === 'switches') {
+      c.sw = []; const order = rng.shuffle([0, 1, 2]);
+      for (let i = 0; i < 3; i++) { let p; for (let k = 0; k < 20; k++) { p = randFreeTile(room, rng, 2); if (!c.sw.some(s => dist(s.tx, s.ty, p.x, p.y) < 5)) break; } c.sw.push({ tx: p.x, ty: p.y, x: tileX(p.x), y: tileY(p.y), on: false, label: ['I', 'II', 'III'][i] }); }
+      c.order = order; c.step = 0; c.showT = 4; c.fails = 0;
+    } else if (id === 'lights') { c.radius = 210; }
+    else if (id === 'timer') { c.limit = 60; c.enraged = false; }
+    return c;
+  }
+  const spawnReinforcement = (n) => { const pool = G.run.biome.enemyPool.filter(id => { const e = Content.enemy(id); return e && e.archetype !== 'summoner'; }); if (Room.alive() >= 8) return; for (let i = 0; i < n; i++) Room.spawnAt({ enemy: RNG.pick(pool), count: 1, x: -1, y: -1 }); UI.banner('Renforts', '#ff6b6b'); };
+
+  /* ---------- update ---------- */
+  function update(room, dt) {
+    const c = room.challenge; if (!c || c.done) return; c.t += dt; const pl = G.player;
+    if (c.id === 'capture') {
+      const z = c.zones[c.zi]; const inside = dist(pl.x, pl.y, z.x, z.y) < c.r;
+      c.gauge = clamp(c.gauge + (inside ? dt / 6 : -dt / 12), 0, 1);
+      c.reinforceT -= dt; if (c.reinforceT <= 0) { c.reinforceT = c.reinforceEvery; spawnReinforcement(2 + Math.floor(RNG() * 2)); }
+      if (c.gauge >= 1) { c.zi++; c.gauge = 0; AudioEngine.roomClear({ intensity: 0.6 }); Particles.spawn(z.x, z.y, { count: 30, color: '#7fff9a', glow: true, speedMax: 300 }); if (c.zi >= c.zones.length) { c.done = true; UI.banner('Zones capturées', '#7fff9a'); room.challengeOk = true; } else UI.banner(`Zone ${c.zi + 1} / 3`, '#7fff9a'); }
+      c.hud = `Zone ${Math.min(c.zi + 1, 3)}/3 · ${Math.round(c.gauge * 100)} %`;
+    } else if (c.id === 'collapse') {
+      /* avertissements → chutes */
+      for (const [k, until] of c.warn) { if (room.time >= until) { c.warn.delete(k); c.holes.add(k); c.fallen++; const [tx, ty] = k.split(',').map(Number); Particles.spawn(tileX(tx), tileY(ty), { count: 8, color: '#3a3f55', size: 4, speedMax: 90, life: 0.7 }); G.shake = Math.min(6, G.shake + 1.5); } }
+      c.nextT -= dt;
+      const safe = c.total - c.holes.size - c.warn.size;
+      if (c.nextT <= 0 && safe > c.target) { c.nextT = Math.max(1.3, c.every0 - c.t * 0.014); scheduleCluster(room, c); if (c.t > 25 && RNG.chance(0.5)) scheduleCluster(room, c); AudioEngine.trapSpike({ intensity: 0.7 }); }   // accélère avec le temps, parfois deux paquets
+      c.reinforceT -= dt; if (c.reinforceT <= 0 && Room.alive() < 5) { c.reinforceT = c.reinforceEvery; spawnReinforcement(2); }
+      /* chutes */
+      const tileOf = e => `${Math.floor((e.x - ROOM_X) / TILE)},${Math.floor((e.y - ROOM_Y) / TILE)}`;
+      if (!pl.dead && !pl.dashing && c.holes.has(tileOf(pl))) fallPlayer(room, c);
+      for (const e of G.enemies) { if (e.dead || e.isBoss || e.state === 'dash' || e.state === 'lunge' || e.state === 'charge') continue; if (c.holes.has(tileOf(e))) { e.xp = Math.round(e.xp * 0.5); e.coins = 0; Floaters.add(e.x, e.y - 10, 'tombé', '#9aa4c4', 12); Combat.killEnemy(e, { silent: true }); } }
+      const pct = Math.round(100 * (c.total - c.holes.size) / c.total);
+      c.hud = `Sol ${pct} % · objectif 40 %`;
+      if (c.total - c.holes.size <= c.target) { c.done = true; room.challengeOk = true; UI.banner('Surface atteinte : sortie ouverte', '#ffb347'); Room.clear(); }
+    } else if (c.id === 'switches') {
+      c.showT -= dt;
+      for (const s of c.sw) {
+        if (s.on || dist(pl.x, pl.y, s.x, s.y) > 26 + pl.r) continue;
+        const expected = c.order[c.step];
+        if (c.sw.indexOf(s) === expected) { s.on = true; c.step++; AudioEngine.uiConfirm({}); Particles.spawn(s.x, s.y, { count: 10, color: '#7fff9a', glow: true }); if (c.step >= 3) { c.done = true; room.challengeOk = true; reward(room); } }
+        else { c.fails++; for (const q of c.sw) q.on = false; c.step = 0; Combat.hitPlayer(8, { type: 'trap', x: s.x, y: s.y, trapName: 'Décharge' }); G.room.beams.push({ ax: s.x, ay: s.y, bx: pl.x, by: pl.y, t: 0, life: 0.25, color: '#c9a3ff', width: 4, jag: true }); UI.banner('Mauvais ordre', '#ff5e7a'); s.cool = 1; }
+      }
+      c.hud = `Ordre : ${c.order.map(i => c.sw[i].label).join(' → ')} · ${c.step}/3`;
+    } else if (c.id === 'lights') { c.hud = 'Lampe : ' + Math.round(c.radius) + ' px'; if (room.state === 'clear') c.done = true; }
+    else if (c.id === 'timer') {
+      const left = Math.max(0, c.limit - room.time);
+      if (room.state === 'clear' && !c.done) { c.done = true; if (left > 0) { room.challengeOk = true; const bonus = 30; G.run.coinsPending += bonus; UI.toast(`Chrono tenu : +${bonus} crédits`); } }
+      if (left <= 0 && !c.enraged) { c.enraged = true; UI.banner('ENRAGÉS', '#ff5e7a'); AudioEngine.bossRoar({}); for (const e of G.enemies) enrage(e); }
+      c.hud = left > 0 ? `${left.toFixed(1)} s` : 'ENRAGÉS';
+    }
+  }
+  function enrage(e) { if (e.dead || e.enraged) return; e.enraged = true; e.speed *= 1.3; e.damage = Math.round(e.damage * 1.3); e.color = '#ff3b3b'; }
+  function reward(room) { const pl = G.player; UI.banner('Séquence validée', '#c9a3ff'); AudioEngine.chestOpen({}); Run.addXp(Math.round(40 * pl.stats.xpGain)); for (let i = 0; i < 25; i++) Pickups.spawn(W / 2, H / 2, 'coin', 1); Pickups.spawn(W / 2, H / 2, 'relic', 1); }
+  function fallPlayer(room, c) {
+    const pl = G.player; Combat.hitPlayer(12, { type: 'trap', x: pl.x, y: pl.y, trapName: 'Chute' });
+    /* remonter sur la dalle sûre la plus proche */
+    let best = null, bd = 1e9; for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) { const k = `${tx},${ty}`; if (c.holes.has(k) || c.warn.has(k) || !tileFree(tx, ty, room)) continue; const d = dist(pl.x, pl.y, tileX(tx), tileY(ty)); if (d < bd) { bd = d; best = { x: tileX(tx), y: tileY(ty) }; } }
+    if (best) { pl.x = best.x; pl.y = best.y; } pl.invulnUntil = Math.max(pl.invulnUntil, Time.now + 1); Particles.spawn(pl.x, pl.y, { count: 10, color: '#9aa4c4', size: 3 });
+  }
+  /* génère un paquet de 2-5 dalles (6 max au biome 2+) qui tomberont, sans couper la salle */
+  function scheduleCluster(room, c) {
+    const pl = G.player; const ptx = Math.floor((pl.x - ROOM_X) / TILE), pty = Math.floor((pl.y - ROOM_Y) / TILE);
+    const maxSize = 6 + Math.max(0, (G.run.biome.order || 1) - 1);
+    const protectedTile = (tx, ty) => (Math.abs(tx - ptx) <= 1 && Math.abs(ty - pty) <= 1) || (tx >= ROOM_COLS - 2 && Math.abs(ty - 6) <= 1) || (tx <= 1 && Math.abs(ty - 6) <= 1);
+    const isSafe = (tx, ty, extra) => tx >= 0 && ty >= 0 && tx < ROOM_COLS && ty < ROOM_ROWS && !c.holes.has(`${tx},${ty}`) && !c.warn.has(`${tx},${ty}`) && !extra.has(`${tx},${ty}`);
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const size = RNG.int(3, maxSize); const cluster = new Set();
+      let cx = RNG.int(0, ROOM_COLS - 1), cy = RNG.int(0, ROOM_ROWS - 1);
+      if (!isSafe(cx, cy, cluster) || protectedTile(cx, cy)) continue;
+      cluster.add(`${cx},${cy}`);
+      let guard = 0;
+      while (cluster.size < size && guard++ < 30) { const dir = RNG.pick([[1, 0], [-1, 0], [0, 1], [0, -1]]); const nx = cx + dir[0], ny = cy + dir[1]; if (isSafe(nx, ny, cluster) && !protectedTile(nx, ny)) { cluster.add(`${nx},${ny}`); cx = nx; cy = ny; } }
+      /* connexité : toutes les dalles sûres restantes (hors obstacles) doivent rester reliées */
+      if (!connected(room, c, cluster)) continue;
+      for (const k of cluster) c.warn.set(k, room.time + 1.3);
+      return;
+    }
+  }
+  function connected(room, c, cluster) {
+    const ok = (tx, ty) => tx >= 0 && ty >= 0 && tx < ROOM_COLS && ty < ROOM_ROWS && !c.holes.has(`${tx},${ty}`) && !c.warn.has(`${tx},${ty}`) && !cluster.has(`${tx},${ty}`) && tileFree(tx, ty, room);
+    let start = null; for (let ty = 0; ty < ROOM_ROWS && !start; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) if (ok(tx, ty)) { start = [tx, ty]; break; }
+    if (!start) return false;
+    const seen = new Set([start.join(',')]); const q = [start]; let count = 0;
+    while (q.length) { const [x, y] = q.pop(); count++; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, k = `${nx},${ny}`; if (!seen.has(k) && ok(nx, ny)) { seen.add(k); q.push([nx, ny]); } } }
+    let total = 0; for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) if (ok(tx, ty)) total++;
+    return count === total;
+  }
+  /* ---------- rendu monde (sous les entités) ---------- */
+  function renderFloor(ctx, room) {
+    const c = room.challenge; if (!c) return;
+    if (c.id === 'collapse') {
+      ctx.save();
+      for (const k of c.holes) { const [tx, ty] = k.split(',').map(Number); const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE; ctx.fillStyle = '#04050a'; ctx.fillRect(x, y, TILE, TILE); ctx.fillStyle = 'rgba(110,231,255,.08)'; ctx.fillRect(x, y, TILE, 3); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x, y + TILE - 6, TILE, 6); }
+      for (const [k, until] of c.warn) { const [tx, ty] = k.split(',').map(Number); const kk = 1 - clamp((until - room.time) / 1.3, 0, 1); const j = Math.sin(Time.now * 40) * 2 * kk; const x = ROOM_X + tx * TILE + j, y = ROOM_Y + ty * TILE; ctx.fillStyle = `rgba(255,179,71,${0.15 + 0.35 * kk})`; ctx.fillRect(x, y, TILE, TILE); ctx.strokeStyle = `rgba(20,20,30,${0.5 + 0.5 * kk})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 8, y + 6); ctx.lineTo(x + 22, y + 24); ctx.lineTo(x + 14, y + 40); ctx.moveTo(x + 30, y + 4); ctx.lineTo(x + 26, y + 26); ctx.lineTo(x + 40, y + 42); ctx.stroke(); }
+      ctx.restore();
+    } else if (c.id === 'capture' && !c.done) {
+      const z = c.zones[c.zi]; ctx.save(); const g = ctx.createRadialGradient(z.x, z.y, c.r * 0.3, z.x, z.y, c.r); g.addColorStop(0, 'rgba(127,255,154,.05)'); g.addColorStop(1, 'rgba(127,255,154,.22)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(z.x, z.y, c.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#7fff9a'; ctx.lineWidth = 3; ctx.shadowColor = '#7fff9a'; ctx.shadowBlur = 14; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -Time.now * 40; ctx.beginPath(); ctx.arc(z.x, z.y, c.r, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]); ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(z.x, z.y, c.r + 10, -Math.PI / 2, -Math.PI / 2 + TAU * c.gauge); ctx.stroke(); ctx.restore();
+      c.zones.forEach((zz, i) => { if (i > c.zi) { ctx.save(); ctx.globalAlpha = 0.25; ctx.strokeStyle = '#7fff9a'; ctx.setLineDash([4, 8]); ctx.beginPath(); ctx.arc(zz.x, zz.y, c.r * 0.6, 0, TAU); ctx.stroke(); ctx.restore(); } });
+    } else if (c.id === 'switches') {
+      ctx.save();
+      for (const s of c.sw) { ctx.fillStyle = s.on ? '#2a6a3a' : '#3a4260'; ctx.fillRect(s.x - 20, s.y - 20, 40, 40); ctx.strokeStyle = s.on ? '#7fff9a' : '#c9a3ff'; ctx.lineWidth = 2; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 12; ctx.strokeRect(s.x - 20, s.y - 20, 40, 40); ctx.shadowBlur = 0; ctx.fillStyle = s.on ? '#7fff9a' : '#e8ecf7'; ctx.font = 'bold 18px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s.label, s.x, s.y + 1); }
+      if (c.showT > 0 && !c.done) { ctx.globalAlpha = clamp(c.showT, 0, 1); ctx.fillStyle = '#c9a3ff'; ctx.font = 'bold 26px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.shadowColor = '#c9a3ff'; ctx.shadowBlur = 16; ctx.fillText('ORDRE : ' + c.order.map(i => c.sw[i].label).join('  →  '), W / 2, ROOM_Y + 40); }
+      ctx.restore();
+    }
+  }
+  /* ---------- rendu monde (au-dessus des entités) : lumières coupées ---------- */
+  function renderOverlay(ctx, room) {
+    const c = room.challenge; if (!c || c.id !== 'lights' || c.done) return; const pl = G.player;
+    ctx.save(); const V = Engine.view;
+    const g = ctx.createRadialGradient(pl.x, pl.y, c.radius * 0.35, pl.x, pl.y, c.radius); g.addColorStop(0, 'rgba(2,3,8,0)'); g.addColorStop(0.7, 'rgba(2,3,8,.75)'); g.addColorStop(1, 'rgba(2,3,8,.94)');
+    ctx.fillStyle = g; ctx.fillRect(-V.ox - W, -V.oy - H, 3 * W + V.w, 3 * H + V.h);
+    /* yeux des ennemis */
+    for (const e of G.enemies) { if (e.dead) continue; ctx.fillStyle = e.tele ? '#ffd166' : '#ff5e7a'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(e.x - 4, e.y - 4, 2.2, 0, TAU); ctx.arc(e.x + 4, e.y - 4, 2.2, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+  /* ---------- HUD ---------- */
+  function renderHud(ctx, room) {
+    const c = room.challenge; if (!c) return;
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = 340, x = W / 2 - w / 2, y = 52; ctx.fillStyle = 'rgba(8,10,18,.75)'; UI.roundRect(ctx, x, y, w, 30, 8); ctx.fill(); ctx.strokeStyle = c.def.color; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = c.def.color; ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif'; ctx.fillText(`${c.def.name.toUpperCase()}${c.done ? ' — ' + (room.challengeOk ? 'réussi' : 'terminé') : ' · ' + c.hud}`, W / 2, y + 15);
+    ctx.restore();
+  }
+  function dangerAt(x, y, room) {
+    const c = room.challenge; if (!c) return 0;
+    if (c.id === 'collapse') { const k = `${Math.floor((x - ROOM_X) / TILE)},${Math.floor((y - ROOM_Y) / TILE)}`; if (c.holes.has(k)) return 1; if (c.warn.has(k)) return 0.9; }
+    return 0;
+  }
+  /* objectif pour le bot */
+  function goal(room) {
+    const c = room.challenge; if (!c || c.done) return null;
+    if (c.id === 'capture') return c.zones[c.zi];
+    if (c.id === 'switches' && Room.alive() === 0) { const i = c.order[c.step]; return c.sw[i]; }
+    return null;
+  }
+  const xpMul = room => { const c = room.challenge; if (!c || c.done) return 1; if (c.id === 'lights') return 1.25; return 1; };
+  const killBonus = (room, e) => { const c = room.challenge; if (!c || c.done || c.id !== 'capture') return 1; const z = c.zones[c.zi]; return dist(e.x, e.y, z.x, z.y) < c.r ? 1.5 : 1; };
+  return { pick, create, update, renderFloor, renderOverlay, renderHud, dangerAt, goal, xpMul, killBonus, enrage, DEFS: CHALLENGE_DEFS };
+})();
+
+</script>
+<script>
 /* ==== 40_room.js ==== */
 /* =========================================================================
    SALLE ZÉRO — 40_room.js
@@ -4085,7 +4267,8 @@ const Room = {
       hits: 0, kills: 0, combo: 0, comboUntil: 0, bestCombo: 0, comboTarget: 8, died: false,
       doorOpen: false, chest: null, boss: null,
       beams: [], blasts: [], slashes: [], hazards: [], turrets: [], decoys: [],
-      modular: (def.modular || []).map(m => Object.assign({ t: 0 }, m)),   // phase 2 : éléments de décor animés avec collision (murs coulissants, plateformes, zone sûre mobile)
+      modular: (def.modular || []).map(m => Object.assign({ t: 0 }, m)),
+      challenge: null, challengeOk: false,   // phase 2 : éléments de décor animés avec collision (murs coulissants, plateformes, zone sûre mobile)
       floorSeed: (def.index * 7919) ^ 0x5bd1, label: `${STR.room} ${def.index}/9 — ${ROOM_TYPES[def.type] ? ROOM_TYPES[def.type].label : def.type}`,
     };
     for (const t of (def.traps || [])) { const td = Content.trap(t.trap); if (!td) { console.warn('piège inconnu', t.trap); continue; } r.traps.push(new Trap(td, t)); }
@@ -4097,13 +4280,17 @@ const Room = {
     G.run.roomIndex = index; applyDifficulty();
     G.enemies = []; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
     G.room = Room.create(def);
+    /* défi de salle (salles 2, 3, 6, 7) */
+    const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
+    if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.snap(pl.x, pl.y);
     for (const h of pl.hooks.onRoomStart) { if (h.effect === 'shield_on_room') { pl.shield = Math.max(pl.shield, h.amount * (h.stacks || 1)); pl.shieldUntil = Time.now + 999; } else if (h.effect === 'heal_on_room') pl.heal(pl.stats.maxHp * h.fraction * (h.stacks || 1)); }
     G.run.roomIndex = index; G.run.stats.roomsEntered++;
     Modular.init(G.room);
     if (def.type === 'CHEST' || def.type === 'CHEST_FINAL') { G.room.chest = { x: W / 2, y: H / 2, r: 22, opened: false }; G.room.doorOpen = false; }
-    if (def.type === 'TRAP') { G.room.doorOpen = true; }
+    if (def.type === 'TRAP') { G.room.doorOpen = !(G.room.challenge && G.room.challenge.id === 'collapse'); }
     UI.banner(G.room.label, '#6ee7ff'); AudioEngine.uiConfirm({});
+    if (G.room.challenge) setTimeout(() => { if (G.room && G.room.challenge) { UI.banner('DÉFI : ' + G.room.challenge.def.name, G.room.challenge.def.color, G.room.challenge.def.desc); AudioEngine.trapWarn({ intensity: 0.8 }); } }, 900);
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Music.play('boss'); else Music.play('biome');
     return true;
   },
@@ -4111,7 +4298,9 @@ const Room = {
   spawnEnemy(def, x, y, opts = {}) {
     if (!def) return null;
     if (G.enemies.filter(e => !e.dead).length > 60) return null;
-    const e = new Enemy(def, x, y, opts); resolveRoomCollision(e); G.enemies.push(e); return e;
+    const e = new Enemy(def, x, y, opts); resolveRoomCollision(e); G.enemies.push(e);
+    if (G.room.challenge && G.room.challenge.enraged) Challenge.enrage(e);
+    return e;
   },
   spawnAt(spawn) {
     const bdef = Content.boss(spawn.enemy); if (bdef) { Room.spawnBoss(bdef, spawn.x >= 0 ? tileX(spawn.x) : null, spawn.y >= 0 ? tileY(spawn.y) : null); return; }
@@ -4153,15 +4342,18 @@ const Room = {
       for (const f of r.fragmentsDef) { if (!f.spawned && r.stateT >= (f.at || 0)) { f.spawned = true; Pickups.spawn(tileX(f.x), tileY(f.y), 'fragment', f.xp || 12); r.fragmentsSpawned++; } }
       /* condition de fin */
       const allWaves = r.waves.every(w => w.done);
+      const ch = r.challenge; const holdsDoor = ch && !ch.done && (ch.id === 'capture' || ch.id === 'collapse');
       if (r.type === 'CHEST' || r.type === 'CHEST_FINAL') { /* fin par interaction */ }
-      else if (r.type === 'TRAP') { /* porte ouverte dès le début */ }
+      else if (r.type === 'TRAP') { /* porte ouverte dès le début (sauf effondrement) */ }
       else if (r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') { if (r.bossDead && Room.alive() === 0) Room.clear(); }
-      else if (allWaves && Room.alive() === 0 && r.wavesStarted) Room.clear();
+      else if (!holdsDoor && allWaves && Room.alive() === 0 && r.wavesStarted) Room.clear();
     }
     /* coffre */
     if (r.chest && !r.chest.opened) { const near = dist(pl.x, pl.y, r.chest.x, r.chest.y) < r.chest.r + pl.r + 16; r.chest.near = near; if (near && (Input.wasPressed('interact') || (pl.bot && r.stateT > 1))) Run.openChest(); }
     /* porte */
     if (r.doorOpen && !pl.dead) { const dx = ROOM_X + ROOM_W, dy = ROOM_Y + ROOM_H / 2; if (pl.x > dx - pl.r - 26 && Math.abs(pl.y - dy) < TILE * 0.9) Run.nextRoom(); }
+    /* défi */
+    if (r.challenge) Challenge.update(r, dt);
     /* pièges */
     for (const t of r.traps) t.update(dt, r.time);
     /* salles modulaires (phase 2) : Modular.update(r, dt) déplacera les obstacles et recalculera px/py */
@@ -4187,12 +4379,13 @@ const Room = {
   /* score de la salle courante */
   score() { const r = G.room; return Progression.roomScore({ hits: r.hits, time: r.time, refTime: r.refTime, bestCombo: r.bestCombo, comboTarget: r.comboTarget, died: r.died, fragments: r.fragments, fragmentsTotal: r.fragmentsDef.length }); },
   /* danger pour le bot */
-  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, r.time)); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); return d; },
+  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, r.time)); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
 
   render(ctx) {
     const r = G.room; if (!r) return;
     Sprites.drawFloor(ctx, r);
     /* obstacles */
+    if (r.challenge) Challenge.renderFloor(ctx, r);
     for (const o of r.obstacles) if (!o.dyn) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */
@@ -4913,6 +5106,7 @@ const Debug = (() => {
       <label>Rareté forcée <select id="d-rarity"><option value="">aucune</option>${RARITY_ORDER.map(r => `<option value="${r}">${RARITY[r].label}</option>`).join('')}</select></label>
       <div class="drow"><label class="chk"><input type="checkbox" id="d-invuln"> Invulnérable</label><label class="chk"><input type="checkbox" id="d-hit"> Hitboxes</label><label class="chk"><input type="checkbox" id="d-scores"> Scores</label></div>
       <div class="drow"><label>Biome <select id="d-biome">${Content.biomes().map(b => `<option value="${b.id}">${b.name}</option>`).join('')}</select></label></div>
+      <div class="drow"><label>Défi <select id="d-ch"><option value="">aléatoire</option><option value="none">aucun</option>${Object.keys(Challenge.DEFS).map(k => `<option value="${k}">${Challenge.DEFS[k].name}</option>`).join('')}</select></label></div>
       <div class="drow"><label>Salle <select id="d-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => `<option value="${i}">${i}</option>`).join('')}</select></label><button class="btn small" id="d-goto">Aller</button><button class="btn small" id="d-kill">Tuer tout</button><button class="btn small" id="d-lvl">+ niveau</button><button class="btn small" id="d-heal">Soigner</button></div>
       <div class="drow"><label>Ennemi <select id="d-enemy">${Content.enemies().map(e => `<option value="${e.id}">${e.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawn">Spawn</button><label class="chk"><input type="checkbox" id="d-elite"> élite</label></div>
       <div class="drow"><label>Piège <select id="d-trap">${Content.traps().map(t => `<option value="${t.id}">${t.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawntrap">Poser</button><button class="btn small" id="d-cleartraps">Retirer pièges</button></div>
@@ -4927,6 +5121,7 @@ const Debug = (() => {
     bind('#d-xp', e => { G.debug.xpMul = +e.value; $('#d-xp-v').textContent = e.value + '×'; });
     bind('#d-coin', e => { G.debug.coinMul = +e.value; $('#d-coin-v').textContent = e.value + '×'; });
     bind('#d-rarity', e => { G.debug.forceRarity = e.value || null; });
+    bind('#d-ch', e => { G.debug.forceChallenge = e.value || null; });
     bind('#d-invuln', e => { G.debug.invuln = e.checked; }); bind('#d-hit', e => { G.debug.hitboxes = e.checked; }); bind('#d-scores', e => { G.debug.showScores = e.checked; });
     bind('#d-ts', e => { Time.scale = +e.value; $('#d-ts-v').textContent = e.value + '×'; });
     $('#d-close').onclick = hide;
@@ -4995,6 +5190,7 @@ const Debug = (() => {
     const frag = Pickups.list.find(p => p.kind === 'fragment');
     if (rm.chest && !rm.chest.opened) goal = { x: rm.chest.x, y: rm.chest.y };
     else if (rm.type === 'TRAP' && frag && rm.time < 40) goal = frag;
+    else if (Challenge.goal(rm) && !(enemy && dist(pl.x, pl.y, enemy.x, enemy.y) < 150)) goal = Challenge.goal(rm);
     else if (rm.doorOpen && (!enemy || rm.state === 'clear' || rm.type === 'TRAP')) goal = { x: ROOM_X + ROOM_W + 10, y: ROOM_Y + ROOM_H / 2 };
     else if (enemy) goal = enemy;
     else { const pk = Pickups.list[0]; goal = pk ? { x: pk.x, y: pk.y } : { x: W / 2, y: H / 2 }; }
@@ -5070,10 +5266,12 @@ function render(ctx) {
     Pickups.render(ctx);
     const ents = G.enemies.slice().sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
     G.player.render(ctx);
-    Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx); Floaters.render(ctx);
+    Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx);
+    if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);
+    Floaters.render(ctx);
     Debug.renderOverlay(ctx);
     ctx.restore();
-    if (G.attract) { UI.renderAttractVeil(ctx); } else UI.renderHud(ctx);
+    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); }
   } else UI.renderBackdrop(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);
 }

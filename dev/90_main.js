@@ -18,10 +18,12 @@ function render(ctx) {
     Pickups.render(ctx);
     const ents = G.enemies.slice().sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
     G.player.render(ctx);
-    Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx); Floaters.render(ctx);
+    Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx);
+    if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);
+    Floaters.render(ctx);
     Debug.renderOverlay(ctx);
     ctx.restore();
-    if (G.attract) { UI.renderAttractVeil(ctx); } else UI.renderHud(ctx);
+    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); }
   } else UI.renderBackdrop(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);
 }

@@ -16,6 +16,7 @@ const Debug = (() => {
       <label>Rareté forcée <select id="d-rarity"><option value="">aucune</option>${RARITY_ORDER.map(r => `<option value="${r}">${RARITY[r].label}</option>`).join('')}</select></label>
       <div class="drow"><label class="chk"><input type="checkbox" id="d-invuln"> Invulnérable</label><label class="chk"><input type="checkbox" id="d-hit"> Hitboxes</label><label class="chk"><input type="checkbox" id="d-scores"> Scores</label></div>
       <div class="drow"><label>Biome <select id="d-biome">${Content.biomes().map(b => `<option value="${b.id}">${b.name}</option>`).join('')}</select></label></div>
+      <div class="drow"><label>Défi <select id="d-ch"><option value="">aléatoire</option><option value="none">aucun</option>${Object.keys(Challenge.DEFS).map(k => `<option value="${k}">${Challenge.DEFS[k].name}</option>`).join('')}</select></label></div>
       <div class="drow"><label>Salle <select id="d-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => `<option value="${i}">${i}</option>`).join('')}</select></label><button class="btn small" id="d-goto">Aller</button><button class="btn small" id="d-kill">Tuer tout</button><button class="btn small" id="d-lvl">+ niveau</button><button class="btn small" id="d-heal">Soigner</button></div>
       <div class="drow"><label>Ennemi <select id="d-enemy">${Content.enemies().map(e => `<option value="${e.id}">${e.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawn">Spawn</button><label class="chk"><input type="checkbox" id="d-elite"> élite</label></div>
       <div class="drow"><label>Piège <select id="d-trap">${Content.traps().map(t => `<option value="${t.id}">${t.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawntrap">Poser</button><button class="btn small" id="d-cleartraps">Retirer pièges</button></div>
@@ -30,6 +31,7 @@ const Debug = (() => {
     bind('#d-xp', e => { G.debug.xpMul = +e.value; $('#d-xp-v').textContent = e.value + '×'; });
     bind('#d-coin', e => { G.debug.coinMul = +e.value; $('#d-coin-v').textContent = e.value + '×'; });
     bind('#d-rarity', e => { G.debug.forceRarity = e.value || null; });
+    bind('#d-ch', e => { G.debug.forceChallenge = e.value || null; });
     bind('#d-invuln', e => { G.debug.invuln = e.checked; }); bind('#d-hit', e => { G.debug.hitboxes = e.checked; }); bind('#d-scores', e => { G.debug.showScores = e.checked; });
     bind('#d-ts', e => { Time.scale = +e.value; $('#d-ts-v').textContent = e.value + '×'; });
     $('#d-close').onclick = hide;
@@ -98,6 +100,7 @@ const Debug = (() => {
     const frag = Pickups.list.find(p => p.kind === 'fragment');
     if (rm.chest && !rm.chest.opened) goal = { x: rm.chest.x, y: rm.chest.y };
     else if (rm.type === 'TRAP' && frag && rm.time < 40) goal = frag;
+    else if (Challenge.goal(rm) && !(enemy && dist(pl.x, pl.y, enemy.x, enemy.y) < 150)) goal = Challenge.goal(rm);
     else if (rm.doorOpen && (!enemy || rm.state === 'clear' || rm.type === 'TRAP')) goal = { x: ROOM_X + ROOM_W + 10, y: ROOM_Y + ROOM_H / 2 };
     else if (enemy) goal = enemy;
     else { const pk = Pickups.list[0]; goal = pk ? { x: pk.x, y: pk.y } : { x: W / 2, y: H / 2 }; }

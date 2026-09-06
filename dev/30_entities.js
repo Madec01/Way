@@ -238,7 +238,7 @@ const Combat = {
       }
     }
     d = Math.max(1, Math.round(d));
-    e.hp -= d; e.flash = 0.12;
+    e.hp -= d; if (!info.dot) e.flash = 0.12;   // les brûlures/poisons ne font pas clignoter
     if (!info.dot) {
       const kb = (info.knockback || 1) * pl.stats.knockback * (e.isBoss ? 0.1 : 1) * 160 / Math.max(1, e.mass || 1);
       const a = info.vx != null ? Math.atan2(info.vy, info.vx) : angleTo(pl.x, pl.y, e.x, e.y);
@@ -290,7 +290,7 @@ const Combat = {
     G.room.combo++; G.room.comboUntil = Time.now + 2.5; G.room.bestCombo = Math.max(G.room.bestCombo, G.room.combo);
     /* drops */
     const xpMul = pl.stats.xpGain * G.debug.xpMul, coinMul = pl.stats.coinGain * G.debug.coinMul;
-    let xp = Math.round(e.xp * xpMul); let n = clamp(Math.ceil(xp / 5), 1, 6);
+    let xp = Math.round(e.xp * xpMul * Challenge.xpMul(G.room) * Challenge.killBonus(G.room, e)); let n = clamp(Math.ceil(xp / 5), 1, 6);
     for (let i = 0; i < n; i++) Pickups.spawn(e.x, e.y, 'xp', Math.max(1, Math.round(xp / n)));
     const coins = Math.round(e.coins * coinMul); for (let i = 0; i < coins; i++) Pickups.spawn(e.x, e.y, 'coin', 1);
     if (!e.isBoss && RNG.chance(0.03)) Pickups.spawn(e.x, e.y, 'heart', 15);

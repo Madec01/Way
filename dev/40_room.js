@@ -29,7 +29,8 @@ const Room = {
       hits: 0, kills: 0, combo: 0, comboUntil: 0, bestCombo: 0, comboTarget: 8, died: false,
       doorOpen: false, chest: null, boss: null,
       beams: [], blasts: [], slashes: [], hazards: [], turrets: [], decoys: [],
-      modular: (def.modular || []).map(m => Object.assign({ t: 0 }, m)),   // phase 2 : éléments de décor animés avec collision (murs coulissants, plateformes, zone sûre mobile)
+      modular: (def.modular || []).map(m => Object.assign({ t: 0 }, m)),
+      challenge: null, challengeOk: false,   // phase 2 : éléments de décor animés avec collision (murs coulissants, plateformes, zone sûre mobile)
       floorSeed: (def.index * 7919) ^ 0x5bd1, label: `${STR.room} ${def.index}/9 — ${ROOM_TYPES[def.type] ? ROOM_TYPES[def.type].label : def.type}`,
     };
     for (const t of (def.traps || [])) { const td = Content.trap(t.trap); if (!td) { console.warn('piège inconnu', t.trap); continue; } r.traps.push(new Trap(td, t)); }
@@ -41,13 +42,17 @@ const Room = {
     G.run.roomIndex = index; applyDifficulty();
     G.enemies = []; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
     G.room = Room.create(def);
+    /* défi de salle (salles 2, 3, 6, 7) */
+    const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
+    if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.snap(pl.x, pl.y);
     for (const h of pl.hooks.onRoomStart) { if (h.effect === 'shield_on_room') { pl.shield = Math.max(pl.shield, h.amount * (h.stacks || 1)); pl.shieldUntil = Time.now + 999; } else if (h.effect === 'heal_on_room') pl.heal(pl.stats.maxHp * h.fraction * (h.stacks || 1)); }
     G.run.roomIndex = index; G.run.stats.roomsEntered++;
     Modular.init(G.room);
     if (def.type === 'CHEST' || def.type === 'CHEST_FINAL') { G.room.chest = { x: W / 2, y: H / 2, r: 22, opened: false }; G.room.doorOpen = false; }
-    if (def.type === 'TRAP') { G.room.doorOpen = true; }
+    if (def.type === 'TRAP') { G.room.doorOpen = !(G.room.challenge && G.room.challenge.id === 'collapse'); }
     UI.banner(G.room.label, '#6ee7ff'); AudioEngine.uiConfirm({});
+    if (G.room.challenge) setTimeout(() => { if (G.room && G.room.challenge) { UI.banner('DÉFI : ' + G.room.challenge.def.name, G.room.challenge.def.color, G.room.challenge.def.desc); AudioEngine.trapWarn({ intensity: 0.8 }); } }, 900);
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Music.play('boss'); else Music.play('biome');
     return true;
   },
@@ -55,7 +60,9 @@ const Room = {
   spawnEnemy(def, x, y, opts = {}) {
     if (!def) return null;
     if (G.enemies.filter(e => !e.dead).length > 60) return null;
-    const e = new Enemy(def, x, y, opts); resolveRoomCollision(e); G.enemies.push(e); return e;
+    const e = new Enemy(def, x, y, opts); resolveRoomCollision(e); G.enemies.push(e);
+    if (G.room.challenge && G.room.challenge.enraged) Challenge.enrage(e);
+    return e;
   },
   spawnAt(spawn) {
     const bdef = Content.boss(spawn.enemy); if (bdef) { Room.spawnBoss(bdef, spawn.x >= 0 ? tileX(spawn.x) : null, spawn.y >= 0 ? tileY(spawn.y) : null); return; }
@@ -97,15 +104,18 @@ const Room = {
       for (const f of r.fragmentsDef) { if (!f.spawned && r.stateT >= (f.at || 0)) { f.spawned = true; Pickups.spawn(tileX(f.x), tileY(f.y), 'fragment', f.xp || 12); r.fragmentsSpawned++; } }
       /* condition de fin */
       const allWaves = r.waves.every(w => w.done);
+      const ch = r.challenge; const holdsDoor = ch && !ch.done && (ch.id === 'capture' || ch.id === 'collapse');
       if (r.type === 'CHEST' || r.type === 'CHEST_FINAL') { /* fin par interaction */ }
-      else if (r.type === 'TRAP') { /* porte ouverte dès le début */ }
+      else if (r.type === 'TRAP') { /* porte ouverte dès le début (sauf effondrement) */ }
       else if (r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') { if (r.bossDead && Room.alive() === 0) Room.clear(); }
-      else if (allWaves && Room.alive() === 0 && r.wavesStarted) Room.clear();
+      else if (!holdsDoor && allWaves && Room.alive() === 0 && r.wavesStarted) Room.clear();
     }
     /* coffre */
     if (r.chest && !r.chest.opened) { const near = dist(pl.x, pl.y, r.chest.x, r.chest.y) < r.chest.r + pl.r + 16; r.chest.near = near; if (near && (Input.wasPressed('interact') || (pl.bot && r.stateT > 1))) Run.openChest(); }
     /* porte */
     if (r.doorOpen && !pl.dead) { const dx = ROOM_X + ROOM_W, dy = ROOM_Y + ROOM_H / 2; if (pl.x > dx - pl.r - 26 && Math.abs(pl.y - dy) < TILE * 0.9) Run.nextRoom(); }
+    /* défi */
+    if (r.challenge) Challenge.update(r, dt);
     /* pièges */
     for (const t of r.traps) t.update(dt, r.time);
     /* salles modulaires (phase 2) : Modular.update(r, dt) déplacera les obstacles et recalculera px/py */
@@ -131,12 +141,13 @@ const Room = {
   /* score de la salle courante */
   score() { const r = G.room; return Progression.roomScore({ hits: r.hits, time: r.time, refTime: r.refTime, bestCombo: r.bestCombo, comboTarget: r.comboTarget, died: r.died, fragments: r.fragments, fragmentsTotal: r.fragmentsDef.length }); },
   /* danger pour le bot */
-  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, r.time)); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); return d; },
+  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, r.time)); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
 
   render(ctx) {
     const r = G.room; if (!r) return;
     Sprites.drawFloor(ctx, r);
     /* obstacles */
+    if (r.challenge) Challenge.renderFloor(ctx, r);
     for (const o of r.obstacles) if (!o.dyn) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */
