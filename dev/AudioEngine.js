@@ -164,8 +164,9 @@
     /* Routage : effets → compresseur (colle les SFX entre eux) → master ; musique → master directement. La musique ne passe
        JAMAIS par le compresseur des effets : avec une piste MP3 forte, chaque transitoire d'effet (ramassage, survol) faisait
        chuter le gain en 3 ms sur la musique aussi = clic audible à chaque son, perçu comme un crépitement. */
-    limiter = ctx.createDynamicsCompressor();   // sécurité en sortie : seuls les vrais pics sont rabotés, relâchement lent (pas de distorsion des basses)
-    limiter.threshold.value = -1.5; limiter.knee.value = 1; limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.25;
+    /* Sécurité en sortie : écrêtage doux (tanh), pas un second compresseur — dans Chrome, deux DynamicsCompressor en série font
+       chuter tout le son d'environ 12 dB (mesuré en rendu offline). Linéaire pour les niveaux normaux, arrondit seulement les vrais pics. */
+    limiter = ctx.createWaveShaper(); limiter.curve = tanhCurve(1.15); limiter.oversample = 'none';
     master.connect(limiter); limiter.connect(ctx.destination);
 
     sfxBus = ctx.createGain(); sfxBus.gain.value = vol.sfx; sfxBus.connect(comp); comp.connect(master);
@@ -350,6 +351,22 @@
     return g;
   }
   /** Nappe : 2 dents-de-scie détunées → lowpass résonant balayé → tanh. */
+  /** Mallet : porteur sinus + modulateur inharmonique (bois ≈ ×3,01, métal ≈ ×4,5) à index bref → lowpass → attaque nette, décroissance naturelle. */
+  function layerMallet(v, t, o, f, gain, dur, metal) {
+    const fq = f * o.p; const m = v.fm(fq, fq * (metal ? 4.53 : 3.01), fq * 0.9, t, t + dur + 0.1);
+    sweep(m.idx.gain, t, fq * 0.9, fq * 0.05, dur * 0.35);
+    const lp = v.filter('lowpass', Math.min(9000, fq * 5), 0.8); const g = v.gain(0);
+    v.chain(m.car, lp, g, v.out); perc(g.gain, t, gain * o.g, 0.003, dur);
+    layerClick(v, t, o, Math.min(6000, fq * 3), 4, gain * 0.25, 0.008);
+  }
+  /** Corde pincée : FM ratio 2 à index qui s'éteint vite (comme tempoNote), lowpass qui se referme, petite saturation. */
+  function layerPluck(v, t, o, f, gain, dur) {
+    const fq = f * o.p; const m = v.fm(fq, fq * 2.0, 320, t, t + dur + 0.1);
+    sweep(m.idx.gain, t, 320, 10, dur * 0.4);
+    const lp = v.filter('lowpass', 2800, 1.5); const sh = v.shaper(1.3); const g = v.gain(0);
+    sweep(lp.frequency, t, 2800, 900, dur);
+    v.chain(m.car, lp, sh, g, v.out); perc(g.gain, t, gain * o.g, 0.004, dur);
+  }
   function layerPad(v, t, o, freq, gain, a, hold, r, cutoff0, cutoff1, q, drive) {
     const mix = v.gain(0.3);
     for (const det of [-7, 7]) {
@@ -367,7 +384,7 @@
   /* ------------------------------------------------------------------ */
   /** Trim de niveau par son (équilibrage mesuré en rendu offline : pic visé ≈ 0,15-0,35, boss ≈ 0,6). */
   const LEVELS = {
-    shootBlade: 2.6, shootBow: 1.8, shootBoomerang: 2.4, shootChain: 3.2, shootPistol: 0.75, hitEnemy: 1.3, dash: 2.6, skillTurret: 2,
+    shootBlade: 1.7, shootBow: 1.3, shootBoomerang: 1.7, shootChain: 2.2, shootPistol: 0.5, shootHammer: 0.7, hitEnemy: 0.85, dash: 2, skillTurret: 2,
     pickupXp: 2.4, pickupCoin: 2.4, pickupFragment: 2, trapWarn: 2.4, trapSpike: 3.5, uiHover: 3, uiClick: 2.4, uiConfirm: 1.3,
     chestOpen: 1.5, bossRoar: 0.8, playerDie: 0.8, tempoNote: 0.8,   // mix : effets répétitifs (tirs, coups, ramassages, interface) ≈ −6 dB sous la musique, impacts rares au niveau
   };
@@ -644,8 +661,8 @@
   // skillShield : bouclier → nappe détunée lowpass balayé 400→1800→600 Hz saturée + shimmer blanc highpass 6 kHz + grande réverbe.
   def('skillShield', 5, (o, t) => {
     const v = voice(o, 0.9, 5); if (!v) return;
-    layerPad(v, t, o, 220, 0.5, 0.06, 0.3, 0.4, 400, 1800, 3, 1.5);
-    layerPad(v, t, o, 330, 0.3, 0.1, 0.3, 0.4, 300, 1200, 3, 1.5);
+    layerMallet(v, t, o, 220, 0.4, 0.8, true); layerMallet(v, t + 0.05, o, 330, 0.28, 0.9, true);
+    layerPad(v, t, o, 110, 0.22, 0.08, 0.3, 0.4, 250, 700, 1, 1);
     const n = v.noise('white', t, t + 0.7);
     const hp = v.filter('highpass', 6000, 1); const g = v.gain(0);
     v.chain(n, hp, g, v.out); adsr(g.gain, t, 0.18 * o.g, 0.08, 0.1, 0.6, 0.35, 0.3);
@@ -772,16 +789,15 @@
   // levelUp : montée → bruit rose lowpass 300→6 kHz sur 0.7 s puis accord de 3 nappes détunées (fondamentale, quinte, octave) saturées + réverbe.
   def('levelUp', 7, (o, t) => {
     const v = voice(o, 2.4, 7); if (!v) return;
-    const n = v.noise('pink', t, t + 1.0);
-    const lp = v.filter('lowpass', 300, 4); const g = v.gain(0);
-    sweep(lp.frequency, t, 300, 6000, 0.7);
-    v.chain(n, lp, g, v.out); adsr(g.gain, t, 0.45 * o.g, 0.1, 0.1, 0.9, 0.7, 0.25);
-    const t2 = t + 0.55;
-    layerPad(v, t2, o, 220, 0.4, 0.12, 0.9, 0.7, 500, 1500, 2, 1.5);
-    layerPad(v, t2 + 0.03, o, 330, 0.3, 0.15, 0.9, 0.7, 500, 1500, 2, 1.5);
-    layerPad(v, t2 + 0.06, o, 440, 0.25, 0.2, 0.9, 0.7, 700, 2000, 2, 1.5);
-    layerClick(v, t2, o, 2500, 4, 0.3, 0.02);
-    v.reverb(0.5);
+    /* souffle qui monte, puis un coup grave qui « pose » l'accord */
+    const n = v.noise('pink', t, t + 1.0); const lp = v.filter('lowpass', 300, 2); const g = v.gain(0);
+    sweep(lp.frequency, t, 300, 5000, 0.6); v.chain(n, lp, g, v.out); adsr(g.gain, t, 0.28 * o.g, 0.1, 0.1, 0.9, 0.5, 0.25);
+    layerThump(v, t + 0.5, o, 80, 42, 0.7, 0.35, 3);
+    /* arpège de mallets : fondamentale, quinte, octave, tierce à l'octave — un temps musical bref entre chaque */
+    const base = 220; const steps = [[0, 1], [0.11, 1.5], [0.22, 2], [0.33, key.mode === 'major' ? 2.52 : 2.38]];
+    for (const [dt, r] of steps) layerMallet(v, t + 0.5 + dt, o, base * r, 0.42, 0.9, false);
+    layerMallet(v, t + 0.5 + 0.44, o, base * 4, 0.22, 1.2, true);   // petite cloche métallique tout en haut
+    v.reverb(0.55);
   });
 
   /* ==================================================================
@@ -802,7 +818,7 @@
     sweep(bp.frequency, t + 0.05, 400 * o.p, 950 * o.p, 0.35);
     v.noiseMod('white', 30, 0.5, am.gain, t + 0.05, t + 0.45);
     v.chain(s, bp, am, sh, g, v.out); adsr(g.gain, t + 0.05, 0.25 * o.g, 0.02, 0.05, 0.9, 0.3, 0.08);
-    layerPad(v, t + 0.3, o, 165, 0.3, 0.15, 0.4, 0.5, 300, 900, 2, 1.5);
+    layerPluck(v, t + 0.3, o, 165, 0.35, 0.6); layerMallet(v, t + 0.42, o, 330, 0.25, 0.8, false);
     v.reverb(0.35);
   });
 
@@ -933,15 +949,12 @@
   // roomClear : résolution brève → 2 nappes (quinte puis octave) lowpass saturées + gonflement rose + réverbe.
   def('roomClear', 6, (o, t) => {
     const v = voice(o, 1.6, 6); if (!v) return;
-    layerPad(v, t, o, 196, 0.35, 0.05, 0.5, 0.5, 600, 1300, 2, 1.5);
-    layerPad(v, t + 0.18, o, 294, 0.3, 0.05, 0.4, 0.5, 700, 1600, 2, 1.5);
-    layerPad(v, t + 0.36, o, 392, 0.3, 0.08, 0.5, 0.6, 800, 2200, 2, 1.5);
-    const n = v.noise('pink', t, t + 1.2);
-    const lp = v.filter('lowpass', 800, 1.5); const g = v.gain(0);
-    sweep(lp.frequency, t, 800, 4000, 0.6);
-    v.chain(n, lp, g, v.out); adsr(g.gain, t, 0.25 * o.g, 0.3, 0.1, 0.8, 0.6, 0.4);
-    layerClick(v, t, o, 2200, 4, 0.2, 0.02);
-    layerClick(v, t + 0.36, o, 3200, 4, 0.2, 0.02);
+    layerPluck(v, t, o, 196, 0.45, 0.7);
+    layerPluck(v, t + 0.17, o, 294, 0.4, 0.7);
+    layerMallet(v, t + 0.34, o, 392, 0.35, 1.1, false);
+    layerThump(v, t + 0.34, o, 70, 40, 0.45, 0.3, 3);
+    const n = v.noise('pink', t, t + 1.2); const lp = v.filter('lowpass', 800, 1.5); const g = v.gain(0);
+    sweep(lp.frequency, t, 800, 4000, 0.6); v.chain(n, lp, g, v.out); adsr(g.gain, t, 0.18 * o.g, 0.3, 0.1, 0.8, 0.5, 0.4);
     v.reverb(0.45);
   });
 
