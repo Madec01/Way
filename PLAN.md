@@ -134,3 +134,9 @@ Moi : architecture, moteur, intégration, arbitrage, cohérence.
 **Reste pour la suite** : biome 3 (LES ARCHIVES) : nouveaux ennemis, pièges, passifs de niveau, armes ; manette (`Input` abstrait) ; mobile ; playtest humain pour l'équilibrage des salles 6-9.
 
 **Comment tester** : `python3 -m http.server 8765`, ouvrir `http://localhost:8765/`, Mode Test, F1. Sources dans `dev/`, assemblage `node dev/build.js`.
+
+## 8. Chantiers à venir (demandes de Martin, à ne pas perdre)
+
+| Priorité | Chantier | Détail |
+|---|---|---|
+| Haute | **Refonte complète de l'interface mobile** | Sur téléphone, tout est illisible et peu pratique : textes et cartes trop petits, écrans (menu, hub, préparation, choix de greffes, pause, fin) pensés pour un écran large. À refaire en mode « tactile d'abord » : polices et boutons plus gros, une colonne à la fois dans le hub, cartes de choix en plein écran, HUD de combat simplifié, joystick et boutons plus grands. Gros chantier : à planifier comme un jalon à part entière, avec captures sur un vrai format téléphone (390×844 et 360×780). |
