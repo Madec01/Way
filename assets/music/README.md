@@ -6,11 +6,13 @@ Le jeu lit les fichiers de ce dossier par leur nom, sans modification de code :
 |---|---|
 | `menu.mp3` | Menu principal (sans ce fichier : la musique du hub) |
 | `hub.mp3` | Salle Zéro (hub) |
-| `biome1.mp3` | Biome 1 (ADMISSION) : salles 1 à 4 (et 6 à 8 s'il n'y a pas de `biome1b.mp3`, en reprenant là où elle s'était arrêtée) |
-| `biome1b.mp3` | Biome 1, salles 6 à 8 (optionnel : deuxième piste pour ne pas réentendre la première ; même tempo conseillé) |
+| `biome1-1.mp3` | Biome 1 (ADMISSION) : salles 1 à 4 (et 6 à 8 s'il n'y a pas de `biome1-2.mp3`, en reprenant là où elle s'était arrêtée) |
+| `biome1-2.mp3` | Biome 1, salles 6 à 8 (même tempo que `biome1-1.mp3` : la salle du tempo s'y cale) |
 | `boss1.mp3` | Biome 1 : salle 5 (mini-boss) et salle 9 (revanche) |
-| `biome2.mp3`, `boss2.mp3` | Biome 2, même logique |
-| `biome3.mp3`, `boss3.mp3` | Biome 3, même logique |
+| `biome2-1.mp3`, `biome2-2.mp3`, `boss2.mp3` | Biome 2, même logique |
+| `biome3-1.mp3`, `biome3-2.mp3`, `boss3.mp3` | Biome 3, même logique |
+
+L'ancien nom `biome1.mp3` reste accepté en repli si `biome1-1.mp3` manque.
 
 Formats acceptés : `.mp3`, `.ogg` ou `.m4a` (cherchés dans cet ordre). Noms **en minuscules** (GitHub Pages distingue `Biome1.mp3` de `biome1.mp3`). Les pistes bouclent toutes seules.
 

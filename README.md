@@ -11,7 +11,7 @@ Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.htm
 - **Zoom caméra** : la caméra suit le joueur ; zoom réglable dans le menu pause (1× à 2×, 1,5× par défaut en tactile). Plein écran depuis le menu principal, la pause ou le bouton tactile.
 
 ## Musiques
-Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (salles 1-4), `biome1b.mp3` (salles 6-8, optionnel : sans lui `biome1.mp3` reprend là où elle s'était arrêtée) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `biome2b.mp3` / `boss2.mp3` pour le biome suivant, etc. Noms en minuscules (GitHub Pages distingue la casse). Fichier absent : musique générative. Détails dans `assets/music/README.md`.
+Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1-1.mp3` (salles 1-4), `biome1-2.mp3` (salles 6-8 ; sans lui `biome1-1.mp3` reprend là où elle s'était arrêtée) et `boss1.mp3` (salles 5 et 9), puis `biome2-1.mp3` / `biome2-2.mp3` / `boss2.mp3` pour le biome suivant, etc. Noms en minuscules (GitHub Pages distingue la casse). Fichier absent : musique générative. Détails dans `assets/music/README.md`.
 
 Après un changement de piste, lancer `python3 dev/analyze_music.py` (dépend de `librosa`) : il écrit `assets/music/tempo.json` (BPM, premier temps, tonalité) que le jeu lit pour caler la **salle du tempo** sur la musique. Sans ce fichier, la salle bat sur un métronome interne à 120 BPM.
 
