@@ -56,13 +56,13 @@ CONTENT.bosses.push({
     ] },
   ],
   weakness: { desc: 'Après chaque charge, ses racines restent plantées 1,2 s : dégâts ×1,8 pendant qu\'elle se rétracte.', rule: 'after_charge', damageMul: 1.8, window: 1.2 },
-  revenge: { hpMul: 1.5, window: 0.8, name: 'Étalon 12 / rév. B', phaseText: 'DONNÉES CHARGÉES', mimic: true,
+  revenge: { hpMul: 1.35, window: 0.8, name: 'Étalon 12 / rév. B', phaseText: 'DONNÉES CHARGÉES', mimic: true,
     extraPhases: [ { hpBelow: 0.3, patterns: [
       { kind: 'ring', telegraph: 0.5, duration: 1.2, cooldown: 2.5, count: 14, rate: 3, rotate: 0.35, projSpeed: 300, projDamage: 15, projSize: 8, color: '#b7ff7a' },
       { kind: 'spiral', telegraph: 0.6, duration: 3, cooldown: 5, arms: 4, rate: 16, angularSpeed: 3, projSpeed: 250, projDamage: 13, projSize: 7, color: '#e2c6ff' },
       { kind: 'charge', telegraph: 0.45, duration: 0.7, cooldown: 3, speed: 860, damage: 30, stunTime: 0.8 },
     ] } ],
-    desc: 'Salle 9 : rév. B, PV ×1,5, rétraction plus courte (0,8 s), phase 3 sous 30 %.' },
+    desc: 'Salle 9 : rév. B, PV ×1,35, rétraction plus courte (0,8 s), phase 3 sous 30 %.' },
 });
 
 /* Salles du biome 2 : mêmes types que le biome 1, plus d'ennemis, des élites, pièges plus serrés. */

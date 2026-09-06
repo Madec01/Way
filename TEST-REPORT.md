@@ -257,3 +257,226 @@ Biome 2 LA SERRE (mode test, 4 armes) : pistolet, arc, foudre et boomerang attei
 Bug corrigé pendant la passe : `Projectiles.update` lisait un élément indéfini quand une onde de choc supprimait des projectiles pendant la boucle.
 
 Musique : reprise à la position mémorisée vérifiée (biome1 reprend en salle 6 à 5,5 s après 4 s en salle 1 ; boss1 reprend en salle 9 à 4,4 s après 3 s en salle 5).
+
+---
+
+## 10. Rééquilibrage complet (passe 2)
+
+Date : 2026-09-06. Agent Équilibrage. Retour joueur (humain, bon niveau) : jeu **beaucoup trop facile**, greffes rares/épiques/colossales trop fréquentes, foudre trop fréquente. Périmètre : données uniquement (`dev/05_balance.js`, `dev/content.js`, `dev/content2.js`), `index.html` régénéré par `dev/build.js`, aucun fichier moteur touché, rien commité.
+
+### 10.1 Méthode
+
+- **Harness** : `window.__autoplay(config)` piloté par Playwright/Chromium headless (`timeScale 40`, `render:false`, `maxRooms 9`, `maxSeconds 700`, difficulté 1, personnage `char_neuf`, `pickStrategy:'random'`, compétence tirée au sort par le harness selon la seed). Serveur `http://localhost:8766/`.
+- **Plan de mesure**, identique avant et après chaque itération (mêmes seeds 100-105) : 3 configurations × 6 armes (pistolet, arc, lame, foudre, boomerang, marteau) × 6 seeds = **108 runs par itération, 540 runs au total**, 0 erreur JS.
+  - Normal · biome 1 (profil vierge, chance 4 = Neuf + trait),
+  - Test · biome 1 (tous les passifs méta au max, chance 14),
+  - Test · biome 2.
+- **Instrumentation côté page (sans toucher au moteur)** : enveloppe sur `Progression.drawUpgrades` (rareté de chaque carte proposée, distinction level-up / coffre via `opts.label`, chance passée), enveloppe sur `Combat.hitEnemy` (instant de la mort du boss). Le niveau par salle vient de `roomTimes[].level`, la cause de mort de `deathCause`.
+- **Ordre des leviers** : rampPerRoom, PV/dégâts des ennemis et des boss, dégâts des pièges, poids de rareté et effet de la chance, courbe d'XP, greffes épiques/colossales, compétences de base, passifs méta. Quatre itérations, chacune re-mesurée intégralement. Scripts : `scratchpad/p2sweep.js` (balayage instrumenté), `p2analyze.js` (agrégats par arme et compétence), `p2table.js` (tableaux), `patch_p2_it{1,2,3,4}.js` (modifications appliquées, rejouables, échec si une chaîne cible est absente), originaux dans `scratchpad/p2_orig/`.
+- **Rappel des limites du bot** (elles biaisent les chiffres, pas le sens des réglages) : il tire 100 % du temps à portée, se place **au contact** avec les armes de mêlée (lame, marteau, orbe), n'esquive un pattern que s'il est déjà télégraphié, ne charge pas l'arc volontairement, n'utilise pas les re-rolls et prend ses greffes au hasard. Un humain de bon niveau fera nettement mieux que le bot à données égales : les cibles ci-dessous en tiennent compte (elles sont volontairement basses pour le bot).
+
+### 10.2 Résultats par cible (état final = it4)
+
+| # | Cible | Avant | Après (it4) | Statut |
+|---|---|---|---|---|
+| 1 | Normal B1 : salle 4 atteinte 35-55 % | 47 % | **36 %** | atteint |
+| 1 | Normal B1 : mini-boss tué ≤ 15 % | 22 % | **0 %** | atteint (13 arrivées en salle 5, 0 kill : voir §10.6) |
+| 1 | Normal B1 : salle 9 gagnée ≤ 5 % | 3 % | **0 %** | atteint |
+| 2 | Test B1 : mini-boss tué 40-60 % | 100 % | **64 %** | proche (au-dessus de 4 points, n=36 → ±16 points d'intervalle) |
+| 2 | Test B1 : salle 9 gagnée 15-30 % | 69 % | **17 %** | atteint |
+| 2 | Test B1 : niveau en salle 9 ≤ 8 | 8,4 | **6,8** | atteint |
+| 3 | Test B2 : mini-boss tué 20-40 % | 50 % | **31 %** | atteint |
+| 3 | Test B2 : salle 9 gagnée ≤ 15 % | 11 % | **0 %** | atteint (mais 0 : voir §10.6) |
+| 4 | Level-up à chance 4 (normal) : épique ≤ 8 %, colossal ≤ 1,2 % | 6,9 % / 3,4 % | **6,9 % / 0,5 %** (n=189) | atteint |
+| 4 | Level-up à chance 14 (test) : épique ≤ 14 %, colossal ≤ 3 % | 12,2 % / 3,6 % | **9,4 % / 2,9 %** (n=684) | atteint |
+| 4 | Coffres = principale source d'épiques/colossales | — | théorie : coffre « Épique garanti » à chance 14 = 1 épique garantie + 22,8 % / 3,5 % sur les autres cartes | atteint par construction (le bot, souvent touché, tombe sur « Rare garanti ») |
+| 5 | Foudre : Tempête every ≥ 2 s, Foudre ambiante ≥ 3,5 s | 0,7 s / 2,5 s | **2,2 s / 3,5 s**, aléa ×[0,8 ; 2,0] (moyenne ×1,4 → 3,1 s et 4,9 s réels) | atteint |
+| 6 | Chaque arme ≥ 15 % de salle 4 en normal | lame 0 %, marteau 17 % | pistolet 83 %, foudre 67 %, boomerang 50 %, arc 17 %, **lame 0 %, marteau 0 %** | **non atteint pour la mêlée** (limite du bot, §10.6) |
+| 6 | Aucune arme trivialisante | pistolet 100 % de victoires en test | meilleure arme en test : pistolet / lame 33 % de victoires | atteint |
+
+### 10.3 Tableaux avant / après (mêmes seeds, 36 runs par colonne)
+
+**Normal · biome 1** (base : n=36, it1 : n=36, it2 : n=36, it3 : n=36, it4 : n=36)
+
+| Métrique | base | it1 | it2 | it3 | it4 |
+|---|---|---|---|---|---|
+| Salle 4 atteinte | 47 % | 28 % | 36 % | 36 % | 36 % |
+| Mini-boss tué | 22 % | 3 % | 3 % | 0 % | 0 % |
+| Salle 9 atteinte | 11 % | 0 % | 0 % | 0 % | 0 % |
+| Salle 9 gagnée | 3 % | 0 % | 0 % | 0 % | 0 % |
+| Niveau moyen en salle 9 (runs y arrivant) | 6,5 | - | - | - | - |
+| Niveau moyen après la salle 4 | 3,9 | 3,6 | 3,5 | 3,5 | 3,5 |
+| Durée du combat de mini-boss (s, si tué) | 37,9 | 49,4 | 41,9 | - | - |
+| Dégâts subis / run | 170,7 | 145,9 | 141,2 | 142,0 | 142,8 |
+
+| Arme | base S4 / boss / win | it1 S4 / boss / win | it2 S4 / boss / win | it3 S4 / boss / win | it4 S4 / boss / win |
+|---|---|---|---|---|---|
+| blade | 0 % / 0 % / 0 % | 0 % / 0 % / 0 % | 0 % / 0 % / 0 % | 0 % / 0 % / 0 % | 0 % / 0 % / 0 % |
+| boomerang | 67 % / 50 % / 0 % | 33 % / 0 % / 0 % | 50 % / 0 % / 0 % | 50 % / 0 % / 0 % | 50 % / 0 % / 0 % |
+| bow | 33 % / 0 % / 0 % | 33 % / 0 % / 0 % | 17 % / 0 % / 0 % | 17 % / 0 % / 0 % | 17 % / 0 % / 0 % |
+| chain | 100 % / 33 % / 17 % | 33 % / 0 % / 0 % | 67 % / 0 % / 0 % | 67 % / 0 % / 0 % | 67 % / 0 % / 0 % |
+| hammer | 17 % / 0 % / 0 % | 0 % / 0 % / 0 % | 0 % / 0 % / 0 % | 0 % / 0 % / 0 % | 0 % / 0 % / 0 % |
+| pistol | 67 % / 50 % / 0 % | 67 % / 17 % / 0 % | 83 % / 17 % / 0 % | 83 % / 0 % / 0 % | 83 % / 0 % / 0 % |
+
+| Raretés proposées | base | it1 | it2 | it3 | it4 |
+|---|---|---|---|---|---|
+| Level-up (commun / rare / épique / colossal) | n=321 : 64,5 % / 25,2 % / 6,9 % / 3,4 % | n=198 : 72,7 % / 18,7 % / 7,1 % / 1,5 % | n=192 : 72,9 % / 20,3 % / 6,3 % / 0,5 % | n=195 : 70,8 % / 22,1 % / 6,7 % / 0,5 % | n=189 : 72,0 % / 20,6 % / 6,9 % / 0,5 % |
+| Coffres (commun / rare / épique / colossal) | n=63 : 41,3 % / 47,6 % / 9,5 % / 1,6 % | n=30 : 56,7 % / 36,7 % / 6,7 % / 0,0 % | n=39 : 51,3 % / 46,2 % / 2,6 % / 0,0 % | n=39 : 51,3 % / 46,2 % / 2,6 % / 0,0 % | n=39 : 46,2 % / 46,2 % / 7,7 % / 0,0 % |
+
+**Test · biome 1** (base : n=36, it1 : n=36, it2 : n=36, it3 : n=36, it4 : n=36)
+
+| Métrique | base | it1 | it2 | it3 | it4 |
+|---|---|---|---|---|---|
+| Salle 4 atteinte | 100 % | 94 % | 100 % | 100 % | 100 % |
+| Mini-boss tué | 100 % | 81 % | 94 % | 78 % | 64 % |
+| Salle 9 atteinte | 89 % | 53 % | 72 % | 58 % | 53 % |
+| Salle 9 gagnée | 69 % | 8 % | 8 % | 8 % | 17 % |
+| Niveau moyen en salle 9 (runs y arrivant) | 8,4 | 6,7 | 6,8 | 6,7 | 6,8 |
+| Niveau moyen après la salle 4 | 5,0 | 4,1 | 4,1 | 4,1 | 4,1 |
+| Durée du combat de mini-boss (s, si tué) | 32,9 | 53,4 | 45,8 | 54,6 | 58,9 |
+| Dégâts subis / run | 329,9 | 407,5 | 432,9 | 404,8 | 406,6 |
+
+| Arme | base S4 / boss / win | it1 S4 / boss / win | it2 S4 / boss / win | it3 S4 / boss / win | it4 S4 / boss / win |
+|---|---|---|---|---|---|
+| blade | 100 % / 100 % / 17 % | 83 % / 50 % / 0 % | 100 % / 83 % / 0 % | 100 % / 67 % / 0 % | 100 % / 67 % / 33 % |
+| boomerang | 100 % / 100 % / 83 % | 100 % / 100 % / 33 % | 100 % / 100 % / 17 % | 100 % / 100 % / 0 % | 100 % / 83 % / 17 % |
+| bow | 100 % / 100 % / 83 % | 100 % / 83 % / 0 % | 100 % / 100 % / 0 % | 100 % / 67 % / 0 % | 100 % / 50 % / 0 % |
+| chain | 100 % / 100 % / 67 % | 100 % / 100 % / 0 % | 100 % / 100 % / 0 % | 100 % / 83 % / 33 % | 100 % / 67 % / 0 % |
+| hammer | 100 % / 100 % / 67 % | 83 % / 50 % / 0 % | 100 % / 83 % / 17 % | 100 % / 50 % / 0 % | 100 % / 33 % / 17 % |
+| pistol | 100 % / 100 % / 100 % | 100 % / 100 % / 17 % | 100 % / 100 % / 17 % | 100 % / 100 % / 17 % | 100 % / 83 % / 33 % |
+
+| Raretés proposées | base | it1 | it2 | it3 | it4 |
+|---|---|---|---|---|---|
+| Level-up (commun / rare / épique / colossal) | n=1044 : 60,2 % / 23,9 % / 12,2 % / 3,6 % | n=716 : 67,2 % / 24,4 % / 6,6 % / 1,8 % | n=780 : 63,5 % / 25,1 % / 8,7 % / 2,7 % | n=716 : 64,9 % / 25,0 % / 8,5 % / 1,5 % | n=684 : 62,7 % / 25,0 % / 9,4 % / 2,9 % |
+| Coffres (commun / rare / épique / colossal) | n=272 : 44,5 % / 29,8 % / 18,8 % / 7,0 % | n=212 : 55,2 % / 25,5 % / 13,7 % / 5,7 % | n=248 : 55,6 % / 26,6 % / 12,5 % / 5,2 % | n=228 : 58,3 % / 28,5 % / 10,1 % / 3,1 % | n=220 : 59,5 % / 29,5 % / 7,7 % / 3,2 % |
+
+**Test · biome 2** (base : n=36, it1 : n=36, it2 : n=36, it3 : n=36, it4 : n=36)
+
+| Métrique | base | it1 | it2 | it3 | it4 |
+|---|---|---|---|---|---|
+| Salle 4 atteinte | 69 % | 50 % | 58 % | 56 % | 53 % |
+| Mini-boss tué | 50 % | 22 % | 33 % | 33 % | 31 % |
+| Salle 9 atteinte | 31 % | 8 % | 11 % | 8 % | 11 % |
+| Salle 9 gagnée | 11 % | 0 % | 3 % | 0 % | 0 % |
+| Niveau moyen en salle 9 (runs y arrivant) | 9,5 | 8,0 | 8,3 | 8,0 | 8,0 |
+| Niveau moyen après la salle 4 | 6,0 | 5,2 | 5,1 | 5,1 | 5,1 |
+| Durée du combat de mini-boss (s, si tué) | 52,1 | 60,9 | 51,2 | 54,2 | 53,6 |
+| Dégâts subis / run | 547,1 | 467,7 | 470,3 | 465,3 | 461,3 |
+
+| Arme | base S4 / boss / win | it1 S4 / boss / win | it2 S4 / boss / win | it3 S4 / boss / win | it4 S4 / boss / win |
+|---|---|---|---|---|---|
+| blade | 17 % / 17 % / 0 % | 0 % / 0 % / 0 % | 33 % / 33 % / 0 % | 17 % / 17 % / 0 % | 0 % / 0 % / 0 % |
+| boomerang | 83 % / 50 % / 17 % | 67 % / 33 % / 0 % | 67 % / 33 % / 17 % | 67 % / 33 % / 0 % | 67 % / 33 % / 0 % |
+| bow | 67 % / 33 % / 0 % | 33 % / 0 % / 0 % | 33 % / 0 % / 0 % | 17 % / 0 % / 0 % | 17 % / 0 % / 0 % |
+| chain | 100 % / 67 % / 33 % | 100 % / 50 % / 0 % | 100 % / 67 % / 0 % | 100 % / 67 % / 0 % | 100 % / 67 % / 0 % |
+| hammer | 50 % / 33 % / 0 % | 0 % / 0 % / 0 % | 17 % / 17 % / 0 % | 33 % / 33 % / 0 % | 33 % / 33 % / 0 % |
+| pistol | 100 % / 100 % / 17 % | 100 % / 50 % / 0 % | 100 % / 50 % / 0 % | 100 % / 50 % / 0 % | 100 % / 50 % / 0 % |
+
+| Raretés proposées | base | it1 | it2 | it3 | it4 |
+|---|---|---|---|---|---|
+| Level-up (commun / rare / épique / colossal) | n=916 : 58,2 % / 24,9 % / 14,2 % / 2,7 % | n=660 : 69,4 % / 19,5 % / 8,8 % / 2,3 % | n=684 : 68,6 % / 20,5 % / 8,5 % / 2,5 % | n=676 : 67,6 % / 21,2 % / 9,0 % / 2,2 % | n=672 : 66,7 % / 22,0 % / 9,2 % / 2,1 % |
+| Coffres (commun / rare / épique / colossal) | n=144 : 60,4 % / 27,8 % / 11,8 % / 0,0 % | n=84 : 72,6 % / 17,9 % / 9,5 % / 0,0 % | n=100 : 67,0 % / 21,0 % / 12,0 % / 0,0 % | n=92 : 66,3 % / 20,7 % / 13,0 % / 0,0 % | n=92 : 64,1 % / 19,6 % / 16,3 % / 0,0 % |
+### 10.4 Table complète des changements (origine → état final)
+
+Fichier `dev/05_balance.js` :
+
+| It. | Objet | Champ | Avant → Après | Raison mesurée |
+|---|---|---|---|---|
+| 1 | BALANCE.xp | a / b / c | 30 / 20 / 3,4 → **34 / 25 / 4,4** | niveau 8,4 en salle 9 (test) ; +25 % d'XP cumulée pour le niveau 9 (1654 → 2070) |
+| 1, 2 | BALANCE.rarity | common / rare / epic / colossal | 68 / 24 / 7 / 1 → **72 / 22,6 / 5 / 0,4** | colossal 3,4 % des cartes de level-up en normal, épique 12 % en test |
+| 1 | BALANCE.luck | shift / epicShare | 0,6 / 0,7 → **0,45 / 0,72** | chance méta (14) : épique 12,2 %, colossal 3,6 % → théorie 9,5 % / 2,3 % |
+| 1, 2 | BALANCE | rampPerRoom | 0,06 → 0,11 (it. 1) → **0,09** | salle 9 gagnée 69 % en test ; 0,11 faisait tomber la salle 4 à 28 % en normal (cible 35-55) |
+| 1 | BALANCE.lightningJitter | min / max | 0,75 / 1,6 → **0,8 / 2,0** | la foudre frappe trop souvent : intervalle moyen ×1,18 → ×1,4 |
+
+Fichier `dev/content.js` :
+
+| It. | Objet | Champ | Avant → Après | Raison mesurée |
+|---|---|---|---|---|
+| 1-3 | weapon_blade | damage / fireRate / knockback / desc | 22 / 3,0 / 1,0 → **28 / 3,4 / 1,5** (66 → 95 DPS) | 0 % de salle 4 en normal pour le bot (mort au contact en S2-S3) |
+| 1-3 | weapon_hammer | damage / knockback / special.stunTime / desc | 60 / 2,5 / 0,4 → **75 / 3,0 / 0,6** (48 → 60 DPS) | 17 % → 0 % de salle 4 en normal après le durcissement |
+| 1 | skill_shield | effect.amount / desc | 55 → **45** | 100 % de victoires en test avec le bouclier (n=6) |
+| 1 | skill_shockwave | effect.damage / desc | 60 → **50** | 83 % de victoires en test (n=6), compétence à la fois défensive et offensive |
+| 1 | upg_foudre_ambiante | hooks.passive.every / damage / desc | 2,5 / 18 → **3,5 / 26** | cible ≥ 3,5 s ; dégâts par coup relevés pour garder l'intérêt |
+| 1 | upg_tempete | hooks.passive.every / damage / desc | 0,7 / 26 → **2,2 / 48** | cible ≥ 2 s ; colossale toujours spectaculaire (48 + 3 sauts) mais 3× moins fréquente |
+| 1 | upg_ceinture | hooks.passive.damage / desc | 18 → **15** | épique offensive au-dessus des rares équivalentes |
+| 1 | upg_orbes_gardiennes | maxStacks | 2 → **1** | 4 orbes bloquant les projectiles rendaient les tirs du boss inoffensifs |
+| 1 | meta_puissance | tiers[].mods damage | 1,05 ×3, 1,06 ×2 → **1,04 ×3, 1,05 ×2** (×1,30 → ×1,23) | test trop facile (mini-boss 100 %) |
+| 1 | meta_etude | tiers[].mods xpGain | 1,1 ×3, 1,15 → **1,08 ×3, 1,1** (×1,53 → ×1,39) | niveau 8,4 en salle 9 en test |
+| 1, 2 | enemy_rodeur | hp / damage | 38 / 8 → **43 / 9** | +20 % en it. 1 trop dur en normal (salle 4 : 28 %) → +12 % / +12 % |
+| 1, 2 | enemy_sentinelle | hp / damage / behavior.projDamage / desc | 32 / 8 / 10 → **36 / 9 / 11** | idem |
+| 1, 2, 4 | enemy_bloc | hp / damage / behavior.chargeDamageMul | 175 / 12 / 1,5 → **200 / 12 / 1,3** | contact en charge (18 → 21 avec la rampe) : 4-5 morts sur 6 du marteau en salle 3 ; dégâts revenus à 12, charge ×1,3 (15,6) |
+| 1, 2 | enemy_meche | hp / damage / behavior.explosionDamage | 22 / 6 / 22 → **25 / 6 / 24** | idem |
+| 1, 2 | enemy_incubateur | hp / damage | 80 / 8 → **90 / 9** | idem |
+| 1, 2 | enemy_nuee | hp / damage | 10 / 5 → **11 / 5** | idem |
+| 1, 2 | enemy_eclipse | hp / damage | 40 / 12 → **45 / 13** | idem |
+| 1-4 | boss_etalon_07 | hp / damage (contact) | 1900 / 14 → **3300 / 22** | mini-boss tué 100 % → 81 % → 94 % en test : le bot survit à 47 s de combat, il faut allonger et rendre létal |
+| 1-4 | boss phase 1 | ring projDamage / cooldown | 15 / 2,6 → **22 / 2,3** | idem ; en it. 4 la létalité est reportée du slam vers les projectiles (esquivables) |
+| 1-3 | boss phase 1 | charge damage / cooldown | 25 / 3,8 → **34 / 3,4** | idem |
+| 1-4 | boss phase 1 | slam damage / cooldown | 31 / 4,5 → 40 / 4,0 (it. 3) → **32 / 4,0** | le slam (×1,72 en salle 9 = 69 dégâts) causait 10 des 18 morts de la salle 9 en it. 3 |
+| 1-4 | boss phase 2 | fan projDamage / cooldown | 15 / 1,9 → **22 / 1,7** | idem |
+| 1-4 | boss phase 2 | spiral projDamage / cooldown | 13 / 4,5 → **19 / 4,0** | idem |
+| 2 | boss phase 2 | summon cooldown | 7,0 → **6,0** | idem |
+| 1-3 | boss phase 2 | charge damage / cooldown | 27 / 3,8 → **36 / 3,4** | idem |
+| 2-4 | boss_etalon_07.revenge | hpMul / plateHits / desc | 1,6 / 6 → **0,9 / 5** (PV en salle 9 : 1900×1,6×1,48 = 4499 → 3300×0,9×1,72 = 5108) | revanche : 84-88 % de morts parmi les arrivants en salle 9 ; la rampe ×1,72 et les mécaniques (plaque, mimétisme, charges sans étourdissement) suffisent |
+| 1-4 | revenge phase 3 | laser_sweep damage / ring projDamage / charge damage / charge stunTime | 20 / 14 / 26 / 0,6 → **17 / 13 / 24 / 1,0** | idem (ces valeurs sont multipliées par 1,72 en salle 9). Note : `revenge.wallStun` n'est lu nulle part dans le moteur, il est laissé tel quel |
+| 1, 2 | trap_balayage | damage | 14 → **15** | +20 % en it. 1 trop dur en normal → +10 % |
+| 1, 2 | trap_tourniquet | damage | 12 → **13** | idem |
+| 1, 2 | trap_grille | damage | 10 → **11** | idem |
+| 1, 2 | trap_bouche | damage | 12 → **13** | idem |
+| 1, 2 | trap_dalles | damage | 10 → **11** | idem |
+| 1, 2 | trap_nappe | damage / desc | 8 → **9** | idem |
+| 1, 2 | trap_rail | damage | 18 → **20** | idem |
+| 1, 2 | trap_tourelle | damage | 9 → **10** | idem |
+
+Fichier `dev/content2.js` :
+
+| It. | Objet | Champ | Avant → Après | Raison mesurée |
+|---|---|---|---|---|
+| 2 | boss_serriste.revenge | hpMul / desc | 1,5 → **1,35** | 0 victoire en biome 2 après it. 1 (cible ≤ 15 %, mais pas 0) |
+
+Valeurs des ennemis, du boss et des pièges du biome 2 inchangées (multiplicateurs de biome 1,3 / 1,2 / 1,08 conservés) : après it. 1 le biome 2 était déjà dans la cible (mini-boss 22-33 %, salle 9 gagnée 0-3 %).
+
+### 10.5 Distribution des raretés
+
+Poids finaux `BALANCE.rarity = { common 72, rare 22,6, epic 5, colossal 0,4 }`, chance : `shift 0,45`, `epicShare 0,72` (chaque point de chance retire 0,45 au commun et le répartit 72 / 28 entre épique et colossal, plafond 20).
+
+Théorie (part de chaque carte tirée) :
+
+| Chance | Level-up (commun / rare / épique / colossal) | Coffre « Épique/Colossal garanti » (`shiftEpic`, hors carte garantie) |
+|---|---|---|
+| 0 | 72,0 % / 22,6 % / 5,0 % / 0,4 % | 52,9 % / 33,2 % / 13,2 % / 0,7 % |
+| 4 (Neuf, profil vierge) | 70,2 % / 22,6 % / 6,3 % / 0,9 % | 50,1 % / 32,2 % / 16,2 % / 1,5 % |
+| 14 (méta au max) | 65,7 % / 22,6 % / 9,5 % / 2,2 % | 43,7 % / 30,0 % / 22,8 % / 3,5 % |
+| 20 (plafond : méta + 3 Trèfles) | 63,0 % / 22,6 % / 11,5 % / 2,9 % | 40,2 % / 28,9 % / 26,4 % / 4,5 % |
+
+Mesuré (it4, cartes proposées au bot) : normal chance 4, level-up n=189 : 72,0 / 20,6 / 6,9 / 0,5 % ; test chance 14, level-up n=684 : 62,7 / 25,0 / 9,4 / 2,9 % ; test biome 2 n=672 : 66,7 / 22,0 / 9,2 / 2,1 %. Le colossal mesuré à chance 14 (2,9 %) est un peu au-dessus de la théorie (2,2 %) : quand la rareté tirée n'a plus de carte disponible le tirage redescend d'un cran, ce qui ne crée pas de colossales ; l'écart est du bruit d'échantillon (20 cartes sur 684) plus les Trèfles ramassés en cours de run (chance jusqu'à 20). Avant la passe : 12,2 % d'épiques et 3,6 % de colossales à chance 14, 3,4 % de colossales à chance 4.
+
+Coffres : le bot est touché dans presque toutes les salles, donc ses coffres tombent sur « Rare garanti » (score moyen 0,6-0,85) ; ses coffres mesurés ne reflètent pas ceux d'un bon joueur. Pour un joueur qui passe les salles 1-3 avec ≤ 1 coup chacune (score ≥ 0,85), le coffre de la salle 4 garantit une épique et propose les autres cartes avec `shiftEpic` (22,8 % d'épiques à chance 14), et un sans-faute (score ≥ 0,999) garantit une colossale : les coffres restent la principale source d'épiques/colossales, les level-ups en donnent environ une épique tous les 3-4 niveaux (soit 1-2 par run à ~7 niveaux) et une colossale tous les 30-45 niveaux.
+
+### 10.6 Déséquilibres restants et recommandations pour un playtest humain
+
+1. **Lame et marteau en mode normal (bot) : 0 % de salle 4** malgré +27 % de dégâts sur la lame (22 → 28, cadence 3,4) et +25 % sur le marteau (60 → 75, étourdissement 0,6 s). Le bot se place au contact (`enemy.r + pl.r + 14 px`), donc dans la portée du bond du Rôdeur et de la charge du Bloc ; les morts sont à 80 % des contacts Rôdeur/Bloc en salle 3. Un humain recule entre deux coups et n'a pas ce problème. À vérifier en playtest : si la lame (arme de départ, 95 DPS théorique, la plus haute du jeu) paraît trop forte pour un humain, ramener `damage` à 25 et `fireRate` à 3,2 avant de toucher au reste. Le marteau à 75 dégâts one-shot désormais Rôdeur/Sentinelle/Mèche/Nuée en salle 1 : à surveiller.
+2. **Mini-boss en test : 64 %** (cible 40-60). Le bot survit aux patterns par volume de PV (Vitalité +50, Résurrection à 60 %, 3 armures) plus que par esquive ; les leviers restants sans toucher au moteur seraient `hp` 3300 → 3600 ou `ring.count` 12 → 14, mais chaque durcissement du boss de base se répercute ×1,72 en salle 9 (même définition). Recommandation : laisser un humain juger le combat de la salle 5 (3300 × 1,36 = 4488 PV, ~60 s pour le bot, probablement 25-35 s pour un humain équipé) avant d'aller plus loin.
+3. **Revanche (salle 9)** : la victoire du bot est passée de 8 % à 17 % en abaissant le slam (40 → 32, soit 55 dégâts en salle 9 au lieu de 69) et les PV de base (×0,9). La revanche reste le mur principal en test : 13 morts en salle 9 sur 19 arrivées. Les morts viennent d'abord des projectiles (anneau 22 × 1,72 = 38 par balle) et du slam. Pour un humain qui esquive, c'est probablement le bon niveau ; si le playtest montre des morts « injustes », baisser `revenge.extraPhases.ring.projDamage` (13) et `fan.projDamage` (22) plutôt que les PV.
+4. **Biome 2 : 0 victoire sur 36 runs en test** (cible ≤ 15 % : atteinte mais peut-être trop). Racine (240 PV, charge 620) tue les armes de mêlée du bot en salle 3 (blade 0 %, marteau 33 %). Les valeurs du biome 2 n'ont pas été touchées (hors PV de la revanche 1,5 → 1,35) parce qu'il était déjà dans la cible après l'itération 1 ; le cran biome 1 → biome 2 reste net (mini-boss 64 % → 31 %). À rejouer en playtest après validation du biome 1.
+5. **Progression** : niveau 6,8 en salle 9 en test (8,4 avant), 3,5 après la salle 4 en normal (3,9 avant). Un humain gagne la même XP que le bot (l'XP vient des vagues, fixes) plus les bonus de traversée parfaite (15 XP × xpGain) : compter 7-8 niveaux en fin de palier. Si le playtest trouve les level-ups trop rares, revenir sur `BALANCE.xp.c` (4,4 → 4,0) avant de toucher aux raretés.
+6. **Compétences** : Bouclier 55 → 45 PV et Onde de choc 60 → 50 dégâts. En it4 test B1, le bouclier reste la compétence la plus performante (50 % de victoires, n=6) devant dash (17 %), aimant (8 %) et onde (0 %) ; n trop faible pour trancher, à vérifier en playtest (le bouclier absorbe 45 PV toutes les 12 s → 9,6 s avec Réactivité, soit ~4,7 PV/s de mitigation).
+7. **Foudre** : Tempête 2,2 s × aléa [0,8 ; 2,0] = 3,1 s en moyenne (48 dégâts + 3 sauts), Foudre ambiante 3,5 s → 4,9 s (3,5 s avec 2 exemplaires, 26 dégâts). Non mesurable avec le bot (tirage aléatoire) : à valider à l'oreille et à l'œil en playtest, l'aléa ×2,0 peut donner des silences de 7 s sur la Foudre ambiante.
+8. **Non modifié, à surveiller** : Cœur de verre (×2 dégâts, ×0,5 PV), Noyau (5 orbes 22 + aura 16/s), Mitraille (+3 projectiles guidés) restent volontairement spectaculaires ; à 0,4-0,9 % par carte de level-up et via les coffres sans faute ils sont rares. `revenge.wallStun` (content.js) n'est lu nulle part dans le moteur : la durée d'étourdissement des charges de phase 3 est `stunTime` du pattern (0,6 → 1,0 s).
+
+### 10.7 Vérifications
+
+`node dev/build.js` (index.html 398 Ko), évaluation de `content.js` + `content2.js` en Node (« ok »), `node --check dev/05_balance.js` après chaque itération ; 540 runs headless, 0 erreur JS, 0 timeout du harness. Fichier `dev/.balance_done` créé.
+
+### Résumé (10 lignes)
+
+1. 540 runs headless (3 configurations × 6 armes × 6 seeds × 5 états), mêmes seeds avant/après, 0 erreur JS.
+2. Montée de difficulté par salle 0,06 → 0,09 (salle 5 ×1,36, salle 9 ×1,72), ennemis biome 1 +12 % PV / +10 % dégâts, pièges +10 %.
+3. Mini-boss 1900 → 3300 PV, contact 14 → 22, projectiles +45 %, cadence des patterns +10-15 % ; revanche ×1,6 → ×0,9 de base, slam 40 → 32, phase 3 adoucie.
+4. Courbe d'XP +25 % (niveau 8,4 → 6,8 en salle 9 en test), Étude ×1,53 → ×1,39, Puissance ×1,30 → ×1,23.
+5. Raretés : épique 5 %, colossal 0,4 % de base ; chance 0,45/pt → à chance 14 : 9,4 % / 2,9 % mesurés (12,2 % / 3,6 % avant), à chance 4 : 6,9 % / 0,5 %.
+6. Foudre : Tempête 0,7 → 2,2 s (48 dégâts), Foudre ambiante 2,5 → 3,5 s (26), aléa [0,8 ; 2,0].
+7. Normal B1 : salle 4 atteinte 47 → 36 %, mini-boss 22 → 0 %, victoire 3 → 0 %. Test B1 : mini-boss 100 → 64 %, victoire 69 → 17 %. Test B2 : mini-boss 50 → 31 %, victoire 11 → 0 %.
+8. Toutes les cibles atteintes sauf : mini-boss test 64 % (cible 40-60, à 4 points) et lame/marteau à 0 % de salle 4 en normal (bot au contact ; buffs lame 22 → 28 dégâts, marteau 60 → 75).
+9. Descriptions mises à jour pour chaque chiffre modifié (armes, compétences, greffes, Sentinelle, Nappe de gaz, revanches).
+10. À valider en playtest humain : sensation de la lame (95 DPS), combat de la salle 5, revanche, biome 2 (0 victoire bot), fréquence de la foudre à l'oreille.
