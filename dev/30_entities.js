@@ -166,19 +166,42 @@ function nearestEnemy(x, y, maxD = Infinity, filter) {
 }
 
 /* ---------- Pickups ---------- */
+/* Reliques : effet pour la salle en cours seulement */
+const RELICS = [
+  { id: 'jambon', name: 'Jambon fumé', desc: '+40 PV et régénération +3/s pour la salle', apply: pl => { pl.heal(40); pl.addBuff('relic', 1e6, [{ stat: 'regen', add: 3 }], true); } },
+  { id: 'parapluie', name: 'Parapluie renforcé', desc: 'Bouclier de 60 et armure +3 pour la salle', apply: pl => { pl.shield = Math.max(pl.shield, 60); pl.shieldUntil = Time.now + 1e6; pl.addBuff('relic', 1e6, [{ stat: 'armor', add: 3 }], true); } },
+  { id: 'lunettes', name: 'Lunettes de visée', desc: 'Crit +30 % pour la salle', apply: pl => pl.addBuff('relic', 1e6, [{ stat: 'critChance', add: 0.3 }, { stat: 'critMult', add: 0.5 }], true) },
+  { id: 'bottes', name: 'Bottes de facteur', desc: 'Vitesse +30 % et cadence +15 % pour la salle', apply: pl => pl.addBuff('relic', 1e6, [{ stat: 'speed', mul: 1.3 }, { stat: 'fireRate', mul: 1.15 }], true) },
+  { id: 'sifflet', name: 'Sifflet de chef de gare', desc: 'Appelle un allié pour 25 s', apply: pl => Pickups.summonAlly(pl.x, pl.y) },
+];
+const NO_MAGNET = new Set(['fragment', 'weapon', 'ally', 'relic']);
 const Pickups = {
   list: [],
-  spawn(x, y, kind, value = 1) {
+  spawn(x, y, kind, value = 1, extra = {}) {
     const a = RNG.range(0, TAU), s = RNG.range(40, 120);
-    this.list.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, kind, value, t: 0, magnet: false, r: kind === 'fragment' ? 10 : 6 });
+    this.list.push(Object.assign({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, kind, value, t: 0, magnet: false, r: kind === 'fragment' ? 10 : (kind === 'weapon' || kind === 'relic' || kind === 'ally') ? 12 : 6 }, extra));
   },
+  /* tirage d'un objet à la mort d'un ennemi (élite : 35 % ; dernière vague : 6 % de bourse), 2 objets max par salle */
+  maybeDrop(e) {
+    const r = G.room; if (!r || r.drops >= 2 || e.isBoss) return;
+    const lastWave = r.waves.length && r.waves.every(w => w.done);
+    if (e.elite && RNG.chance(0.35)) { const k = RNG(); r.drops++; if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14)); else if (k < 0.8) this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else this.spawn(e.x, e.y, 'ally', 1); }
+    else if (lastWave && RNG.chance(0.06)) { r.drops++; this.spawn(e.x, e.y, 'purse', RNG.int(4, 9)); }
+  },
+  /* arme d'essai posée au sol, une fois par palier */
+  placeWeaponDrop(room) {
+    const pl = G.player; const pool = Content.weapons().filter(w => w.id !== pl.weapon.id && !(pl.trialWeapon && w.id === pl.trialWeapon.prev.id));
+    const notOwned = pool.filter(w => !Meta.weaponUnlocked(w.id)); const w = RNG.pick(notOwned.length ? notOwned : pool); if (!w) return;
+    for (let k = 0; k < 30; k++) { const tx = RNG.int(4, ROOM_COLS - 4), ty = RNG.int(2, ROOM_ROWS - 3); if (!pointBlocked(tileX(tx), tileY(ty), 16) && dist(tileX(tx), tileY(ty), pl.x, pl.y) > 200) { this.spawn(tileX(tx), tileY(ty), 'weapon', 1, { weapon: w.id, vx: 0, vy: 0 }); return; } }
+  },
+  summonAlly(x, y) { const pl = G.player; G.room.turrets.push({ x, y, until: Time.now + 25, cd: 0, rate: 2.2, damage: Math.max(3, pl.weapon.damage * pl.stats.damage * 0.4), range: 360, hp: 60, mobile: true }); Particles.spawn(x, y, { count: 14, color: '#9ff', glow: true }); UI.toast('Un Passeur détraqué vous suit 25 s.'); AudioEngine.skillTurret({}); },
   update(dt) {
     const pl = G.player; if (!pl) return;
     const always = pl.flags.xpMagnet || pl.magnetUntil > Time.now;
     for (let i = this.list.length - 1; i >= 0; i--) {
       const p = this.list[i]; p.t += dt;
       const d = dist(p.x, p.y, pl.x, pl.y);
-      if (p.magnet || d < pl.stats.pickupRadius || (always && p.kind !== 'fragment')) {
+      if (p.magnet || (d < pl.stats.pickupRadius && !NO_MAGNET.has(p.kind)) || (always && !NO_MAGNET.has(p.kind))) {
         p.magnet = true; const a = angleTo(p.x, p.y, pl.x, pl.y); const sp = 420 + p.t * 300; p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp;
       } else { p.vx -= p.vx * 5 * dt; p.vy -= p.vy * 5 * dt; }
       p.x += p.vx * dt; p.y += p.vy * dt;
@@ -192,6 +215,10 @@ const Pickups = {
       if (p.kind === 'xp') { ctx.fillStyle = '#7ef0ff'; ctx.shadowColor = '#7ef0ff'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(p.x, p.y + bob, 4 + Math.min(3, p.value / 6), 0, TAU); ctx.fill(); }
       else if (p.kind === 'coin') { ctx.fillStyle = '#ffd166'; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(p.x, p.y + bob, 5, 0, TAU); ctx.fill(); ctx.fillStyle = '#b8860b'; ctx.fillRect(p.x - 1, p.y + bob - 3, 2, 6); }
       else if (p.kind === 'fragment') { ctx.save(); ctx.translate(p.x, p.y + bob); ctx.rotate(Time.now * 2); ctx.fillStyle = '#c8ff5a'; ctx.shadowColor = '#c8ff5a'; ctx.shadowBlur = 16; ctx.fillRect(-7, -7, 14, 14); ctx.fillStyle = '#fff'; ctx.fillRect(-3, -3, 6, 6); ctx.restore(); }
+      else if (p.kind === 'purse') { ctx.fillStyle = '#8b5a2b'; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p.x, p.y + bob + 2, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#c98a4b'; ctx.fillRect(p.x - 4, p.y + bob - 8, 8, 4); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(p.x, p.y + bob + 2, 3, 0, TAU); ctx.fill(); }
+      else if (p.kind === 'weapon') { const w = Content.weapon(p.weapon); const col = w ? (WEAPON_COLORS[w.family] || '#fff') : '#fff'; ctx.save(); ctx.translate(p.x, p.y + bob); ctx.rotate(Math.PI / 4); ctx.fillStyle = 'rgba(8,10,18,.8)'; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = 16 + Math.sin(Time.now * 5) * 6; ctx.fillRect(-12, -12, 24, 24); ctx.strokeRect(-12, -12, 24, 24); ctx.rotate(-Math.PI / 4); ctx.fillStyle = col; ctx.font = 'bold 13px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((w ? w.family[0] : '?').toUpperCase(), 0, 1); ctx.restore(); ctx.fillStyle = '#e8ecf7'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(w ? w.name : '', p.x, p.y + bob - 20); }
+      else if (p.kind === 'ally') { ctx.fillStyle = '#3a4260'; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(p.x, p.y + bob - 6, 5, 0, TAU); ctx.fill(); ctx.fillRect(p.x - 5, p.y + bob - 1, 10, 10); ctx.fillStyle = '#9ff'; ctx.beginPath(); ctx.arc(p.x, p.y + bob - 6, 2, 0, TAU); ctx.fill(); ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#9ff'; ctx.fillText('allié', p.x, p.y + bob - 18); }
+      else if (p.kind === 'relic') { const rl = RELICS.find(r => r.id === p.relic); ctx.save(); ctx.translate(p.x, p.y + bob); ctx.rotate(Time.now * 1.5); ctx.fillStyle = '#c9a3ff'; ctx.shadowColor = '#c9a3ff'; ctx.shadowBlur = 16; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * TAU / 10, rr = i % 2 ? 11 : 5; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); ctx.restore(); ctx.fillStyle = '#e8ecf7'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(rl ? rl.name : 'Relique', p.x, p.y + bob - 18); }
       else if (p.kind === 'heart') { ctx.fillStyle = '#ff5e7a'; ctx.shadowColor = '#ff5e7a'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p.x - 3, p.y + bob - 2, 4, 0, TAU); ctx.arc(p.x + 3, p.y + bob - 2, 4, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(p.x - 7, p.y + bob - 1); ctx.lineTo(p.x + 7, p.y + bob - 1); ctx.lineTo(p.x, p.y + bob + 7); ctx.fill(); }
     }
     ctx.shadowBlur = 0;
@@ -294,6 +321,7 @@ const Combat = {
     for (let i = 0; i < n; i++) Pickups.spawn(e.x, e.y, 'xp', Math.max(1, Math.round(xp / n)));
     const coins = Math.round(e.coins * coinMul); for (let i = 0; i < coins; i++) Pickups.spawn(e.x, e.y, 'coin', 1);
     if (!e.isBoss && RNG.chance(0.03)) Pickups.spawn(e.x, e.y, 'heart', 15);
+    if (!info.silent || e.elite) Pickups.maybeDrop(e);
     for (const h of pl.hooks.onKill) {
       if (h.effect === 'explode') Combat.explosion(e.x, e.y, (h.radius || 80) * pl.stats.areaSize, Math.round(e.maxHp * (h.damageMul || 0.3)) + 5, '#ff8c42', true);
       else if (h.effect === 'heal_on_kill') pl.heal(h.amount * (h.stacks || 1));
@@ -351,6 +379,10 @@ const Combat = {
       Floaters.add(p.x, p.y - 16, '+' + xp + ' XP', '#c8ff5a', 16); AudioEngine.pickupFragment({});
     }
     else if (p.kind === 'heart') { pl.heal(p.value); AudioEngine.pickupXp({ intensity: 1 }); }
+    else if (p.kind === 'purse') { G.run.coinsPending += p.value; G.run.stats.coins += p.value; Floaters.add(p.x, p.y - 16, '+' + p.value + ' ◈', '#ffd166', 16); AudioEngine.chestOpen({ intensity: 0.5 }); }
+    else if (p.kind === 'weapon') { const w = Content.weapon(p.weapon); if (!w) return; if (!pl.trialWeapon) pl.trialWeapon = { prev: pl.weapon }; else Pickups.spawn(p.x, p.y, 'weapon', 1, { weapon: pl.weapon.id, vx: 0, vy: 0 }); pl.weapon = w; pl.orbs = null; pl.charge = 0; pl.recompute(); UI.toast(`Arme d'essai : ${w.name} (cette salle seulement)`, 4); UI.banner(w.name, WEAPON_COLORS[w.family] || '#fff', 'arme d\'essai'); AudioEngine.uiConfirm({}); }
+    else if (p.kind === 'ally') { Pickups.summonAlly(p.x, p.y); }
+    else if (p.kind === 'relic') { const rl = RELICS.find(r => r.id === p.relic) || RELICS[0]; rl.apply(pl); UI.banner(rl.name, '#c9a3ff', rl.desc); AudioEngine.levelUp({ intensity: 0.6 }); }
   },
 };
 
@@ -514,7 +546,7 @@ class Player {
     this.buffs = []; this.stormT = 0; this.auraCd = new Map(); this.drones = [];
     this.bot = null;  // contrôleur autoplay
   }
-  addBuff(id, duration, mods) { this.buffs = this.buffs.filter(b => b.id !== id); this.buffs.push({ id, until: Time.now + duration, mods }); this.recompute(); }
+  addBuff(id, duration, mods, roomOnly = false) { this.buffs = this.buffs.filter(b => b.id !== id); this.buffs.push({ id, until: Time.now + duration, mods, roomOnly }); this.recompute(); }
   sources() {
     const src = [];
     const c = this.char; if (c) { src.push({ id: c.id, mods: Object.keys(c.stats || {}).map(k => k === 'maxHp' || k === 'speed' || k === 'luck' ? { stat: k, add: c.stats[k] - BASE_STATS[k] } : { stat: k, mul: c.stats[k] / BASE_STATS[k] }) }); if (c.trait) src.push(c.trait); }
@@ -609,9 +641,18 @@ class Player {
     if (blink) ctx.globalAlpha = 0.45;
     /* ombre */
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU); ctx.fill();
-    Sprites.draw(ctx, this.char && this.char.sprite || 'player', this.x, this.y, { flip: this.facing < 0, walk: this.walkT, fallback: () => {
+    /* auras selon les greffes (artefacts visibles) */
+    const fx = this.hooks; const hasFx = eff => fx.onHit.some(h => h.effect === eff) || fx.passive.some(h => h.effect === eff);
+    if (hasFx('burn') || hasFx('burn_aura')) { if (VFX_RNG.chance(0.5)) Particles.spawn(this.x + VFX_RNG.range(-10, 10), this.y + this.r - 4, { count: 1, color: VFX_RNG.chance(0.5) ? '#ff8c42' : '#ffd166', size: 3, speedMin: 30, speedMax: 60, angle: -Math.PI / 2, spread: 0.4, life: 0.5, glow: true }); ctx.save(); ctx.globalAlpha = 0.25; const g = ctx.createRadialGradient(this.x, this.y + 8, 4, this.x, this.y + 8, 30); g.addColorStop(0, 'rgba(255,140,40,.8)'); g.addColorStop(1, 'rgba(255,140,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.x, this.y + 8, 30, 0, TAU); ctx.fill(); ctx.restore(); }
+    if (hasFx('chain') || hasFx('lightning_storm')) { if (VFX_RNG.chance(0.12)) { const a = VFX_RNG.range(0, TAU); G.room.beams.push({ ax: this.x, ay: this.y - 10, bx: this.x + Math.cos(a) * 26, by: this.y - 10 + Math.sin(a) * 26, t: 0, life: 0.12, color: '#b3e5ff', width: 2, jag: true }); } }
+    if (hasFx('freeze') || hasFx('frost_bonus')) { if (VFX_RNG.chance(0.3)) Particles.spawn(this.x + VFX_RNG.range(-12, 12), this.y - VFX_RNG.range(0, 24), { count: 1, color: '#c8f6ff', size: 2, speedMax: 12, life: 0.7, glow: true }); }
+    if (hasFx('poison')) { if (VFX_RNG.chance(0.2)) Particles.spawn(this.x + VFX_RNG.range(-8, 8), this.y - 20, { count: 1, color: '#b7ff7a', size: 2, speedMin: 15, speedMax: 30, angle: -Math.PI / 2, spread: 0.3, life: 0.8 }); }
+    const tier = G.debug.forceTier != null ? G.debug.forceTier : Sprites.bodyTier(G.run && G.run.upgrades);
+    Sprites.drawBody(ctx, this.char && this.char.sprite || 'player', this.x, this.y, { tier, flip: this.facing < 0, walk: this.walkT, flash: this.hurtFlash > 0, fallback: () => {
       ctx.fillStyle = this.hurtFlash > 0 ? '#ff9db0' : '#e8ecf7'; ctx.shadowColor = '#6ee7ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
       ctx.fillStyle = '#0b0d14'; ctx.beginPath(); ctx.arc(this.x + Math.cos(this.aim) * 6, this.y + Math.sin(this.aim) * 6, 4, 0, TAU); ctx.fill(); } });
+    /* arme en main, orientée vers la visée */
+    if (this.weapon) { const col = WEAPON_COLORS[this.weapon.family] || '#fff'; ctx.save(); ctx.translate(this.x + Math.cos(this.aim) * 10, this.y + 2 + Math.sin(this.aim) * 6); ctx.rotate(this.aim); ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 8; const fam = this.weapon.family; if (fam === 'blade') { ctx.fillRect(0, -1.5, 22, 3); ctx.fillStyle = '#5a3a22'; ctx.fillRect(-4, -2.5, 6, 5); } else if (fam === 'hammer') { ctx.fillStyle = '#5a3a22'; ctx.fillRect(0, -1.5, 22, 3); ctx.fillStyle = col; ctx.fillRect(18, -6, 9, 12); } else if (fam === 'bow') { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(6, 0, 12, -1.3, 1.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(9, -11); ctx.lineTo(9, 11); ctx.stroke(); } else if (fam === 'flame') { ctx.fillStyle = '#3a4260'; ctx.fillRect(0, -3, 16, 6); ctx.fillStyle = col; ctx.fillRect(14, -2, 8, 4); } else if (fam === 'orb' || fam === 'chain') { ctx.beginPath(); ctx.arc(12, 0, 5, 0, TAU); ctx.fill(); } else if (fam === 'boomerang') { ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(10, 0); ctx.lineTo(0, 8); ctx.stroke(); } else { ctx.fillStyle = '#3a4260'; ctx.fillRect(0, -2.5, 14, 5); ctx.fillStyle = col; ctx.fillRect(12, -1.5, 6, 3); } ctx.restore(); }
     /* bouclier */
     if (this.shield > 0) { ctx.strokeStyle = '#8ff'; ctx.lineWidth = 2; ctx.shadowColor = '#8ff'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(this.x, this.y, this.r + 6, 0, TAU); ctx.stroke(); ctx.shadowBlur = 0; }
     /* charge de l'arc */
@@ -620,8 +661,6 @@ class Player {
     if (this.orbs) for (const o of this.orbs) { ctx.fillStyle = this.weapon.color || WEAPON_COLORS[this.weapon.family] || '#c9a3ff'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(o.x, o.y, (this.weapon.size || 10) * this.stats.areaSize, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
     for (const d of this.drones) { ctx.fillStyle = '#3a4260'; ctx.beginPath(); ctx.arc(d.x, d.y, 7, 0, TAU); ctx.fill(); ctx.fillStyle = '#9ff'; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(d.x, d.y, 3, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
     if (this.orbitShield) for (const o of this.orbitShield.orbs) { ctx.fillStyle = '#8ff'; ctx.shadowColor = '#8ff'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(o.x, o.y, 6, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
-    /* indicateur de visée */
-    ctx.globalAlpha = 0.35; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(this.x + Math.cos(this.aim) * (this.r + 4), this.y + Math.sin(this.aim) * (this.r + 4)); ctx.lineTo(this.x + Math.cos(this.aim) * (this.r + 18), this.y + Math.sin(this.aim) * (this.r + 18)); ctx.stroke();
     ctx.restore();
   }
 }

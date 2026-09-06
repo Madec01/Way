@@ -30,7 +30,7 @@ const Room = {
       doorOpen: false, chest: null, boss: null,
       beams: [], blasts: [], slashes: [], hazards: [], turrets: [], decoys: [],
       modular: (def.modular || []).map(m => Object.assign({ t: 0 }, m)),
-      challenge: null, challengeOk: false,   // phase 2 : éléments de décor animés avec collision (murs coulissants, plateformes, zone sûre mobile)
+      challenge: null, challengeOk: false, drops: 0,   // phase 2 : éléments de décor animés avec collision (murs coulissants, plateformes, zone sûre mobile)
       floorSeed: (def.index * 7919) ^ 0x5bd1, label: `${STR.room} ${def.index}/9 — ${ROOM_TYPES[def.type] ? ROOM_TYPES[def.type].label : def.type}`,
     };
     for (const t of (def.traps || [])) { const td = Content.trap(t.trap); if (!td) { console.warn('piège inconnu', t.trap); continue; } r.traps.push(new Trap(td, t)); }
@@ -46,6 +46,11 @@ const Room = {
     const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
     if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.snap(pl.x, pl.y);
+    /* fin des effets « cette salle seulement » : arme d'essai rendue, reliques retirées */
+    if (pl.trialWeapon) { pl.weapon = pl.trialWeapon.prev; pl.trialWeapon = null; }
+    if (pl.buffs.some(b => b.roomOnly)) pl.buffs = pl.buffs.filter(b => !b.roomOnly);
+    pl.recompute();
+    if (G.run.weaponDropRoom === index && !G.run.attract) Pickups.placeWeaponDrop(G.room);
     for (const h of pl.hooks.onRoomStart) { if (h.effect === 'shield_on_room') { pl.shield = Math.max(pl.shield, h.amount * (h.stacks || 1)); pl.shieldUntil = Time.now + 999; } else if (h.effect === 'heal_on_room') pl.heal(pl.stats.maxHp * h.fraction * (h.stacks || 1)); }
     G.run.roomIndex = index; G.run.stats.roomsEntered++;
     Modular.init(G.room);
@@ -126,7 +131,7 @@ const Room = {
       if (h.owner === 'player') for (const e of G.enemies) { if (e.dead || dist(h.x, h.y, e.x, e.y) > h.r + e.r) continue; const last = h.cd.get(e) || -9; if (Time.now - last < 0.25) continue; h.cd.set(e, Time.now); Combat.hitEnemy(e, h.dps * 0.25, { dot: true, x: e.x, y: e.y }); }
     }
     /* tourelles */
-    for (let i = r.turrets.length - 1; i >= 0; i--) { const t = r.turrets[i]; if (Time.now > t.until) { r.turrets.splice(i, 1); continue; } t.cd -= dt; if (t.cd <= 0) { const e = nearestEnemy(t.x, t.y, t.range); if (e) { t.cd = 1 / t.rate; const a = angleTo(t.x, t.y, e.x, e.y); Projectiles.spawn({ x: t.x, y: t.y, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 4, damage: t.damage, owner: 'player', life: 1.2, color: '#9ff', knockback: 0.3 }); } } }
+    for (let i = r.turrets.length - 1; i >= 0; i--) { const t = r.turrets[i]; if (Time.now > t.until) { r.turrets.splice(i, 1); continue; } if (t.mobile) { const d = dist(t.x, t.y, pl.x, pl.y); if (d > 90) { const a = angleTo(t.x, t.y, pl.x, pl.y); t.x += Math.cos(a) * 220 * dt; t.y += Math.sin(a) * 220 * dt; } t.r = 12; resolveRoomCollision(t); } t.cd -= dt; if (t.cd <= 0) { const e = nearestEnemy(t.x, t.y, t.range); if (e) { t.cd = 1 / t.rate; const a = angleTo(t.x, t.y, e.x, e.y); Projectiles.spawn({ x: t.x, y: t.y, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 4, damage: t.damage, owner: 'player', life: 1.2, color: '#9ff', knockback: 0.3 }); } } }
     /* leurres */
     for (let i = r.decoys.length - 1; i >= 0; i--) { const d = r.decoys[i]; if (Time.now > d.until || d.hp <= 0) { if (d.explode) Combat.explosion(d.x, d.y, 110, 40 * pl.stats.damage, '#c9a3ff', true); r.decoys.splice(i, 1); } }
     /* cosmétique */
@@ -162,7 +167,7 @@ const Room = {
     /* coffre */
     if (r.chest) Sprites.drawChest(ctx, r.chest);
     /* tourelles & leurres */
-    for (const t of r.turrets) { ctx.save(); ctx.fillStyle = '#3a3f55'; ctx.beginPath(); ctx.arc(t.x, t.y, 12, 0, TAU); ctx.fill(); ctx.fillStyle = '#9ff'; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(t.x, t.y, 5, 0, TAU); ctx.fill(); ctx.restore(); }
+    for (const t of r.turrets) { ctx.save(); if (t.mobile) { Sprites.draw(ctx, 'npc_ally', t.x, t.y, { walk: Time.now, tint: 'rgba(120,255,255,.35)', fallback: () => { ctx.fillStyle = '#3a4260'; ctx.beginPath(); ctx.arc(t.x, t.y - 8, 7, 0, TAU); ctx.fill(); ctx.fillRect(t.x - 7, t.y - 2, 14, 14); } }); ctx.fillStyle = '#9ff'; ctx.font = '10px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(Math.ceil(t.until - Time.now) + ' s', t.x, t.y - 30); } else { ctx.fillStyle = '#3a4260'; ctx.beginPath(); ctx.arc(t.x, t.y, 12, 0, TAU); ctx.fill(); ctx.fillStyle = '#9ff'; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(t.x, t.y, 5, 0, TAU); ctx.fill(); } ctx.restore(); }
     for (const d of r.decoys) { ctx.save(); ctx.globalAlpha = 0.6; ctx.fillStyle = '#c9a3ff'; ctx.shadowColor = '#c9a3ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, TAU); ctx.fill(); ctx.restore(); }
   },
   renderFx(ctx) {
@@ -190,7 +195,7 @@ const Run = {
       level: 1, xp: 0, xpNext: Progression.xpForLevel(1), upgrades: [], pendingLevelUps: 0, rerolls: 0,
       scores: [], coinsPending: 0, coinsValidated: 0, lastCheckpoint: 0, startedAt: Time.now, ended: false,
       stats: { kills: 0, damageDealt: 0, damageTaken: 0, hitsTaken: 0, shots: 0, skillUses: 0, coins: 0, roomsEntered: 0, roomTimes: [], bossKilled: false, deathCause: null, deathRoom: null, levelReached: 1 },
-      skillChoices: null,
+      skillChoices: null, weaponDropRoom: RNG.pick([1, 3, 6, 7]),
     };
     G.player = new Player(charDef);
     G.player.hp = 0; G.player.recompute(); G.player.hp = G.player.stats.maxHp;

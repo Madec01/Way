@@ -13,6 +13,9 @@ Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.htm
 ## Musiques
 Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (salles 1-4 et 6-8) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `boss2.mp3` pour le biome suivant, etc. Fichier absent : musique générative. Détails dans `assets/music/README.md`.
 
+## Objets au sol et apparence
+Bourses, arme d'essai (une par palier), allié temporaire et reliques d'une salle tombent des élites ou sont posés au sol. Le Passeur commence nu et s'habille avec ses greffes jusqu'au chevalier complet. Détails dans `CONTENT.md` §19.
+
 ## Défis de salle
 Salles 2, 3, 6 et 7 : un défi peut s'ajouter à la salle (capture de zone, sol qui s'effondre, séquence d'interrupteurs, lumières coupées, chrono). Détails dans `CONTENT.md` §18.
 

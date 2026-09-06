@@ -479,3 +479,18 @@ Mesure bot (mode test, biome 1) avant → après : niveau après la salle 1 : 5 
 | Séquence | combat, pièges | Trois interrupteurs I, II, III ; l'ordre s'affiche 4 s au début puis dans le HUD. Marcher dessus dans l'ordre ; erreur = décharge de 8 et remise à zéro. Optionnel. | 40 XP, 25 crédits, une relique |
 | Lumières coupées | combat, pièges | Seule une lampe de 210 px autour du joueur éclaire ; les ennemis se trahissent par leurs yeux (jaunes quand ils télégraphient). | XP +25 % |
 | Chrono | combat | 60 s pour vider la salle. Après, tout ce qui reste et tout ce qui arrive est enragé (vitesse et dégâts +30 %, teinte rouge). | 30 crédits si tenu |
+
+---
+
+## 19. Objets au sol et apparence du Passeur
+
+**Objets au sol** (en plus des cœurs, 3 % par kill) — deux objets maximum par salle :
+
+| Objet | Apparition | Effet |
+|---|---|---|
+| Bourse | 50 % des drops d'élite (35 % de chance par élite tué) ; 6 % sur les ennemis de la dernière vague | 4 à 14 crédits en attente |
+| Arme d'essai | Posée au sol dans une salle de combat tirée au sort par palier (1, 3, 6 ou 7), de préférence une arme non possédée | Remplace l'arme jusqu'à la fin de la salle, puis l'arme d'origine revient. Pas d'aimantation : il faut marcher dessus. |
+| Allié | 20 % des drops d'élite, ou relique Sifflet | Un Passeur détraqué qui suit le joueur 25 s et tire 2,2 fois/s à 40 % des dégâts de l'arme |
+| Relique | 30 % des drops d'élite, ou récompense de la Séquence | Effet pour la salle seulement : Jambon fumé (+40 PV, régén +3), Parapluie renforcé (bouclier 60, armure +3), Lunettes de visée (crit +30 %), Bottes de facteur (vitesse +30 %, cadence +15 %), Sifflet de chef de gare (allié) |
+
+**Apparence** (`Sprites.drawBody`) : la tenue suit le nombre de greffes possédées. 0 à 2 : nu, mosaïque de floutage sur les parties intimes ; 3 à 5 : vêtements de route ; 6 à 8 : l'armure du sprite sans le casque ; 9 et plus : le chevalier complet. L'arme est dessinée en main, orientée vers la visée. Les greffes de brûlure, foudre, gel et poison ajoutent une aura (flammes aux pieds, arcs électriques, givre, bulles). Dans le hub, le portrait est nu. Le panneau debug force une tenue.

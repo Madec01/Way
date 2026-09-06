@@ -86,6 +86,7 @@ const UI = (() => {
           <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
           <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
           <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
+          <div class="muted tiny">Tenue : aucune. « Vous êtes venu comme ça ? » Elle viendra avec les greffes : 3 pour des vêtements, 6 pour l'armure, 9 pour le casque.</div>
           <h3>Dossiers de réactivation</h3>
           <div class="cards vertical" id="hub-chars"></div>
         </section>
@@ -110,7 +111,7 @@ const UI = (() => {
       card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
       cc.appendChild(card);
     });
-    const pb = s.querySelector('#hub-portrait'); const pc = Sprites.portrait(cur.sprite || 'player', 5); if (pc) pb.appendChild(pc);
+    const pb = s.querySelector('#hub-portrait'); const pc = Sprites.portraitBody(cur.sprite || 'player', 0, 5); if (pc) pb.appendChild(pc);
     s.querySelectorAll('[data-biome]').forEach(c => c.onclick = () => { const b = Content.biome(c.dataset.biome); if (!Meta.biomeUnlocked(b)) { toast('Palier scellé.'); return; } p.biome = b.id; Meta.save(); AudioEngine.uiClick({}); showHub(); });
     s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; AudioEngine.uiClick({}); showHub(); });
     s.querySelector('#hub-menu').onclick = () => { showMenu(); };
@@ -312,7 +313,7 @@ const UI = (() => {
     const sy = H - 40;
     ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(8,10,18,.75)'; roundRect(ctx, 18, sy - 22, 420, 44, 8); ctx.fill();
     ctx.fillStyle = WEAPON_COLORS[pl.weapon.family] || '#fff'; ctx.beginPath(); ctx.arc(40, sy, 10, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#e8ecf7'; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(pl.weapon.name, 58, sy - 7);
+    ctx.fillStyle = pl.trialWeapon ? '#ffd166' : '#e8ecf7'; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(pl.weapon.name + (pl.trialWeapon ? ' (essai)' : ''), 58, sy - 7);
     ctx.fillStyle = '#9aa4c4'; ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillText(`${Math.round(pl.weapon.damage * pl.stats.damage)} dmg · ${(pl.weapon.fireRate * pl.stats.fireRate).toFixed(1)}/s · crit ${Math.round(pl.stats.critChance * 100)} %`, 58, sy + 9);
     /* compétence : cercle de cooldown */
     const cx = 270, cd = Skills.cooldownOf(pl); const ready = pl.skillCharges > 0; const k = ready ? 1 : 1 - clamp(pl.skillCd / Math.max(0.01, cd), 0, 1);

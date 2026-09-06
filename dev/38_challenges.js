@@ -67,7 +67,7 @@ const Challenge = (() => {
       for (const e of G.enemies) { if (e.dead || e.isBoss || e.state === 'dash' || e.state === 'lunge' || e.state === 'charge') continue; if (c.holes.has(tileOf(e))) { e.xp = Math.round(e.xp * 0.5); e.coins = 0; Floaters.add(e.x, e.y - 10, 'tombé', '#9aa4c4', 12); Combat.killEnemy(e, { silent: true }); } }
       const pct = Math.round(100 * (c.total - c.holes.size) / c.total);
       c.hud = `Sol ${pct} % · objectif 40 %`;
-      if (c.total - c.holes.size <= c.target) { c.done = true; room.challengeOk = true; UI.banner('Surface atteinte : sortie ouverte', '#ffb347'); Room.clear(); }
+      if (c.total - c.holes.size <= c.target) { c.done = true; room.challengeOk = true; c.warn.clear(); buildPlanks(room, c); UI.banner('Surface atteinte : une passerelle se déploie', '#ffb347'); Room.clear(); }
     } else if (c.id === 'switches') {
       c.showT -= dt;
       for (const s of c.sw) {
@@ -112,6 +112,15 @@ const Challenge = (() => {
       return;
     }
   }
+  /* passerelle : plus court chemin du joueur à la porte, les trous traversés redeviennent des planches */
+  function buildPlanks(room, c) {
+    const pl = G.player; const sx = clamp(Math.floor((pl.x - ROOM_X) / TILE), 0, ROOM_COLS - 1), sy = clamp(Math.floor((pl.y - ROOM_Y) / TILE), 0, ROOM_ROWS - 1); const gx = ROOM_COLS - 1, gy = 6;
+    const ok = (tx, ty) => tx >= 0 && ty >= 0 && tx < ROOM_COLS && ty < ROOM_ROWS && tileFree(tx, ty, room);
+    const prev = new Map(); const q = [[sx, sy]]; prev.set(`${sx},${sy}`, null); let found = false;
+    while (q.length) { const [x, y] = q.shift(); if (x === gx && y === gy) { found = true; break; } for (const [dx, dy] of [[1, 0], [0, 1], [0, -1], [-1, 0]]) { const nx = x + dx, ny = y + dy, k = `${nx},${ny}`; if (ok(nx, ny) && !prev.has(k)) { prev.set(k, `${x},${y}`); q.push([nx, ny]); } } }
+    c.planks = new Set(); c.path = []; if (!found) return;
+    let k = `${gx},${gy}`; while (k) { if (c.holes.has(k)) { c.holes.delete(k); c.planks.add(k); } const [tx, ty] = k.split(',').map(Number); c.path.unshift({ x: tileX(tx), y: tileY(ty) }); k = prev.get(k); }
+  }
   function connected(room, c, cluster) {
     const ok = (tx, ty) => tx >= 0 && ty >= 0 && tx < ROOM_COLS && ty < ROOM_ROWS && !c.holes.has(`${tx},${ty}`) && !c.warn.has(`${tx},${ty}`) && !cluster.has(`${tx},${ty}`) && tileFree(tx, ty, room);
     let start = null; for (let ty = 0; ty < ROOM_ROWS && !start; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) if (ok(tx, ty)) { start = [tx, ty]; break; }
@@ -127,6 +136,7 @@ const Challenge = (() => {
     if (c.id === 'collapse') {
       ctx.save();
       for (const k of c.holes) { const [tx, ty] = k.split(',').map(Number); const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE; ctx.fillStyle = '#04050a'; ctx.fillRect(x, y, TILE, TILE); ctx.fillStyle = 'rgba(110,231,255,.08)'; ctx.fillRect(x, y, TILE, 3); ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x, y + TILE - 6, TILE, 6); }
+      if (c.planks) for (const k of c.planks) { const [tx, ty] = k.split(',').map(Number); const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE; ctx.fillStyle = '#04050a'; ctx.fillRect(x, y, TILE, TILE); ctx.fillStyle = '#8b5a2b'; ctx.fillRect(x + 4, y + 6, TILE - 8, 12); ctx.fillRect(x + 4, y + 22, TILE - 8, 12); ctx.fillStyle = '#5a3a22'; ctx.fillRect(x + 4, y + 17, TILE - 8, 3); ctx.fillStyle = '#c98a4b'; ctx.fillRect(x + 8, y + 9, 4, 3); ctx.fillRect(x + TILE - 12, y + 25, 4, 3); }
       for (const [k, until] of c.warn) { const [tx, ty] = k.split(',').map(Number); const kk = 1 - clamp((until - room.time) / 1.3, 0, 1); const j = Math.sin(Time.now * 40) * 2 * kk; const x = ROOM_X + tx * TILE + j, y = ROOM_Y + ty * TILE; ctx.fillStyle = `rgba(255,179,71,${0.15 + 0.35 * kk})`; ctx.fillRect(x, y, TILE, TILE); ctx.strokeStyle = `rgba(20,20,30,${0.5 + 0.5 * kk})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 8, y + 6); ctx.lineTo(x + 22, y + 24); ctx.lineTo(x + 14, y + 40); ctx.moveTo(x + 30, y + 4); ctx.lineTo(x + 26, y + 26); ctx.lineTo(x + 40, y + 42); ctx.stroke(); }
       ctx.restore();
     } else if (c.id === 'capture' && !c.done) {
@@ -166,8 +176,10 @@ const Challenge = (() => {
   }
   /* objectif pour le bot */
   function goal(room) {
-    const c = room.challenge; if (!c || c.done) return null;
+    const c = room.challenge; if (!c) return null;
+    if (c.done && c.id !== 'collapse') return null;
     if (c.id === 'capture') return c.zones[c.zi];
+    if (c.id === 'collapse' && c.done && c.path && c.path.length) { const pl = G.player; let bi = 0, bd = 1e9; c.path.forEach((p, i) => { const d = dist(pl.x, pl.y, p.x, p.y); if (d < bd) { bd = d; bi = i; } }); return c.path[Math.min(bi + (bd < 20 ? 1 : 0), c.path.length - 1)]; }
     if (c.id === 'switches' && Room.alive() === 0) { const i = c.order[c.step]; return c.sw[i]; }
     return null;
   }
