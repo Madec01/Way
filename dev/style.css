@@ -226,3 +226,17 @@ body.touch .menu2{padding:calc(16px*var(--ui-scale)) calc(28px*var(--ui-scale))}
 .prep .card{min-width:12em;max-width:17em;padding:.55em .8em;font-size:.95em}
 .prep .prepstep{padding:.2em .8em .5em;margin:.4em 0}.prep .prepstep h3{margin:.3em 0 .35em}
 .prep h2{margin:.1em 0 .3em}.prep .prepsummary{margin:.25em 0}.prep .row{margin:.4em 0}
+/* ---- hub : trois zones bien distinctes (1 personnage / 2 mission / boutique) ---- */
+.hubcol.subject{border-top:4px solid #7fff9a;background:linear-gradient(180deg,rgba(127,255,154,.07),rgba(8,10,18,.62) 30%)}
+.hubcol.center{border-top:4px solid #ffb347;background:linear-gradient(180deg,rgba(255,179,71,.08),rgba(8,10,18,.62) 30%)}
+.hubcol.shopcol{border-top:4px solid var(--accent);background:linear-gradient(180deg,rgba(110,231,255,.07),rgba(8,10,18,.62) 30%)}
+.colhead{display:flex;align-items:center;gap:.7em;padding-bottom:.5em;border-bottom:1px solid var(--line);margin-bottom:.2em}
+.colnum{display:inline-flex;width:2em;height:2em;border-radius:50%;align-items:center;justify-content:center;font-family:"Silkscreen",monospace;font-weight:700;color:#0b0d14;background:#7fff9a;flex:none}
+.hubcol.center .colnum{background:#ffb347}
+.colnum.shop{background:var(--accent)}
+.coltitle{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.5em;letter-spacing:.06em;text-transform:uppercase;line-height:1}
+.hubcol.subject .coltitle{color:#7fff9a}.hubcol.center .coltitle{color:#ffb347}.hubcol.shopcol .coltitle{color:var(--accent)}
+.colsub{font-size:.8em;color:var(--muted)}
+.hubcol.subject h3{color:#7fff9a}.hubcol.center h3{color:#ffb347}
+.card.char.selected{border-color:#7fff9a;box-shadow:0 0 20px rgba(127,255,154,.3)}
+.card.char.selected .lvlstate{color:#7fff9a;font-weight:700}

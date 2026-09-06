@@ -79,20 +79,21 @@ const UI = (() => {
     s.innerHTML = `
       <div class="hub2">
         <header class="hubhead">
-          <div class="hubid"><div class="stamp"><span>Salle Zéro</span><span class="sep">·</span><span>Stockage</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
+          <div class="hubid"><div class="stamp"><span>Salle Zéro</span><span class="sep">·</span><span>Ton camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
           <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits consignés${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
           <div class="hubactions"><button class="btn ghost small" id="hub-menu">Menu</button></div>
         </header>
         <section class="hubcol subject">
+          <div class="colhead"><span class="colnum">1</span><div><div class="coltitle">Personnage</div><div class="colsub">Qui tu envoies dans les salles</div></div></div>
           <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
           <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
           <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
           <div class="muted tiny">Tenue : aucune. « Vous êtes venu comme ça ? » Elle viendra avec les greffes : 3 pour des vêtements, 6 pour l'armure, 9 pour le casque.</div>
-          <h3>Dossiers de réactivation</h3>
+          <h3>Changer de personnage</h3>
           <div class="cards vertical" id="hub-chars"></div>
         </section>
         <section class="hubcol center">
-          <h3>Choisis ton niveau</h3>
+          <div class="colhead"><span class="colnum">2</span><div><div class="coltitle">Mission</div><div class="colsub">Où tu vas : choisis un niveau, puis JOUER</div></div></div>
           <div class="muted tiny lvlhint">Clique sur un niveau pour le sélectionner, puis sur JOUER. Chaque niveau fait 9 salles : un boss en salle 5, sa revanche en salle 9.</div>
           <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; const prev = b.unlockAfter ? Content.biome(b.unlockAfter) : null; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
             <div class="lvlhead"><span class="lvlnum">Niveau ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
@@ -103,14 +104,15 @@ const UI = (() => {
           <button class="cta" id="hub-enter"><span class="l">JOUER — Niveau ${biome.order} · ${esc(biome.name)}</span><span class="d">Ensuite : choix de l'arme et de la compétence, puis salle 1</span></button>
         </section>
         <section class="hubcol shopcol">
-          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</nav>
+          <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux runs : bonus permanents</div></div></div>
+          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${({ passifs: 'Améliorations', armes: 'Armes', sujets: 'Personnages', fragments: 'Fragments' })[t] || t}</button>`).join('')}</nav>
           <div id="hub-shop" class="shop"></div>
         </section>
       </div>`;
     const cc = s.querySelector('#hub-chars');
     chars.forEach((c, i) => {
       const owned = Meta.characterUnlocked(c.id); const sel = c.id === p.character;
-      const card = el('div', 'card char mini' + (sel ? ' selected' : '') + (owned ? '' : ' locked'), `<div class="cardtitle"><span>${esc(c.name)}</span>${sel ? '<span class="tag">actif</span>' : ''}</div><div class="muted tiny">${esc(c.trait.name)} · PV ${c.stats.maxHp} · vit. ${c.stats.speed}</div>${owned ? '' : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Réactiver — ◈ ${c.price}</button>`}`);
+      const card = el('div', 'card char mini' + (sel ? ' selected' : '') + (owned ? '' : ' locked'), `<div class="cardtitle"><span>${esc(c.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div><div class="muted tiny">${esc(c.trait.name)} · PV ${c.stats.maxHp} · vit. ${c.stats.speed}</div>${owned ? '' : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Débloquer — ◈ ${c.price}</button>`}`);
       card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
       cc.appendChild(card);
     });
