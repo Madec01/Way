@@ -1,4 +1,20 @@
 {
+ "biome1-1.mp3": {
+  "bpm": 129.2,
+  "offset": 0.121,
+  "key": "D",
+  "mode": "minor",
+  "duration": 191.7,
+  "stable": true
+ },
+ "biome1-2.mp3": {
+  "bpm": 129.2,
+  "offset": 0.271,
+  "key": "D",
+  "mode": "major",
+  "duration": 249.1,
+  "stable": true
+ },
  "biome2-1.mp3": {
   "bpm": 129.2,
   "offset": 0.459,

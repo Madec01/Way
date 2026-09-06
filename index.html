@@ -3290,7 +3290,7 @@ const WEAPON_COLORS = { blade: '#e8ecf7', hammer: '#ffb347', bow: '#c8ff5a', pis
 const Weapons = {
   /* Appelé chaque pas quand le joueur tient le tir. Retourne true si une attaque a été déclenchée. */
   update(pl, dt, firing, aim) {
-    const w = pl.weapon; const st = pl.stats;
+    const w = pl.weapon; const st = pl.stats; if (!w) return;   // écran de préparation : pas encore d'arme
     const rate = w.fireRate * st.fireRate;
     pl.attackCd -= dt; pl.beatMul = 1;
     if (w.type === 'orbital') { Weapons.orbital(pl, dt, firing); return; }
