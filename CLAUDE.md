@@ -4,7 +4,7 @@ Roguelite d'action 2D vue de dessus, navigateur, **un seul `index.html`** (Canva
 
 ## Sources et assemblage
 - Sources dans `dev/` (un module par fichier, ordre dans `dev/build.js`), assemblées par `node dev/build.js` → `index.html`. **Toujours éditer `dev/*.js` puis rebuild**, jamais `index.html` directement.
-- Modules : `00_core` (Engine, Input, Camera, Fullscreen), `05_balance` (constantes d'équilibrage), `AudioEngine`, `content.js` (biome 1 + tout le contenu) et `content2.js` (biome 2), `10_content_api`, `15_sprites` (sprites, corps du joueur, musique), `20_progression`, `30_entities` (joueur, armes, projectiles, pickups, combat), `32_enemies` (ennemis + boss), `34_traps`, `36_modular`, `38_challenges`, `40_room` (état G, Room, Run), `50_ui`, `55_touch`, `57_attract`, `60_meta`, `70_debug` (panneau F1 + bot + `window.__autoplay`), `90_main`.
+- Modules : `00_core` (Engine, Input, Camera, Fullscreen), `05_balance` (constantes d'équilibrage), `AudioEngine`, `content.js` (biome 1 + tout le contenu) et `content2.js` (biome 2), `10_content_api`, `15_sprites` (sprites, corps du joueur, musique), `20_progression`, `30_entities` (joueur, armes, projectiles, pickups, combat), `32_enemies` (ennemis + boss), `34_traps`, `36_modular`, `38_challenges`, `39_tempo` (Beat : horloge musicale calée sur `assets/music/tempo.json` ; Tempo : salle du tempo), `40_room` (état G, Room, Run), `50_ui`, `55_touch`, `57_attract`, `60_meta`, `70_debug` (panneau F1 + bot + `window.__autoplay`), `90_main`.
 - Schéma des données : `SCHEMA.md`. Contenu chiffré : `CONTENT.md`. Rapports de test/équilibrage : `TEST-REPORT.md` (§10 = dernier rééquilibrage). Plan/état : `PLAN.md`.
 
 ## Tester
@@ -21,3 +21,10 @@ En attente de décision de l'auteur : **l'histoire**. L'ancien lore (`LORE.md`, 
 - Contenu = données déclaratives avec `id` stables ; effets à hooks listés dans `SCHEMA.md` §2 ; pas de logique de gameplay dans `content*.js`.
 - Pas de son « oscillateur nu » ; pas de dépendance externe, pas de build step pour jouer.
 - Commits en français, un point court à l'auteur par étape, push sur `main`.
+
+## Rythme et musique
+- `Beat` (dev/39_tempo.js) avance avec l'horloge de simulation (`Time.now`) et se recale sur la position de l'`<audio>` en temps réel (Time.scale 1, non headless) : recalage franc au-delà de 120 ms, correction douce sinon. Autoplay accéléré et vitesse debug restent donc cohérents.
+- `assets/music/tempo.json` est généré par `python3 dev/analyze_music.py` (librosa) : BPM, décalage du premier temps, tonalité par fichier. À relancer à chaque changement de piste. Piste absente du fichier → métronome interne 120 BPM (`Beat.info.internal`).
+- Salle du tempo = type `COMBAT_TEMPO` (salle 7 des deux biomes). Pièges : `params.beats = { period, active, telegraph, on }` (ou `{ every, telegraph, on }` pour bouches et tourelles) en temps musicaux, recalés à chaque appel par `Trap.syncBeat()` ; l'horloge des pièges y est `Beat.t` (`Room.trapTime`). Ennemis : `beatLock`/`beatDiv` posés par `Room.spawnEnemy`, `Enemy.armed()` retarde lunge/tir/charge/explosion au prochain temps. Joueur : `Tempo.playerAction` (tir et compétence) → `pl.beatMul` dans `Weapons.dmgOf`.
+- Ne jamais poser une tourelle sur la tuile de la porte (x 23, y 6) : le bot refuse d'approcher une zone de danger permanente et reste bloqué sous la porte.
+- Scripts de test : `tempo.js` (BIOME=…, vérifie compte à rebours, spawns sur le premier temps, attaques en phase), `tempo_dmg.js` (LVL=…, dégâts par source), `dmgrooms.js` (run accélérée, dégâts et PV par salle).

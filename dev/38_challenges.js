@@ -12,7 +12,7 @@ const CHALLENGE_DEFS = {
   lights:   { name: 'Lumières coupées', desc: 'Seule votre lampe éclaire. Les ennemis se trahissent par leurs yeux. XP +25 %.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#9fd8ff' },
   timer:    { name: 'Chrono', desc: 'Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s\'enrage.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ff5e7a' },
 };
-const CHALLENGE_ROOMS = [2, 6, 7];   // salle 2 : toujours un défi ; 6 et 7 : 60 % de chance
+const CHALLENGE_ROOMS = [2, 6];   // salle 2 : toujours un défi ; 6 : 60 % de chance (la salle 7 est la salle du tempo)
 const CHALLENGE_CHANCE = 0.6;
 
 const Challenge = (() => {

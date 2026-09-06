@@ -11,20 +11,25 @@ Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.htm
 - **Zoom caméra** : la caméra suit le joueur ; zoom réglable dans le menu pause (1× à 2×, 1,5× par défaut en tactile). Plein écran depuis le menu principal, la pause ou le bouton tactile.
 
 ## Musiques
-Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (salles 1-4 et 6-8) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `boss2.mp3` pour le biome suivant, etc. Fichier absent : musique générative. Détails dans `assets/music/README.md`.
+Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (salles 1-4 et 6-8) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `boss2.mp3` pour le biome suivant, etc. Noms en minuscules (GitHub Pages distingue la casse). Fichier absent : musique générative. Détails dans `assets/music/README.md`.
+
+Après un changement de piste, lancer `python3 dev/analyze_music.py` (dépend de `librosa`) : il écrit `assets/music/tempo.json` (BPM, premier temps, tonalité) que le jeu lit pour caler la **salle du tempo** sur la musique. Sans ce fichier, la salle bat sur un métronome interne à 120 BPM.
 
 ## Objets au sol et apparence
 Bourses, arme d'essai (une par palier), allié temporaire et reliques d'une salle tombent des élites ou sont posés au sol. Le Passeur commence nu et s'habille avec ses greffes jusqu'au chevalier complet. Détails dans `CONTENT.md` §19.
 
 ## Défis de salle
-Salle 2 : salle aléatoire avec un défi garanti ; salles 6 et 7 : un défi peut s'ajouter (capture de zone, sol qui s'effondre, séquence d'interrupteurs, lumières coupées, chrono). Détails dans `CONTENT.md` §18.
+Salle 2 : salle aléatoire avec un défi garanti ; salle 6 : un défi peut s'ajouter (capture de zone, sol qui s'effondre, séquence d'interrupteurs, lumières coupées, chrono). Détails dans `CONTENT.md` §18.
+
+## Salle du tempo
+La salle 7 de chaque palier joue en rythme : compte à rebours sur une mesure, pièges qui frappent sur les temps, ennemis qui n'attaquent que sur les temps (noires en vague 1, croches ensuite) avec un voyant qui bat, vagues qui entrent sur le premier temps d'une mesure, porte qui s'ouvre sur la mesure. Tirer ou lancer sa compétence sur un temps donne +25 % (jusqu'à +50 % en série), une note de la gamme du morceau et un combo affiché ; jamais de malus hors rythme. Bonus d'XP à la fin selon le nombre d'actions en rythme, et « sans fausse note » si aucun coup reçu. Détails dans `CONTENT.md` §20.
 
 ## Menu, hub et histoire
 Le menu principal et le hub sont joués sur une scène d'attraction : le sujet, piloté par le bot, combat des ennemis des deux paliers derrière l'interface. Le menu se navigue au clavier (flèches, Entrée) ou à la souris.
 
 ## Modes
 - **Normal** : sauvegarde locale, 1 sujet et 2 armes débloqués, économie normale.
-- **Test** : tout débloqué, passifs au maximum, panneau debug (difficulté 0,5× → 3×, saut de salle, multiplicateurs XP/crédits, rareté forcée, invulnérabilité, spawn d'ennemi/piège, hitboxes, scores en direct, écran de test audio, autoplay).
+- **Test** : tout débloqué, passifs au maximum, choix de la salle (1 à 9) et du niveau de départ sur l'écran de préparation, panneau debug (difficulté 0,5× → 3×, saut de salle, multiplicateurs XP/crédits, rareté forcée, invulnérabilité, spawn d'ennemi/piège, hitboxes, scores en direct, écran de test audio, autoplay).
 
 ## Harness de test
 Dans la console : `await __autoplay({ seed: 42, timeScale: 20, render: false, weapon: 'weapon_pistol', skill: 'skill_dash', difficulty: 1 })`

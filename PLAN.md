@@ -81,7 +81,7 @@ Déterminisme : les pièges lisent `room.time` (temps écoulé depuis l'entrée,
 | 4 | Salles 1-3 | 6 ennemis + 6 pièges du biome 1, vagues, level-up à 3 choix, salle 2 = salle aléatoire (défi garanti), salle 3 = pièges + ennemis. |
 | 5 | Salles 4-5 | Score de salle, coffre avec plancher de rareté, mini-boss à 2-3 patterns + faiblesse. |
 | 6 | Méta | Hub, argent, 15+ passifs méta, 2 personnages, modes Normal/Test, panneau debug, sauvegarde. |
-| 7 | Audio + assets | `AudioEngine` + écran de test audio, sprites intégrés, musiques, `CREDITS.md`. |
+| 7 | Audio + assets | `AudioEngine` + écran de test audio, sprites intégrés, musiques, `CREDITS.md`. Salle du tempo (salle 7, type `COMBAT_TEMPO`) calée sur `assets/music/tempo.json`. |
 | 8 | Test + équilibrage | `__autoplay` exploité par l'Agent Test, `TEST-REPORT.md`, liste phase 2. |
 
 À chaque jalon : un commit poussé + un message court (ce qui marche / ce qui manque / comment tester).

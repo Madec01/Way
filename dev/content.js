@@ -605,24 +605,26 @@ const CONTENT = {
           [ { x: 5, y: 6, w: 2, h: 1 }, { x: 17, y: 6, w: 2, h: 1 }, { x: 11, y: 1, w: 2, h: 1 }, { x: 11, y: 11, w: 2, h: 1 } ]
         ] }
       ] },
-    { id: 'room_b1_7', biome: 'biome_1', index: 7, type: 'COMBAT_TRAP_MODULAR', refTime: 90,
-      obstacles: [ { x: 6, y: 6, w: 1, h: 1 }, { x: 17, y: 6, w: 1, h: 1 } ],
+    { id: 'room_b1_7', biome: 'biome_1', index: 7, type: 'COMBAT_TEMPO', refTime: 95,
+      obstacles: [ { x: 5, y: 3, w: 1, h: 1 }, { x: 18, y: 3, w: 1, h: 1 }, { x: 5, y: 9, w: 1, h: 1 }, { x: 18, y: 9, w: 1, h: 1 } ],
       waves: [
-        { at: 'start', spawns: [ { enemy: 'enemy_incubateur', count: 1, x: 21, y: 3 }, { enemy: 'enemy_eclipse', count: 2, x: -1, y: -1 } ] },
-        { at: 'clear', spawns: [ { enemy: 'enemy_bloc', count: 1, x: 21, y: 6 }, { enemy: 'enemy_sentinelle', count: 3, x: -1, y: -1 }, { enemy: 'enemy_nuee', count: 2, x: -1, y: -1 } ] },
-        { at: 'clear', spawns: [ { enemy: 'enemy_meche', count: 4, x: -1, y: -1 }, { enemy: 'enemy_eclipse', count: 2, x: -1, y: -1 } ] }
+        { at: 'start', spawns: [ { enemy: 'enemy_rodeur', count: 3, x: -1, y: -1 }, { enemy: 'enemy_sentinelle', count: 2, x: -1, y: -1 } ] },
+        { at: 'clear', spawns: [ { enemy: 'enemy_meche', count: 3, x: -1, y: -1 }, { enemy: 'enemy_rodeur', count: 2, x: -1, y: -1 }, { enemy: 'enemy_sentinelle', count: 2, x: -1, y: -1 }, { enemy: 'enemy_eclipse', count: 1, x: -1, y: -1 } ] },
+        { at: 'clear', spawns: [ { enemy: 'enemy_sentinelle', count: 3, x: -1, y: -1 }, { enemy: 'enemy_rodeur', count: 2, x: -1, y: -1 }, { enemy: 'enemy_meche', count: 2, x: -1, y: -1 }, { enemy: 'enemy_eclipse', count: 1, x: -1, y: -1 } ] }
       ],
+      /* cadences en temps musicaux (4 temps par mesure) : on = temps du cycle où le piège frappe */
       traps: [
-        { trap: 'trap_grille', x: 2, y: 1, w: 20, h: 11, phase: 0 },
-        { trap: 'trap_nappe', x: 11, y: 6, phase: 0 },
-        { trap: 'trap_tourelle', x: 0, y: 6, phase: 0.6 },
-        { trap: 'trap_tourelle', x: 23, y: 6, phase: 1.8 }
+        { trap: 'trap_dalles', x: 2, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
+        { trap: 'trap_dalles', x: 18, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
+        { trap: 'trap_dalles', x: 18, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
+        { trap: 'trap_dalles', x: 2, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
+        { trap: 'trap_bouche', x: 11, y: 0, params: { dir: 'down', beats: { every: 8, telegraph: 1, on: 1 } } },
+        { trap: 'trap_bouche', x: 12, y: 12, params: { dir: 'up', beats: { every: 8, telegraph: 1, on: 5 } } },
+        { trap: 'trap_grille', x: 2, y: 1, w: 20, h: 11, params: { beats: { period: 16, active: 1, telegraph: 3, on: 0 } } },
+        { trap: 'trap_tourelle', x: 0, y: 2, params: { beats: { every: 8, telegraph: 1, on: 3 } } },
+        { trap: 'trap_tourelle', x: 23, y: 10, params: { beats: { every: 8, telegraph: 1, on: 7 } } }
       ],
-      fragments: [],
-      modular: [
-        { kind: 'safe_zone', radius: 3, period: 9, telegraph: 2.2, damage: 15, speed: 1.6, path: [ { x: 4, y: 3 }, { x: 19, y: 3 }, { x: 19, y: 9 }, { x: 4, y: 9 } ] },
-        { kind: 'slide_wall', x: 11, y: 0, w: 2, h: 3, dx: 0, dy: 8, period: 10, phase: 2 }
-      ] },
+      fragments: [], modular: [] },
     { id: 'room_b1_8', biome: 'biome_1', index: 8, type: 'CHEST_FINAL', refTime: 20,
       obstacles: [ { x: 8, y: 4, w: 1, h: 1 }, { x: 8, y: 8, w: 1, h: 1 }, { x: 15, y: 4, w: 1, h: 1 }, { x: 15, y: 8, w: 1, h: 1 } ], waves: [], traps: [], fragments: [], modular: [] },
     { id: 'room_b1_9', biome: 'biome_1', index: 9, type: 'BOSS_REVENGE', refTime: 150,

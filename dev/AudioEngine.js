@@ -51,6 +51,7 @@
       I,
       p: 1 + rnd(-0.07, 0.07),                       // jitter de hauteur ±7 %
       g: (1 + rnd(-0.1, 0.1)) * (0.55 + 0.45 * I),   // jitter de gain ±10 %, pondéré par l'intensité
+      hz: isNum(o.hz) ? o.hz : 0,                    // hauteur imposée (Hz) pour les sons musicaux (salle du tempo)
     };
   }
 
@@ -927,6 +928,26 @@
     v.reverb(0.06);
   });
 
+  // tempoTick : compte à rebours de la salle du tempo → clic bandpass 2 kHz + petit coup grave ; intensité 1 = « GO » (double clic, plus haut).
+  def('tempoTick', 3, (o, t) => {
+    const v = voice(o, 0.3, 3); if (!v) return; const go = o.I >= 0.95;
+    layerClick(v, t, o, go ? 2600 : 2000, 6, 0.4, 0.03);
+    layerThump(v, t, o, go ? 420 : 300, go ? 220 : 160, 0.3, 0.09, 3);
+    if (go) { layerClick(v, t + 0.07, o, 3200, 6, 0.3, 0.03); }
+    v.reverb(0.1);
+  });
+
+  // tempoNote : note « en rythme » → FM pincée sur la hauteur demandée (o.hz, pentatonique de la piste), lowpass, courte queue.
+  def('tempoNote', 3, (o, t) => {
+    const v = voice(o, 0.5, 3); if (!v) return; const fq = o.hz || 294;
+    const f = v.fm(fq, fq * 2.0, 320, t, t + 0.45);
+    sweep(f.idx.gain, t, 320, 12, 0.18);
+    const lp = v.filter('lowpass', 2600, 2); const sh = v.shaper(1.3); const g = v.gain(0);
+    v.chain(f.car, lp, sh, g, v.out); perc(g.gain, t, 0.3 * o.g, 0.004, 0.32);
+    layerClick(v, t, o, 3000, 5, 0.1, 0.01);
+    v.reverb(0.2);
+  });
+
   // uiConfirm : validation → deux tons FM filtrés (500 puis 750 Hz) + souffle rose + petite réverbe.
   def('uiConfirm', 3, (o, t) => {
     const v = voice(o, 0.45, 3); if (!v) return;
@@ -1146,6 +1167,8 @@
   api.playMusic = playMusic;
   api.stopMusic = stopMusic;
   api.duckMusic = duckMusic;
+  /* position de lecture de la piste courante (salle du tempo) : { t, paused } ou null */
+  api.musicTime = () => music.cur && music.cur.el ? { t: music.cur.el.currentTime, paused: music.cur.el.paused } : null;
   api.musicState = () => ({ hasTrack: !!music.cur, gain: music.cur ? music.cur.g.gain.value : null, el: music.cur && music.cur.el ? { paused: music.cur.el.paused, t: music.cur.el.currentTime, ready: music.cur.el.readyState, net: music.cur.el.networkState, err: music.cur.el.error && music.cur.el.error.code, src: music.cur.el.currentSrc.slice(-24) } : null, generative: !!gen, ctxState: ctx ? ctx.state : null, ctxTime: ctx ? ctx.currentTime : null });
   api.startGenerativeMusic = startGenerativeMusic;
   api.stopGenerativeMusic = stopGenerativeMusic;

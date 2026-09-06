@@ -20,10 +20,11 @@ function render(ctx) {
     G.player.render(ctx);
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx);
     if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);
+    if (G.room.tempo) Tempo.renderOverlay(ctx, G.room);
     Floaters.render(ctx);
     Debug.renderOverlay(ctx);
     ctx.restore();
-    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); }
+    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); if (G.room.tempo) Tempo.renderHud(ctx, G.room); }
   } else UI.renderBackdrop(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);
 }
@@ -37,7 +38,7 @@ async function boot() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
   UI.init(); Debug.init(); Touch.init();
   Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));
-  await Sprites.load();
+  await Sprites.load(); Beat.load();
   UI.showMenu();
   Engine.start(update, render);
   Attract.start();

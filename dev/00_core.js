@@ -24,6 +24,7 @@ const ROOM_TYPES = {
   PREP_COMBAT: { label: 'Préparation + Combat', phase: 1 },
   TRAP: { label: 'Pièges', phase: 1 },
   COMBAT_CHALLENGE: { label: 'Salle aléatoire', phase: 1 },
+  COMBAT_TEMPO: { label: 'Salle du tempo', phase: 2 },
   COMBAT_TRAP: { label: 'Combat + Pièges', phase: 1 },
   CHEST: { label: 'Coffre', phase: 1 },
   MINIBOSS: { label: 'Mini-boss', phase: 1 },
@@ -204,5 +205,6 @@ const Engine = (() => {
   function start(u, r) { updateFn = u; renderFn = r; if (!running) { running = true; last = 0; rafId = requestAnimationFrame(loop); } }
   function stop() { running = false; cancelAnimationFrame(rafId); }
   function setHeadless(h) { headless = h; maxStepsPerFrame = h ? 400 : 8; }
-  return { init, start, stop, stats, view, get ctx() { return ctx; }, get canvas() { return canvas; }, setHeadless };
+  function isHeadless() { return headless; }
+  return { init, start, stop, stats, view, get ctx() { return ctx; }, get canvas() { return canvas; }, setHeadless, isHeadless };
 })();

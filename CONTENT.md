@@ -468,7 +468,7 @@ Mesure bot (mode test, biome 1) avant → après : niveau après la salle 1 : 5 
 
 ---
 
-## 18. Défis de salle (salle 2 toujours, salles 6 et 7 à 60 %)
+## 18. Défis de salle (salle 2 toujours, salle 6 à 60 %)
 
 La salle 2 est une « salle aléatoire » : combat à 3 vagues avec un défi garanti, tiré parmi ceux non encore vus dans la run. Les salles de pièges seules ont été retirées. En salles 6 et 7, 60 % de chance de tirer un défi (`dev/38_challenges.js`). Le HUD affiche le défi et sa jauge ; le panneau debug permet de forcer un défi.
 
@@ -494,3 +494,21 @@ La salle 2 est une « salle aléatoire » : combat à 3 vagues avec un défi gar
 | Relique | 30 % des drops d'élite, ou récompense de la Séquence | Effet pour la salle seulement : Jambon fumé (+40 PV, régén +3), Parapluie renforcé (bouclier 60, armure +3), Lunettes de visée (crit +30 %), Bottes de facteur (vitesse +30 %, cadence +15 %), Sifflet de chef de gare (allié) |
 
 **Apparence** (`Sprites.drawBody`) : la tenue suit le nombre de greffes possédées. 0 à 2 : nu, mosaïque de floutage sur les parties intimes ; 3 à 5 : vêtements de route ; 6 à 8 : l'armure du sprite sans le casque ; 9 et plus : le chevalier complet. L'arme est dessinée en main, orientée vers la visée. Les greffes de brûlure, foudre, gel et poison ajoutent une aura (flammes aux pieds, arcs électriques, givre, bulles). Dans le hub, le portrait est nu. Le panneau debug force une tenue.
+
+---
+
+## 20. Salle du tempo (salle 7 des deux biomes, type `COMBAT_TEMPO`)
+
+Une salle par palier joue en rythme avec la musique du biome. Le chef d'orchestre `Beat` lit `assets/music/tempo.json` (BPM, premier temps, tonalité, généré par `dev/analyze_music.py`) ; piste absente → métronome interne 120 BPM. Mesure à 4 temps.
+
+| Élément | Règle |
+|---|---|
+| Entrée | Porte fermée, pièges éteints. Au premier temps de la mesure suivante : compte à rebours 4-3-2-1 sur les temps (clic + chiffre au centre), puis « GO » : pièges allumés, vague 1 sur le temps fort suivant. |
+| Pièges | Cadence en temps musicaux (`params.beats`). Dalles à pointes en 4 zones : 4 coins qui frappent sur le 1 (deux zones) et le 3 (deux autres), 0,5 temps de pointes, 1 temps d'annonce. Bouches de feu haut/bas : une boule toutes les 2 mesures, décalées d'une mesure. Grille laser : 1 temps toutes les 4 mesures, 3 temps d'annonce (biome 1 uniquement). Tourelles murales : un tir toutes les 2 mesures, alternées. Biome 2 : + une zone de dalles centrale (sur le 2), deux nappes de gaz (2 temps toutes les 2 mesures, alternées), bouches en éventail. |
+| Ennemis | Types normaux du biome, mais `beatLock` : ruée, tir, charge, dash et explosion n'arrivent que sur un temps (vague 1) ou une croche (vagues 2 et 3). Un voyant jaune bat au-dessus de leur tête. |
+| Vagues | 3 vagues (ADMISSION : 5 / 8 / 8 ennemis ; LA SERRE : 5 / 8 / 10). Chaque vague entre sur le premier temps d'une mesure. |
+| Joueur | Tir ou compétence à ±100 ms d'un temps : dégâts ×1,25 (+0,025 par combo, max ×1,5), compétence ×1,25 (dash plus long), note de la pentatonique de la piste (mineure ou majeure selon la tonalité détectée), flottant « TEMPO ×n », éclat autour du joueur. Un seul bonus par temps ; combo retombe après 2 mesures sans action en rythme. Jamais de malus. |
+| HUD | Barre de mesure sous le cartouche de salle (4 points, le temps fort en jaune, curseur), combo, mention « métronome interne » si aucune piste. Sol : flash sur chaque temps, ondes depuis le centre. Anneau autour du joueur qui bat. |
+| Fin | Porte fermée jusqu'au premier temps de la mesure suivante (« Dernier accord »), puis ouverture. XP : 4 par action en rythme (max 150) × gain d'XP ; +15 XP « sans fausse note » si aucun coup reçu. Pas de défi aléatoire dans cette salle. |
+
+Tenue par le bot (autoplay, 4 armes, difficulté 1) : les 4 bots atteignent la salle 9 après le passage en salle 7 ; dégâts subis à niveau 7 entre 15 et 75.

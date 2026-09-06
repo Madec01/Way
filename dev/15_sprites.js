@@ -229,5 +229,5 @@ const Music = (() => {
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
   function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); preload(['biome', 'boss']); }
-  return { play, stop, setEnabled, restart, preload, keyFor, get current() { return current; }, get generative() { return generative; } };
+  return { play, stop, setEnabled, restart, preload, keyFor, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
 })();

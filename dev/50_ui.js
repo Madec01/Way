@@ -156,6 +156,7 @@ const UI = (() => {
     const r = G.run; const s = screens.prep; const lp = r.levelPassive;
     const weapons = Content.weapons().filter(w => Meta.weaponUnlocked(w.id));
     let selW = r.char.startWeapon && Meta.weaponUnlocked(r.char.startWeapon) ? r.char.startWeapon : weapons[0].id; let selS = null;
+    let selR = state.testRoom || 1, selL = state.testLevel || 1;   // mode Test : salle et niveau de départ (mémorisés pour la session)
     const metaList = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).map(m => `${esc(m.name)} ${Meta.tierOf(m.id)}`).join(', ') || 'aucune calibration';
     const render = () => {
       s.innerHTML = `
@@ -171,14 +172,23 @@ const UI = (() => {
           <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div></div>`).join('')}</div>
           <h3>${STR.chooseSkill} <span class="muted tiny">(en jeu : clic droit, Espace ou Maj${Input.touch.active ? ', bouton COMP.' : ''})</span></h3>
           <div class="cards" id="prep-skills">${r.skillChoices.map(sk => `<div class="card pick ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div><div class="muted tiny">Cooldown ${sk.cooldown} s</div></div>`).join('')}</div>
+          ${G.mode === 'test' ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Salle de départ <select id="prep-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => { const d = r.rooms.find(x => x.index === i); const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : ''; return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`; }).join('')}</select></label><label class="muted small">Niveau de départ <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>` : ''}
           <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${STR.enter}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
         </div>`;
+      const pr = s.querySelector('#prep-room'), plv = s.querySelector('#prep-level');
+      if (pr) pr.onchange = () => { selR = +pr.value; state.testRoom = selR; };
+      if (plv) plv.onchange = () => { selL = +plv.value; state.testLevel = selL; };
       s.querySelectorAll('[data-w]').forEach(c => c.onclick = () => { selW = c.dataset.w; AudioEngine.uiClick({}); render(); });
       s.querySelectorAll('[data-s]').forEach(c => c.onclick = () => { selS = c.dataset.s; AudioEngine.uiClick({}); render(); });
       s.querySelector('#prep-go').onclick = () => go();
       s.querySelector('#prep-abort').onclick = () => { Run.toHub(); };
     };
-    const go = () => { if (!selS) return; Run.equip(selW, selS); hideAll(); G.paused = false; Room.begin(); AudioEngine.uiConfirm({}); };
+    const go = () => {
+      if (!selS) return; Run.equip(selW, selS); hideAll(); G.paused = false;
+      if (G.mode === 'test' && selR > 1) Room.load(selR);   // mode Test : départ direct dans la salle choisie
+      if (G.mode === 'test' && selL > 1) { for (let i = 1; i < selL; i++) Run.addXp(G.run.xpNext - G.run.xp); }   // niveaux offerts : les choix de greffes s'enchaînent avant la salle
+      Room.begin(); AudioEngine.uiConfirm({});
+    };
     state.prep = { pick: (w, sk) => { selW = w; selS = sk; go(); }, weapons, skills: r.skillChoices };
     render(); show('prep');
     if (G.autoplay) Debug.autoPrep();

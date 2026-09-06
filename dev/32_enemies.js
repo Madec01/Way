@@ -45,6 +45,8 @@ class Enemy {
     this.x += sx / l * sp * dt; this.y += sy / l * sp * dt;
   }
   setState(s) { this.state = s; this.stateT = 0; }
+  /* prêt à frapper : télégraphie écoulée et, dans la salle du tempo, un temps (ou une croche) vient d'être franchi */
+  armed(t) { return this.stateT >= t && (!this.beatLock || Beat.crossedFrame(this.beatDiv || 1)); }
   update(dt) {
     if (this.dead) return; const pl = G.player;
     this.slow = updateStatus(this, dt); if (this.dead) return;
@@ -79,7 +81,7 @@ class Enemy {
     const b = this.behavior; const lr = b.lungeRange || 110;
     if (this.state === 'spawn') this.setState('chase');
     if (this.state === 'chase') { this.moveToward(t.x, t.y, dt); if (d < lr && this.stateT > 0.3) { this.setState('windup'); this.lungeA = angleTo(this.x, this.y, t.x, t.y); } }
-    else if (this.state === 'windup') { this.tele = 1; this.lungeA = lerp(this.lungeA, angleTo(this.x, this.y, t.x, t.y), 0.1); if (this.stateT >= this.telegraph.time) { this.setState('lunge'); this.tele = 0; } }
+    else if (this.state === 'windup') { this.tele = 1; this.lungeA = lerp(this.lungeA, angleTo(this.x, this.y, t.x, t.y), 0.1); if (this.armed(this.telegraph.time)) { this.setState('lunge'); this.tele = 0; } }
     else if (this.state === 'lunge') { const sp = (b.lungeSpeed || 620) * this.slow; this.x += Math.cos(this.lungeA) * sp * dt; this.y += Math.sin(this.lungeA) * sp * dt; if (this.stateT > (b.lungeTime || 0.25) || this.hitWall) this.setState('recover'); }
     else if (this.state === 'recover') { if (this.stateT > (b.recover || 0.5)) this.setState('chase'); }
   }
@@ -90,14 +92,14 @@ class Enemy {
       if (d < keep - 40) this.moveToward(this.x * 2 - t.x, this.y * 2 - t.y, dt, 0.9); else if (d > keep + 60) this.moveToward(t.x, t.y, dt); else { this.wander += dt * 1.5; this.x += Math.cos(this.wander) * this.speed * 0.4 * dt; this.y += Math.sin(this.wander) * this.speed * 0.4 * dt; }
       if (this.fireCd <= 0 && d < (b.range || 520) && lineOfSight(this.x, this.y, t.x, t.y)) { this.setState('aim'); this.aimA = angleTo(this.x, this.y, t.x, t.y); }
     } else if (this.state === 'aim') {
-      this.tele = 1; if (this.stateT >= this.telegraph.time) { this.tele = 0; const n = b.count || 1, sp = b.spread || 0.3; for (let i = 0; i < n; i++) enemyProjectile(this, this.aimA + (n > 1 ? lerp(-sp / 2, sp / 2, i / (n - 1)) : 0)); this.fireCd = 1 / (b.fireRate || 0.8) / G.difficulty.fireRateMul; AudioEngine.shootPistol({ x: (this.x - W / 2) / (W / 2), intensity: 0.4 }); this.setState('position'); }
+      this.tele = 1; if (this.armed(this.telegraph.time)) { this.tele = 0; const n = b.count || 1, sp = b.spread || 0.3; for (let i = 0; i < n; i++) enemyProjectile(this, this.aimA + (n > 1 ? lerp(-sp / 2, sp / 2, i / (n - 1)) : 0)); this.fireCd = 1 / (b.fireRate || 0.8) / G.difficulty.fireRateMul; AudioEngine.shootPistol({ x: (this.x - W / 2) / (W / 2), intensity: 0.4 }); this.setState('position'); }
     }
   }
   ai_tank(dt, t, d) {
     const b = this.behavior;
     if (this.state === 'spawn') this.setState('walk');
     if (this.state === 'walk') { this.moveToward(t.x, t.y, dt, 0.6); if (d < (b.chargeRange || 320) && this.stateT > Math.max(1, (b.chargeCooldown || 3) - (b.stun || 1.2)) && lineOfSight(this.x, this.y, t.x, t.y)) { this.setState('windup'); this.chargeA = angleTo(this.x, this.y, t.x, t.y); } }
-    else if (this.state === 'windup') { this.tele = 1; if (this.stateT >= (b.chargeWindup || this.telegraph.time)) { this.tele = 0; this.setState('charge'); AudioEngine.dash({ intensity: 1 }); } }
+    else if (this.state === 'windup') { this.tele = 1; if (this.armed(b.chargeWindup || this.telegraph.time)) { this.tele = 0; this.setState('charge'); AudioEngine.dash({ intensity: 1 }); } }
     else if (this.state === 'charge') { const sp = (b.chargeSpeed || 520) * this.slow; this.x += Math.cos(this.chargeA) * sp * dt; this.y += Math.sin(this.chargeA) * sp * dt; if (this.hitWall || this.stateT > (b.chargeTime || 0.9)) { this.setState('stunned'); if (this.hitWall) { G.shake = Math.min(8, G.shake + 4); Particles.spawn(this.x, this.y, { count: 10, color: '#aaa', size: 3 }); } } }
     else if (this.state === 'stunned') { if (this.stateT > (b.stun || 1.2)) this.setState('walk'); }
     if (this.state === 'walk' && this.stateT < (b.chargeCooldown || 0) - (b.stun || 1.2)) { /* attente avant nouvelle charge */ }
@@ -106,7 +108,7 @@ class Enemy {
     const b = this.behavior;
     if (this.state === 'spawn') this.setState('chase');
     if (this.state === 'chase') { this.moveToward(t.x, t.y, dt, 1.1); if (d < (b.triggerRange || 60)) this.setState('fuse'); }
-    else if (this.state === 'fuse') { this.tele = 1; this.moveToward(t.x, t.y, dt, 0.35); if (this.stateT >= (b.fuse || 0.7)) { this.explode(); } }
+    else if (this.state === 'fuse') { this.tele = 1; this.moveToward(t.x, t.y, dt, 0.35); if (this.armed(b.fuse || 0.7)) { this.explode(); } }
   }
   explode() {
     const b = this.behavior; const r = (b.radius || 80); const dmg = Math.round((b.explosionDamage || this.damage * 2) * G.difficulty.damageMul);
@@ -123,7 +125,7 @@ class Enemy {
       this.summoned = this.summoned.filter(e => !e.dead);
       if (this.summonCd <= 0 && this.summoned.length < (b.max || 4)) this.setState('summon');
     } else if (this.state === 'summon') {
-      this.tele = 1; if (this.stateT >= this.telegraph.time) {
+      this.tele = 1; if (this.armed(this.telegraph.time)) {
         this.tele = 0; const def = Content.enemy(b.summon); const n = b.count || 2;
         for (let i = 0; i < n; i++) { const a = RNG.range(0, TAU); const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 40, this.y + Math.sin(a) * 40, { hpMul: 0.7 }); if (e) { e.xp = Math.round(e.xp * 0.4); e.coins = 0; this.summoned.push(e); } }
         this.summonCd = (b.every || 5) / G.difficulty.fireRateMul; this.setState('idle'); AudioEngine.trapGas({ intensity: 0.5 });
@@ -141,7 +143,7 @@ class Enemy {
     const b = this.behavior;
     if (this.state === 'spawn') this.setState('wait');
     if (this.state === 'wait') { this.moveToward(t.x, t.y, dt, 0.5); if (this.stateT > (b.wait || 1.2) && (d < (b.range || 420) || this.stateT > (b.wait || 1.2) * 3)) { this.setState('windup'); this.dashA = angleTo(this.x, this.y, t.x, t.y); this.dashLen = Math.min(d + 40, b.dashDistance || 300); } }
-    else if (this.state === 'windup') { this.tele = 1; this.dashA = angleTo(this.x, this.y, t.x, t.y); if (this.stateT >= this.telegraph.time) { this.tele = 0; this.setState('dash'); this.dashed = 0; Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true }); } }
+    else if (this.state === 'windup') { this.tele = 1; this.dashA = angleTo(this.x, this.y, t.x, t.y); if (this.armed(this.telegraph.time)) { this.tele = 0; this.setState('dash'); this.dashed = 0; Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true }); } }
     else if (this.state === 'dash') { const sp = (b.dashSpeed || 900) * this.slow; const step = sp * dt; this.x += Math.cos(this.dashA) * step; this.y += Math.sin(this.dashA) * step; this.dashed += step; if (this.dashed >= this.dashLen || this.hitWall) { this.setState('wait'); this.stateT = -(b.postDashPause || 0); } }
   }
   /* --- rendu commun --- */
@@ -150,6 +152,8 @@ class Enemy {
     const alpha = this.spawnT > 0 ? clamp(1 - this.spawnT / 0.6, 0.1, 1) : 1;
     ctx.save(); ctx.globalAlpha = alpha;
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU); ctx.fill();
+    /* salle du tempo : voyant qui bat au-dessus de la tête */
+    if (this.beatLock) { const k = Math.max(0, 1 - Beat.phase() * 3); ctx.strokeStyle = '#ffd166'; ctx.fillStyle = '#ffd166'; ctx.lineWidth = 2; ctx.globalAlpha = alpha * (0.3 + 0.7 * k); ctx.beginPath(); ctx.arc(this.x, this.y - this.r - 10, 3 + k * 3, 0, TAU); ctx.fill(); ctx.globalAlpha = alpha; }
     /* télégraphie : halo pulsant + ligne d'intention */
     if (this.tele) {
       const k = 0.5 + 0.5 * Math.sin(Time.now * 30); ctx.strokeStyle = this.telegraph.color || '#fff'; ctx.lineWidth = 2 + k * 2; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 12;

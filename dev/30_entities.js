@@ -393,23 +393,23 @@ const Weapons = {
   update(pl, dt, firing, aim) {
     const w = pl.weapon; const st = pl.stats;
     const rate = w.fireRate * st.fireRate;
-    pl.attackCd -= dt;
+    pl.attackCd -= dt; pl.beatMul = 1;
     if (w.type === 'orbital') { Weapons.orbital(pl, dt, firing); return; }
     if (w.family === 'bow') {
       const ch = w.charge || { min: 0.15, max: 0.9, damageMul: 3 };
       if (firing && pl.attackCd <= 0) { const cs = Progression.hasPassive(pl.hooks, 'charge_speed'); pl.charge = Math.min(ch.max, pl.charge + dt * (cs ? (cs.mul || 1.4) : 1)); }
-      else if (pl.charge > 0) { const t = clamp((pl.charge - ch.min) / Math.max(0.01, ch.max - ch.min), 0, 1); Weapons.shoot(pl, aim, { damageMul: lerp(1, ch.damageMul, t), speedMul: lerp(0.8, 1.4, t), extraPierce: t >= 0.99 ? ((w.special && w.special.chargedPierceBonus) || 1) : 0, kind: 'arrow', size: 4 + 3 * t }); pl.charge = 0; pl.attackCd = 1 / rate; }
+      else if (pl.charge > 0) { const t = clamp((pl.charge - ch.min) / Math.max(0.01, ch.max - ch.min), 0, 1); pl.beatMul = Tempo.playerAction(pl, 'shot'); Weapons.shoot(pl, aim, { damageMul: lerp(1, ch.damageMul, t), speedMul: lerp(0.8, 1.4, t), extraPierce: t >= 0.99 ? ((w.special && w.special.chargedPierceBonus) || 1) : 0, kind: 'arrow', size: 4 + 3 * t }); pl.charge = 0; pl.attackCd = 1 / rate; }
       return;
     }
     if (!firing) { if (pl.flameOn) { pl.flameOn = false; AudioEngine.stopFlame(); } return; }
     if (w.family === 'flame') { Weapons.flame(pl, dt, aim, rate); return; }
     if (pl.attackCd > 0) return;
-    pl.attackCd = 1 / rate;
+    pl.attackCd = 1 / rate; pl.beatMul = Tempo.playerAction(pl, 'shot');
     if (w.family === 'chain' || (w.special && w.special.kind === 'chain')) Weapons.chainStrike(pl, aim);
     else if (w.type === 'melee' || w.type === 'area') Weapons.melee(pl, aim);
     else Weapons.shoot(pl, aim, {});
   },
-  dmgOf(pl, mul = 1) { return pl.weapon.damage * pl.stats.damage * mul; },
+  dmgOf(pl, mul = 1) { return pl.weapon.damage * pl.stats.damage * mul * (pl.beatMul || 1); },
   shoot(pl, aim, o) {
     const w = pl.weapon, st = pl.stats;
     const n = (w.projectiles || 1) + st.projectiles; const spread = (w.spread || 0) + (n > 1 ? 0.12 * (n - 1) : 0);
@@ -501,7 +501,7 @@ const Skills = {
   cooldownOf(pl) { return pl.skill.cooldown * (1 - pl.stats.cooldownReduction); },
   use(pl, aim) {
     if (pl.skillCharges <= 0) return false;
-    const s = pl.skill, e = s.effect, pw = pl.stats.skillPower;
+    const s = pl.skill, e = s.effect, pw = pl.stats.skillPower * Tempo.playerAction(pl, 'skill');
     pl.skillCharges--; if (pl.skillCharges < pl.skillMaxCharges && pl.skillCd <= 0) pl.skillCd = Skills.cooldownOf(pl);
     switch (e.kind) {
       case 'dash': {

@@ -224,6 +224,7 @@ const ROOM_TYPES = {
   PREP_COMBAT: { label: 'Préparation + Combat', phase: 1 },
   TRAP: { label: 'Pièges', phase: 1 },
   COMBAT_CHALLENGE: { label: 'Salle aléatoire', phase: 1 },
+  COMBAT_TEMPO: { label: 'Salle du tempo', phase: 2 },
   COMBAT_TRAP: { label: 'Combat + Pièges', phase: 1 },
   CHEST: { label: 'Coffre', phase: 1 },
   MINIBOSS: { label: 'Mini-boss', phase: 1 },
@@ -404,7 +405,8 @@ const Engine = (() => {
   function start(u, r) { updateFn = u; renderFn = r; if (!running) { running = true; last = 0; rafId = requestAnimationFrame(loop); } }
   function stop() { running = false; cancelAnimationFrame(rafId); }
   function setHeadless(h) { headless = h; maxStepsPerFrame = h ? 400 : 8; }
-  return { init, start, stop, stats, view, get ctx() { return ctx; }, get canvas() { return canvas; }, setHeadless };
+  function isHeadless() { return headless; }
+  return { init, start, stop, stats, view, get ctx() { return ctx; }, get canvas() { return canvas; }, setHeadless, isHeadless };
 })();
 
 </script>
@@ -487,6 +489,7 @@ const BALANCE = {
       I,
       p: 1 + rnd(-0.07, 0.07),                       // jitter de hauteur ±7 %
       g: (1 + rnd(-0.1, 0.1)) * (0.55 + 0.45 * I),   // jitter de gain ±10 %, pondéré par l'intensité
+      hz: isNum(o.hz) ? o.hz : 0,                    // hauteur imposée (Hz) pour les sons musicaux (salle du tempo)
     };
   }
 
@@ -1363,6 +1366,26 @@ const BALANCE = {
     v.reverb(0.06);
   });
 
+  // tempoTick : compte à rebours de la salle du tempo → clic bandpass 2 kHz + petit coup grave ; intensité 1 = « GO » (double clic, plus haut).
+  def('tempoTick', 3, (o, t) => {
+    const v = voice(o, 0.3, 3); if (!v) return; const go = o.I >= 0.95;
+    layerClick(v, t, o, go ? 2600 : 2000, 6, 0.4, 0.03);
+    layerThump(v, t, o, go ? 420 : 300, go ? 220 : 160, 0.3, 0.09, 3);
+    if (go) { layerClick(v, t + 0.07, o, 3200, 6, 0.3, 0.03); }
+    v.reverb(0.1);
+  });
+
+  // tempoNote : note « en rythme » → FM pincée sur la hauteur demandée (o.hz, pentatonique de la piste), lowpass, courte queue.
+  def('tempoNote', 3, (o, t) => {
+    const v = voice(o, 0.5, 3); if (!v) return; const fq = o.hz || 294;
+    const f = v.fm(fq, fq * 2.0, 320, t, t + 0.45);
+    sweep(f.idx.gain, t, 320, 12, 0.18);
+    const lp = v.filter('lowpass', 2600, 2); const sh = v.shaper(1.3); const g = v.gain(0);
+    v.chain(f.car, lp, sh, g, v.out); perc(g.gain, t, 0.3 * o.g, 0.004, 0.32);
+    layerClick(v, t, o, 3000, 5, 0.1, 0.01);
+    v.reverb(0.2);
+  });
+
   // uiConfirm : validation → deux tons FM filtrés (500 puis 750 Hz) + souffle rose + petite réverbe.
   def('uiConfirm', 3, (o, t) => {
     const v = voice(o, 0.45, 3); if (!v) return;
@@ -1582,6 +1605,8 @@ const BALANCE = {
   api.playMusic = playMusic;
   api.stopMusic = stopMusic;
   api.duckMusic = duckMusic;
+  /* position de lecture de la piste courante (salle du tempo) : { t, paused } ou null */
+  api.musicTime = () => music.cur && music.cur.el ? { t: music.cur.el.currentTime, paused: music.cur.el.paused } : null;
   api.musicState = () => ({ hasTrack: !!music.cur, gain: music.cur ? music.cur.g.gain.value : null, el: music.cur && music.cur.el ? { paused: music.cur.el.paused, t: music.cur.el.currentTime, ready: music.cur.el.readyState, net: music.cur.el.networkState, err: music.cur.el.error && music.cur.el.error.code, src: music.cur.el.currentSrc.slice(-24) } : null, generative: !!gen, ctxState: ctx ? ctx.state : null, ctxTime: ctx ? ctx.currentTime : null });
   api.startGenerativeMusic = startGenerativeMusic;
   api.stopGenerativeMusic = stopGenerativeMusic;
@@ -2204,24 +2229,26 @@ const CONTENT = {
           [ { x: 5, y: 6, w: 2, h: 1 }, { x: 17, y: 6, w: 2, h: 1 }, { x: 11, y: 1, w: 2, h: 1 }, { x: 11, y: 11, w: 2, h: 1 } ]
         ] }
       ] },
-    { id: 'room_b1_7', biome: 'biome_1', index: 7, type: 'COMBAT_TRAP_MODULAR', refTime: 90,
-      obstacles: [ { x: 6, y: 6, w: 1, h: 1 }, { x: 17, y: 6, w: 1, h: 1 } ],
+    { id: 'room_b1_7', biome: 'biome_1', index: 7, type: 'COMBAT_TEMPO', refTime: 95,
+      obstacles: [ { x: 5, y: 3, w: 1, h: 1 }, { x: 18, y: 3, w: 1, h: 1 }, { x: 5, y: 9, w: 1, h: 1 }, { x: 18, y: 9, w: 1, h: 1 } ],
       waves: [
-        { at: 'start', spawns: [ { enemy: 'enemy_incubateur', count: 1, x: 21, y: 3 }, { enemy: 'enemy_eclipse', count: 2, x: -1, y: -1 } ] },
-        { at: 'clear', spawns: [ { enemy: 'enemy_bloc', count: 1, x: 21, y: 6 }, { enemy: 'enemy_sentinelle', count: 3, x: -1, y: -1 }, { enemy: 'enemy_nuee', count: 2, x: -1, y: -1 } ] },
-        { at: 'clear', spawns: [ { enemy: 'enemy_meche', count: 4, x: -1, y: -1 }, { enemy: 'enemy_eclipse', count: 2, x: -1, y: -1 } ] }
+        { at: 'start', spawns: [ { enemy: 'enemy_rodeur', count: 3, x: -1, y: -1 }, { enemy: 'enemy_sentinelle', count: 2, x: -1, y: -1 } ] },
+        { at: 'clear', spawns: [ { enemy: 'enemy_meche', count: 3, x: -1, y: -1 }, { enemy: 'enemy_rodeur', count: 2, x: -1, y: -1 }, { enemy: 'enemy_sentinelle', count: 2, x: -1, y: -1 }, { enemy: 'enemy_eclipse', count: 1, x: -1, y: -1 } ] },
+        { at: 'clear', spawns: [ { enemy: 'enemy_sentinelle', count: 3, x: -1, y: -1 }, { enemy: 'enemy_rodeur', count: 2, x: -1, y: -1 }, { enemy: 'enemy_meche', count: 2, x: -1, y: -1 }, { enemy: 'enemy_eclipse', count: 1, x: -1, y: -1 } ] }
       ],
+      /* cadences en temps musicaux (4 temps par mesure) : on = temps du cycle où le piège frappe */
       traps: [
-        { trap: 'trap_grille', x: 2, y: 1, w: 20, h: 11, phase: 0 },
-        { trap: 'trap_nappe', x: 11, y: 6, phase: 0 },
-        { trap: 'trap_tourelle', x: 0, y: 6, phase: 0.6 },
-        { trap: 'trap_tourelle', x: 23, y: 6, phase: 1.8 }
+        { trap: 'trap_dalles', x: 2, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
+        { trap: 'trap_dalles', x: 18, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
+        { trap: 'trap_dalles', x: 18, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
+        { trap: 'trap_dalles', x: 2, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
+        { trap: 'trap_bouche', x: 11, y: 0, params: { dir: 'down', beats: { every: 8, telegraph: 1, on: 1 } } },
+        { trap: 'trap_bouche', x: 12, y: 12, params: { dir: 'up', beats: { every: 8, telegraph: 1, on: 5 } } },
+        { trap: 'trap_grille', x: 2, y: 1, w: 20, h: 11, params: { beats: { period: 16, active: 1, telegraph: 3, on: 0 } } },
+        { trap: 'trap_tourelle', x: 0, y: 2, params: { beats: { every: 8, telegraph: 1, on: 3 } } },
+        { trap: 'trap_tourelle', x: 23, y: 10, params: { beats: { every: 8, telegraph: 1, on: 7 } } }
       ],
-      fragments: [],
-      modular: [
-        { kind: 'safe_zone', radius: 3, period: 9, telegraph: 2.2, damage: 15, speed: 1.6, path: [ { x: 4, y: 3 }, { x: 19, y: 3 }, { x: 19, y: 9 }, { x: 4, y: 9 } ] },
-        { kind: 'slide_wall', x: 11, y: 0, w: 2, h: 3, dx: 0, dy: 8, period: 10, phase: 2 }
-      ] },
+      fragments: [], modular: [] },
     { id: 'room_b1_8', biome: 'biome_1', index: 8, type: 'CHEST_FINAL', refTime: 20,
       obstacles: [ { x: 8, y: 4, w: 1, h: 1 }, { x: 8, y: 8, w: 1, h: 1 }, { x: 15, y: 4, w: 1, h: 1 }, { x: 15, y: 8, w: 1, h: 1 } ], waves: [], traps: [], fragments: [], modular: [] },
     { id: 'room_b1_9', biome: 'biome_1', index: 9, type: 'BOSS_REVENGE', refTime: 150,
@@ -2358,24 +2385,26 @@ CONTENT.rooms.push(
         [ { x: 5, y: 6, w: 2, h: 1 }, { x: 17, y: 6, w: 2, h: 1 }, { x: 9, y: 2, w: 1, h: 2 }, { x: 14, y: 9, w: 1, h: 2 } ]
       ] },
     ] },
-  { id: 'room_b2_7', biome: 'biome_2', index: 7, type: 'COMBAT_TRAP_MODULAR', refTime: 100,
-    obstacles: [ { x: 6, y: 6, w: 1, h: 1 }, { x: 17, y: 6, w: 1, h: 1 } ],
+  { id: 'room_b2_7', biome: 'biome_2', index: 7, type: 'COMBAT_TEMPO', refTime: 105,
+    obstacles: [ { x: 5, y: 3, w: 1, h: 1 }, { x: 18, y: 3, w: 1, h: 1 }, { x: 5, y: 9, w: 1, h: 1 }, { x: 18, y: 9, w: 1, h: 1 } ],
     waves: [
-      { at: 'start', spawns: [ { enemy: 'enemy_bourgeon', count: 1, x: 21, y: 3 }, { enemy: 'enemy_liane', count: 2, x: -1, y: -1 }, { enemy: 'enemy_ronce', count: 2, x: -1, y: -1 } ] },
-      { at: 'clear', spawns: [ { enemy: 'enemy_racine', count: 1, x: 21, y: 6, elite: true }, { enemy: 'enemy_pollinisateur', count: 3, x: -1, y: -1 }, { enemy: 'enemy_moucherons', count: 2, x: -1, y: -1 } ] },
-      { at: 'clear', spawns: [ { enemy: 'enemy_spore', count: 5, x: -1, y: -1 }, { enemy: 'enemy_liane', count: 2, x: -1, y: -1 }, { enemy: 'enemy_bourgeon', count: 1, x: 2, y: 9 } ] },
+      { at: 'start', spawns: [ { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_pollinisateur', count: 2, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_spore', count: 3, x: -1, y: -1 }, { enemy: 'enemy_liane', count: 2, x: -1, y: -1 }, { enemy: 'enemy_pollinisateur', count: 2, x: -1, y: -1 }, { enemy: 'enemy_moucherons', count: 1, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_pollinisateur', count: 3, x: -1, y: -1 }, { enemy: 'enemy_ronce', count: 2, x: -1, y: -1 }, { enemy: 'enemy_spore', count: 3, x: -1, y: -1 }, { enemy: 'enemy_liane', count: 1, x: -1, y: -1 }, { enemy: 'enemy_racine', count: 1, x: 21, y: 6 } ] },
     ],
     traps: [
-      { trap: 'trap_grille', x: 2, y: 1, w: 20, h: 11, phase: 0, params: { spacingTiles: 3 } },
-      { trap: 'trap_nappe', x: 11, y: 6, phase: 0 }, { trap: 'trap_nappe', x: 5, y: 2, phase: 4 }, { trap: 'trap_nappe', x: 18, y: 10, phase: 2 },
-      { trap: 'trap_tourelle', x: 0, y: 6, phase: 0.6 }, { trap: 'trap_tourelle', x: 23, y: 6, phase: 1.8 },
-      { trap: 'trap_bouche', x: 11, y: 12, phase: 0.4, params: { dir: 'up', pattern: 'fan', count: 3 } },
-    ], fragments: [],
-    modular: [
-      { kind: 'safe_zone', radius: 2.6, period: 8, telegraph: 2.0, damage: 18, speed: 1.9, path: [ { x: 4, y: 3 }, { x: 19, y: 3 }, { x: 19, y: 9 }, { x: 4, y: 9 } ] },
-      { kind: 'slide_wall', x: 11, y: 0, w: 2, h: 3, dx: 0, dy: 8, period: 9, phase: 2 },
-      { kind: 'slide_wall', x: 2, y: 5, w: 3, h: 1, dx: 8, dy: 0, period: 11, phase: 5 },
-    ] },
+      { trap: 'trap_dalles', x: 2, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
+      { trap: 'trap_dalles', x: 18, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
+      { trap: 'trap_dalles', x: 18, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
+      { trap: 'trap_dalles', x: 2, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
+      { trap: 'trap_dalles', x: 10, y: 5, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 1 } } },
+      { trap: 'trap_bouche', x: 11, y: 0, params: { dir: 'down', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 1 } } },
+      { trap: 'trap_bouche', x: 12, y: 12, params: { dir: 'up', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 5 } } },
+      { trap: 'trap_nappe', x: 4, y: 6, params: { beats: { period: 8, active: 2, telegraph: 2, on: 4 } } },
+      { trap: 'trap_nappe', x: 19, y: 6, params: { beats: { period: 8, active: 2, telegraph: 2, on: 0 } } },
+      { trap: 'trap_tourelle', x: 0, y: 10, params: { beats: { every: 8, telegraph: 1, on: 3 } } },
+      { trap: 'trap_tourelle', x: 23, y: 2, params: { beats: { every: 8, telegraph: 1, on: 7 } } },
+    ], fragments: [], modular: [] },
   { id: 'room_b2_8', biome: 'biome_2', index: 8, type: 'CHEST_FINAL', refTime: 20,
     obstacles: [ { x: 8, y: 4, w: 1, h: 1 }, { x: 8, y: 8, w: 1, h: 1 }, { x: 15, y: 4, w: 1, h: 1 }, { x: 15, y: 8, w: 1, h: 1 } ], waves: [], traps: [], fragments: [], modular: [] },
   { id: 'room_b2_9', biome: 'biome_2', index: 9, type: 'BOSS_REVENGE', refTime: 160,
@@ -2681,7 +2710,7 @@ const Music = (() => {
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
   function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); preload(['biome', 'boss']); }
-  return { play, stop, setEnabled, restart, preload, keyFor, get current() { return current; }, get generative() { return generative; } };
+  return { play, stop, setEnabled, restart, preload, keyFor, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
 })();
 
 </script>
@@ -3212,23 +3241,23 @@ const Weapons = {
   update(pl, dt, firing, aim) {
     const w = pl.weapon; const st = pl.stats;
     const rate = w.fireRate * st.fireRate;
-    pl.attackCd -= dt;
+    pl.attackCd -= dt; pl.beatMul = 1;
     if (w.type === 'orbital') { Weapons.orbital(pl, dt, firing); return; }
     if (w.family === 'bow') {
       const ch = w.charge || { min: 0.15, max: 0.9, damageMul: 3 };
       if (firing && pl.attackCd <= 0) { const cs = Progression.hasPassive(pl.hooks, 'charge_speed'); pl.charge = Math.min(ch.max, pl.charge + dt * (cs ? (cs.mul || 1.4) : 1)); }
-      else if (pl.charge > 0) { const t = clamp((pl.charge - ch.min) / Math.max(0.01, ch.max - ch.min), 0, 1); Weapons.shoot(pl, aim, { damageMul: lerp(1, ch.damageMul, t), speedMul: lerp(0.8, 1.4, t), extraPierce: t >= 0.99 ? ((w.special && w.special.chargedPierceBonus) || 1) : 0, kind: 'arrow', size: 4 + 3 * t }); pl.charge = 0; pl.attackCd = 1 / rate; }
+      else if (pl.charge > 0) { const t = clamp((pl.charge - ch.min) / Math.max(0.01, ch.max - ch.min), 0, 1); pl.beatMul = Tempo.playerAction(pl, 'shot'); Weapons.shoot(pl, aim, { damageMul: lerp(1, ch.damageMul, t), speedMul: lerp(0.8, 1.4, t), extraPierce: t >= 0.99 ? ((w.special && w.special.chargedPierceBonus) || 1) : 0, kind: 'arrow', size: 4 + 3 * t }); pl.charge = 0; pl.attackCd = 1 / rate; }
       return;
     }
     if (!firing) { if (pl.flameOn) { pl.flameOn = false; AudioEngine.stopFlame(); } return; }
     if (w.family === 'flame') { Weapons.flame(pl, dt, aim, rate); return; }
     if (pl.attackCd > 0) return;
-    pl.attackCd = 1 / rate;
+    pl.attackCd = 1 / rate; pl.beatMul = Tempo.playerAction(pl, 'shot');
     if (w.family === 'chain' || (w.special && w.special.kind === 'chain')) Weapons.chainStrike(pl, aim);
     else if (w.type === 'melee' || w.type === 'area') Weapons.melee(pl, aim);
     else Weapons.shoot(pl, aim, {});
   },
-  dmgOf(pl, mul = 1) { return pl.weapon.damage * pl.stats.damage * mul; },
+  dmgOf(pl, mul = 1) { return pl.weapon.damage * pl.stats.damage * mul * (pl.beatMul || 1); },
   shoot(pl, aim, o) {
     const w = pl.weapon, st = pl.stats;
     const n = (w.projectiles || 1) + st.projectiles; const spread = (w.spread || 0) + (n > 1 ? 0.12 * (n - 1) : 0);
@@ -3320,7 +3349,7 @@ const Skills = {
   cooldownOf(pl) { return pl.skill.cooldown * (1 - pl.stats.cooldownReduction); },
   use(pl, aim) {
     if (pl.skillCharges <= 0) return false;
-    const s = pl.skill, e = s.effect, pw = pl.stats.skillPower;
+    const s = pl.skill, e = s.effect, pw = pl.stats.skillPower * Tempo.playerAction(pl, 'skill');
     pl.skillCharges--; if (pl.skillCharges < pl.skillMaxCharges && pl.skillCd <= 0) pl.skillCd = Skills.cooldownOf(pl);
     switch (e.kind) {
       case 'dash': {
@@ -3534,6 +3563,8 @@ class Enemy {
     this.x += sx / l * sp * dt; this.y += sy / l * sp * dt;
   }
   setState(s) { this.state = s; this.stateT = 0; }
+  /* prêt à frapper : télégraphie écoulée et, dans la salle du tempo, un temps (ou une croche) vient d'être franchi */
+  armed(t) { return this.stateT >= t && (!this.beatLock || Beat.crossedFrame(this.beatDiv || 1)); }
   update(dt) {
     if (this.dead) return; const pl = G.player;
     this.slow = updateStatus(this, dt); if (this.dead) return;
@@ -3568,7 +3599,7 @@ class Enemy {
     const b = this.behavior; const lr = b.lungeRange || 110;
     if (this.state === 'spawn') this.setState('chase');
     if (this.state === 'chase') { this.moveToward(t.x, t.y, dt); if (d < lr && this.stateT > 0.3) { this.setState('windup'); this.lungeA = angleTo(this.x, this.y, t.x, t.y); } }
-    else if (this.state === 'windup') { this.tele = 1; this.lungeA = lerp(this.lungeA, angleTo(this.x, this.y, t.x, t.y), 0.1); if (this.stateT >= this.telegraph.time) { this.setState('lunge'); this.tele = 0; } }
+    else if (this.state === 'windup') { this.tele = 1; this.lungeA = lerp(this.lungeA, angleTo(this.x, this.y, t.x, t.y), 0.1); if (this.armed(this.telegraph.time)) { this.setState('lunge'); this.tele = 0; } }
     else if (this.state === 'lunge') { const sp = (b.lungeSpeed || 620) * this.slow; this.x += Math.cos(this.lungeA) * sp * dt; this.y += Math.sin(this.lungeA) * sp * dt; if (this.stateT > (b.lungeTime || 0.25) || this.hitWall) this.setState('recover'); }
     else if (this.state === 'recover') { if (this.stateT > (b.recover || 0.5)) this.setState('chase'); }
   }
@@ -3579,14 +3610,14 @@ class Enemy {
       if (d < keep - 40) this.moveToward(this.x * 2 - t.x, this.y * 2 - t.y, dt, 0.9); else if (d > keep + 60) this.moveToward(t.x, t.y, dt); else { this.wander += dt * 1.5; this.x += Math.cos(this.wander) * this.speed * 0.4 * dt; this.y += Math.sin(this.wander) * this.speed * 0.4 * dt; }
       if (this.fireCd <= 0 && d < (b.range || 520) && lineOfSight(this.x, this.y, t.x, t.y)) { this.setState('aim'); this.aimA = angleTo(this.x, this.y, t.x, t.y); }
     } else if (this.state === 'aim') {
-      this.tele = 1; if (this.stateT >= this.telegraph.time) { this.tele = 0; const n = b.count || 1, sp = b.spread || 0.3; for (let i = 0; i < n; i++) enemyProjectile(this, this.aimA + (n > 1 ? lerp(-sp / 2, sp / 2, i / (n - 1)) : 0)); this.fireCd = 1 / (b.fireRate || 0.8) / G.difficulty.fireRateMul; AudioEngine.shootPistol({ x: (this.x - W / 2) / (W / 2), intensity: 0.4 }); this.setState('position'); }
+      this.tele = 1; if (this.armed(this.telegraph.time)) { this.tele = 0; const n = b.count || 1, sp = b.spread || 0.3; for (let i = 0; i < n; i++) enemyProjectile(this, this.aimA + (n > 1 ? lerp(-sp / 2, sp / 2, i / (n - 1)) : 0)); this.fireCd = 1 / (b.fireRate || 0.8) / G.difficulty.fireRateMul; AudioEngine.shootPistol({ x: (this.x - W / 2) / (W / 2), intensity: 0.4 }); this.setState('position'); }
     }
   }
   ai_tank(dt, t, d) {
     const b = this.behavior;
     if (this.state === 'spawn') this.setState('walk');
     if (this.state === 'walk') { this.moveToward(t.x, t.y, dt, 0.6); if (d < (b.chargeRange || 320) && this.stateT > Math.max(1, (b.chargeCooldown || 3) - (b.stun || 1.2)) && lineOfSight(this.x, this.y, t.x, t.y)) { this.setState('windup'); this.chargeA = angleTo(this.x, this.y, t.x, t.y); } }
-    else if (this.state === 'windup') { this.tele = 1; if (this.stateT >= (b.chargeWindup || this.telegraph.time)) { this.tele = 0; this.setState('charge'); AudioEngine.dash({ intensity: 1 }); } }
+    else if (this.state === 'windup') { this.tele = 1; if (this.armed(b.chargeWindup || this.telegraph.time)) { this.tele = 0; this.setState('charge'); AudioEngine.dash({ intensity: 1 }); } }
     else if (this.state === 'charge') { const sp = (b.chargeSpeed || 520) * this.slow; this.x += Math.cos(this.chargeA) * sp * dt; this.y += Math.sin(this.chargeA) * sp * dt; if (this.hitWall || this.stateT > (b.chargeTime || 0.9)) { this.setState('stunned'); if (this.hitWall) { G.shake = Math.min(8, G.shake + 4); Particles.spawn(this.x, this.y, { count: 10, color: '#aaa', size: 3 }); } } }
     else if (this.state === 'stunned') { if (this.stateT > (b.stun || 1.2)) this.setState('walk'); }
     if (this.state === 'walk' && this.stateT < (b.chargeCooldown || 0) - (b.stun || 1.2)) { /* attente avant nouvelle charge */ }
@@ -3595,7 +3626,7 @@ class Enemy {
     const b = this.behavior;
     if (this.state === 'spawn') this.setState('chase');
     if (this.state === 'chase') { this.moveToward(t.x, t.y, dt, 1.1); if (d < (b.triggerRange || 60)) this.setState('fuse'); }
-    else if (this.state === 'fuse') { this.tele = 1; this.moveToward(t.x, t.y, dt, 0.35); if (this.stateT >= (b.fuse || 0.7)) { this.explode(); } }
+    else if (this.state === 'fuse') { this.tele = 1; this.moveToward(t.x, t.y, dt, 0.35); if (this.armed(b.fuse || 0.7)) { this.explode(); } }
   }
   explode() {
     const b = this.behavior; const r = (b.radius || 80); const dmg = Math.round((b.explosionDamage || this.damage * 2) * G.difficulty.damageMul);
@@ -3612,7 +3643,7 @@ class Enemy {
       this.summoned = this.summoned.filter(e => !e.dead);
       if (this.summonCd <= 0 && this.summoned.length < (b.max || 4)) this.setState('summon');
     } else if (this.state === 'summon') {
-      this.tele = 1; if (this.stateT >= this.telegraph.time) {
+      this.tele = 1; if (this.armed(this.telegraph.time)) {
         this.tele = 0; const def = Content.enemy(b.summon); const n = b.count || 2;
         for (let i = 0; i < n; i++) { const a = RNG.range(0, TAU); const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 40, this.y + Math.sin(a) * 40, { hpMul: 0.7 }); if (e) { e.xp = Math.round(e.xp * 0.4); e.coins = 0; this.summoned.push(e); } }
         this.summonCd = (b.every || 5) / G.difficulty.fireRateMul; this.setState('idle'); AudioEngine.trapGas({ intensity: 0.5 });
@@ -3630,7 +3661,7 @@ class Enemy {
     const b = this.behavior;
     if (this.state === 'spawn') this.setState('wait');
     if (this.state === 'wait') { this.moveToward(t.x, t.y, dt, 0.5); if (this.stateT > (b.wait || 1.2) && (d < (b.range || 420) || this.stateT > (b.wait || 1.2) * 3)) { this.setState('windup'); this.dashA = angleTo(this.x, this.y, t.x, t.y); this.dashLen = Math.min(d + 40, b.dashDistance || 300); } }
-    else if (this.state === 'windup') { this.tele = 1; this.dashA = angleTo(this.x, this.y, t.x, t.y); if (this.stateT >= this.telegraph.time) { this.tele = 0; this.setState('dash'); this.dashed = 0; Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true }); } }
+    else if (this.state === 'windup') { this.tele = 1; this.dashA = angleTo(this.x, this.y, t.x, t.y); if (this.armed(this.telegraph.time)) { this.tele = 0; this.setState('dash'); this.dashed = 0; Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true }); } }
     else if (this.state === 'dash') { const sp = (b.dashSpeed || 900) * this.slow; const step = sp * dt; this.x += Math.cos(this.dashA) * step; this.y += Math.sin(this.dashA) * step; this.dashed += step; if (this.dashed >= this.dashLen || this.hitWall) { this.setState('wait'); this.stateT = -(b.postDashPause || 0); } }
   }
   /* --- rendu commun --- */
@@ -3639,6 +3670,8 @@ class Enemy {
     const alpha = this.spawnT > 0 ? clamp(1 - this.spawnT / 0.6, 0.1, 1) : 1;
     ctx.save(); ctx.globalAlpha = alpha;
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU); ctx.fill();
+    /* salle du tempo : voyant qui bat au-dessus de la tête */
+    if (this.beatLock) { const k = Math.max(0, 1 - Beat.phase() * 3); ctx.strokeStyle = '#ffd166'; ctx.fillStyle = '#ffd166'; ctx.lineWidth = 2; ctx.globalAlpha = alpha * (0.3 + 0.7 * k); ctx.beginPath(); ctx.arc(this.x, this.y - this.r - 10, 3 + k * 3, 0, TAU); ctx.fill(); ctx.globalAlpha = alpha; }
     /* télégraphie : halo pulsant + ligne d'intention */
     if (this.tele) {
       const k = 0.5 + 0.5 * Math.sin(Time.now * 30); ctx.strokeStyle = this.telegraph.color || '#fff'; ctx.lineWidth = 2 + k * 2; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 12;
@@ -3822,6 +3855,7 @@ class Trap {
     this.period = (def.period || 3) / d.fireRateMul; this.telegraph = def.telegraph != null ? def.telegraph : 0.6; this.active = def.active != null ? def.active : 1;
     this.speedMul = d.speedMul; this.hitCd = 0; this.warned = -1; this.fireCount = 0; this.color = def.color || '#ff5e7a';
     this.disabled = false;
+    this.beats = this.p.beats || null;   // salle du tempo : cadence en temps musicaux (voir syncBeat)
     /* --- adaptation des paramètres de contenu --- */
     const p = this.p;
     switch (this.kind) {
@@ -3845,9 +3879,16 @@ class Trap {
   }
   warn(idx, snd = 'trapWarn') { if (this.warned !== idx) { this.warned = idx; AudioEngine[snd]({ x: (this.cx - W / 2) / (W / 2), intensity: 0.5 }); } }
   hit(pl) { if (this.hitCd > 0) return; if (Combat.hitPlayer(this.damage, { type: 'trap', x: this.cx, y: this.cy, trapName: this.name })) this.hitCd = 0.5; }
-  update(dt, rt) { this.hitCd -= dt; if (this.disabled) return; this['u_' + this.kind](dt, rt, G.player); }
-  render(ctx, rt) { if (this.disabled) return; this['r_' + this.kind](ctx, rt); }
-  dangerAt(x, y, rt) { const f = this['d_' + this.kind]; return f ? f.call(this, x, y, rt) : 0; }
+  update(dt, rt) { this.hitCd -= dt; if (this.beats) this.syncBeat(); if (this.disabled) return; this['u_' + this.kind](dt, rt, G.player); }
+  render(ctx, rt) { if (this.beats) this.syncBeat(); if (this.disabled) return; this['r_' + this.kind](ctx, rt); }
+  dangerAt(x, y, rt) { if (this.disabled) return 0; if (this.beats) this.syncBeat(); const f = this['d_' + this.kind]; return f ? f.call(this, x, y, rt) : 0; }
+  /* salle du tempo : p.beats = { period, active, telegraph, on } (ou { every, telegraph, on } pour bouches et tourelles), en temps musicaux ;
+     rt est alors le temps musical (Beat.t) et le piège se déclenche sur le temps « on » de chaque cycle, quel que soit le BPM de la piste. */
+  syncBeat() {
+    const b = this.beats, L = Beat.beatLen(); const tele = b.telegraph != null ? b.telegraph : 1, on = b.on || 0;
+    if (this.kind === 'wall_fireball' || this.kind === 'turret_fixed') { const every = b.every || b.period || 2; this.p.every = every * L * G.difficulty.fireRateMul; this.telegraph = tele * L; this.phase = ((((on - tele) % every) + every) % every) * L; }
+    else { const period = b.period || 4, act = b.active || 1; this.period = period * L; this.active = act * L; this.telegraph = tele * L; this.phase = ((((on + act) % period) + period) % period) * L; }
+  }
 
   /* --- laser_sweep : rayon qui traverse la zone pendant la phase active (aller, puis retour au cycle suivant) --- */
   sweepSeg(rt) {
@@ -4127,7 +4168,7 @@ const CHALLENGE_DEFS = {
   lights:   { name: 'Lumières coupées', desc: 'Seule votre lampe éclaire. Les ennemis se trahissent par leurs yeux. XP +25 %.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#9fd8ff' },
   timer:    { name: 'Chrono', desc: 'Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s\'enrage.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ff5e7a' },
 };
-const CHALLENGE_ROOMS = [2, 6, 7];   // salle 2 : toujours un défi ; 6 et 7 : 60 % de chance
+const CHALLENGE_ROOMS = [2, 6];   // salle 2 : toujours un défi ; 6 : 60 % de chance (la salle 7 est la salle du tempo)
 const CHALLENGE_CHANCE = 0.6;
 
 const Challenge = (() => {
@@ -4306,6 +4347,144 @@ const Challenge = (() => {
 
 </script>
 <script>
+/* ==== 39_tempo.js ==== */
+/* ==== 39_tempo.js — chef d'orchestre (Beat) + salle du tempo (Tempo) ====
+   Beat : temps musical calé sur la piste en cours. assets/music/tempo.json (généré par dev/analyze_music.py) donne
+   BPM, décalage du premier temps et tonalité de chaque piste ; sans piste ou fichier absent → métronome interne 120 BPM.
+   Tout ce qui « joue en rythme » lit Beat (jamais l'horloge de salle), donc pause, chargement et reprise de position restent calés.
+   Tempo : règles de la salle du tempo (type COMBAT_TEMPO, salle 7) : compte à rebours sur une mesure, pièges et ennemis sur les temps,
+   vagues qui entrent sur le premier temps d'une mesure, bonus « en rythme » pour le joueur, porte qui s'ouvre sur la mesure. */
+const Beat = (() => {
+  let meta = null, cur = { bpm: 120, offset: 0, key: 'D', mode: 'minor', internal: true };
+  let t = 0, prevT = 0, lastRead = -1, sameFrames = 0, anchorT = 0, anchorNow = 0;
+  async function load() { try { const r = await fetch(ASSET_BASE + 'music/tempo.json'); if (r.ok) meta = await r.json(); } catch (e) { meta = null; } }
+  function trackFor(url) { if (!meta || !url) return null; let name = url.split('/').pop().split('?')[0]; try { name = decodeURIComponent(name); } catch (e) { /* */ } return meta[name] || null; }
+  /* position musicale lue sur l'<audio> (moins le décalage du premier temps), ou null si la piste ne joue pas (chargement, pause, génératif) */
+  function readMusic() {
+    const m = AudioEngine.musicTime ? AudioEngine.musicTime() : null; const url = Music.currentUrl; const info = m && !m.paused && url ? trackFor(url) : null;
+    if (info && m.t > 0) {
+      if (m.t === lastRead) sameFrames++; else { sameFrames = 0; lastRead = m.t; }
+      if (sameFrames < 30) { cur = { bpm: info.bpm, offset: info.offset, key: info.key || 'D', mode: info.mode || 'minor', internal: false }; return m.t - info.offset; }
+    }
+    if (!cur.internal) cur = { bpm: 120, offset: 0, key: cur.key, mode: cur.mode, internal: true };
+    return null;
+  }
+  /* le temps musical avance avec l'horloge de simulation (Time.now : vitesse debug, autoplay accéléré et ralenti compris) et se recale
+     sur la piste quand le jeu tourne en temps réel : recalage franc au-delà de 120 ms (démarrage, boucle, reprise), correction douce sinon */
+  function update() {
+    prevT = t; const m = readMusic(); const simT = anchorT + (Time.now - anchorNow);
+    if (m != null && Time.scale === 1 && !Engine.isHeadless()) {
+      const drift = m - simT;
+      if (Math.abs(drift) > 0.12) { anchorT = m; anchorNow = Time.now; t = m; }
+      else { anchorT += drift * 0.05; t = anchorT + (Time.now - anchorNow); }
+    } else t = simT;
+  }
+  const beatLen = () => 60 / cur.bpm;
+  const index = () => Math.floor(t / beatLen());
+  const phase = () => ((t / beatLen()) % 1 + 1) % 1;
+  /* vrai si une frontière de subdivision (div par temps) a été franchie pendant le dernier pas */
+  function crossedFrame(div = 1) { const L = beatLen() / div; return t >= prevT && Math.floor(t / L) !== Math.floor(prevT / L); }
+  const beatInBar = () => ((index() % 4) + 4) % 4;
+  /* distance (s) au temps le plus proche */
+  function distToBeat(div = 1) { const L = beatLen() / div; const p = ((t / L) % 1 + 1) % 1; return Math.min(p, 1 - p) * L; }
+  function rootHz() { const semi = { C: -9, 'C#': -8, D: -7, 'D#': -6, E: -5, F: -4, 'F#': -3, G: -2, 'G#': -1, A: 0, 'A#': 1, B: 2 }[cur.key]; return 440 * Math.pow(2, (semi == null ? -7 : semi) / 12); }
+  /* fréquence de la n-ième note de la pentatonique de la piste (mode mineur ou majeur) */
+  function noteHz(n) { const deg = cur.mode === 'major' ? [0, 2, 4, 7, 9] : [0, 3, 5, 7, 10]; const i = Math.max(0, n | 0); return rootHz() * Math.pow(2, (deg[i % 5] + 12 * Math.min(2, Math.floor(i / 5))) / 12); }
+  return { load, update, beatLen, index, phase, crossedFrame, beatInBar, distToBeat, rootHz, noteHz, get info() { return cur; }, get t() { return t; } };
+})();
+
+const Tempo = {
+  WINDOW: 0.1,   // fenêtre « en rythme » (s) de part et d'autre du temps
+  COLOR: '#ffd166',
+  create(room) {
+    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9 };
+    for (const t of room.traps) t.disabled = true;   // les pièges attendent la fin du compte à rebours
+  },
+  /* appelé chaque pas de simulation (Room.update) */
+  update(room, dt) {
+    const tp = room.tempo; const crossed = Beat.crossedFrame(1); const down = crossed && Beat.beatInBar() === 0;
+    if (crossed) { tp.pulses.push({ t: 0 }); if (tp.pulses.length > 6) tp.pulses.shift(); }
+    for (let i = tp.pulses.length - 1; i >= 0; i--) { tp.pulses[i].t += dt; if (tp.pulses[i].t > 1.2) tp.pulses.splice(i, 1); }
+    for (let i = tp.flashes.length - 1; i >= 0; i--) { tp.flashes[i].t += dt; if (tp.flashes[i].t > 0.35) tp.flashes.splice(i, 1); }
+    tp.countT += dt; tp.goT += dt;
+    if (room.state === 'intro') return;
+    if (tp.phase === 'wait') { if (down) { tp.phase = 'count'; tp.count = 4; tp.countT = 0; AudioEngine.tempoTick({ intensity: 0.7 }); } return; }   // attend le début d'une mesure
+    if (tp.phase === 'count') {
+      if (crossed) { tp.count--; tp.countT = 0; if (tp.count <= 0) { tp.phase = 'go'; tp.started = true; tp.goT = 0; for (const t of room.traps) t.disabled = false; AudioEngine.tempoTick({ intensity: 1 }); } else AudioEngine.tempoTick({ intensity: 0.7 }); }
+      return;
+    }
+    if (tp.combo > 0 && Beat.t - tp.lastAction > Beat.beatLen() * 8) tp.combo = 0;   // deux mesures sans action en rythme : le combo retombe
+    if (tp.pendingDoor && down) { tp.pendingDoor = false; room.doorOpen = true; AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a'); for (const p of Pickups.list) p.magnet = true; }
+  },
+  /* les vagues n'entrent que sur le premier temps d'une mesure, une fois le compte à rebours fini */
+  waveGate(room) {
+    const tp = room.tempo; if (!tp.started) return false;
+    if (!(Beat.crossedFrame(1) && Beat.beatInBar() === 0)) return false;
+    tp.div = room.wavesStarted ? 2 : 1;   // vague 1 : les ennemis frappent sur les noires ; vagues suivantes : sur les croches
+    return true;
+  },
+  /* fin de salle : la porte s'ouvre sur la mesure suivante, bonus d'XP selon le nombre d'actions en rythme */
+  onClear(room) {
+    const tp = room.tempo; room.doorOpen = false; tp.pendingDoor = true;
+    const bonus = Math.round(Math.min(150, tp.onBeat * 4) * G.player.stats.xpGain * G.debug.xpMul);
+    if (bonus > 0 && !G.attract) { Run.addXp(bonus); UI.toast(`En rythme ×${tp.onBeat} (meilleure série ${tp.best}) : +${bonus} XP`); }
+    UI.banner('Dernier accord', Tempo.COLOR);
+  },
+  /* action du joueur (tir, compétence) : multiplicateur si elle tombe sur un temps ; un seul bonus par temps */
+  playerAction(pl, kind) {
+    const r = G.room; if (!r || !r.tempo || !r.tempo.started || G.attract) return 1;
+    const tp = r.tempo; if (Beat.distToBeat(1) > Tempo.WINDOW) return 1;
+    const idx = Math.round(Beat.t / Beat.beatLen()); if (tp.lastIdx === idx) return tp.lastMul;
+    tp.lastIdx = idx; tp.combo++; tp.best = Math.max(tp.best, tp.combo); tp.onBeat++; tp.lastAction = Beat.t;
+    const mul = 1.25 + Math.min(0.25, tp.combo * 0.025); tp.lastMul = mul;
+    Floaters.add(pl.x, pl.y - pl.r - 26, 'TEMPO ×' + tp.combo, Tempo.COLOR, 15);
+    AudioEngine.tempoNote({ intensity: 0.75, hz: Beat.noteHz(tp.combo - 1) });
+    tp.flashes.push({ t: 0 });
+    return mul;
+  },
+  /* sol : flash sur chaque temps + ondes qui partent du centre */
+  renderFloor(ctx, room) {
+    const tp = room.tempo; const ph = Beat.phase(); ctx.save();
+    ctx.beginPath(); ctx.rect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H); ctx.clip();
+    ctx.globalAlpha = 0.07 * Math.max(0, 1 - ph * 2.5); ctx.fillStyle = Tempo.COLOR; ctx.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
+    ctx.strokeStyle = Tempo.COLOR; ctx.lineWidth = 3;
+    for (const p of tp.pulses) { const k = p.t / 1.2; ctx.globalAlpha = 0.22 * (1 - k); ctx.beginPath(); ctx.arc(ROOM_X + ROOM_W / 2, ROOM_Y + ROOM_H / 2, 20 + k * 720, 0, TAU); ctx.stroke(); }
+    ctx.restore();
+  },
+  /* au-dessus des entités : anneau du joueur, éclats « en rythme », compte à rebours */
+  renderOverlay(ctx, room) {
+    const tp = room.tempo; const pl = G.player; const ph = Beat.phase(); ctx.save();
+    if (pl && !pl.dead) {
+      ctx.strokeStyle = Tempo.COLOR; ctx.shadowColor = Tempo.COLOR; ctx.shadowBlur = 10; ctx.lineWidth = 2; ctx.globalAlpha = 0.25 + 0.55 * Math.max(0, 1 - ph * 2);
+      ctx.beginPath(); ctx.arc(pl.x, pl.y, pl.r + 8 + (1 - ph) * 8, 0, TAU); ctx.stroke();
+      for (const f of tp.flashes) { const k = f.t / 0.35; ctx.globalAlpha = 0.8 * (1 - k); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(pl.x, pl.y, pl.r + 10 + k * 50, 0, TAU); ctx.stroke(); }
+    }
+    ctx.shadowBlur = 0;
+    if (tp.phase === 'count' || tp.goT < 0.5) {
+      const txt = tp.phase === 'count' ? String(tp.count) : 'GO'; const k = tp.phase === 'count' ? clamp(tp.countT / Beat.beatLen(), 0, 1) : clamp(tp.goT / 0.5, 0, 1);
+      ctx.globalAlpha = 1 - k * 0.8; ctx.fillStyle = Tempo.COLOR; ctx.shadowColor = Tempo.COLOR; ctx.shadowBlur = 24; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `bold ${Math.round(150 - k * 40)}px "Segoe UI", system-ui, sans-serif`; ctx.fillText(txt, ROOM_X + ROOM_W / 2, ROOM_Y + ROOM_H / 2);
+    }
+    ctx.restore();
+  },
+  /* HUD (coordonnées écran) : barre de mesure en haut au centre + combo */
+  renderHud(ctx, room) {
+    const tp = room.tempo; const ph = Beat.phase(); const bib = Beat.beatInBar(); ctx.save();
+    const cx = W / 2, y = 66, sp = 30;   // sous le cartouche « Salle 7/9 » du HUD
+    ctx.fillStyle = 'rgba(8,10,18,.7)'; ctx.fillRect(cx - 88, y - 14, 176, tp.combo > 0 ? 46 : 28);
+    for (let i = 0; i < 4; i++) {
+      const x = cx - 1.5 * sp + i * sp; const on = i === bib && tp.phase !== 'wait';
+      ctx.globalAlpha = on ? 1 : 0.35; ctx.fillStyle = i === 0 ? Tempo.COLOR : '#e8ecf7'; ctx.beginPath(); ctx.arc(x, y, on ? 6 + (1 - ph) * 4 : 4, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff'; ctx.fillRect(cx - 1.5 * sp + (bib + ph) * sp - 1, y - 11, 2, 22);
+    if (tp.combo > 0) { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = Tempo.COLOR; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(`TEMPO ×${tp.combo}`, cx, y + 22); }
+    if (Beat.info.internal) { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#9aa4c4'; ctx.font = '10px "Segoe UI", system-ui, sans-serif'; ctx.globalAlpha = 0.8; ctx.fillText('métronome interne', cx, y + (tp.combo > 0 ? 38 : 24)); }
+    ctx.restore();
+  },
+};
+
+</script>
+<script>
 /* ==== 40_room.js ==== */
 /* =========================================================================
    SALLE ZÉRO — 40_room.js
@@ -4365,6 +4544,7 @@ const Room = {
     Modular.init(G.room);
     if (def.type === 'CHEST' || def.type === 'CHEST_FINAL') { G.room.chest = { x: W / 2, y: H / 2, r: 22, opened: false }; G.room.doorOpen = false; }
     if (def.type === 'TRAP') { G.room.doorOpen = !(G.room.challenge && G.room.challenge.id === 'collapse'); }
+    if (def.type === 'COMBAT_TEMPO') Tempo.create(G.room);
     UI.banner(G.room.label, '#6ee7ff'); AudioEngine.uiConfirm({});
     if (G.room.challenge) setTimeout(() => { if (G.room && G.room.challenge) { UI.banner('DÉFI : ' + G.room.challenge.def.name, G.room.challenge.def.color, G.room.challenge.def.desc); AudioEngine.trapWarn({ intensity: 0.8 }); } }, 900);
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Music.play('boss'); else Music.play('biome');
@@ -4375,6 +4555,7 @@ const Room = {
     if (!def) return null;
     if (G.enemies.filter(e => !e.dead).length > 60) return null;
     const e = new Enemy(def, x, y, opts); resolveRoomCollision(e); G.enemies.push(e);
+    if (G.room.tempo) { e.beatLock = true; e.beatDiv = G.room.tempo.div || 1; }   // salle du tempo : frappe sur les temps
     if (G.room.challenge && G.room.challenge.enraged) Challenge.enrage(e);
     return e;
   },
@@ -4402,7 +4583,7 @@ const Room = {
   alive() { return G.enemies.filter(e => !e.dead).length; },
   update(dt) {
     const r = G.room; const pl = G.player;
-    r.time += dt; r.stateT += dt;
+    r.time += dt; r.stateT += dt; Beat.update();
     if (r.combo > 0 && Time.now > r.comboUntil) r.combo = 0;
     if (r.state === 'intro') { if (r.stateT >= 0.8) Room.begin(); return; }
     /* vagues */
@@ -4411,7 +4592,7 @@ const Room = {
       for (const w of r.waves) {
         if (w.done) continue;
         const trig = w.at === 'start' ? r.stateT >= 0 : w.at === 'clear' ? (alive === 0 && r.wavesStarted && r.lastWaveT < r.stateT - 0.5) : typeof w.at === 'number' ? r.stateT >= w.at : false;
-        if (trig) { w.done = true; r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
+        if (trig && (!r.tempo || Tempo.waveGate(r))) { w.done = true; r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
       }
       if ((r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') && !r.boss && r.stateT > 0.2 && !r.waves.length) Room.spawnBoss();
       /* fragments d'énergie */
@@ -4430,8 +4611,10 @@ const Room = {
     if (r.doorOpen && !pl.dead) { const dx = ROOM_X + ROOM_W, dy = ROOM_Y + ROOM_H / 2; if (pl.x > dx - pl.r - 26 && Math.abs(pl.y - dy) < TILE * 0.9) Run.nextRoom(); }
     /* défi */
     if (r.challenge) Challenge.update(r, dt);
-    /* pièges */
-    for (const t of r.traps) t.update(dt, r.time);
+    /* salle du tempo */
+    if (r.tempo) Tempo.update(r, dt);
+    /* pièges (salle du tempo : temps musical) */
+    for (const t of r.traps) t.update(dt, Room.trapTime(r));
     /* salles modulaires (phase 2) : Modular.update(r, dt) déplacera les obstacles et recalculera px/py */
     if (r.modular.length) Modular.update(r, dt);
     /* zones de dégâts (traînées de feu, gaz du joueur…) */
@@ -4447,21 +4630,25 @@ const Room = {
     const tick = a => { for (let i = a.length - 1; i >= 0; i--) { a[i].t += dt; if (a[i].t > a[i].life) a.splice(i, 1); } };
     tick(r.beams); tick(r.blasts); tick(r.slashes);
   },
+  /* horloge des pièges : temps musical dans la salle du tempo, temps de salle ailleurs */
+  trapTime(r) { return r.tempo ? Beat.t : r.time; },
   clear() {
-    const r = G.room; if (r.state === 'clear') return; r.state = 'clear'; r.stateT = 0; r.doorOpen = true;
-    AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
+    const r = G.room; if (r.state === 'clear') return; r.state = 'clear'; r.stateT = 0;
+    if (r.tempo) { Tempo.onClear(r); return; }   // porte sur la mesure suivante
+    r.doorOpen = true; AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
     for (const p of Pickups.list) p.magnet = true;
   },
   /* score de la salle courante */
   score() { const r = G.room; return Progression.roomScore({ hits: r.hits, time: r.time, refTime: r.refTime, bestCombo: r.bestCombo, comboTarget: r.comboTarget, died: r.died, fragments: r.fragments, fragmentsTotal: r.fragmentsDef.length }); },
   /* danger pour le bot */
-  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, r.time)); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
+  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, Room.trapTime(r))); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
 
   render(ctx) {
     const r = G.room; if (!r) return;
     Sprites.drawFloor(ctx, r);
     /* obstacles */
     if (r.challenge) Challenge.renderFloor(ctx, r);
+    if (r.tempo) Tempo.renderFloor(ctx, r);
     for (const o of r.obstacles) if (!o.dyn) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */
@@ -4472,7 +4659,7 @@ const Room = {
     ctx.restore();
     /* zones */
     for (const h of r.hazards) { ctx.save(); ctx.globalAlpha = 0.45 * clamp((h.until - Time.now) / 1, 0.3, 1); ctx.fillStyle = h.color; ctx.shadowColor = h.color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, TAU); ctx.fill(); ctx.restore(); }
-    for (const t of r.traps) t.render(ctx, r.time);
+    for (const t of r.traps) t.render(ctx, Room.trapTime(r));
     /* coffre */
     if (r.chest) Sprites.drawChest(ctx, r.chest);
     /* tourelles & leurres */
@@ -4567,7 +4754,7 @@ const Run = {
     const r = G.room; const s = Room.score();
     G.run.scores.push({ index: r.index, score: s, hits: r.hits, time: r.time, died: r.died });
     G.run.stats.roomTimes.push({ room: r.index, time: Math.round(r.time * 10) / 10, hits: r.hits, score: Math.round(s * 100) / 100, level: G.run.level });
-    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(BALANCE.xpPerfectTrapRoom * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
+    if ((r.type === 'TRAP' || r.type === 'COMBAT_TEMPO') && r.hits === 0) { const bonus = Math.round(BALANCE.xpPerfectTrapRoom * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(r.type === 'COMBAT_TEMPO' ? `Sans fausse note : +${bonus} XP` : `Traversée parfaite : +${bonus} XP`); }
     if (r.index === 3) Meta.unlockLore('room3_done');
     if (r.index === 5) { Meta.unlockLore('room5_reached'); if (r.hits === 0) Meta.unlockLore('boss_no_hit'); }
     if (r.index === 9 && r.hits === 0) Meta.unlockLore('boss_no_hit');
@@ -4770,6 +4957,7 @@ const UI = (() => {
     const r = G.run; const s = screens.prep; const lp = r.levelPassive;
     const weapons = Content.weapons().filter(w => Meta.weaponUnlocked(w.id));
     let selW = r.char.startWeapon && Meta.weaponUnlocked(r.char.startWeapon) ? r.char.startWeapon : weapons[0].id; let selS = null;
+    let selR = state.testRoom || 1, selL = state.testLevel || 1;   // mode Test : salle et niveau de départ (mémorisés pour la session)
     const metaList = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).map(m => `${esc(m.name)} ${Meta.tierOf(m.id)}`).join(', ') || 'aucune calibration';
     const render = () => {
       s.innerHTML = `
@@ -4785,14 +4973,23 @@ const UI = (() => {
           <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div></div>`).join('')}</div>
           <h3>${STR.chooseSkill} <span class="muted tiny">(en jeu : clic droit, Espace ou Maj${Input.touch.active ? ', bouton COMP.' : ''})</span></h3>
           <div class="cards" id="prep-skills">${r.skillChoices.map(sk => `<div class="card pick ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div><div class="muted tiny">Cooldown ${sk.cooldown} s</div></div>`).join('')}</div>
+          ${G.mode === 'test' ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Salle de départ <select id="prep-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => { const d = r.rooms.find(x => x.index === i); const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : ''; return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`; }).join('')}</select></label><label class="muted small">Niveau de départ <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>` : ''}
           <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${STR.enter}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
         </div>`;
+      const pr = s.querySelector('#prep-room'), plv = s.querySelector('#prep-level');
+      if (pr) pr.onchange = () => { selR = +pr.value; state.testRoom = selR; };
+      if (plv) plv.onchange = () => { selL = +plv.value; state.testLevel = selL; };
       s.querySelectorAll('[data-w]').forEach(c => c.onclick = () => { selW = c.dataset.w; AudioEngine.uiClick({}); render(); });
       s.querySelectorAll('[data-s]').forEach(c => c.onclick = () => { selS = c.dataset.s; AudioEngine.uiClick({}); render(); });
       s.querySelector('#prep-go').onclick = () => go();
       s.querySelector('#prep-abort').onclick = () => { Run.toHub(); };
     };
-    const go = () => { if (!selS) return; Run.equip(selW, selS); hideAll(); G.paused = false; Room.begin(); AudioEngine.uiConfirm({}); };
+    const go = () => {
+      if (!selS) return; Run.equip(selW, selS); hideAll(); G.paused = false;
+      if (G.mode === 'test' && selR > 1) Room.load(selR);   // mode Test : départ direct dans la salle choisie
+      if (G.mode === 'test' && selL > 1) { for (let i = 1; i < selL; i++) Run.addXp(G.run.xpNext - G.run.xp); }   // niveaux offerts : les choix de greffes s'enchaînent avant la salle
+      Room.begin(); AudioEngine.uiConfirm({});
+    };
     state.prep = { pick: (w, sk) => { selW = w; selS = sk; go(); }, weapons, skills: r.skillChoices };
     render(); show('prep');
     if (G.autoplay) Debug.autoPrep();
@@ -5348,10 +5545,11 @@ function render(ctx) {
     G.player.render(ctx);
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx);
     if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);
+    if (G.room.tempo) Tempo.renderOverlay(ctx, G.room);
     Floaters.render(ctx);
     Debug.renderOverlay(ctx);
     ctx.restore();
-    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); }
+    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); if (G.room.tempo) Tempo.renderHud(ctx, G.room); }
   } else UI.renderBackdrop(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);
 }
@@ -5365,7 +5563,7 @@ async function boot() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden && AudioEngine.resume) AudioEngine.resume(); });
   UI.init(); Debug.init(); Touch.init();
   Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));
-  await Sprites.load();
+  await Sprites.load(); Beat.load();
   UI.showMenu();
   Engine.start(update, render);
   Attract.start();

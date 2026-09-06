@@ -1,0 +1,26 @@
+{
+ "biome1.mp3": {
+  "bpm": 129.2,
+  "offset": 0.386,
+  "key": "D",
+  "mode": "minor",
+  "duration": 199.7,
+  "stable": true
+ },
+ "boss1.mp3": {
+  "bpm": 129.2,
+  "offset": 0.403,
+  "key": "D",
+  "mode": "major",
+  "duration": 147.5,
+  "stable": true
+ },
+ "menu.mp3": {
+  "bpm": 95.7,
+  "offset": 0.168,
+  "key": "F",
+  "mode": "minor",
+  "duration": 212.6,
+  "stable": true
+ }
+}

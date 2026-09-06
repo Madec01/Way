@@ -19,6 +19,7 @@ class Trap {
     this.period = (def.period || 3) / d.fireRateMul; this.telegraph = def.telegraph != null ? def.telegraph : 0.6; this.active = def.active != null ? def.active : 1;
     this.speedMul = d.speedMul; this.hitCd = 0; this.warned = -1; this.fireCount = 0; this.color = def.color || '#ff5e7a';
     this.disabled = false;
+    this.beats = this.p.beats || null;   // salle du tempo : cadence en temps musicaux (voir syncBeat)
     /* --- adaptation des paramètres de contenu --- */
     const p = this.p;
     switch (this.kind) {
@@ -42,9 +43,16 @@ class Trap {
   }
   warn(idx, snd = 'trapWarn') { if (this.warned !== idx) { this.warned = idx; AudioEngine[snd]({ x: (this.cx - W / 2) / (W / 2), intensity: 0.5 }); } }
   hit(pl) { if (this.hitCd > 0) return; if (Combat.hitPlayer(this.damage, { type: 'trap', x: this.cx, y: this.cy, trapName: this.name })) this.hitCd = 0.5; }
-  update(dt, rt) { this.hitCd -= dt; if (this.disabled) return; this['u_' + this.kind](dt, rt, G.player); }
-  render(ctx, rt) { if (this.disabled) return; this['r_' + this.kind](ctx, rt); }
-  dangerAt(x, y, rt) { const f = this['d_' + this.kind]; return f ? f.call(this, x, y, rt) : 0; }
+  update(dt, rt) { this.hitCd -= dt; if (this.beats) this.syncBeat(); if (this.disabled) return; this['u_' + this.kind](dt, rt, G.player); }
+  render(ctx, rt) { if (this.beats) this.syncBeat(); if (this.disabled) return; this['r_' + this.kind](ctx, rt); }
+  dangerAt(x, y, rt) { if (this.disabled) return 0; if (this.beats) this.syncBeat(); const f = this['d_' + this.kind]; return f ? f.call(this, x, y, rt) : 0; }
+  /* salle du tempo : p.beats = { period, active, telegraph, on } (ou { every, telegraph, on } pour bouches et tourelles), en temps musicaux ;
+     rt est alors le temps musical (Beat.t) et le piège se déclenche sur le temps « on » de chaque cycle, quel que soit le BPM de la piste. */
+  syncBeat() {
+    const b = this.beats, L = Beat.beatLen(); const tele = b.telegraph != null ? b.telegraph : 1, on = b.on || 0;
+    if (this.kind === 'wall_fireball' || this.kind === 'turret_fixed') { const every = b.every || b.period || 2; this.p.every = every * L * G.difficulty.fireRateMul; this.telegraph = tele * L; this.phase = ((((on - tele) % every) + every) % every) * L; }
+    else { const period = b.period || 4, act = b.active || 1; this.period = period * L; this.active = act * L; this.telegraph = tele * L; this.phase = ((((on + act) % period) + period) % period) * L; }
+  }
 
   /* --- laser_sweep : rayon qui traverse la zone pendant la phase active (aller, puis retour au cycle suivant) --- */
   sweepSeg(rt) {

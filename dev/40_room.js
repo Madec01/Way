@@ -56,6 +56,7 @@ const Room = {
     Modular.init(G.room);
     if (def.type === 'CHEST' || def.type === 'CHEST_FINAL') { G.room.chest = { x: W / 2, y: H / 2, r: 22, opened: false }; G.room.doorOpen = false; }
     if (def.type === 'TRAP') { G.room.doorOpen = !(G.room.challenge && G.room.challenge.id === 'collapse'); }
+    if (def.type === 'COMBAT_TEMPO') Tempo.create(G.room);
     UI.banner(G.room.label, '#6ee7ff'); AudioEngine.uiConfirm({});
     if (G.room.challenge) setTimeout(() => { if (G.room && G.room.challenge) { UI.banner('DÉFI : ' + G.room.challenge.def.name, G.room.challenge.def.color, G.room.challenge.def.desc); AudioEngine.trapWarn({ intensity: 0.8 }); } }, 900);
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Music.play('boss'); else Music.play('biome');
@@ -66,6 +67,7 @@ const Room = {
     if (!def) return null;
     if (G.enemies.filter(e => !e.dead).length > 60) return null;
     const e = new Enemy(def, x, y, opts); resolveRoomCollision(e); G.enemies.push(e);
+    if (G.room.tempo) { e.beatLock = true; e.beatDiv = G.room.tempo.div || 1; }   // salle du tempo : frappe sur les temps
     if (G.room.challenge && G.room.challenge.enraged) Challenge.enrage(e);
     return e;
   },
@@ -93,7 +95,7 @@ const Room = {
   alive() { return G.enemies.filter(e => !e.dead).length; },
   update(dt) {
     const r = G.room; const pl = G.player;
-    r.time += dt; r.stateT += dt;
+    r.time += dt; r.stateT += dt; Beat.update();
     if (r.combo > 0 && Time.now > r.comboUntil) r.combo = 0;
     if (r.state === 'intro') { if (r.stateT >= 0.8) Room.begin(); return; }
     /* vagues */
@@ -102,7 +104,7 @@ const Room = {
       for (const w of r.waves) {
         if (w.done) continue;
         const trig = w.at === 'start' ? r.stateT >= 0 : w.at === 'clear' ? (alive === 0 && r.wavesStarted && r.lastWaveT < r.stateT - 0.5) : typeof w.at === 'number' ? r.stateT >= w.at : false;
-        if (trig) { w.done = true; r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
+        if (trig && (!r.tempo || Tempo.waveGate(r))) { w.done = true; r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
       }
       if ((r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') && !r.boss && r.stateT > 0.2 && !r.waves.length) Room.spawnBoss();
       /* fragments d'énergie */
@@ -121,8 +123,10 @@ const Room = {
     if (r.doorOpen && !pl.dead) { const dx = ROOM_X + ROOM_W, dy = ROOM_Y + ROOM_H / 2; if (pl.x > dx - pl.r - 26 && Math.abs(pl.y - dy) < TILE * 0.9) Run.nextRoom(); }
     /* défi */
     if (r.challenge) Challenge.update(r, dt);
-    /* pièges */
-    for (const t of r.traps) t.update(dt, r.time);
+    /* salle du tempo */
+    if (r.tempo) Tempo.update(r, dt);
+    /* pièges (salle du tempo : temps musical) */
+    for (const t of r.traps) t.update(dt, Room.trapTime(r));
     /* salles modulaires (phase 2) : Modular.update(r, dt) déplacera les obstacles et recalculera px/py */
     if (r.modular.length) Modular.update(r, dt);
     /* zones de dégâts (traînées de feu, gaz du joueur…) */
@@ -138,21 +142,25 @@ const Room = {
     const tick = a => { for (let i = a.length - 1; i >= 0; i--) { a[i].t += dt; if (a[i].t > a[i].life) a.splice(i, 1); } };
     tick(r.beams); tick(r.blasts); tick(r.slashes);
   },
+  /* horloge des pièges : temps musical dans la salle du tempo, temps de salle ailleurs */
+  trapTime(r) { return r.tempo ? Beat.t : r.time; },
   clear() {
-    const r = G.room; if (r.state === 'clear') return; r.state = 'clear'; r.stateT = 0; r.doorOpen = true;
-    AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
+    const r = G.room; if (r.state === 'clear') return; r.state = 'clear'; r.stateT = 0;
+    if (r.tempo) { Tempo.onClear(r); return; }   // porte sur la mesure suivante
+    r.doorOpen = true; AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
     for (const p of Pickups.list) p.magnet = true;
   },
   /* score de la salle courante */
   score() { const r = G.room; return Progression.roomScore({ hits: r.hits, time: r.time, refTime: r.refTime, bestCombo: r.bestCombo, comboTarget: r.comboTarget, died: r.died, fragments: r.fragments, fragmentsTotal: r.fragmentsDef.length }); },
   /* danger pour le bot */
-  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, r.time)); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
+  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, Room.trapTime(r))); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
 
   render(ctx) {
     const r = G.room; if (!r) return;
     Sprites.drawFloor(ctx, r);
     /* obstacles */
     if (r.challenge) Challenge.renderFloor(ctx, r);
+    if (r.tempo) Tempo.renderFloor(ctx, r);
     for (const o of r.obstacles) if (!o.dyn) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */
@@ -163,7 +171,7 @@ const Room = {
     ctx.restore();
     /* zones */
     for (const h of r.hazards) { ctx.save(); ctx.globalAlpha = 0.45 * clamp((h.until - Time.now) / 1, 0.3, 1); ctx.fillStyle = h.color; ctx.shadowColor = h.color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, TAU); ctx.fill(); ctx.restore(); }
-    for (const t of r.traps) t.render(ctx, r.time);
+    for (const t of r.traps) t.render(ctx, Room.trapTime(r));
     /* coffre */
     if (r.chest) Sprites.drawChest(ctx, r.chest);
     /* tourelles & leurres */
@@ -258,7 +266,7 @@ const Run = {
     const r = G.room; const s = Room.score();
     G.run.scores.push({ index: r.index, score: s, hits: r.hits, time: r.time, died: r.died });
     G.run.stats.roomTimes.push({ room: r.index, time: Math.round(r.time * 10) / 10, hits: r.hits, score: Math.round(s * 100) / 100, level: G.run.level });
-    if (r.type === 'TRAP' && r.hits === 0) { const bonus = Math.round(BALANCE.xpPerfectTrapRoom * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(`Traversée parfaite : +${bonus} XP`); }
+    if ((r.type === 'TRAP' || r.type === 'COMBAT_TEMPO') && r.hits === 0) { const bonus = Math.round(BALANCE.xpPerfectTrapRoom * G.player.stats.xpGain * G.debug.xpMul); Run.addXp(bonus); UI.toast(r.type === 'COMBAT_TEMPO' ? `Sans fausse note : +${bonus} XP` : `Traversée parfaite : +${bonus} XP`); }
     if (r.index === 3) Meta.unlockLore('room3_done');
     if (r.index === 5) { Meta.unlockLore('room5_reached'); if (r.hits === 0) Meta.unlockLore('boss_no_hit'); }
     if (r.index === 9 && r.hits === 0) Meta.unlockLore('boss_no_hit');
