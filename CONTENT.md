@@ -513,3 +513,18 @@ Une salle par palier joue en rythme avec la musique du biome. Le chef d'orchestr
 | Fin | Porte fermée jusqu'au premier temps de la mesure suivante (« Dernier accord »), puis ouverture. XP : 4 par action en rythme (max 150) × gain d'XP ; +15 XP « sans fausse note » si aucun coup reçu. Pas de défi aléatoire dans cette salle. |
 
 Tenue par le bot (autoplay, 4 armes, difficulté 1) : les 4 bots atteignent la salle 9 après le passage en salle 7 ; dégâts subis à niveau 7 entre 15 et 75.
+
+### 20 bis. Boss en rythme (salles 5 et 9, `Boss.rhythmStep`)
+
+| Élément | Règle |
+|---|---|
+| Phrase | 4 mesures (16 temps) ; 2 mesures sous 30 % PV. La première phrase démarre sur un temps fort après l'intro. La revanche (salle 9) joue décalée d'un demi-temps : mêmes phrases, tout tombe sur les contretemps. |
+| Petites attaques (anneau, éventail, spirale, téléportation) | Lancées sur un temps avec une télégraphie d'un temps, donc elles partent sur le temps suivant. Cadence : temps fort de chaque mesure à pleine santé ; temps 1 et 3 sous 60 % ; chaque temps sous 30 %. Pendant la première moitié de la phrase seulement. |
+| Utilitaires (invocation, bouclier, brouillage) | Sur le dernier temps de la première moitié, à la place d'une petite attaque. |
+| Grosse attaque (charge, onde, laser, aspiration) | Télégraphie dès le début de la 3e mesure (2e sur phrase courte) jusqu'au temps fort de la dernière mesure, où elle part. Jauge d'annonce autour du boss. |
+| Souffle | Après la grosse attaque, faiblesse active (dégâts ×mul de la faiblesse) jusqu'à la phrase suivante, « À BOUT DE SOUFFLE ». |
+| Attaque libre | Coup de pied (onde de 110 px, 90 % des dégâts) si le joueur reste collé plus de 1,4 s, recharge 4,5 s, uniquement pendant la première moitié de phrase. Hors rythme, volontairement. |
+| HUD / visuels | Partition de la phrase sous le cartouche (points blancs = petites attaques, orange = annonce, rouge = grosse attaque, vert = souffle, curseur), anneau de phrase autour du boss de la même couleur, vignette rouge et impulsion caméra à la grosse attaque. Bonus « en rythme » du joueur actif, sans compte à rebours ni dancefloor. Pièges de la salle sur leur horloge habituelle. |
+| Musique | boss1.mp3 : 129 BPM en ré majeur, même tempo que le biome ; sans piste, métronome interne 120 BPM. Désactivable pour les tests : `G.debug.noRhythm = true` avant le spawn (ancien séquenceur à recharges en secondes). |
+
+Tenue par le bot (balayage 4 armes, difficulté 1) inchangée : pistolet, chaîne et boomerang atteignent la salle 9 (le boomerang gagne), l'arc meurt en 5.

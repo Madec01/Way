@@ -194,13 +194,15 @@ const Music = (() => {
      puis biome2.mp3 / boss2.mp3 pour le biome 2, etc. (.ogg et .m4a acceptés). Fichier absent → musique générative. */
   const resolved = {};
   /* 'biome' / 'boss' → 'biome1' / 'boss1' selon le biome de la run courante */
-  function keyFor(kind) { if (kind === 'hub' || kind === 'menu') return kind; const n = (G.run && G.run.biome && G.run.biome.order) || 1; return kind + n; }
+  /* 'biome' → biome1 (salles 1-4) ou biome1b (salles 6-8, si le fichier existe, sinon biome1 reprend là où il s'était arrêté) ; 'boss' → boss1 */
+  function keyFor(kind) { if (kind === 'hub' || kind === 'menu') return kind; const n = (G.run && G.run.biome && G.run.biome.order) || 1; if (kind === 'biome_b') return 'biome' + n + 'b'; if (kind === 'biome' && G.room && G.room.index >= 6) return 'biome' + n + 'b'; return kind + n; }
   async function resolve(key) {
     if (resolved[key]) return resolved[key];
     for (const ext of ['mp3', 'ogg', 'm4a']) {
       const url = ASSET_BASE + 'music/' + key + '.' + ext;
       try { const r = await fetch(url, { method: 'HEAD' }); if (r.ok) { resolved[key] = url; return url; } } catch (e) { break; }   // file:// → fetch impossible → génératif
     }
+    if (/^biome\d+b$/.test(key)) { const base = await resolve(key.slice(0, -1)); resolved[key] = base; return base; }   // pas de 2e piste : la 1re continue
     if (key === 'menu') { const h = await resolve('hub'); resolved.menu = h; return h; }
     if (key === 'hub') { const m = await resolve('menu'); resolved.hub = m; return m; }   // pas de hub.mp3 : le hub garde la musique du menu
     resolved[key] = null; return null;
@@ -228,6 +230,6 @@ const Music = (() => {
   function stop() { remember(); current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
-  function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); preload(['biome', 'boss']); }
+  function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+b?$/, '')); preload(['biome', 'boss', 'biome_b']); }
   return { play, stop, setEnabled, restart, preload, keyFor, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
 })();

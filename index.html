@@ -2715,13 +2715,15 @@ const Music = (() => {
      puis biome2.mp3 / boss2.mp3 pour le biome 2, etc. (.ogg et .m4a acceptés). Fichier absent → musique générative. */
   const resolved = {};
   /* 'biome' / 'boss' → 'biome1' / 'boss1' selon le biome de la run courante */
-  function keyFor(kind) { if (kind === 'hub' || kind === 'menu') return kind; const n = (G.run && G.run.biome && G.run.biome.order) || 1; return kind + n; }
+  /* 'biome' → biome1 (salles 1-4) ou biome1b (salles 6-8, si le fichier existe, sinon biome1 reprend là où il s'était arrêté) ; 'boss' → boss1 */
+  function keyFor(kind) { if (kind === 'hub' || kind === 'menu') return kind; const n = (G.run && G.run.biome && G.run.biome.order) || 1; if (kind === 'biome_b') return 'biome' + n + 'b'; if (kind === 'biome' && G.room && G.room.index >= 6) return 'biome' + n + 'b'; return kind + n; }
   async function resolve(key) {
     if (resolved[key]) return resolved[key];
     for (const ext of ['mp3', 'ogg', 'm4a']) {
       const url = ASSET_BASE + 'music/' + key + '.' + ext;
       try { const r = await fetch(url, { method: 'HEAD' }); if (r.ok) { resolved[key] = url; return url; } } catch (e) { break; }   // file:// → fetch impossible → génératif
     }
+    if (/^biome\d+b$/.test(key)) { const base = await resolve(key.slice(0, -1)); resolved[key] = base; return base; }   // pas de 2e piste : la 1re continue
     if (key === 'menu') { const h = await resolve('hub'); resolved.menu = h; return h; }
     if (key === 'hub') { const m = await resolve('menu'); resolved.hub = m; return m; }   // pas de hub.mp3 : le hub garde la musique du menu
     resolved[key] = null; return null;
@@ -2749,7 +2751,7 @@ const Music = (() => {
   function stop() { remember(); current = null; currentUrl = null; AudioEngine.stopMusic && AudioEngine.stopMusic(1); AudioEngine.stopGenerativeMusic && AudioEngine.stopGenerativeMusic(1); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à la première interaction (l'AudioContext ne peut démarrer avant) : une seule fois */
-  function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+$/, '')); preload(['biome', 'boss']); }
+  function restart() { if (armed) return; armed = true; const k = current; current = null; if (k) play(k.replace(/\d+b?$/, '')); preload(['biome', 'boss', 'biome_b']); }
   return { play, stop, setEnabled, restart, preload, keyFor, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
 })();
 
@@ -3784,6 +3786,8 @@ class Boss extends Enemy {
       this.phaseText = rv.phaseText;
     }
     this.phase = this.phases[0];
+    /* rythme : phrases de 4 mesures (2 sous 30 % PV) calées sur Beat ; la revanche joue décalée d'un demi-temps */
+    this.rhythm = !(G.debug && G.debug.noRhythm); this.beatOffset = rv ? 0.5 : 0; this.rb = { start: null, last: -1, lastHalf: -1, bars: 4, stage: 'small', smallIdx: 0, bigIdx: 0, bigFired: false, closeT: 0 };
     this.weakActive = false; this.weakUntil = 0; this.weakMul = this.weak.damageMul || 2; this.facingA = 0; this.intro = 1.5; this.spawnT = 0;
   }
   /* pattern miroir de la compétence du joueur */
@@ -3818,12 +3822,64 @@ class Boss extends Enemy {
     if (next && this.hp / this.maxHp <= (next.hpBelow || 0.5)) { this.phaseIdx++; this.phase = next; this.patternIdx = 0; this.cur = null; this.patternCd = 1.2; this.stunUntil = Time.now + 1; this.invulnPhase = Time.now + 1; Particles.spawn(this.x, this.y, { count: 30, color: this.color, glow: true, speedMax: 300 }); G.shake = 10; AudioEngine.bossPhase({}); UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color); }
     /* faiblesse temporelle */
     if (this.weakActive && Time.now > this.weakUntil) this.weakActive = false;
+    if (this.rhythm) { const rb = this.rb; const bt = Beat.t / Beat.beatLen() + this.beatOffset; const bi = Math.floor(bt); rb.crossed = bi !== rb.last; rb.last = bi; }   // suivi des temps même pendant un pattern (sinon un temps « en retard » déclenche hors rythme)
     if (this.weak.rule === 'back') { this.facingA = this.cur && this.cur.kind === 'charge' ? this.chargeA : angleTo(this.x, this.y, pl.x, pl.y); }
     if (this.cur) { this.runPattern(dt, t, d); return; }
     /* déplacement d'attente : approche lente */
     if (d > 180) this.moveToward(t.x, t.y, dt, 0.7, false); else if (d < 100) this.moveToward(this.x * 2 - t.x, this.y * 2 - t.y, dt, 0.5, false);
+    if (this.rhythm) { this.rhythmStep(dt, t, d); return; }
     this.patternCd -= dt;
     if (this.patternCd <= 0) { const pats = this.phase.patterns; const p = pats[this.patternIdx % pats.length]; this.patternIdx++; this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p); this.tele = 1; this.telegraph = { time: p.telegraph || 0.8, color: p.color || this.color }; this.chargeA = angleTo(this.x, this.y, t.x, t.y); AudioEngine.trapWarn({ intensity: 0.7 }); if (p.label) Floaters.add(this.x, this.y - this.r - 30, p.label, p.color || '#ff7a3c', 15); }
+  }
+  /* --- séquenceur rythmique ---
+     Une phrase = N temps (16, ou 8 sous 30 % PV). Première moitié : petites attaques (anneau, éventail, spirale…) lancées sur chaque temps
+     (aussi sur les contretemps sous 60 % PV) avec une télégraphie d'un temps, donc elles partent SUR le temps suivant. Dernier temps de
+     cette moitié : attaque utilitaire (invocation, bouclier…) s'il y en a. Puis une mesure d'annonce : la grosse attaque (charge, onde,
+     laser, aspiration) télégraphie jusqu'au temps fort de la dernière mesure, où elle part. Ensuite le boss « souffle » : faiblesse
+     active jusqu'à la phrase suivante. Attaque libre hors rythme : un coup de pied si le joueur colle le boss plus d'une seconde. */
+  static patKind(p) { return ['charge', 'slam', 'laser_sweep', 'pull'].includes(p.kind) ? 'big' : ['summon', 'shield', 'slow'].includes(p.kind) ? 'util' : 'small'; }
+  startPattern(p, telegraph, t) {
+    this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p, telegraph != null ? { telegraph } : {}); this.tele = 1;
+    this.telegraph = { time: this.cur.telegraph || 0.8, color: p.color || this.color }; this.chargeA = angleTo(this.x, this.y, t.x, t.y);
+    AudioEngine.trapWarn({ intensity: Boss.patKind(p) === 'big' ? 0.9 : 0.5 }); if (p.label) Floaters.add(this.x, this.y - this.r - 30, p.label, p.color || '#ff7a3c', 15);
+  }
+  /* position dans la phrase : { p (temps, fractionnaire), n, smallEnd, bigBeat } ; null tant que la phrase n'a pas commencé */
+  phrasePos() {
+    const rb = this.rb; if (rb.start == null) return null; const L = Beat.beatLen(); const bt = Beat.t / L + this.beatOffset; const n = rb.bars * 4;
+    return { p: bt - rb.start, n, smallEnd: n / 2, bigBeat: n - n / 4, L, bt };
+  }
+  rhythmStep(dt, t, d) {
+    const rb = this.rb; const L = Beat.beatLen(); const bt = Beat.t / L + this.beatOffset; const bi = Math.floor(bt); const crossed = rb.crossed;
+    const hpk = this.hp / this.maxHp; const bars = hpk <= 0.3 ? 2 : 4;
+    if (rb.start == null) { if (crossed && ((bi % 4) + 4) % 4 === 0) { rb.start = bi; rb.bars = bars; rb.bigFired = false; } return; }   // la première phrase démarre sur un temps fort
+    const n = rb.bars * 4; let p = bt - rb.start;
+    if (p >= n) { rb.start += n; rb.bars = bars; rb.bigFired = false; p -= n; this.weakPhrase = false; }   // nouvelle phrase
+    const smallEnd = n / 2, bigBeat = n - n / 4; const pi = Math.floor(p);
+    /* attaque libre : coup de pied si le joueur colle le boss */
+    rb.closeT = d < this.r + G.player.r + 34 ? rb.closeT + dt : 0;
+    rb.kickCd = Math.max(0, (rb.kickCd || 0) - dt);
+    if (rb.closeT > 1.4 && !this.cur && p < smallEnd && rb.kickCd <= 0) { rb.closeT = 0; rb.kickCd = 4.5; this.startPattern({ kind: 'slam', duration: 0.3, radius: 110, damage: Math.round(this.damage * 0.9), jump: 0.25, label: 'COUP DE PIED', color: '#ffb347' }, 0.45, t); return; }
+    if (p < smallEnd) {
+      /* petites attaques lancées sur un temps avec une télégraphie d'un temps → elles partent SUR le temps suivant.
+         Cadence : une par mesure (temps fort) à pleine santé, sur les temps 1 et 3 sous 60 % PV, sur chaque temps sous 30 % */
+      const slot = hpk > 0.6 ? pi % 4 === 0 : hpk > 0.3 ? pi % 2 === 0 : true;
+      if (crossed && !this.cur) {
+        const pats = this.phase.patterns; const utils = pats.filter(q => Boss.patKind(q) === 'util'); const smalls = pats.filter(q => Boss.patKind(q) === 'small');
+        if (pi === smallEnd - 1 && utils.length) { const u = utils[rb.smallIdx % utils.length]; this.startPattern(u, L * 0.9, t); }
+        else if (slot && smalls.length) { const s = smalls[rb.smallIdx++ % smalls.length]; this.startPattern(s, L, t); }
+      }
+    } else if (!rb.bigFired && p >= smallEnd) {
+      /* annonce : la grosse attaque télégraphie jusqu'au temps fort de la dernière mesure */
+      if (this.cur && Boss.patKind(this.cur) !== 'big') { this.cur.phase === 'tele' ? (this.cur = null, this.tele = 0) : this.endPattern(); }
+      if (!this.cur) {
+        const bigs = this.phase.patterns.filter(q => Boss.patKind(q) === 'big'); const b = bigs.length ? bigs[rb.bigIdx++ % bigs.length] : this.phase.patterns[0];
+        const tele = Math.max(0.35, (bigBeat - p) * L); this.startPattern(b, tele, t); rb.bigFired = true; rb.bigStage = 1;
+      }
+    } else if (rb.bigFired && !this.cur && !this.weakPhrase && p >= bigBeat) {
+      /* le boss souffle jusqu'à la phrase suivante */
+      this.weakPhrase = true; this.weakActive = true; this.weakUntil = Time.now + (n - p) * L; Floaters.add(this.x, this.y - this.r - 20, 'À BOUT DE SOUFFLE', '#ffd166', 18);
+      if (G.room && G.room.tempo) G.room.tempo.bigFlash = 1;
+    }
   }
   runPattern(dt, t, d) {
     const c = this.cur; c.t += dt; const pl = G.player; const rate = G.difficulty.fireRateMul;
@@ -3849,7 +3905,7 @@ class Boss extends Enemy {
       default: this.endPattern();
     }
   }
-  endPattern() { const c = this.cur; this.cur = null; this.patternCd = (c.cooldown || 1.2) / G.difficulty.fireRateMul; this.air = 0; if (this.weak.rule === 'during_reload') { this.weakActive = true; this.weakUntil = Time.now + (this.weak.window || 1); } }
+  endPattern() { const c = this.cur; this.cur = null; this.patternCd = (c.cooldown || 1.2) / G.difficulty.fireRateMul; this.air = 0; if (this.rhythm && Boss.patKind(c) === 'big' && G.room && G.room.tempo) G.room.tempo.bigFlash = 1; if (this.weak.rule === 'during_reload') { this.weakActive = true; this.weakUntil = Time.now + (this.weak.window || 1); } }
   update(dt) {
     if (this.dead) return; const pl = G.player;
     this.slow = updateStatus(this, dt); if (this.dead) return;
@@ -4439,15 +4495,20 @@ const Tempo = {
   WINDOW: 0.1,   // fenêtre « en rythme » (s) de part et d'autre du temps
   COLOR: '#ffd166',
   create(room) {
-    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9 };
+    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: true, bigFlash: 0 };
     for (const t of room.traps) t.disabled = true;   // les pièges attendent la fin du compte à rebours
+  },
+  /* salle de boss : le boss joue par phrases (voir Boss.rhythmStep), pas de compte à rebours, pièges sur leur horloge habituelle,
+     bonus « en rythme » du joueur actif, portée et HUD de phrase */
+  createBoss(room) {
+    room.tempo = { phase: 'go', count: 0, countT: 9, started: true, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: false, boss: true, bigFlash: 0 };
   },
   /* appelé chaque pas de simulation (Room.update) */
   update(room, dt) {
     const tp = room.tempo; const crossed = Beat.crossedFrame(1); const down = crossed && Beat.beatInBar() === 0;
     if (crossed) { tp.pulses.push({ t: 0, down: Beat.beatInBar() === 0 }); if (tp.pulses.length > 6) tp.pulses.shift(); }
-    const kd = Beat.beatInBar() === 0 ? Math.max(0, 1 - Beat.phase() * 2.5) : 0; Camera.pulse = tp.started ? 0.012 * kd : 0;
-    if (down && tp.started) { for (const o of room.obstacles) { if (o.dyn) continue; Particles.spawn(o.x + o.w / 2, o.y + 4, { count: 5, color: Tempo.COLOR, glow: true, speedMin: 40, speedMax: 120, life: 0.5, size: 2 }); } }
+    const kd = Beat.beatInBar() === 0 ? Math.max(0, 1 - Beat.phase() * 2.5) : 0; tp.bigFlash = Math.max(0, tp.bigFlash - dt * 2.2); Camera.pulse = tp.boss ? 0.02 * tp.bigFlash : (tp.started ? 0.012 * kd : 0);
+    if (down && tp.started && !tp.boss) { for (const o of room.obstacles) { if (o.dyn) continue; Particles.spawn(o.x + o.w / 2, o.y + 4, { count: 5, color: Tempo.COLOR, glow: true, speedMin: 40, speedMax: 120, life: 0.5, size: 2 }); } }
     for (let i = tp.pulses.length - 1; i >= 0; i--) { tp.pulses[i].t += dt; if (tp.pulses[i].t > 1.2) tp.pulses.splice(i, 1); }
     for (let i = tp.flashes.length - 1; i >= 0; i--) { tp.flashes[i].t += dt; if (tp.flashes[i].t > 0.35) tp.flashes.splice(i, 1); }
     tp.countT += dt; tp.goT += dt;
@@ -4497,7 +4558,7 @@ const Tempo = {
     for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
       const d = Math.hypot(tx + 0.5 - cx, (ty + 0.5 - cy) * 1.25); let a = 0, gold = 0;
       for (const p of tp.pulses) { const r = p.t * 10; const w = Math.abs(d - r); if (w < 1.1) { const v = (1 - w / 1.1) * (1 - p.t / 1.2) * (p.down ? 0.42 : 0.26); if (v > a) { a = v; gold = p.down ? 1 : 0; } } }
-      if ((tx + ty + idx) % 2 === 0) a = Math.max(a, 0.035);
+      if (!tp.boss && (tx + ty + idx) % 2 === 0) a = Math.max(a, 0.035);
       if (a <= 0.01) continue;
       ctx.globalAlpha = a; ctx.fillStyle = gold ? Tempo.COLOR : '#6ee7ff'; ctx.fillRect(ROOM_X + tx * TILE + 2, ROOM_Y + ty * TILE + 2, TILE - 4, TILE - 4);
     }
@@ -4524,6 +4585,17 @@ const Tempo = {
       for (const f of tp.flashes) { const k = f.t / 0.35; ctx.globalAlpha = 0.8 * (1 - k); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(pl.x, pl.y, pl.r + 10 + k * 50, 0, TAU); ctx.stroke(); }
     }
     ctx.shadowBlur = 0;
+    /* boss : anneau de phrase (blanc = petites attaques, orange = annonce, rouge = grosse attaque, vert = il souffle) + jauge d'annonce */
+    const b = room.boss; if (tp.boss && b && !b.dead && b.phrasePos) {
+      const pp = b.phrasePos();
+      if (pp) {
+        const seg = pp.p < pp.smallEnd ? 0 : pp.p < pp.bigBeat ? 1 : b.cur ? 2 : 3; const col = ['#e8ecf7', '#ffb347', '#ff3b5c', '#7fff9a'][seg];
+        ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 12; ctx.lineWidth = seg === 1 ? 4 : 2.5; ctx.globalAlpha = 0.35 + 0.55 * Math.max(0, 1 - ph * 2);
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 14 + (1 - ph) * 6, 0, TAU); ctx.stroke();
+        if (seg === 1) { const k = (pp.p - pp.smallEnd) / (pp.bigBeat - pp.smallEnd); ctx.globalAlpha = 0.9; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 24, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.stroke(); }
+        ctx.shadowBlur = 0;
+      }
+    }
     if (tp.phase === 'count' || tp.goT < 0.5) {
       const txt = tp.phase === 'count' ? String(tp.count) : 'GO'; const k = tp.phase === 'count' ? clamp(tp.countT / Beat.beatLen(), 0, 1) : clamp(tp.goT / 0.5, 0, 1);
       ctx.globalAlpha = 1 - k * 0.8; ctx.fillStyle = Tempo.COLOR; ctx.shadowColor = Tempo.COLOR; ctx.shadowBlur = 24; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -4535,7 +4607,20 @@ const Tempo = {
   /* HUD (coordonnées écran) : barre de mesure en haut au centre + combo */
   renderHud(ctx, room) {
     const tp = room.tempo; const ph = Beat.phase(); const bib = Beat.beatInBar(); ctx.save();
-    if (tp.started && bib === 0) { const kd = Math.max(0, 1 - ph * 2.5); const V = Engine.view; const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(V.w, V.h) * 0.3, W / 2, H / 2, Math.max(V.w, V.h) * 0.75); g.addColorStop(0, 'rgba(255,209,102,0)'); g.addColorStop(1, `rgba(255,209,102,${0.16 * kd})`); ctx.fillStyle = g; ctx.fillRect(-V.ox, -V.oy, V.w, V.h); }
+    if (tp.started && (tp.boss ? tp.bigFlash > 0 : bib === 0)) { const kd = tp.boss ? tp.bigFlash : Math.max(0, 1 - ph * 2.5); const V = Engine.view; const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(V.w, V.h) * 0.3, W / 2, H / 2, Math.max(V.w, V.h) * 0.75); g.addColorStop(0, 'rgba(255,209,102,0)'); g.addColorStop(1, tp.boss ? `rgba(255,59,92,${0.22 * kd})` : `rgba(255,209,102,${0.16 * kd})`); ctx.fillStyle = g; ctx.fillRect(-V.ox, -V.oy, V.w, V.h); }
+    const b = room.boss; const pp = tp.boss && b && !b.dead && b.phrasePos ? b.phrasePos() : null;
+    if (pp) {
+      /* partition de la phrase : un point par temps, groupés par mesure ; blanc = petites attaques, orange = annonce, rouge = grosse attaque, vert = il souffle */
+      const n = pp.n, spd = n > 8 ? 14 : 22, gap = 10; const w = n * spd + (n / 4 - 1) * gap; const x0 = W / 2 - w / 2, yb = 70;
+      ctx.fillStyle = 'rgba(8,10,18,.7)'; ctx.fillRect(x0 - 12, yb - 14, w + 24, tp.combo > 0 ? 46 : 28);
+      for (let i = 0; i < n; i++) {
+        const x = x0 + i * spd + Math.floor(i / 4) * gap + spd / 2; const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? '#ff3b5c' : '#7fff9a'; const cur = Math.floor(pp.p) === i;
+        ctx.globalAlpha = cur ? 1 : 0.4; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, yb, cur ? 5 + (1 - ph) * 3 : (i === pp.bigBeat ? 5 : 3.5), 0, TAU); ctx.fill();
+      }
+      ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff'; ctx.fillRect(x0 + pp.p * spd + Math.floor(pp.p / 4) * gap - 1, yb - 11, 2, 22);
+      if (tp.combo > 0) { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = Tempo.COLOR; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(`TEMPO ×${tp.combo}`, W / 2, yb + 22); }
+      ctx.restore(); return;
+    }
     const cx = W / 2, y = 66, sp = 30;   // sous le cartouche « Salle 7/9 » du HUD
     ctx.fillStyle = 'rgba(8,10,18,.7)'; ctx.fillRect(cx - 88, y - 14, 176, tp.combo > 0 ? 46 : 28);
     for (let i = 0; i < 4; i++) {
@@ -4611,6 +4696,7 @@ const Room = {
     if (def.type === 'CHEST' || def.type === 'CHEST_FINAL') { G.room.chest = { x: W / 2, y: H / 2, r: 22, opened: false }; G.room.doorOpen = false; }
     if (def.type === 'TRAP') { G.room.doorOpen = !(G.room.challenge && G.room.challenge.id === 'collapse'); }
     if (def.type === 'COMBAT_TEMPO') Tempo.create(G.room);
+    if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Tempo.createBoss(G.room);
     UI.banner(G.room.label, '#6ee7ff'); AudioEngine.uiConfirm({});
     if (G.room.challenge) setTimeout(() => { if (G.room && G.room.challenge) { UI.banner('DÉFI : ' + G.room.challenge.def.name, G.room.challenge.def.color, G.room.challenge.def.desc); AudioEngine.trapWarn({ intensity: 0.8 }); } }, 900);
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Music.play('boss'); else Music.play('biome');
@@ -4697,7 +4783,7 @@ const Room = {
     tick(r.beams); tick(r.blasts); tick(r.slashes);
   },
   /* horloge des pièges : temps musical dans la salle du tempo, temps de salle ailleurs */
-  trapTime(r) { return r.tempo ? Beat.t : r.time; },
+  trapTime(r) { return r.tempo && r.tempo.syncTraps ? Beat.t : r.time; },
   clear() {
     const r = G.room; if (r.state === 'clear') return; r.state = 'clear'; r.stateT = 0;
     if (r.tempo) { Tempo.onClear(r); return; }   // porte sur la mesure suivante

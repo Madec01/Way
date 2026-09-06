@@ -47,15 +47,20 @@ const Tempo = {
   WINDOW: 0.1,   // fenêtre « en rythme » (s) de part et d'autre du temps
   COLOR: '#ffd166',
   create(room) {
-    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9 };
+    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: true, bigFlash: 0 };
     for (const t of room.traps) t.disabled = true;   // les pièges attendent la fin du compte à rebours
+  },
+  /* salle de boss : le boss joue par phrases (voir Boss.rhythmStep), pas de compte à rebours, pièges sur leur horloge habituelle,
+     bonus « en rythme » du joueur actif, portée et HUD de phrase */
+  createBoss(room) {
+    room.tempo = { phase: 'go', count: 0, countT: 9, started: true, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: false, boss: true, bigFlash: 0 };
   },
   /* appelé chaque pas de simulation (Room.update) */
   update(room, dt) {
     const tp = room.tempo; const crossed = Beat.crossedFrame(1); const down = crossed && Beat.beatInBar() === 0;
     if (crossed) { tp.pulses.push({ t: 0, down: Beat.beatInBar() === 0 }); if (tp.pulses.length > 6) tp.pulses.shift(); }
-    const kd = Beat.beatInBar() === 0 ? Math.max(0, 1 - Beat.phase() * 2.5) : 0; Camera.pulse = tp.started ? 0.012 * kd : 0;
-    if (down && tp.started) { for (const o of room.obstacles) { if (o.dyn) continue; Particles.spawn(o.x + o.w / 2, o.y + 4, { count: 5, color: Tempo.COLOR, glow: true, speedMin: 40, speedMax: 120, life: 0.5, size: 2 }); } }
+    const kd = Beat.beatInBar() === 0 ? Math.max(0, 1 - Beat.phase() * 2.5) : 0; tp.bigFlash = Math.max(0, tp.bigFlash - dt * 2.2); Camera.pulse = tp.boss ? 0.02 * tp.bigFlash : (tp.started ? 0.012 * kd : 0);
+    if (down && tp.started && !tp.boss) { for (const o of room.obstacles) { if (o.dyn) continue; Particles.spawn(o.x + o.w / 2, o.y + 4, { count: 5, color: Tempo.COLOR, glow: true, speedMin: 40, speedMax: 120, life: 0.5, size: 2 }); } }
     for (let i = tp.pulses.length - 1; i >= 0; i--) { tp.pulses[i].t += dt; if (tp.pulses[i].t > 1.2) tp.pulses.splice(i, 1); }
     for (let i = tp.flashes.length - 1; i >= 0; i--) { tp.flashes[i].t += dt; if (tp.flashes[i].t > 0.35) tp.flashes.splice(i, 1); }
     tp.countT += dt; tp.goT += dt;
@@ -105,7 +110,7 @@ const Tempo = {
     for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
       const d = Math.hypot(tx + 0.5 - cx, (ty + 0.5 - cy) * 1.25); let a = 0, gold = 0;
       for (const p of tp.pulses) { const r = p.t * 10; const w = Math.abs(d - r); if (w < 1.1) { const v = (1 - w / 1.1) * (1 - p.t / 1.2) * (p.down ? 0.42 : 0.26); if (v > a) { a = v; gold = p.down ? 1 : 0; } } }
-      if ((tx + ty + idx) % 2 === 0) a = Math.max(a, 0.035);
+      if (!tp.boss && (tx + ty + idx) % 2 === 0) a = Math.max(a, 0.035);
       if (a <= 0.01) continue;
       ctx.globalAlpha = a; ctx.fillStyle = gold ? Tempo.COLOR : '#6ee7ff'; ctx.fillRect(ROOM_X + tx * TILE + 2, ROOM_Y + ty * TILE + 2, TILE - 4, TILE - 4);
     }
@@ -132,6 +137,17 @@ const Tempo = {
       for (const f of tp.flashes) { const k = f.t / 0.35; ctx.globalAlpha = 0.8 * (1 - k); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(pl.x, pl.y, pl.r + 10 + k * 50, 0, TAU); ctx.stroke(); }
     }
     ctx.shadowBlur = 0;
+    /* boss : anneau de phrase (blanc = petites attaques, orange = annonce, rouge = grosse attaque, vert = il souffle) + jauge d'annonce */
+    const b = room.boss; if (tp.boss && b && !b.dead && b.phrasePos) {
+      const pp = b.phrasePos();
+      if (pp) {
+        const seg = pp.p < pp.smallEnd ? 0 : pp.p < pp.bigBeat ? 1 : b.cur ? 2 : 3; const col = ['#e8ecf7', '#ffb347', '#ff3b5c', '#7fff9a'][seg];
+        ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 12; ctx.lineWidth = seg === 1 ? 4 : 2.5; ctx.globalAlpha = 0.35 + 0.55 * Math.max(0, 1 - ph * 2);
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 14 + (1 - ph) * 6, 0, TAU); ctx.stroke();
+        if (seg === 1) { const k = (pp.p - pp.smallEnd) / (pp.bigBeat - pp.smallEnd); ctx.globalAlpha = 0.9; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 24, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.stroke(); }
+        ctx.shadowBlur = 0;
+      }
+    }
     if (tp.phase === 'count' || tp.goT < 0.5) {
       const txt = tp.phase === 'count' ? String(tp.count) : 'GO'; const k = tp.phase === 'count' ? clamp(tp.countT / Beat.beatLen(), 0, 1) : clamp(tp.goT / 0.5, 0, 1);
       ctx.globalAlpha = 1 - k * 0.8; ctx.fillStyle = Tempo.COLOR; ctx.shadowColor = Tempo.COLOR; ctx.shadowBlur = 24; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -143,7 +159,20 @@ const Tempo = {
   /* HUD (coordonnées écran) : barre de mesure en haut au centre + combo */
   renderHud(ctx, room) {
     const tp = room.tempo; const ph = Beat.phase(); const bib = Beat.beatInBar(); ctx.save();
-    if (tp.started && bib === 0) { const kd = Math.max(0, 1 - ph * 2.5); const V = Engine.view; const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(V.w, V.h) * 0.3, W / 2, H / 2, Math.max(V.w, V.h) * 0.75); g.addColorStop(0, 'rgba(255,209,102,0)'); g.addColorStop(1, `rgba(255,209,102,${0.16 * kd})`); ctx.fillStyle = g; ctx.fillRect(-V.ox, -V.oy, V.w, V.h); }
+    if (tp.started && (tp.boss ? tp.bigFlash > 0 : bib === 0)) { const kd = tp.boss ? tp.bigFlash : Math.max(0, 1 - ph * 2.5); const V = Engine.view; const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(V.w, V.h) * 0.3, W / 2, H / 2, Math.max(V.w, V.h) * 0.75); g.addColorStop(0, 'rgba(255,209,102,0)'); g.addColorStop(1, tp.boss ? `rgba(255,59,92,${0.22 * kd})` : `rgba(255,209,102,${0.16 * kd})`); ctx.fillStyle = g; ctx.fillRect(-V.ox, -V.oy, V.w, V.h); }
+    const b = room.boss; const pp = tp.boss && b && !b.dead && b.phrasePos ? b.phrasePos() : null;
+    if (pp) {
+      /* partition de la phrase : un point par temps, groupés par mesure ; blanc = petites attaques, orange = annonce, rouge = grosse attaque, vert = il souffle */
+      const n = pp.n, spd = n > 8 ? 14 : 22, gap = 10; const w = n * spd + (n / 4 - 1) * gap; const x0 = W / 2 - w / 2, yb = 70;
+      ctx.fillStyle = 'rgba(8,10,18,.7)'; ctx.fillRect(x0 - 12, yb - 14, w + 24, tp.combo > 0 ? 46 : 28);
+      for (let i = 0; i < n; i++) {
+        const x = x0 + i * spd + Math.floor(i / 4) * gap + spd / 2; const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? '#ff3b5c' : '#7fff9a'; const cur = Math.floor(pp.p) === i;
+        ctx.globalAlpha = cur ? 1 : 0.4; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, yb, cur ? 5 + (1 - ph) * 3 : (i === pp.bigBeat ? 5 : 3.5), 0, TAU); ctx.fill();
+      }
+      ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff'; ctx.fillRect(x0 + pp.p * spd + Math.floor(pp.p / 4) * gap - 1, yb - 11, 2, 22);
+      if (tp.combo > 0) { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = Tempo.COLOR; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(`TEMPO ×${tp.combo}`, W / 2, yb + 22); }
+      ctx.restore(); return;
+    }
     const cx = W / 2, y = 66, sp = 30;   // sous le cartouche « Salle 7/9 » du HUD
     ctx.fillStyle = 'rgba(8,10,18,.7)'; ctx.fillRect(cx - 88, y - 14, 176, tp.combo > 0 ? 46 : 28);
     for (let i = 0; i < 4; i++) {

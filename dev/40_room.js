@@ -57,6 +57,7 @@ const Room = {
     if (def.type === 'CHEST' || def.type === 'CHEST_FINAL') { G.room.chest = { x: W / 2, y: H / 2, r: 22, opened: false }; G.room.doorOpen = false; }
     if (def.type === 'TRAP') { G.room.doorOpen = !(G.room.challenge && G.room.challenge.id === 'collapse'); }
     if (def.type === 'COMBAT_TEMPO') Tempo.create(G.room);
+    if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Tempo.createBoss(G.room);
     UI.banner(G.room.label, '#6ee7ff'); AudioEngine.uiConfirm({});
     if (G.room.challenge) setTimeout(() => { if (G.room && G.room.challenge) { UI.banner('DÉFI : ' + G.room.challenge.def.name, G.room.challenge.def.color, G.room.challenge.def.desc); AudioEngine.trapWarn({ intensity: 0.8 }); } }, 900);
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Music.play('boss'); else Music.play('biome');
@@ -143,7 +144,7 @@ const Room = {
     tick(r.beams); tick(r.blasts); tick(r.slashes);
   },
   /* horloge des pièges : temps musical dans la salle du tempo, temps de salle ailleurs */
-  trapTime(r) { return r.tempo ? Beat.t : r.time; },
+  trapTime(r) { return r.tempo && r.tempo.syncTraps ? Beat.t : r.time; },
   clear() {
     const r = G.room; if (r.state === 'clear') return; r.state = 'clear'; r.stateT = 0;
     if (r.tempo) { Tempo.onClear(r); return; }   // porte sur la mesure suivante

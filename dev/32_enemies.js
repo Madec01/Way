@@ -224,6 +224,8 @@ class Boss extends Enemy {
       this.phaseText = rv.phaseText;
     }
     this.phase = this.phases[0];
+    /* rythme : phrases de 4 mesures (2 sous 30 % PV) calées sur Beat ; la revanche joue décalée d'un demi-temps */
+    this.rhythm = !(G.debug && G.debug.noRhythm); this.beatOffset = rv ? 0.5 : 0; this.rb = { start: null, last: -1, lastHalf: -1, bars: 4, stage: 'small', smallIdx: 0, bigIdx: 0, bigFired: false, closeT: 0 };
     this.weakActive = false; this.weakUntil = 0; this.weakMul = this.weak.damageMul || 2; this.facingA = 0; this.intro = 1.5; this.spawnT = 0;
   }
   /* pattern miroir de la compétence du joueur */
@@ -258,12 +260,64 @@ class Boss extends Enemy {
     if (next && this.hp / this.maxHp <= (next.hpBelow || 0.5)) { this.phaseIdx++; this.phase = next; this.patternIdx = 0; this.cur = null; this.patternCd = 1.2; this.stunUntil = Time.now + 1; this.invulnPhase = Time.now + 1; Particles.spawn(this.x, this.y, { count: 30, color: this.color, glow: true, speedMax: 300 }); G.shake = 10; AudioEngine.bossPhase({}); UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color); }
     /* faiblesse temporelle */
     if (this.weakActive && Time.now > this.weakUntil) this.weakActive = false;
+    if (this.rhythm) { const rb = this.rb; const bt = Beat.t / Beat.beatLen() + this.beatOffset; const bi = Math.floor(bt); rb.crossed = bi !== rb.last; rb.last = bi; }   // suivi des temps même pendant un pattern (sinon un temps « en retard » déclenche hors rythme)
     if (this.weak.rule === 'back') { this.facingA = this.cur && this.cur.kind === 'charge' ? this.chargeA : angleTo(this.x, this.y, pl.x, pl.y); }
     if (this.cur) { this.runPattern(dt, t, d); return; }
     /* déplacement d'attente : approche lente */
     if (d > 180) this.moveToward(t.x, t.y, dt, 0.7, false); else if (d < 100) this.moveToward(this.x * 2 - t.x, this.y * 2 - t.y, dt, 0.5, false);
+    if (this.rhythm) { this.rhythmStep(dt, t, d); return; }
     this.patternCd -= dt;
     if (this.patternCd <= 0) { const pats = this.phase.patterns; const p = pats[this.patternIdx % pats.length]; this.patternIdx++; this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p); this.tele = 1; this.telegraph = { time: p.telegraph || 0.8, color: p.color || this.color }; this.chargeA = angleTo(this.x, this.y, t.x, t.y); AudioEngine.trapWarn({ intensity: 0.7 }); if (p.label) Floaters.add(this.x, this.y - this.r - 30, p.label, p.color || '#ff7a3c', 15); }
+  }
+  /* --- séquenceur rythmique ---
+     Une phrase = N temps (16, ou 8 sous 30 % PV). Première moitié : petites attaques (anneau, éventail, spirale…) lancées sur chaque temps
+     (aussi sur les contretemps sous 60 % PV) avec une télégraphie d'un temps, donc elles partent SUR le temps suivant. Dernier temps de
+     cette moitié : attaque utilitaire (invocation, bouclier…) s'il y en a. Puis une mesure d'annonce : la grosse attaque (charge, onde,
+     laser, aspiration) télégraphie jusqu'au temps fort de la dernière mesure, où elle part. Ensuite le boss « souffle » : faiblesse
+     active jusqu'à la phrase suivante. Attaque libre hors rythme : un coup de pied si le joueur colle le boss plus d'une seconde. */
+  static patKind(p) { return ['charge', 'slam', 'laser_sweep', 'pull'].includes(p.kind) ? 'big' : ['summon', 'shield', 'slow'].includes(p.kind) ? 'util' : 'small'; }
+  startPattern(p, telegraph, t) {
+    this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p, telegraph != null ? { telegraph } : {}); this.tele = 1;
+    this.telegraph = { time: this.cur.telegraph || 0.8, color: p.color || this.color }; this.chargeA = angleTo(this.x, this.y, t.x, t.y);
+    AudioEngine.trapWarn({ intensity: Boss.patKind(p) === 'big' ? 0.9 : 0.5 }); if (p.label) Floaters.add(this.x, this.y - this.r - 30, p.label, p.color || '#ff7a3c', 15);
+  }
+  /* position dans la phrase : { p (temps, fractionnaire), n, smallEnd, bigBeat } ; null tant que la phrase n'a pas commencé */
+  phrasePos() {
+    const rb = this.rb; if (rb.start == null) return null; const L = Beat.beatLen(); const bt = Beat.t / L + this.beatOffset; const n = rb.bars * 4;
+    return { p: bt - rb.start, n, smallEnd: n / 2, bigBeat: n - n / 4, L, bt };
+  }
+  rhythmStep(dt, t, d) {
+    const rb = this.rb; const L = Beat.beatLen(); const bt = Beat.t / L + this.beatOffset; const bi = Math.floor(bt); const crossed = rb.crossed;
+    const hpk = this.hp / this.maxHp; const bars = hpk <= 0.3 ? 2 : 4;
+    if (rb.start == null) { if (crossed && ((bi % 4) + 4) % 4 === 0) { rb.start = bi; rb.bars = bars; rb.bigFired = false; } return; }   // la première phrase démarre sur un temps fort
+    const n = rb.bars * 4; let p = bt - rb.start;
+    if (p >= n) { rb.start += n; rb.bars = bars; rb.bigFired = false; p -= n; this.weakPhrase = false; }   // nouvelle phrase
+    const smallEnd = n / 2, bigBeat = n - n / 4; const pi = Math.floor(p);
+    /* attaque libre : coup de pied si le joueur colle le boss */
+    rb.closeT = d < this.r + G.player.r + 34 ? rb.closeT + dt : 0;
+    rb.kickCd = Math.max(0, (rb.kickCd || 0) - dt);
+    if (rb.closeT > 1.4 && !this.cur && p < smallEnd && rb.kickCd <= 0) { rb.closeT = 0; rb.kickCd = 4.5; this.startPattern({ kind: 'slam', duration: 0.3, radius: 110, damage: Math.round(this.damage * 0.9), jump: 0.25, label: 'COUP DE PIED', color: '#ffb347' }, 0.45, t); return; }
+    if (p < smallEnd) {
+      /* petites attaques lancées sur un temps avec une télégraphie d'un temps → elles partent SUR le temps suivant.
+         Cadence : une par mesure (temps fort) à pleine santé, sur les temps 1 et 3 sous 60 % PV, sur chaque temps sous 30 % */
+      const slot = hpk > 0.6 ? pi % 4 === 0 : hpk > 0.3 ? pi % 2 === 0 : true;
+      if (crossed && !this.cur) {
+        const pats = this.phase.patterns; const utils = pats.filter(q => Boss.patKind(q) === 'util'); const smalls = pats.filter(q => Boss.patKind(q) === 'small');
+        if (pi === smallEnd - 1 && utils.length) { const u = utils[rb.smallIdx % utils.length]; this.startPattern(u, L * 0.9, t); }
+        else if (slot && smalls.length) { const s = smalls[rb.smallIdx++ % smalls.length]; this.startPattern(s, L, t); }
+      }
+    } else if (!rb.bigFired && p >= smallEnd) {
+      /* annonce : la grosse attaque télégraphie jusqu'au temps fort de la dernière mesure */
+      if (this.cur && Boss.patKind(this.cur) !== 'big') { this.cur.phase === 'tele' ? (this.cur = null, this.tele = 0) : this.endPattern(); }
+      if (!this.cur) {
+        const bigs = this.phase.patterns.filter(q => Boss.patKind(q) === 'big'); const b = bigs.length ? bigs[rb.bigIdx++ % bigs.length] : this.phase.patterns[0];
+        const tele = Math.max(0.35, (bigBeat - p) * L); this.startPattern(b, tele, t); rb.bigFired = true; rb.bigStage = 1;
+      }
+    } else if (rb.bigFired && !this.cur && !this.weakPhrase && p >= bigBeat) {
+      /* le boss souffle jusqu'à la phrase suivante */
+      this.weakPhrase = true; this.weakActive = true; this.weakUntil = Time.now + (n - p) * L; Floaters.add(this.x, this.y - this.r - 20, 'À BOUT DE SOUFFLE', '#ffd166', 18);
+      if (G.room && G.room.tempo) G.room.tempo.bigFlash = 1;
+    }
   }
   runPattern(dt, t, d) {
     const c = this.cur; c.t += dt; const pl = G.player; const rate = G.difficulty.fireRateMul;
@@ -289,7 +343,7 @@ class Boss extends Enemy {
       default: this.endPattern();
     }
   }
-  endPattern() { const c = this.cur; this.cur = null; this.patternCd = (c.cooldown || 1.2) / G.difficulty.fireRateMul; this.air = 0; if (this.weak.rule === 'during_reload') { this.weakActive = true; this.weakUntil = Time.now + (this.weak.window || 1); } }
+  endPattern() { const c = this.cur; this.cur = null; this.patternCd = (c.cooldown || 1.2) / G.difficulty.fireRateMul; this.air = 0; if (this.rhythm && Boss.patKind(c) === 'big' && G.room && G.room.tempo) G.room.tempo.bigFlash = 1; if (this.weak.rule === 'during_reload') { this.weakActive = true; this.weakUntil = Time.now + (this.weak.window || 1); } }
   update(dt) {
     if (this.dead) return; const pl = G.player;
     this.slow = updateStatus(this, dt); if (this.dead) return;

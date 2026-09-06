@@ -11,7 +11,7 @@ Servir le dossier du dépôt (ex. `python3 -m http.server`) et ouvrir `index.htm
 - **Zoom caméra** : la caméra suit le joueur ; zoom réglable dans le menu pause (1× à 2×, 1,5× par défaut en tactile). Plein écran depuis le menu principal, la pause ou le bouton tactile.
 
 ## Musiques
-Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (salles 1-4 et 6-8) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `boss2.mp3` pour le biome suivant, etc. Noms en minuscules (GitHub Pages distingue la casse). Fichier absent : musique générative. Détails dans `assets/music/README.md`.
+Déposez dans `assets/music/` les fichiers `menu.mp3`, `hub.mp3`, `biome1.mp3` (salles 1-4), `biome1b.mp3` (salles 6-8, optionnel : sans lui `biome1.mp3` reprend là où elle s'était arrêtée) et `boss1.mp3` (salles 5 et 9), puis `biome2.mp3` / `biome2b.mp3` / `boss2.mp3` pour le biome suivant, etc. Noms en minuscules (GitHub Pages distingue la casse). Fichier absent : musique générative. Détails dans `assets/music/README.md`.
 
 Après un changement de piste, lancer `python3 dev/analyze_music.py` (dépend de `librosa`) : il écrit `assets/music/tempo.json` (BPM, premier temps, tonalité) que le jeu lit pour caler la **salle du tempo** sur la musique. Sans ce fichier, la salle bat sur un métronome interne à 120 BPM.
 
@@ -23,6 +23,9 @@ Salle 2 : salle aléatoire avec un défi garanti ; salle 6 : un défi peut s'ajo
 
 ## Salle du tempo
 La salle 7 de chaque palier joue en rythme : compte à rebours sur une mesure, pièges qui frappent sur les temps, ennemis qui n'attaquent que sur les temps (noires en vague 1, croches ensuite) avec un voyant qui bat, vagues qui entrent sur le premier temps d'une mesure, porte qui s'ouvre sur la mesure. Tirer ou lancer sa compétence sur un temps donne +25 % (jusqu'à +50 % en série), une note de la gamme du morceau et un combo affiché ; jamais de malus hors rythme. Bonus d'XP à la fin selon le nombre d'actions en rythme, et « sans fausse note » si aucun coup reçu. Détails dans `CONTENT.md` §20.
+
+## Boss en rythme
+Les boss (salles 5 et 9) jouent par phrases de 4 mesures : petites attaques sur les temps forts (puis sur les temps 1 et 3 sous 60 % de PV, chaque temps sous 30 %), une mesure d'annonce, la grosse attaque sur le temps fort de la dernière mesure, puis le boss « souffle » (faiblesse active) jusqu'à la phrase suivante. Sous 30 % les phrases passent à 2 mesures. La revanche de la salle 9 joue décalée d'un demi-temps. Une attaque libre hors rythme : un coup de pied si on colle le boss. Partition de la phrase dans le HUD, anneau de phrase autour du boss, bonus « en rythme » du joueur actif.
 
 ## Menu, hub et histoire
 Le menu principal et le hub sont joués sur une scène d'attraction : le sujet, piloté par le bot, combat des ennemis des deux paliers derrière l'interface. Le menu se navigue au clavier (flèches, Entrée) ou à la souris. Les deux écrans battent avec `menu.mp3` : titre, cartouche, bouton principal, portrait et crédits pulsent sur chaque temps (temps fort plus marqué), et une onde part du centre de la scène à chaque mesure. Sans musique, ils battent à 120 BPM.
