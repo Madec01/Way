@@ -39,13 +39,13 @@ CONTENT.enemies.push(
 CONTENT.bosses.push({
   id: 'boss_serriste', name: 'Étalon 12, dite « la Serriste »', subtitle: 'Elle a fait pousser ce que vous portez.',
   desc: 'Sujet de référence de LA SERRE, greffée jusqu\'à l\'os de matériel végétal. Vaporise, enracine, et charge quand on la croit lente : après une charge, ses racines mettent 1,2 s à se rétracter.',
-  hp: 2600, speed: 130, radius: 36, damage: 20, xp: 180, coins: 60, color: '#7ed957', sprite: 'boss2',
+  hp: 2600, speed: 130, radius: 36, damage: 20, xp: 180, coins: 60, color: '#7ed957', sprite: 'boss2', crest: 'crown',
   phases: [
     { hpBelow: 1, patterns: [
       { kind: 'spiral', telegraph: 0.7, duration: 2.6, cooldown: 4.5, arms: 3, rate: 14, angularSpeed: 2.4, projSpeed: 230, projDamage: 12, projSize: 7, color: '#b7ff7a' },
       { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 8, enemy: 'enemy_spore', count: 2 },
       { kind: 'charge', telegraph: 0.8, duration: 0.8, cooldown: 4.5, speed: 680, damage: 24, stunTime: 1.2 },
-      { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 5.5, radius: 150, damage: 28 },
+      { kind: 'roots', telegraph: 0.9, duration: 0.6, cooldown: 6, count: 3, radius: 62, dps: 10, color: '#7ed957', label: 'RONCES' },
     ] },
     { hpBelow: 0.55, patterns: [
       { kind: 'fan', telegraph: 0.5, duration: 0.6, cooldown: 2.2, count: 9, spread: 1.4, projSpeed: 320, projDamage: 13, projSize: 8, color: '#e2c6ff' },
@@ -53,6 +53,7 @@ CONTENT.bosses.push({
       { kind: 'charge', telegraph: 0.6, duration: 0.8, cooldown: 4, speed: 760, damage: 26, stunTime: 1.2 },
       { kind: 'ring', telegraph: 0.6, duration: 0.3, cooldown: 3, count: 16, projSpeed: 280, projDamage: 13, projSize: 8, color: '#b7ff7a' },
       { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 9, enemy: 'enemy_moucherons', count: 1 },
+      { kind: 'roots', telegraph: 0.7, duration: 0.6, cooldown: 5, count: 4, radius: 66, dps: 12, color: '#b7ff7a', label: 'RONCES' },
     ] },
   ],
   weakness: { desc: 'Après chaque charge, ses racines restent plantées 1,2 s : dégâts ×1,8 pendant qu\'elle se rétracte.', rule: 'after_charge', damageMul: 1.8, window: 1.2 },

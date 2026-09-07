@@ -51,9 +51,17 @@ const Beat = (() => {
 const Tempo = {
   WINDOW: 0.1,   // fenêtre « en rythme » (s) de part et d'autre du temps
   COLOR: '#ffd166',
+  /* bandeau d'accueil : dit ce qui va se passer, pour ne pas confondre avec une salle de boss */
+  intro(room) {
+    const tp = room.tempo; const first = room.traps.find(t => t.id === tp.groups[0]);
+    UI.banner('SALLE DU TEMPO', Tempo.COLOR, 'Tout joue en musique. Tire sur le temps : dégâts bonus. Un piège de plus à chaque vague' + (first ? ' — on commence par : ' + first.name : '') + '.');
+  },
   create(room) {
-    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: true, bigFlash: 0 };
-    for (const t of room.traps) t.disabled = true;   // les pièges attendent la fin du compte à rebours
+    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: true, bigFlash: 0, groups: [], groupIdx: 0, newTrapT: 9 };
+    /* Les pièges arrivent par familles, une de plus à chaque vague : on entre sur un seul type, on finit avec tous.
+       Les familles gardent l'ordre de la salle (le premier piège déclaré est celui d'accueil). */
+    const seen = []; for (const t of room.traps) { if (!seen.includes(t.id)) seen.push(t.id); t.disabled = true; }
+    room.tempo.groups = seen;
   },
   /* salle de boss : le boss joue par phrases (voir Boss.rhythmStep), pas de compte à rebours, pièges sur leur horloge habituelle,
      bonus « en rythme » du joueur actif, portée et HUD de phrase */
@@ -68,16 +76,25 @@ const Tempo = {
     if (down && tp.started && !tp.boss) { for (const o of room.obstacles) { if (o.dyn) continue; Particles.spawn(o.x + o.w / 2, o.y + 4, { count: 5, color: Tempo.COLOR, glow: true, speedMin: 40, speedMax: 120, life: 0.5, size: 2 }); } }
     for (let i = tp.pulses.length - 1; i >= 0; i--) { tp.pulses[i].t += dt; if (tp.pulses[i].t > 1.2) tp.pulses.splice(i, 1); }
     for (let i = tp.flashes.length - 1; i >= 0; i--) { tp.flashes[i].t += dt; if (tp.flashes[i].t > 0.35) tp.flashes.splice(i, 1); }
-    tp.countT += dt; tp.goT += dt;
+    tp.countT += dt; tp.goT += dt; tp.newTrapT += dt;
     if (room.state === 'intro') return;
-    if (tp.phase === 'wait') { if (down) { tp.phase = 'count'; tp.count = 4; tp.countT = 0; AudioEngine.tempoTick({ intensity: 0.7 }); } return; }   // attend le début d'une mesure
+    if (tp.phase === 'wait') { if (down) { tp.phase = 'count'; tp.count = 8; tp.countT = 0; AudioEngine.tempoTick({ intensity: 0.7 }); } return; }   // attend le début d'une mesure ; 8 temps = deux mesures pour lire la salle
     if (tp.phase === 'count') {
-      if (crossed) { tp.count--; tp.countT = 0; if (tp.count <= 0) { tp.phase = 'go'; tp.started = true; tp.goT = 0; for (const t of room.traps) t.disabled = false; AudioEngine.tempoTick({ intensity: 1 }); } else AudioEngine.tempoTick({ intensity: 0.7 }); }
+      if (crossed) { tp.count--; tp.countT = 0; if (tp.count <= 0) { tp.phase = 'go'; tp.started = true; tp.goT = 0; Tempo.armGroup(room, 0); AudioEngine.tempoTick({ intensity: 1 }); } else AudioEngine.tempoTick({ intensity: 0.7 }); }
       return;
     }
     if (tp.combo > 0 && Beat.t - tp.lastAction > Beat.beatLen() * 8) tp.combo = 0;   // deux mesures sans action en rythme : le combo retombe
     if (tp.pendingDoor && down) { tp.pendingDoor = false; room.doorOpen = true; AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a'); for (const p of Pickups.list) p.magnet = true; }
   },
+  /* arme la famille de pièges n (et toutes les précédentes) et l'annonce */
+  armGroup(room, n) {
+    const tp = room.tempo; if (n >= tp.groups.length) return;
+    tp.groupIdx = n; const id = tp.groups[n]; let name = '';
+    for (const t of room.traps) { const i = tp.groups.indexOf(t.id); if (i <= n) { if (t.disabled && i === n) name = t.name; t.disabled = false; } }
+    if (name && n > 0) { UI.banner('Nouveau piège : ' + name, Tempo.COLOR); AudioEngine.trapWarn({ intensity: 0.9 }); tp.newTrapT = 0; }
+  },
+  /* une vague vient d'entrer : la famille de pièges suivante s'arme */
+  onWave(room) { const tp = room.tempo; if (!tp || !tp.started || tp.boss) return; Tempo.armGroup(room, tp.groupIdx + 1); },
   /* les vagues n'entrent que sur le premier temps d'une mesure, une fois le compte à rebours fini */
   waveGate(room) {
     const tp = room.tempo; if (!tp.started) return false;
@@ -119,6 +136,9 @@ const Tempo = {
       if (a <= 0.01) continue;
       ctx.globalAlpha = a; ctx.fillStyle = gold ? Tempo.COLOR : '#6ee7ff'; ctx.fillRect(ROOM_X + tx * TILE + 2, ROOM_Y + ty * TILE + 2, TILE - 4, TILE - 4);
     }
+    /* liseré or qui bat sur le pourtour : on reconnaît la salle du tempo au premier coup d'œil, sans la confondre avec une salle de boss */
+    ctx.globalAlpha = 0.35 + 0.4 * Math.max(0, 1 - ph * 2); ctx.strokeStyle = Tempo.COLOR; ctx.lineWidth = 5;
+    ctx.strokeRect(ROOM_X + 2.5, ROOM_Y + 2.5, ROOM_W - 5, ROOM_H - 5);
     ctx.restore();
   },
   /* égaliseur le long des murs haut et bas : vrai spectre de la musique (AudioEngine.spectrum), sinon pseudo-spectre calé sur le temps */
@@ -154,7 +174,8 @@ const Tempo = {
       }
     }
     if (tp.phase === 'count' || tp.goT < 0.5) {
-      const txt = tp.phase === 'count' ? String(tp.count) : 'GO'; const k = tp.phase === 'count' ? clamp(tp.countT / Beat.beatLen(), 0, 1) : clamp(tp.goT / 0.5, 0, 1);
+      const txt = tp.phase === 'count' ? (tp.count > 4 ? '' : String(tp.count)) : 'GO';   // la 1re mesure sert à souffler : on ne compte qu'à partir de 4
+      const k = tp.phase === 'count' ? clamp(tp.countT / Beat.beatLen(), 0, 1) : clamp(tp.goT / 0.5, 0, 1);
       ctx.globalAlpha = 1 - k * 0.8; ctx.fillStyle = Tempo.COLOR; ctx.shadowColor = Tempo.COLOR; ctx.shadowBlur = 24; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = `bold ${Math.round(150 - k * 40)}px "Segoe UI", system-ui, sans-serif`; ctx.fillText(txt, ROOM_X + ROOM_W / 2, ROOM_Y + ROOM_H / 2);
       ctx.strokeStyle = Tempo.COLOR; ctx.lineWidth = 4; ctx.globalAlpha = 0.7 * (1 - k); ctx.beginPath(); ctx.arc(ROOM_X + ROOM_W / 2, ROOM_Y + ROOM_H / 2, 90 + (1 - k) * 260, 0, TAU); ctx.stroke();

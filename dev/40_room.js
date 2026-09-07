@@ -58,7 +58,7 @@ const Room = {
     Modular.init(G.room);
     if (def.type === 'CHEST' || def.type === 'CHEST_FINAL') { G.room.chest = { x: W / 2, y: H / 2, r: 22, opened: false }; G.room.doorOpen = false; }
     if (def.type === 'TRAP') { G.room.doorOpen = !(G.room.challenge && G.room.challenge.id === 'collapse'); }
-    if (def.type === 'COMBAT_TEMPO') Tempo.create(G.room);
+    if (def.type === 'COMBAT_TEMPO') { Tempo.create(G.room); setTimeout(() => { if (G.room && G.room.tempo && !G.room.tempo.boss) Tempo.intro(G.room); }, 900); }
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Tempo.createBoss(G.room);
     UI.banner(G.room.label, '#6ee7ff'); AudioEngine.uiConfirm({});
     if (G.room.challenge) setTimeout(() => { if (G.room && G.room.challenge) { UI.banner('DÉFI : ' + G.room.challenge.def.name, G.room.challenge.def.color, G.room.challenge.def.desc); AudioEngine.trapWarn({ intensity: 0.8 }); } }, 900);
@@ -108,7 +108,7 @@ const Room = {
       for (const w of r.waves) {
         if (w.done) continue;
         const trig = w.at === 'start' ? r.stateT >= 0 : w.at === 'clear' ? (alive === 0 && r.wavesStarted && r.lastWaveT < r.stateT - 0.5) : typeof w.at === 'number' ? r.stateT >= w.at : false;
-        if (trig && (!r.tempo || Tempo.waveGate(r))) { w.done = true; r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
+        if (trig && (!r.tempo || Tempo.waveGate(r))) { w.done = true; if (r.wavesStarted && r.tempo) Tempo.onWave(r); r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
       }
       if ((r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') && !r.boss && r.stateT > 0.2 && !r.waves.length) Room.spawnBoss();
       /* fragments d'énergie */
@@ -136,6 +136,15 @@ const Room = {
     /* zones de dégâts (traînées de feu, gaz du joueur…) */
     for (let i = r.hazards.length - 1; i >= 0; i--) {
       const h = r.hazards[i]; if (Time.now > h.until) { r.hazards.splice(i, 1); continue; }
+      if (h.owner === 'enemy') {
+        /* zone posée par un boss : mine qui saute à l'heure dite, ou ronces qui blessent et ralentissent tant qu'on reste dedans */
+        if (h.boomAt && Time.now >= h.boomAt) { h.boomAt = 0; h.until = 0; Combat.explosion(h.x, h.y, h.r, Math.round((h.damage || 24) * G.difficulty.damageMul), h.color, false); continue; }
+        if (h.dps && !pl.dead && dist(h.x, h.y, pl.x, pl.y) < h.r) {
+          if (h.slow) pl.gasSlowUntil = Time.now + 0.1;
+          const last = h.cd.get('pl') || -9; if (Time.now - last >= 0.5) { h.cd.set('pl', Time.now); Combat.hitPlayer(Math.round(h.dps * 0.5 * G.difficulty.damageMul), { type: 'trap', x: h.x, y: h.y, trapName: 'Ronces' }); }
+        }
+        continue;
+      }
       if (h.owner === 'player') for (const e of G.enemies) { if (e.dead || dist(h.x, h.y, e.x, e.y) > h.r + e.r) continue; const last = h.cd.get(e) || -9; if (Time.now - last < 0.25) continue; h.cd.set(e, Time.now); Combat.hitEnemy(e, h.dps * 0.25, { dot: true, x: e.x, y: e.y }); }
     }
     /* tourelles */

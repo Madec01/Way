@@ -57,20 +57,21 @@ CONTENT.traps.push(
 CONTENT.bosses.push({
   id: 'boss_marshal', name: 'Étalon 19, dit « le Marshal »', subtitle: 'Il a nettoyé la concession. Il ne reste que vous.',
   desc: 'Le gardien de la mine. Six coups dans le barillet, une charge de bête et de la dynamite plein les poches. Quand il recharge, il est à vous.',
-  hp: 3000, speed: 135, radius: 36, damage: 22, xp: 220, coins: 80, color: '#e0b060', sprite: 'boss3',
+  hp: 3000, speed: 135, radius: 36, damage: 22, xp: 220, coins: 80, color: '#e0b060', sprite: 'boss3', crest: 'hat',
   phases: [
     { hpBelow: 1, patterns: [
       { kind: 'fan', telegraph: 0.6, duration: 0.5, cooldown: 2.4, count: 6, spread: 0.9, projSpeed: 380, projDamage: 16, projSize: 7, color: '#ffe08a', label: 'BARILLET' },
       { kind: 'charge', telegraph: 0.8, duration: 0.8, cooldown: 4.5, speed: 720, damage: 26, stunTime: 1.2, label: 'TACLE' },
-      { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 5.5, radius: 160, damage: 30, color: '#ff6b3c', label: 'DYNAMITE' },
+      { kind: 'mines', telegraph: 0.9, duration: 0.5, cooldown: 5.5, count: 4, spread: 150, radius: 70, fuse: 1.6, damage: 26, color: '#ff6b3c', label: 'DYNAMITE' },
       { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 8, enemy: 'enemy_coyote', count: 2, label: 'MEUTE' },
     ] },
     { hpBelow: 0.55, patterns: [
       { kind: 'ring', telegraph: 0.6, duration: 0.3, cooldown: 3, count: 12, projSpeed: 300, projDamage: 15, projSize: 8, color: '#ffe08a', label: 'TIR EN ROND' },
-      { kind: 'laser_sweep', telegraph: 1.0, duration: 2.2, cooldown: 7, length: 700, damage: 22, color: '#d8b46a', label: 'LASSO' },
+      { kind: 'duel', telegraph: 1.4, duration: 1.6, cooldown: 6.5, projSpeed: 1000, projDamage: 30, projSize: 5, reload: 1.2, color: '#ffe08a', label: 'DUEL' },
       { kind: 'charge', telegraph: 0.6, duration: 0.8, cooldown: 4, speed: 800, damage: 28, stunTime: 1.2, label: 'TACLE' },
       { kind: 'fan', telegraph: 0.5, duration: 0.5, cooldown: 2.2, count: 8, spread: 1.3, projSpeed: 400, projDamage: 15, projSize: 7, color: '#ffe08a', label: 'BARILLET' },
       { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 9, enemy: 'enemy_baril', count: 2, label: 'POUDRE' },
+      { kind: 'mines', telegraph: 0.7, duration: 0.5, cooldown: 4.5, count: 6, spread: 190, radius: 74, fuse: 1.4, damage: 28, color: '#ff6b3c', label: 'DYNAMITE' },
     ] },
   ],
   weakness: { desc: 'Après chaque attaque il recharge : dégâts ×1,8 pendant 1 s.', rule: 'during_reload', damageMul: 1.8, window: 1.0 },
@@ -79,6 +80,7 @@ CONTENT.bosses.push({
       { kind: 'spiral', telegraph: 0.6, duration: 3, cooldown: 5, arms: 3, rate: 14, angularSpeed: 2.6, projSpeed: 260, projDamage: 14, projSize: 7, color: '#ffe08a', label: 'MITRAILLE' },
       { kind: 'ring', telegraph: 0.5, duration: 1.2, cooldown: 2.5, count: 14, rate: 3, rotate: 0.35, projSpeed: 320, projDamage: 16, projSize: 8, color: '#ffe08a' },
       { kind: 'charge', telegraph: 0.45, duration: 0.7, cooldown: 3, speed: 900, damage: 32, stunTime: 0.8, label: 'TACLE' },
+      { kind: 'duel', telegraph: 1.0, duration: 1.4, cooldown: 5, projSpeed: 1100, projDamage: 34, projSize: 5, reload: 0.9, color: '#ffe08a', label: 'DUEL' },
     ] } ],
     desc: 'Salle 9 : rév. B, PV ×1,35, recharge plus courte (0,7 s), phase 3 sous 30 %.' },
 });

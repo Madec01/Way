@@ -34,12 +34,12 @@ const SPRITE_DEFS = {
   /* biome 3 (western) : wogol → coyote, lizard → bandit, big_zombie → bison, wizzard → croque-mort, big_demon → Marshal ; baril, scorpions et crotale = icônes rastérisées */
   enemy_rusher3:   { idle: [368, 300, 16, 20], run: [432, 300, 16, 20], n: 4, tint: 'rgba(216,162,90,.55)' },
   enemy_shooter3:  { idle: [128, 228, 16, 28], run: [192, 228, 16, 28], hit: [256, 228, 16, 28], n: 4, foot: true, tint: 'rgba(120,80,40,.45)' },
-  enemy_tank3:     { idle: [16, 270, 32, 34],  run: [144, 270, 32, 34], n: 4, foot: true, tint: 'rgba(110,70,30,.55)' },
+  enemy_tank3:     { idle: [16, 320, 32, 32],  run: [144, 320, 32, 32], n: 4, foot: true, tint: 'rgba(110,70,30,.6)' },
   enemy_kamikaze3: { prop: 'barrel', size: 34, roll: true },
   enemy_summoner3: { idle: [128, 164, 16, 28], run: [192, 164, 16, 28], hit: [256, 164, 16, 28], n: 4, foot: true, tint: 'rgba(30,25,45,.55)' },
   enemy_swarm3:    { prop: 'scorpion', size: 22 },
   enemy_dasher3:   { prop: 'rattlesnake', size: 30 },
-  boss3:           { idle: [16, 364, 32, 36],  run: [144, 364, 32, 36], n: 4, foot: true, tint: 'rgba(224,176,96,.5)' },
+  boss3:           { idle: [16, 270, 32, 34],  run: [144, 270, 32, 34], n: 4, foot: true, tint: 'rgba(224,176,96,.45)' },   // big_zombie : silhouette sèche, différente du démon (boss 1) et de l'ogre (boss 2)
 };
 const TILES = { floor: [[16, 64], [32, 64], [48, 64], [16, 80], [32, 80], [48, 80], [16, 96], [32, 96]], wallTop: [32, 0], wallFace: [32, 16], wallLeft: [0, 128], wallRight: [16, 128], cornerTL: [32, 112], cornerTR: [48, 112], cornerBL: [32, 144], cornerBR: [48, 144], column: [[80, 80], [80, 96], [80, 112]], banner: [32, 32], hole: [48, 32], goo: [64, 80] };
 

@@ -152,6 +152,8 @@ class Enemy {
     const alpha = this.spawnT > 0 ? clamp(1 - this.spawnT / 0.6, 0.1, 1) : 1;
     ctx.save(); ctx.globalAlpha = alpha;
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU); ctx.fill();
+    /* ornement du boss : dessiné par-dessus le sprite pour que les trois boss ne se confondent jamais */
+    if (this.isBoss && this.bossDef && this.bossDef.crest) Boss.drawCrest(ctx, this, this.bossDef.crest, alpha);
     /* salle du tempo : voyant qui bat au-dessus de la tête */
     if (this.beatLock) { const k = Math.max(0, 1 - Beat.phase() * 3); ctx.strokeStyle = '#ffd166'; ctx.fillStyle = '#ffd166'; ctx.lineWidth = 2; ctx.globalAlpha = alpha * (0.3 + 0.7 * k); ctx.beginPath(); ctx.arc(this.x, this.y - this.r - 10, 3 + k * 3, 0, TAU); ctx.fill(); ctx.globalAlpha = alpha; }
     /* télégraphie : halo pulsant + ligne d'intention */
@@ -243,6 +245,30 @@ class Boss extends Enemy {
       decoy: { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 8, enemy: 'enemy_nuee', count: 1, label: 'LEURRE COPIÉ' },
     }[k] || null;
   }
+  /* Ornements : « hat » chapeau de shérif + étoile (le Marshal), « crown » couronne de feuilles (la Serriste),
+     « plate » plaque d'acier boulonnée et voyant (le Portier). Dessinés au canvas : aucun sprite à produire. */
+  static drawCrest(ctx, e, kind, alpha) {
+    const r = e.r, x = e.x, y = e.y - r - 6 - (e.air || 0); ctx.save(); ctx.globalAlpha = alpha;
+    if (kind === 'hat') {
+      ctx.fillStyle = '#4a3320'; ctx.fillRect(x - r * 0.95, y + 6, r * 1.9, 5);                       // bord
+      ctx.fillRect(x - r * 0.45, y - 4, r * 0.9, 11); ctx.fillStyle = '#2e1f14'; ctx.fillRect(x - r * 0.45, y + 2, r * 0.9, 3);   // calotte + ruban
+      ctx.fillStyle = '#ffd166'; ctx.beginPath();                                                       // étoile de shérif sur la poitrine
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 3 : 7; ctx.lineTo(x + Math.cos(a) * rr, e.y + 4 + Math.sin(a) * rr); }
+      ctx.closePath(); ctx.fill();
+    } else if (kind === 'crown') {
+      ctx.fillStyle = '#5aa06a'; ctx.strokeStyle = '#7ed957'; ctx.lineWidth = 2;
+      for (let i = -2; i <= 2; i++) { const bx = x + i * r * 0.34, k = 1 - Math.abs(i) * 0.22;          // feuilles
+        ctx.beginPath(); ctx.ellipse(bx, y + 4 - k * 8, 4 * k + 2, 8 * k + 2, i * 0.35, 0, TAU); ctx.fill(); ctx.stroke(); }
+      ctx.fillStyle = '#ff9adb'; ctx.beginPath(); ctx.arc(x, y - 6, 4, 0, TAU); ctx.fill();             // fleur centrale
+    } else if (kind === 'plate') {
+      ctx.fillStyle = '#8a94ac'; ctx.fillRect(x - r * 0.8, y + 2, r * 1.6, 9);                          // plaque
+      ctx.strokeStyle = '#cfd6e6'; ctx.lineWidth = 1.5; ctx.strokeRect(x - r * 0.8, y + 2, r * 1.6, 9);
+      ctx.fillStyle = '#5c6f85'; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(x + i * r * 0.5, y + 6.5, 1.8, 0, TAU); ctx.fill(); }   // boulons
+      const k = 0.5 + 0.5 * Math.sin(Time.now * 5); ctx.fillStyle = '#ff3b5c'; ctx.globalAlpha = alpha * (0.4 + 0.6 * k);
+      ctx.beginPath(); ctx.arc(x, y - 3, 3, 0, TAU); ctx.fill();                                        // voyant
+    }
+    ctx.restore();
+  }
   /* coup dans le dos : renvoie true si la faiblesse s'applique */
   backHit() {
     if (this.plateOn) {
@@ -275,7 +301,7 @@ class Boss extends Enemy {
      cette moitié : attaque utilitaire (invocation, bouclier…) s'il y en a. Puis une mesure d'annonce : la grosse attaque (charge, onde,
      laser, aspiration) télégraphie jusqu'au temps fort de la dernière mesure, où elle part. Ensuite le boss « souffle » : faiblesse
      active jusqu'à la phrase suivante. Attaque libre hors rythme : un coup de pied si le joueur colle le boss plus d'une seconde. */
-  static patKind(p) { return ['charge', 'slam', 'laser_sweep', 'pull'].includes(p.kind) ? 'big' : ['summon', 'shield', 'slow'].includes(p.kind) ? 'util' : 'small'; }
+  static patKind(p) { return ['charge', 'slam', 'laser_sweep', 'pull', 'duel', 'quake', 'mines'].includes(p.kind) ? 'big' : ['summon', 'shield', 'slow', 'roots'].includes(p.kind) ? 'util' : 'small'; }
   startPattern(p, telegraph, t) {
     this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p, telegraph != null ? { telegraph } : {}); this.tele = 1;
     this.telegraph = { time: this.cur.telegraph || 0.8, color: p.color || this.color }; this.chargeA = angleTo(this.x, this.y, t.x, t.y);
@@ -303,7 +329,7 @@ class Boss extends Enemy {
       const slot = hpk > 0.6 ? pi % 4 === 0 : hpk > 0.3 ? pi % 2 === 0 : true;
       if (crossed && !this.cur) {
         const pats = this.phase.patterns; const utils = pats.filter(q => Boss.patKind(q) === 'util'); const smalls = pats.filter(q => Boss.patKind(q) === 'small');
-        if (pi === smallEnd - 1 && utils.length) { const u = utils[rb.smallIdx % utils.length]; this.startPattern(u, L * 0.9, t); }
+        if (pi === smallEnd - 1 && utils.length) { const u = utils[(rb.utilIdx = (rb.utilIdx || 0) + 1) % utils.length]; this.startPattern(u, L * 0.9, t); }
         else if (slot && smalls.length) { const s = smalls[rb.smallIdx++ % smalls.length]; this.startPattern(s, L, t); }
       }
     } else if (!rb.bigFired && p >= smallEnd) {
@@ -335,6 +361,49 @@ class Boss extends Enemy {
       case 'spiral': { const every = 1 / ((c.rate || 12) * rate); if (c.t >= c.fired * every) { c.fired++; const arms = c.arms || 2; for (let i = 0; i < arms; i++) enemyProjectile(this, c.fired * (c.step || (c.angularSpeed || 2) / (c.rate || 12)) + i * TAU / arms, { speed: c.projSpeed || c.speed || 200, damage: c.projDamage || c.damage || this.damage * 0.5, r: c.projSize || c.size || 6, color: c.color }); } if (c.t >= dur) this.endPattern(); break; }
       case 'charge': { const sp = (c.speed || 640) * G.difficulty.speedMul * this.slow; this.x += Math.cos(this.chargeA) * sp * dt; this.y += Math.sin(this.chargeA) * sp * dt; if (this.hitWall || c.t >= dur) { const wall = this.hitWall; this.endPattern(); if (this.weak.rule === 'after_charge' || (this.weak.rule === 'while_stunned' && wall) || (this.weak.rule === 'back' && wall)) { const win = wall ? (c.stunTime || this.weak.window || 1.5) : (this.weak.window || 1.5); this.stunUntil = Time.now + win; if (this.weak.rule !== 'back') { this.weakActive = true; this.weakUntil = this.stunUntil; } Floaters.add(this.x, this.y - this.r - 20, wall ? 'SONNÉ' : 'PRISE EXPOSÉE', '#ffd166', 18); G.shake = 8; } } break; }
       case 'slam': { const jt = c.jump || 0.6; if (c.t < jt) { const k = c.t / jt; this.x = lerp(c.sx != null ? c.sx : (c.sx = this.x), c.tx, k); this.y = lerp(c.sy != null ? c.sy : (c.sy = this.y), c.ty, k); this.air = Math.sin(k * Math.PI) * 60; } else { this.air = 0; Combat.explosion(this.x, this.y, (c.radius || 120), Math.round((c.damage || this.damage) * G.difficulty.damageMul), c.color || '#ffb347', false); G.shake = 12; this.endPattern(); if (this.weak.rule === 'while_stunned') { this.weakActive = true; this.weakUntil = Time.now + (this.weak.window || 1.2); this.stunUntil = this.weakUntil; } } break; }
+      /* --- duel (le Marshal) : il se campe, vise longuement, puis tire une balle unique très rapide. Rechargement = faiblesse. --- */
+      case 'duel': {
+        if (!c.fired) {
+          c.fired = 1; const a = angleTo(this.x, this.y, pl.x, pl.y);
+          enemyProjectile(this, a, { speed: c.projSpeed || 1000, damage: c.projDamage || this.damage * 1.4, r: c.projSize || 5, color: c.color || '#ffe08a' });
+          G.room.beams.push({ ax: this.x, ay: this.y, bx: this.x + Math.cos(a) * 900, by: this.y + Math.sin(a) * 900, t: 0, life: 0.12, color: '#fff3c4', width: 3 });
+          AudioEngine.shootPistol({ intensity: 1 }); G.shake = 6;
+          this.stunUntil = Time.now + (c.reload || 1.2); this.weakActive = true; this.weakUntil = this.stunUntil;   // il recharge : ouvert
+          Floaters.add(this.x, this.y - this.r - 20, 'RECHARGE', '#ffd166', 18);
+        }
+        if (c.t >= (c.reload || 1.2)) this.endPattern(); break;
+      }
+      /* --- onde de choc annulaire (le Portier) : un anneau part de lui et traverse la salle ; on saute par-dessus au dash --- */
+      case 'quake': {
+        if (!c.fired) { c.fired = 1; c.r = 0; G.shake = 12; AudioEngine.skillShockwave({ intensity: 1 }); }
+        const sp = (c.speed || 620) * G.difficulty.speedMul; const prev = c.r; c.r += sp * dt;
+        G.room.blasts.push({ x: this.x, y: this.y, r: c.r, t: 0, life: 0.09, color: c.color || '#9fd8ff' });
+        const d2 = dist(pl.x, pl.y, this.x, this.y);
+        if (!c.hit && !pl.dashing && d2 >= prev - 18 && d2 <= c.r + 18) { c.hit = 1; Combat.hitPlayer(Math.round((c.damage || 26) * G.difficulty.damageMul), { type: 'trap', x: this.x, y: this.y, trapName: 'Onde de choc' }); }
+        if (c.r > (c.range || 900)) this.endPattern(); break;
+      }
+      /* --- mines (le Marshal) : bâtons de dynamite semés autour du joueur, ils sautent après la mèche --- */
+      case 'mines': {
+        if (!c.fired) {
+          c.fired = 1; const n = c.count || 4, fuse = c.fuse || 1.6;
+          for (let i = 0; i < n; i++) { const a = RNG.range(0, TAU), rr = RNG.range(30, c.spread || 150);
+            G.room.hazards.push({ x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20), y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
+              r: c.radius || 70, until: Time.now + fuse + 0.1, boomAt: Time.now + fuse, damage: c.damage || 24, owner: 'enemy', color: c.color || '#ff6b3c', cd: new Map() }); }
+          AudioEngine.trapWarn({ intensity: 0.8 });
+        }
+        if (c.t >= 0.4) this.endPattern(); break;
+      }
+      /* --- racines (la Serriste) : le sol se couvre de ronces qui blessent et ralentissent --- */
+      case 'roots': {
+        if (!c.fired) {
+          c.fired = 1; const n = c.count || 3;
+          for (let i = 0; i < n; i++) { const a = angleTo(this.x, this.y, pl.x, pl.y) + RNG.range(-0.8, 0.8), rr = RNG.range(40, 130);
+            G.room.hazards.push({ x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20), y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
+              r: c.radius || 62, until: Time.now + (c.duration || 4.5), dps: c.dps || 10, slow: true, owner: 'enemy', color: c.color || '#7ed957', cd: new Map() }); }
+          AudioEngine.trapGas({ intensity: 0.8 });
+        }
+        if (c.t >= 0.5) this.endPattern(); break;
+      }
       case 'summon': { if (!c.fired) { c.fired = 1; const def = Content.enemy(c.enemy); for (let i = 0; i < (c.count || 3); i++) { const a = RNG.range(0, TAU); const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 70, this.y + Math.sin(a) * 70, { hpMul: 0.8 }); if (e) { e.xp = Math.round(e.xp * 0.5); } } AudioEngine.trapGas({}); } if (c.t >= (c.duration || 0.5)) this.endPattern(); break; }
       case 'laser_sweep': { const sweep = c.sweep || Math.PI; const a0 = c.a0 != null ? c.a0 : (c.a0 = angleTo(this.x, this.y, pl.x, pl.y) - sweep / 2 * (c.dir = RNG.chance(0.5) ? 1 : -1)); const a = a0 + c.dir * sweep * (c.t / dur); const len = c.length || 700; G.room.beams.push({ ax: this.x, ay: this.y, bx: this.x + Math.cos(a) * len, by: this.y + Math.sin(a) * len, t: 0, life: 0.05, color: c.color || '#ff3b5c', width: 8 }); if (segCircle(this.x, this.y, this.x + Math.cos(a) * len, this.y + Math.sin(a) * len, pl.x, pl.y, pl.r)) Combat.hitPlayer(Math.round((c.damage || this.damage * 0.8) * G.difficulty.damageMul), { type: 'trap', x: this.x, y: this.y }); if (c.t >= dur) this.endPattern(); break; }
       case 'teleport': { if (!c.fired) { c.fired = 1; Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true }); const a = angleTo(pl.x, pl.y, this.x, this.y); const dd = this.r + pl.r + 40; let tx = pl.x - Math.cos(angleTo(this.x, this.y, pl.x, pl.y)) * -dd, ty = pl.y - Math.sin(angleTo(this.x, this.y, pl.x, pl.y)) * -dd; /* derrière le joueur : opposé à la direction boss→joueur */ tx = pl.x + (pl.x - this.x) / Math.max(1, dist(pl.x, pl.y, this.x, this.y)) * dd; ty = pl.y + (pl.y - this.y) / Math.max(1, dist(pl.x, pl.y, this.x, this.y)) * dd; tx = clamp(tx, ROOM_X + this.r, ROOM_X + ROOM_W - this.r); ty = clamp(ty, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r); this.x = tx; this.y = ty; resolveRoomCollision(this); Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true }); AudioEngine.skillBlink({}); const n = c.count || 5, sp = c.spread || 1; const a0 = angleTo(this.x, this.y, pl.x, pl.y); for (let i = 0; i < n; i++) enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), { speed: c.projSpeed || 320, damage: c.projDamage || 14, r: c.projSize || 7, color: c.color }); } if (c.t >= dur) this.endPattern(); break; }

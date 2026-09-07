@@ -428,18 +428,20 @@ const CONTENT = {
     {
       id: 'boss_etalon_07', name: 'Étalon 07, dit « le Portier »',
       desc: 'Le sujet de référence d\'ADMISSION, gardé comme mètre-étalon. Vérin hydraulique au bras droit, prise de calibration à nu dans le dos. Lourd, prévisible : il faut le faire pivoter.',
-      hp: 3300, speed: 120, radius: 36, damage: 22, xp: 120, coins: 40,
+      hp: 3300, speed: 120, radius: 36, damage: 22, xp: 120, coins: 40, crest: 'plate',
       phases: [
         { hpBelow: 1.0, patterns: [
           { kind: 'ring', telegraph: 0.8, duration: 0.3, cooldown: 2.3, count: 12, projSpeed: 260, projDamage: 22, projSize: 8 },
           { kind: 'charge', telegraph: 0.9, duration: 0.8, cooldown: 3.4, speed: 620, damage: 34, stopOnWall: true, stunTime: 1.5 },
-          { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 4.0, radius: 140, damage: 32, knockback: 3.0 }
+          { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 4.0, radius: 140, damage: 32, knockback: 3.0 },
+          { kind: 'quake', telegraph: 1.1, duration: 2.0, cooldown: 5.5, speed: 580, damage: 26, range: 900, color: '#9fd8ff', label: 'ONDE DE CHOC' }
         ] },
         { hpBelow: 0.5, patterns: [
           { kind: 'fan', telegraph: 0.6, duration: 0.5, cooldown: 1.7, count: 7, spread: 1.2, projSpeed: 300, projDamage: 22, projSize: 8 },
           { kind: 'spiral', telegraph: 0.7, duration: 3.0, cooldown: 4.0, arms: 2, rate: 12, angularSpeed: 2.0, projSpeed: 220, projDamage: 19, projSize: 7 },
           { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 6.0, enemy: 'enemy_nuee', count: 4 },
-          { kind: 'charge', telegraph: 0.7, duration: 0.8, cooldown: 3.4, speed: 700, damage: 36, stopOnWall: true, stunTime: 1.5 }
+          { kind: 'charge', telegraph: 0.7, duration: 0.8, cooldown: 3.4, speed: 700, damage: 36, stopOnWall: true, stunTime: 1.5 },
+          { kind: 'quake', telegraph: 0.8, duration: 2.0, cooldown: 4.5, speed: 700, damage: 28, range: 900, color: '#9fd8ff', label: 'ONDE DE CHOC' }
         ] }
       ],
       weakness: { desc: 'Sa prise de calibration dorsale est à nu : tout coup porté dans un cône de 90° derrière lui fait ×1,6 et le "débranche" 0,6 s (étourdi, ne se retourne pas). Une charge finie dans un mur (1,5 s d\'étourdissement) est le moyen le plus sûr d\'atteindre son dos.', rule: 'back', damageMul: 1.6, window: 0.6, coneAngle: 1.57, stunCooldown: 4.0 },
