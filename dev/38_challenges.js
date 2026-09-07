@@ -54,14 +54,14 @@ const Challenge = (() => {
      qu'une idée de lumière à comprendre, et la salle change de visage en musique. */
   const pt = () => ({ x: RNG.range(ROOM_X + 90, ROOM_X + ROOM_W - 90), y: RNG.range(ROOM_Y + 80, ROOM_Y + ROOM_H - 80) });
   const LIGHT_PATTERNS = [
-    { id: 'chase', name: 'Poursuite', bars: 4, make: () => [{ kind: 'round', r: 165, ...pt(), speed: 2.2, color: '#fff6d8', near: true }] },
+    { id: 'chase', name: 'Poursuite', bars: 4, make: () => [{ kind: 'round', r: 185, ...pt(), speed: 2.2, color: '#fff6d8', near: true }] },
     { id: 'fireflies', name: 'Lucioles', bars: 4, make: () => [
       { kind: 'round', r: 84, ...pt(), speed: 6, color: '#9fd8ff', jump: true }, { kind: 'round', r: 84, ...pt(), speed: 6, color: '#ffd166', jump: true }] },   // jump : une destination par temps, atteinte en un temps
     { id: 'sweep', name: 'Balayage', bars: 4, make: () => [{ kind: 'rect', axis: 'v', w: 150, x: ROOM_X + 40, y: 0, speed: 1.2, color: '#c9a3ff', sweep: 1 }] },
     { id: 'cross', name: 'Croix', bars: 4, make: () => [
       { kind: 'rect', axis: 'v', w: 130, x: ROOM_X + ROOM_W * 0.5, y: 0, speed: 2, color: '#c9a3ff' },
       { kind: 'rect', axis: 'h', h: 104, x: 0, y: ROOM_Y + ROOM_H * 0.5, speed: 2, color: '#7fff9a' }] },
-    { id: 'mirrorball', name: 'Boule à facettes', bars: 4, make: () => [{ kind: 'mirror', n: 6, r: 40, spin: 0.8, orbit: 240, color: '#ffd166' }] },
+    { id: 'mirrorball', name: 'Boule à facettes', bars: 4, make: () => [{ kind: 'mirror', n: 6, r: 46, spin: 0.62, orbit: 210, color: '#ffd166' }] },
     { id: 'strobe', name: 'Stroboscope', bars: 2, make: () => [{ kind: 'strobe', color: '#e8ecf7' }] },
     { id: 'blackout', name: 'Noir', bars: 2, make: () => [] },
   ];
@@ -126,23 +126,34 @@ const Challenge = (() => {
         c.fade = Math.min(1, c.fade + dt * 3);
         c.flash = Math.max(0, c.flash - dt * 6);
         if (c.patId === 'strobe' && bar) c.flash = 1;
-        const L = Beat.beatLen();
+        const L = Beat.beatLen(), vMax = (pl.stats && pl.stats.speed) || 260;   // toute la chorégraphie se règle sur la vitesse du joueur
         for (const b of c.beams) {
           if (b.kind === 'mirror') { b.a = (b.a || 0) + b.spin * dt * (1 + 0.5 * Math.max(0, 1 - ph2 * 2)); continue; }   // la rotation s'emballe sur le temps
           if (b.kind === 'strobe') continue;
-          /* balayage : traversée continue, plus rapide au milieu de la salle qu'aux bords */
-          if (b.sweep) { const u = (b.x - ROOM_X) / ROOM_W; b.x += b.sweep * (90 + 190 * Math.sin(Math.PI * clamp(u, 0, 1))) * dt; if (b.x > ROOM_X + ROOM_W - 30) b.x = ROOM_X + 30; b.tx = b.x; continue; }
-          /* nouvelle destination seulement quand la précédente est atteinte, et toujours sur un temps : le trajet dure
-             un ou deux temps (parfois un demi-temps : la lumière file d'un coup), avec départ et arrivée adoucis */
+          /* balayage : va-et-vient continu (avant, il se téléportait au bord opposé), toujours sous la vitesse du joueur */
+          if (b.sweep) { const u = (b.x - ROOM_X) / ROOM_W; b.x += b.sweep * Math.min(vMax * 0.8, 90 + 150 * Math.sin(Math.PI * clamp(u, 0, 1))) * dt;
+            if (b.x > ROOM_X + ROOM_W - 60) { b.x = ROOM_X + ROOM_W - 60; b.sweep = -1; } if (b.x < ROOM_X + 60) { b.x = ROOM_X + 60; b.sweep = 1; } b.tx = b.x; continue; }
+          /* Nouvelle destination seulement quand la précédente est atteinte, et toujours sur un temps. La distance est
+             bornée par ce que le joueur peut parcourir dans le même temps : avant, la lumière visait n'importe quel point
+             de la salle et allait 1,2× à 20× plus vite que lui — impossible à suivre. Les pointes restent (elles couvrent
+             la même distance en deux fois moins de temps), mais on peut toujours recoller. */
           if (b.moveK == null) b.moveK = 1;
           if (b.moveK >= 1 && (bar || (beat && b.jump) || (beat && RNG.chance(0.2)))) {
             b.fx = b.x; b.fy = b.y;
-            if (b.kind === 'rect') { if (b.axis === 'v') b.tx = RNG.range(ROOM_X + 70, ROOM_X + ROOM_W - 70); else b.ty = RNG.range(ROOM_Y + 60, ROOM_Y + ROOM_H - 60); }
-            /* le halo « poursuite » passe près du joueur sans le coller : c'est à lui de suivre */
-            else if (b.near && RNG.chance(0.3)) { b.tx = clamp(pl.x + RNG.range(-380, 380), ROOM_X + 90, ROOM_X + ROOM_W - 90); b.ty = clamp(pl.y + RNG.range(-280, 280), ROOM_Y + 80, ROOM_Y + ROOM_H - 80); }
-            else { const p = pt(); b.tx = p.x; b.ty = p.y; }
-            const dash = RNG.chance(0.25);                              // de temps en temps, un déplacement éclair
-            b.moveDur = L * (dash ? 0.5 : b.jump ? 1 : 2); b.moveK = 0;
+            const burst = RNG.chance(0.22);
+            const dur = L * (burst || b.jump ? 1 : 2);
+            const reach = vMax * (burst ? 1.55 : b.jump ? 1.05 : 0.85) * dur;
+            if (b.kind === 'rect') {
+              if (b.axis === 'v') b.tx = clamp(b.x + RNG.range(-reach, reach), ROOM_X + 70, ROOM_X + ROOM_W - 70);
+              else b.ty = clamp(b.y + RNG.range(-reach, reach), ROOM_Y + 60, ROOM_Y + ROOM_H - 60);
+            } else {
+              /* le halo « poursuite » revient régulièrement vers le joueur sans le coller : c'est à lui de suivre */
+              const a = b.near && RNG.chance(0.5) ? angleTo(b.x, b.y, pl.x, pl.y) + RNG.range(-0.9, 0.9) : RNG.range(0, TAU);
+              const d = reach * RNG.range(0.55, 1);
+              b.tx = clamp(b.x + Math.cos(a) * d, ROOM_X + 80, ROOM_X + ROOM_W - 80);
+              b.ty = clamp(b.y + Math.sin(a) * d, ROOM_Y + 70, ROOM_Y + ROOM_H - 70);
+            }
+            b.moveDur = dur; b.moveK = 0; b.burst = burst;
           }
           if (b.moveK < 1) {
             b.moveK = Math.min(1, b.moveK + dt / Math.max(0.05, b.moveDur || L));
@@ -287,6 +298,16 @@ const Challenge = (() => {
     const c = room.challenge; if (!c || c.id !== 'lights' || c.done) return; const pl = G.player;
     ctx.save();
     lightMask(ctx, c, pl);
+    /* où va la lumière : un cercle en pointillés sur la destination tant qu'elle se déplace. Sans ça on court derrière
+       elle au lieu de couper au plus court, et le motif devient illisible dès qu'il accélère. */
+    if (c.phase !== 'lure') for (const b of c.beams) {
+      if (b.kind !== 'round' || b.moveK == null || b.moveK >= 1 || b.tx == null) continue;
+      const k = 1 - b.moveK;
+      ctx.save(); ctx.globalAlpha = 0.16 + 0.34 * k; ctx.strokeStyle = b.color; ctx.lineWidth = b.burst ? 3 : 2; ctx.setLineDash([10, 12]); ctx.lineDashOffset = -Time.now * 30;
+      ctx.beginPath(); ctx.arc(b.tx, b.ty, b.r * (0.55 + 0.45 * b.moveK), 0, TAU); ctx.stroke();
+      ctx.globalAlpha = (0.1 + 0.2 * k); ctx.setLineDash([]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.tx, b.ty); ctx.stroke(); ctx.restore();
+    }
     /* Le joueur dans le noir : seuls ses yeux restent, en blanc, pour ne pas le confondre avec les ennemis (yeux rouges
        ou jaunes). Ses projectiles restent visibles : une balle qui file éclaire, et sans ça on tirerait à l'aveugle. */
     if (!pl.dead && !lit(c, pl.x, pl.y)) {

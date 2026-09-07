@@ -637,3 +637,22 @@ Le reste : CIMETERRES (éventail de 7 puis 9), ANNEAU, SABLIER (spirale). Il n'i
 **Salles** : mêmes types que les autres paliers. Obstacles `kind` propres au biome : `column`, `jar`, `vase`, `basin`, `palm`, `basket`, `brazier`, `drapes`, `archway`. Décor au sol : `lamp`, `lantern`, `spices`, `teapot`, `gems`, `scarab`, `eye`, `mosque`, `oasis`, `chalice`, `hourglass`, `carpet`, `incense`. Salle 7 (tempo) : dalles à pieux sur le 1 et le 3, jarres de naphte en éventail toutes les 2 mesures, encens alternés, meurtrières alternées.
 
 **Accessoires** : `assets/sprites/orient/*.svg`, icônes game-icons.net (CC BY 3.0, voir CREDITS.md) rastérisées en 16 à 26 px.
+
+
+---
+
+## 25. Lumières coupées — vitesse suivable (correctif)
+
+Le halo visait auparavant n'importe quel point de la salle en un ou deux temps : mesuré à **346 px/s de moyenne et 6 400 px/s en pointe** pour un joueur à **292 px/s**. Suivre la lumière était mathématiquement impossible.
+
+Désormais chaque destination est tirée **autour de la position actuelle du faisceau**, dans un rayon égal à ce que le joueur parcourt pendant le trajet :
+
+| | Durée du trajet | Vitesse visée | Distance |
+|---|---|---|---|
+| Déplacement normal | 2 temps | 0,85 × vitesse du joueur | ~230 px |
+| Lucioles (une destination par temps) | 1 temps | 1,05 × | ~140 px |
+| Pointe (22 % des trajets) | 1 temps | 1,55 × | ~210 px |
+
+Mesures après correctif (`lightmoves.js`, joueur à 336 px/s) : lucioles 280 px/s de moyenne, croix 136, **maximum 458 px/s soit 1,36×** le joueur sur une pointe courte — on recolle toujours. Le balayage fait un va-et-vient au lieu de se téléporter au bord opposé ; la boule à facettes tourne à 0,62 rad/s sur une orbite de 210 px (≈ 130 px/s) ; le halo de poursuite passe de 165 à 185 px de rayon.
+
+Un **cercle en pointillés marque la destination** pendant tout le trajet, relié au halo par un trait fin : on coupe au plus court au lieu de courir derrière.
