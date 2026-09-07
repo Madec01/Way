@@ -17,6 +17,9 @@ Fait : 4 paliers (ADMISSION, LA SERRE, LA CONCESSION, LE SÉRAIL) × 9 salles, 8
 
 En attente de décision de l'auteur : **l'histoire**. L'ancien lore (`LORE.md`, « SUJET NEUF », Bureau d'Homologation) est **rejeté**. Le jeu s'appelle **WAY**. Proposition en cours (à valider, puis à intégrer dans les textes du jeu) : la Voie, route de montagne à Relais-machines construits par l'ingénieure Honorine Way ; le joueur est un Passeur portant le Pli ; ennemis = Détraqués ; Gardien du Relais = mini-boss qui revient avec la Fiche de voyageur ; jetons tamponnés au Poste 4 ; hub = Relais Zéro tenu par la Muletière ; Malle-poste qui ramène quand on tombe ; Relais 1 l'Accueil, Relais 2 les Jardins, Relais 3 les Cuisines ; Passeurs Marius et Léonie. Les textes en jeu portent encore l'ancien vocabulaire (Salle Zéro, greffes, crédits, Étalon…) tant que ce n'est pas validé.
 
+## Règles posées par l'auteur
+- **À chaque nouveau biome**, livrer sans qu'il ait à le demander, en plus du contenu : (1) les **prompts Suno** pour les musiques du palier — deux pistes d'exploration (`biomeN-1`, `biomeN-2`) et une piste de boss (`bossN`), style + paroles instrumentales, dans la direction déjà retenue (orchestral hybride, couleur propre au biome) ; (2) les **prompts PixelLab** pour les accessoires du biome — un prompt global de style, puis un prompt court par objet, avec le nom de fichier exact attendu par `PROP_DEFS` en tête de prompt (voir `assets/sprites/pixel/README.md`). Les deux dans le même message que l'annonce du biome, pas après relance.
+
 ## Conventions
 - Contenu = données déclaratives avec `id` stables ; effets à hooks listés dans `SCHEMA.md` §2 ; pas de logique de gameplay dans `content*.js`.
 - Pas de son « oscillateur nu » ; pas de dépendance externe, pas de build step pour jouer.
