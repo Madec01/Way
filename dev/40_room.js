@@ -108,7 +108,7 @@ const Room = {
       for (const w of r.waves) {
         if (w.done) continue;
         const trig = w.at === 'start' ? r.stateT >= 0 : w.at === 'clear' ? (alive === 0 && r.wavesStarted && r.lastWaveT < r.stateT - 0.5) : typeof w.at === 'number' ? r.stateT >= w.at : false;
-        if (trig && (!r.tempo || Tempo.waveGate(r))) { w.done = true; if (r.wavesStarted && r.tempo) Tempo.onWave(r); r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
+        if (trig && (!r.tempo || Tempo.waveGate(r)) && Challenge.waveGate(r)) { w.done = true; if (r.wavesStarted && r.tempo) Tempo.onWave(r); r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
       }
       if ((r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') && !r.boss && r.stateT > 0.2 && !r.waves.length) Room.spawnBoss();
       /* fragments d'énergie */

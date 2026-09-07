@@ -9,7 +9,7 @@ const CHALLENGE_DEFS = {
   capture:  { name: 'Capture de zone', desc: 'Tenez la zone pour remplir la jauge, trois zones de suite. Porte fermée tant que les zones ne sont pas prises. Renforts au corps à corps. Kills dans la zone : +50 % d\'XP.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#7fff9a' },
   collapse: { name: 'Sol qui s\'effondre', desc: 'Des dalles tombent par paquets pendant tout le combat, jusqu\'à la moitié du sol. Les ennemis tombent aussi. Tuez les vagues : la porte s\'ouvre et une passerelle se déploie.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ffb347', replacesTraps: true },
   switches: { name: 'Séquence', desc: 'Activez les 3 interrupteurs dans l\'ordre affiché ET tuez les vagues : la porte ne s\'ouvre qu\'avec les deux. Décharge en cas d\'erreur.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#c9a3ff' },
-  lights:   { name: 'Lumières coupées', desc: 'Seule votre lampe éclaire. Les ennemis se trahissent par leurs yeux. XP +25 %.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#9fd8ff' },
+  lights:   { name: 'Lumières coupées', desc: 'Noir complet : des projecteurs balaient la salle en musique, à vous de suivre la lumière. Les ennemis se trahissent par leurs yeux. Tuer dans la lumière : +50 % d\'XP. XP +25 %.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#9fd8ff' },
   timer:    { name: 'Chrono', desc: 'Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s\'enrage.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ff5e7a' },
 };
 const CHALLENGE_ROOMS = [2, 6];   // salle 2 : toujours un défi ; 6 : 60 % de chance (la salle 7 est la salle du tempo)
@@ -40,7 +40,20 @@ const Challenge = (() => {
       c.sw = []; const order = rng.shuffle([0, 1, 2]);
       for (let i = 0; i < 3; i++) { let p; for (let k = 0; k < 20; k++) { p = randFreeTile(room, rng, 2); if (!c.sw.some(s => dist(s.tx, s.ty, p.x, p.y) < 5)) break; } c.sw.push({ tx: p.x, ty: p.y, x: tileX(p.x), y: tileY(p.y), on: false, label: ['I', 'II', 'III'][i] }); }
       c.order = order; c.step = 0; c.showT = 4; c.fails = 0;
-    } else if (id === 'lights') { c.radius = 210; }
+    } else if (id === 'lights') {
+      /* Boîte de nuit : au départ un seul halo au centre. Dès qu'on le rejoint, les ennemis arrivent et les projecteurs
+         se mettent à balayer la salle en musique. La lampe du joueur reste minuscule : c'est la lumière qu'il faut suivre. */
+      c.radius = 96; c.phase = 'lure'; c.lure = { x: ROOM_X + ROOM_W / 2, y: ROOM_Y + ROOM_H / 2, r: 120 }; c.t2 = 0;
+      const rndPt = () => ({ x: RNG.range(ROOM_X + 80, ROOM_X + ROOM_W - 80), y: RNG.range(ROOM_Y + 70, ROOM_Y + ROOM_H - 70) });
+      c.beams = [
+        { kind: 'round', r: 150, x: c.lure.x, y: c.lure.y, tx: c.lure.x, ty: c.lure.y, speed: 2.4, color: '#fff6d8', main: true },
+        { kind: 'round', r: 78, ...rndPt(), speed: 4.5, color: '#9fd8ff' },
+        { kind: 'rect', w: 120, h: 0, axis: 'v', x: ROOM_X + ROOM_W * 0.3, y: 0, tx: ROOM_X + ROOM_W * 0.3, ty: 0, speed: 3, color: '#c9a3ff' },
+        { kind: 'rect', w: 0, h: 96, axis: 'h', x: 0, y: ROOM_Y + ROOM_H * 0.6, tx: 0, ty: ROOM_Y + ROOM_H * 0.6, speed: 3, color: '#7fff9a' },
+        { kind: 'mirror', n: 7, r: 34, spin: 0.7, orbit: 230, color: '#ffd166' },
+      ];
+      for (const b of c.beams) { if (b.tx === undefined) { const p = rndPt(); b.tx = p.x; b.ty = p.y; } }
+    }
     else if (id === 'timer') { c.limit = 60; c.enraged = false; }
     return c;
   }
@@ -80,7 +93,29 @@ const Challenge = (() => {
         else { c.fails++; for (const q of c.sw) q.on = false; c.step = 0; Combat.hitPlayer(8, { type: 'trap', x: s.x, y: s.y, trapName: 'Décharge' }); G.room.beams.push({ ax: s.x, ay: s.y, bx: pl.x, by: pl.y, t: 0, life: 0.25, color: '#c9a3ff', width: 4, jag: true }); UI.banner('Mauvais ordre', '#ff5e7a'); s.cool = 1; }
       }
       c.hud = `Ordre : ${c.order.map(i => c.sw[i].label).join(' → ')} · ${c.step}/3`;
-    } else if (c.id === 'lights') { c.hud = 'Lampe : ' + Math.round(c.radius) + ' px'; if (room.state === 'clear') c.done = true; }
+    } else if (c.id === 'lights') {
+      c.t2 += dt;
+      if (c.phase === 'lure') {
+        c.hud = 'Rejoins le halo';
+        if (dist(pl.x, pl.y, c.lure.x, c.lure.y) < c.lure.r * 0.8) {   // le joueur a rejoint la lumière : le spectacle commence
+          c.phase = 'show'; AudioEngine.bossPhase({ intensity: 0.6 }); UI.banner('Les projecteurs s\'allument', c.def.color, 'Suis la lumière : tuer dans un faisceau rapporte +50 % d\'XP.');
+        }
+      } else {
+        c.hud = 'Suis la lumière';
+        /* les projecteurs changent de cible sur les temps forts et pulsent sur chaque temps : la salle danse avec la piste */
+        const bar = Beat.crossedFrame(1) && Beat.beatInBar() === 0, beat = Beat.crossedFrame(1);
+        for (const b of c.beams) {
+          if (b.kind === 'mirror') { b.a = (b.a || 0) + b.spin * dt; continue; }
+          if (bar || (beat && RNG.chance(0.35))) {
+            if (b.kind === 'rect') { if (b.axis === 'v') b.tx = RNG.range(ROOM_X + 60, ROOM_X + ROOM_W - 60); else b.ty = RNG.range(ROOM_Y + 50, ROOM_Y + ROOM_H - 50); }
+            else if (b.main && RNG.chance(0.3)) { b.tx = clamp(pl.x + RNG.range(-380, 380), ROOM_X + 90, ROOM_X + ROOM_W - 90); b.ty = clamp(pl.y + RNG.range(-280, 280), ROOM_Y + 80, ROOM_Y + ROOM_H - 80); }   // il passe près du joueur sans le coller : c'est à lui de suivre
+            else { b.tx = RNG.range(ROOM_X + 80, ROOM_X + ROOM_W - 80); b.ty = RNG.range(ROOM_Y + 70, ROOM_Y + ROOM_H - 70); }
+          }
+          const k = Math.min(1, b.speed * dt); b.x = lerp(b.x, b.tx, k); b.y = lerp(b.y, b.ty, k);
+        }
+      }
+      if (room.state === 'clear') c.done = true;
+    }
     else if (c.id === 'timer') {
       const left = Math.max(0, c.limit - room.time);
       if (room.state === 'clear' && !c.done) { c.done = true; if (left > 0) { room.challengeOk = true; const bonus = 30; G.run.coinsPending += bonus; UI.toast(`Chrono tenu : +${bonus} crédits`); } }
@@ -155,11 +190,61 @@ const Challenge = (() => {
     }
   }
   /* ---------- rendu monde (au-dessus des entités) : lumières coupées ---------- */
+  let darkC = null;
+  /* Masque d'obscurité : un calque noir dans lequel on « perce » chaque source de lumière (destination-out), puis une passe
+     colorée en fondu additif pour la teinte des projecteurs. Un seul calque hors écran, redimensionné avec la vue. */
+  function lightMask(ctx, c, pl) {
+    const V = Engine.view; const w = Math.ceil(V.w), h = Math.ceil(V.h);
+    if (!darkC) darkC = document.createElement('canvas');
+    if (darkC.width !== w || darkC.height !== h) { darkC.width = w; darkC.height = h; }
+    const g = darkC.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h);
+    g.fillStyle = 'rgba(2,3,8,.96)'; g.fillRect(0, 0, w, h);
+    g.save(); g.translate(V.ox, V.oy); g.globalCompositeOperation = 'destination-out';
+    const ph = Beat.phase(); const pulse = 1 + 0.12 * Math.max(0, 1 - ph * 2.5);   // les faisceaux respirent sur le temps
+    const disc = (x, y, r) => { const rg = g.createRadialGradient(x, y, r * 0.25, x, y, r); rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.65, 'rgba(0,0,0,.85)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
+    disc(pl.x, pl.y, c.radius);                                                     // lampe du joueur : juste ses pieds
+    if (c.phase === 'lure') { disc(c.lure.x, c.lure.y, c.lure.r * (1 + 0.08 * Math.sin(Time.now * 3))); }
+    else for (const b of c.beams) {
+      if (b.kind === 'round') disc(b.x, b.y, b.r * pulse);
+      else if (b.kind === 'rect') {
+        const rw = b.axis === 'v' ? b.w * pulse : ROOM_W + 200, rh = b.axis === 'v' ? ROOM_H + 200 : b.h * pulse;
+        const x0 = b.axis === 'v' ? b.x - rw / 2 : ROOM_X - 100, y0 = b.axis === 'v' ? ROOM_Y - 100 : b.y - rh / 2;
+        const lg = b.axis === 'v' ? g.createLinearGradient(x0, 0, x0 + rw, 0) : g.createLinearGradient(0, y0, 0, y0 + rh);
+        lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(0.5, 'rgba(0,0,0,.92)'); lg.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = lg; g.fillRect(x0, y0, rw, rh);
+      } else if (b.kind === 'mirror') {
+        for (let i = 0; i < b.n; i++) { const a = (b.a || 0) + i * TAU / b.n; disc(ROOM_X + ROOM_W / 2 + Math.cos(a) * b.orbit, ROOM_Y + ROOM_H / 2 + Math.sin(a * 1.3) * b.orbit * 0.5, b.r * pulse); }
+      }
+    }
+    g.restore();
+    ctx.drawImage(darkC, -V.ox, -V.oy);
+    /* teinte des faisceaux, par-dessus, en lumière additive */
+    if (c.phase !== 'lure') {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.13;
+      for (const b of c.beams) {
+        ctx.fillStyle = b.color;
+        if (b.kind === 'round') { ctx.beginPath(); ctx.arc(b.x, b.y, b.r * pulse, 0, TAU); ctx.fill(); }
+        else if (b.kind === 'rect') { if (b.axis === 'v') ctx.fillRect(b.x - b.w * pulse / 2, ROOM_Y, b.w * pulse, ROOM_H); else ctx.fillRect(ROOM_X, b.y - b.h * pulse / 2, ROOM_W, b.h * pulse); }
+        else for (let i = 0; i < b.n; i++) { const a = (b.a || 0) + i * TAU / b.n; ctx.beginPath(); ctx.arc(ROOM_X + ROOM_W / 2 + Math.cos(a) * b.orbit, ROOM_Y + ROOM_H / 2 + Math.sin(a * 1.3) * b.orbit * 0.5, b.r * pulse, 0, TAU); ctx.fill(); }
+      }
+      ctx.restore();
+    }
+  }
+  /* vrai si le point est dans un faisceau (bonus d'XP, lisibilité du bot) */
+  function lit(c, x, y) {
+    if (!c || c.id !== 'lights') return true;
+    if (c.phase === 'lure') return dist(x, y, c.lure.x, c.lure.y) < c.lure.r;
+    for (const b of c.beams) {
+      if (b.kind === 'round' && dist(x, y, b.x, b.y) < b.r) return true;
+      if (b.kind === 'rect' && (b.axis === 'v' ? Math.abs(x - b.x) < b.w / 2 : Math.abs(y - b.y) < b.h / 2)) return true;
+      if (b.kind === 'mirror') for (let i = 0; i < b.n; i++) { const a = (b.a || 0) + i * TAU / b.n; if (dist(x, y, ROOM_X + ROOM_W / 2 + Math.cos(a) * b.orbit, ROOM_Y + ROOM_H / 2 + Math.sin(a * 1.3) * b.orbit * 0.5) < b.r) return true; }
+    }
+    return false;
+  }
   function renderOverlay(ctx, room) {
     const c = room.challenge; if (!c || c.id !== 'lights' || c.done) return; const pl = G.player;
-    ctx.save(); const V = Engine.view;
-    const g = ctx.createRadialGradient(pl.x, pl.y, c.radius * 0.35, pl.x, pl.y, c.radius); g.addColorStop(0, 'rgba(2,3,8,0)'); g.addColorStop(0.7, 'rgba(2,3,8,.75)'); g.addColorStop(1, 'rgba(2,3,8,.94)');
-    ctx.fillStyle = g; ctx.fillRect(-V.ox - W, -V.oy - H, 3 * W + V.w, 3 * H + V.h);
+    ctx.save();
+    lightMask(ctx, c, pl);
     /* yeux des ennemis */
     for (const e of G.enemies) { if (e.dead) continue; ctx.fillStyle = e.tele ? '#ffd166' : '#ff5e7a'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(e.x - 4, e.y - 4, 2.2, 0, TAU); ctx.arc(e.x + 4, e.y - 4, 2.2, 0, TAU); ctx.fill(); }
     ctx.restore();
@@ -178,15 +263,18 @@ const Challenge = (() => {
     return 0;
   }
   /* objectif pour le bot */
+  /* les ennemis n'arrivent qu'une fois le halo d'accueil rejoint */
+  function waveGate(room) { const c = room.challenge; return !(c && c.id === 'lights' && !c.done && c.phase === 'lure'); }
   function goal(room) {
     const c = room.challenge; if (!c) return null;
     if (c.done && c.id !== 'collapse') return null;
+    if (c.id === 'lights') return c.phase === 'lure' ? c.lure : (c.beams.find(b => b.main) || null);
     if (c.id === 'capture') return c.zones[c.zi];
     if (c.id === 'collapse' && c.done && c.path && c.path.length) { const pl = G.player; let bi = 0, bd = 1e9; c.path.forEach((p, i) => { const d = dist(pl.x, pl.y, p.x, p.y); if (d < bd) { bd = d; bi = i; } }); return c.path[Math.min(bi + (bd < 20 ? 1 : 0), c.path.length - 1)]; }
     if (c.id === 'switches' && Room.alive() === 0) { const i = c.order[c.step]; return c.sw[i]; }
     return null;
   }
   const xpMul = room => { const c = room.challenge; if (!c || c.done) return 1; if (c.id === 'lights') return 1.25; return 1; };
-  const killBonus = (room, e) => { const c = room.challenge; if (!c || c.done || c.id !== 'capture') return 1; const z = c.zones[c.zi]; return dist(e.x, e.y, z.x, z.y) < c.r ? 1.5 : 1; };
-  return { pick, create, update, renderFloor, renderOverlay, renderHud, dangerAt, goal, xpMul, killBonus, enrage, DEFS: CHALLENGE_DEFS };
+  const killBonus = (room, e) => { const c = room.challenge; if (!c || c.done) return 1; if (c.id === 'lights') return lit(c, e.x, e.y) ? 1.5 : 1; if (c.id !== 'capture') return 1; const z = c.zones[c.zi]; return dist(e.x, e.y, z.x, z.y) < c.r ? 1.5 : 1; };
+  return { pick, create, update, renderFloor, renderOverlay, renderHud, dangerAt, goal, waveGate, lit, xpMul, killBonus, enrage, DEFS: CHALLENGE_DEFS };
 })();

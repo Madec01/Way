@@ -54,10 +54,10 @@ const Tempo = {
   /* bandeau d'accueil : dit ce qui va se passer, pour ne pas confondre avec une salle de boss */
   intro(room) {
     const tp = room.tempo; const first = room.traps.find(t => t.id === tp.groups[0]);
-    UI.banner('SALLE DU TEMPO', Tempo.COLOR, 'Tout joue en musique. Tire sur le temps : dégâts bonus. Un piège de plus à chaque vague' + (first ? ' — on commence par : ' + first.name : '') + '.');
+    UI.banner('SALLE DU TEMPO', Tempo.COLOR, 'Tout joue en musique. Tire sur le temps : dégâts bonus. Aucun piège au départ, un de plus à chaque vague — toujours annoncé' + (first ? ' (premier : ' + first.name + ')' : '') + '.');
   },
   create(room) {
-    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: true, bigFlash: 0, groups: [], groupIdx: 0, newTrapT: 9 };
+    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: true, bigFlash: 0, groups: [], groupIdx: -1, newTrapT: 9, pendingGroup: null, cueBeats: 0, cueName: '' };   // groupIdx -1 : on commence sans aucun piège
     /* Les pièges arrivent par familles, une de plus à chaque vague : on entre sur un seul type, on finit avec tous.
        Les familles gardent l'ordre de la salle (le premier piège déclaré est celui d'accueil). */
     const seen = []; for (const t of room.traps) { if (!seen.includes(t.id)) seen.push(t.id); t.disabled = true; }
@@ -80,21 +80,35 @@ const Tempo = {
     if (room.state === 'intro') return;
     if (tp.phase === 'wait') { if (down) { tp.phase = 'count'; tp.count = 8; tp.countT = 0; AudioEngine.tempoTick({ intensity: 0.7 }); } return; }   // attend le début d'une mesure ; 8 temps = deux mesures pour lire la salle
     if (tp.phase === 'count') {
-      if (crossed) { tp.count--; tp.countT = 0; if (tp.count <= 0) { tp.phase = 'go'; tp.started = true; tp.goT = 0; Tempo.armGroup(room, 0); AudioEngine.tempoTick({ intensity: 1 }); } else AudioEngine.tempoTick({ intensity: 0.7 }); }
+      /* la salle démarre sans aucun piège : le premier est annoncé avec la première vague */
+      if (crossed) { tp.count--; tp.countT = 0; if (tp.count <= 0) { tp.phase = 'go'; tp.started = true; tp.goT = 0; AudioEngine.tempoTick({ intensity: 1 }); } else AudioEngine.tempoTick({ intensity: 0.7 }); }
       return;
+    }
+    /* avertisseur : quatre temps annoncés (bip qui monte), puis la famille de pièges s'arme */
+    if (tp.pendingGroup != null && crossed) {
+      tp.cueBeats--;
+      if (tp.cueBeats <= 0) { const n = tp.pendingGroup; tp.pendingGroup = null; Tempo.armGroup(room, n); }
+      else AudioEngine.tempoCue({ intensity: 0.6, hz: Beat.noteHz(4 - tp.cueBeats) });
     }
     if (tp.combo > 0 && Beat.t - tp.lastAction > Beat.beatLen() * 8) tp.combo = 0;   // deux mesures sans action en rythme : le combo retombe
     if (tp.pendingDoor && down) { tp.pendingDoor = false; room.doorOpen = true; AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a'); for (const p of Pickups.list) p.magnet = true; }
   },
-  /* arme la famille de pièges n (et toutes les précédentes) et l'annonce */
+  /* arme la famille de pièges n (et toutes les précédentes) */
   armGroup(room, n) {
     const tp = room.tempo; if (n >= tp.groups.length) return;
-    tp.groupIdx = n; const id = tp.groups[n]; let name = '';
+    tp.groupIdx = n; let name = '';
     for (const t of room.traps) { const i = tp.groups.indexOf(t.id); if (i <= n) { if (t.disabled && i === n) name = t.name; t.disabled = false; } }
-    if (name && n > 0) { UI.banner('Nouveau piège : ' + name, Tempo.COLOR); AudioEngine.trapWarn({ intensity: 0.9 }); tp.newTrapT = 0; }
+    if (name) { UI.banner('Piège en place : ' + name, Tempo.COLOR); AudioEngine.tempoTick({ intensity: 1 }); tp.newTrapT = 0; }
   },
-  /* une vague vient d'entrer : la famille de pièges suivante s'arme */
-  onWave(room) { const tp = room.tempo; if (!tp || !tp.started || tp.boss) return; Tempo.armGroup(room, tp.groupIdx + 1); },
+  /* une vague vient d'entrer : la famille suivante est annoncée, puis armée une mesure plus tard */
+  onWave(room) {
+    const tp = room.tempo; if (!tp || !tp.started || tp.boss) return;
+    const n = tp.groupIdx + 1; if (n >= tp.groups.length || tp.pendingGroup != null) return;
+    const first = room.traps.find(t => t.id === tp.groups[n]);
+    tp.pendingGroup = n; tp.cueBeats = 4; tp.cueName = first ? first.name : '';
+    UI.banner('⚠ ' + (tp.cueName || 'Nouveau piège') + ' dans 4 temps', '#ff9a3c');
+    AudioEngine.tempoCue({ intensity: 0.9, hz: Beat.noteHz(0) });
+  },
   /* les vagues n'entrent que sur le premier temps d'une mesure, une fois le compte à rebours fini */
   waveGate(room) {
     const tp = room.tempo; if (!tp.started) return false;
@@ -172,6 +186,13 @@ const Tempo = {
         if (seg === 1) { const k = (pp.p - pp.smallEnd) / (pp.bigBeat - pp.smallEnd); ctx.globalAlpha = 0.9; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 24, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.stroke(); }
         ctx.shadowBlur = 0;
       }
+    }
+    /* avertisseur de piège : bandeau orange qui bat au centre haut */
+    if (tp.pendingGroup != null) {
+      const kk = Math.max(0, 1 - ph * 2); ctx.globalAlpha = 0.55 + 0.45 * kk; ctx.fillStyle = '#ff9a3c'; ctx.shadowColor = '#ff9a3c'; ctx.shadowBlur = 18;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 34px "Segoe UI", system-ui, sans-serif';
+      ctx.fillText('⚠ ' + (tp.cueName || 'Nouveau piège') + ' · ' + tp.cueBeats, ROOM_X + ROOM_W / 2, ROOM_Y + 46);
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     }
     if (tp.phase === 'count' || tp.goT < 0.5) {
       const txt = tp.phase === 'count' ? (tp.count > 4 ? '' : String(tp.count)) : 'GO';   // la 1re mesure sert à souffler : on ne compte qu'à partir de 4

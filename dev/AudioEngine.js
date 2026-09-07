@@ -385,14 +385,17 @@
   /** Trim de niveau par son (équilibrage mesuré en rendu offline : pic visé ≈ 0,15-0,35, boss ≈ 0,6). */
   const LEVELS = {
     shootBlade: 1.7, shootBow: 1.3, shootBoomerang: 1.7, shootChain: 2.2, shootPistol: 0.5, shootHammer: 0.7, hitEnemy: 0.85, dash: 2, skillTurret: 2,
-    pickupXp: 2.4, pickupCoin: 2.4, pickupFragment: 2, trapWarn: 2.4, trapSpike: 3.5, uiHover: 3, uiClick: 2.4, uiConfirm: 1.3,
+    pickupXp: 2.4, pickupCoin: 2.4, pickupFragment: 2, uiHover: 3, uiClick: 2.4, uiConfirm: 1.3,
+    /* pièges : très en retrait sous la musique, ils ponctuent sans couvrir */
+    trapWarn: 1.1, trapSpike: 1.4, trapLaser: 0.5, trapFire: 0.5, trapGas: 0.45, trapSaw: 0.4,
     chestOpen: 1.5, bossRoar: 0.8, playerDie: 0.8, tempoNote: 0.8,   // mix : effets répétitifs (tirs, coups, ramassages, interface) ≈ −6 dB sous la musique, impacts rares au niveau
   };
   /* Espacement minimal entre deux déclenchements du même son (s) : au-delà de la polyphonie utile, les rafales (ramassage
      de 30 orbes, survol rapide des boutons) ne font que saturer et crépiter. Par défaut 25 ms. */
   /* Sons accordés : fréquence de référence (celle que le son multiplie par o.p) → ramenée sur la note de la pentatonique de la
      piste la plus proche. Les tirs, coups et pièges restent libres (bruit, percussions). */
-  const TUNE = { pickupXp: 1200, pickupCoin: 1800, pickupFragment: 2400, uiHover: 1500, uiClick: 600, uiConfirm: 500, roomClear: 196, levelUp: 220, chestOpen: 165, skillShield: 220, skillBlink: 1400, skillMagnet: 110, skillSlowtime: 220, shootOrb: 300, hitCrit: 900, trapWarn: 900, bossPhase: 110 };
+  const TUNE = { pickupXp: 1200, pickupCoin: 1800, pickupFragment: 2400, uiHover: 1500, uiClick: 600, uiConfirm: 500, roomClear: 196, levelUp: 220, chestOpen: 165, skillShield: 220, skillBlink: 1400, skillMagnet: 110, skillSlowtime: 220, shootOrb: 300, hitCrit: 900, bossPhase: 110,
+    trapWarn: 900, trapLaser: 80, trapSaw: 110, trapSpike: 700, tempoCue: 440 };   // les pièges bourdonnent dans la tonalité de la piste au lieu de frotter contre elle
   const DEGREES = { minor: [0, 3, 5, 7, 10], major: [0, 2, 4, 7, 9] };
   function scaleRatio(step) { const d = DEGREES[key.mode] || DEGREES.minor; const i = Math.max(0, step | 0); return Math.pow(2, (d[i % 5] + 12 * Math.floor(i / 5)) / 12); }
   function nearestScale(f) {
@@ -998,6 +1001,15 @@
     v.chain(f.car, lp, sh, g, v.out); perc(g.gain, t, 0.3 * o.g, 0.004, 0.32);
     layerClick(v, t, o, 3000, 5, 0.1, 0.01);
     v.reverb(0.2);
+  });
+
+  // tempoCue : avertisseur « un piège arrive » → deux notes montantes (quinte) en cloche douce + souffle, accordé sur la piste.
+  def('tempoCue', 4, (o, t) => {
+    const v = voice(o, 0.9, 4); if (!v) return; const f = (o.hz || 440) * o.p;
+    layerMallet(v, t, o, f, 0.3, 0.5, true); layerMallet(v, t + 0.12, o, f * 1.5, 0.26, 0.6, true);
+    const n = v.noise('pink', t, t + 0.4); const hp = v.filter('highpass', 3000, 1); const g = v.gain(0);
+    v.chain(n, hp, g, v.out); perc(g.gain, t, 0.12 * o.g, 0.02, 0.3);
+    v.reverb(0.35);
   });
 
   // bossBreath : souffle avant le boss (silence entre la coupure de la musique et le morceau de boss) → brun lowpass balayé 150→1400 Hz, gonflement 0,9 s, réverbe.

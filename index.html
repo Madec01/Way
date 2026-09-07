@@ -895,14 +895,17 @@ const BALANCE = {
   /** Trim de niveau par son (équilibrage mesuré en rendu offline : pic visé ≈ 0,15-0,35, boss ≈ 0,6). */
   const LEVELS = {
     shootBlade: 1.7, shootBow: 1.3, shootBoomerang: 1.7, shootChain: 2.2, shootPistol: 0.5, shootHammer: 0.7, hitEnemy: 0.85, dash: 2, skillTurret: 2,
-    pickupXp: 2.4, pickupCoin: 2.4, pickupFragment: 2, trapWarn: 2.4, trapSpike: 3.5, uiHover: 3, uiClick: 2.4, uiConfirm: 1.3,
+    pickupXp: 2.4, pickupCoin: 2.4, pickupFragment: 2, uiHover: 3, uiClick: 2.4, uiConfirm: 1.3,
+    /* pièges : très en retrait sous la musique, ils ponctuent sans couvrir */
+    trapWarn: 1.1, trapSpike: 1.4, trapLaser: 0.5, trapFire: 0.5, trapGas: 0.45, trapSaw: 0.4,
     chestOpen: 1.5, bossRoar: 0.8, playerDie: 0.8, tempoNote: 0.8,   // mix : effets répétitifs (tirs, coups, ramassages, interface) ≈ −6 dB sous la musique, impacts rares au niveau
   };
   /* Espacement minimal entre deux déclenchements du même son (s) : au-delà de la polyphonie utile, les rafales (ramassage
      de 30 orbes, survol rapide des boutons) ne font que saturer et crépiter. Par défaut 25 ms. */
   /* Sons accordés : fréquence de référence (celle que le son multiplie par o.p) → ramenée sur la note de la pentatonique de la
      piste la plus proche. Les tirs, coups et pièges restent libres (bruit, percussions). */
-  const TUNE = { pickupXp: 1200, pickupCoin: 1800, pickupFragment: 2400, uiHover: 1500, uiClick: 600, uiConfirm: 500, roomClear: 196, levelUp: 220, chestOpen: 165, skillShield: 220, skillBlink: 1400, skillMagnet: 110, skillSlowtime: 220, shootOrb: 300, hitCrit: 900, trapWarn: 900, bossPhase: 110 };
+  const TUNE = { pickupXp: 1200, pickupCoin: 1800, pickupFragment: 2400, uiHover: 1500, uiClick: 600, uiConfirm: 500, roomClear: 196, levelUp: 220, chestOpen: 165, skillShield: 220, skillBlink: 1400, skillMagnet: 110, skillSlowtime: 220, shootOrb: 300, hitCrit: 900, bossPhase: 110,
+    trapWarn: 900, trapLaser: 80, trapSaw: 110, trapSpike: 700, tempoCue: 440 };   // les pièges bourdonnent dans la tonalité de la piste au lieu de frotter contre elle
   const DEGREES = { minor: [0, 3, 5, 7, 10], major: [0, 2, 4, 7, 9] };
   function scaleRatio(step) { const d = DEGREES[key.mode] || DEGREES.minor; const i = Math.max(0, step | 0); return Math.pow(2, (d[i % 5] + 12 * Math.floor(i / 5)) / 12); }
   function nearestScale(f) {
@@ -1508,6 +1511,15 @@ const BALANCE = {
     v.chain(f.car, lp, sh, g, v.out); perc(g.gain, t, 0.3 * o.g, 0.004, 0.32);
     layerClick(v, t, o, 3000, 5, 0.1, 0.01);
     v.reverb(0.2);
+  });
+
+  // tempoCue : avertisseur « un piège arrive » → deux notes montantes (quinte) en cloche douce + souffle, accordé sur la piste.
+  def('tempoCue', 4, (o, t) => {
+    const v = voice(o, 0.9, 4); if (!v) return; const f = (o.hz || 440) * o.p;
+    layerMallet(v, t, o, f, 0.3, 0.5, true); layerMallet(v, t + 0.12, o, f * 1.5, 0.26, 0.6, true);
+    const n = v.noise('pink', t, t + 0.4); const hp = v.filter('highpass', 3000, 1); const g = v.gain(0);
+    v.chain(n, hp, g, v.out); perc(g.gain, t, 0.12 * o.g, 0.02, 0.3);
+    v.reverb(0.35);
   });
 
   // bossBreath : souffle avant le boss (silence entre la coupure de la musique et le morceau de boss) → brun lowpass balayé 150→1400 Hz, gonflement 0,9 s, réverbe.
@@ -4771,7 +4783,7 @@ const CHALLENGE_DEFS = {
   capture:  { name: 'Capture de zone', desc: 'Tenez la zone pour remplir la jauge, trois zones de suite. Porte fermée tant que les zones ne sont pas prises. Renforts au corps à corps. Kills dans la zone : +50 % d\'XP.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#7fff9a' },
   collapse: { name: 'Sol qui s\'effondre', desc: 'Des dalles tombent par paquets pendant tout le combat, jusqu\'à la moitié du sol. Les ennemis tombent aussi. Tuez les vagues : la porte s\'ouvre et une passerelle se déploie.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ffb347', replacesTraps: true },
   switches: { name: 'Séquence', desc: 'Activez les 3 interrupteurs dans l\'ordre affiché ET tuez les vagues : la porte ne s\'ouvre qu\'avec les deux. Décharge en cas d\'erreur.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#c9a3ff' },
-  lights:   { name: 'Lumières coupées', desc: 'Seule votre lampe éclaire. Les ennemis se trahissent par leurs yeux. XP +25 %.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#9fd8ff' },
+  lights:   { name: 'Lumières coupées', desc: 'Noir complet : des projecteurs balaient la salle en musique, à vous de suivre la lumière. Les ennemis se trahissent par leurs yeux. Tuer dans la lumière : +50 % d\'XP. XP +25 %.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#9fd8ff' },
   timer:    { name: 'Chrono', desc: 'Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s\'enrage.', rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'], color: '#ff5e7a' },
 };
 const CHALLENGE_ROOMS = [2, 6];   // salle 2 : toujours un défi ; 6 : 60 % de chance (la salle 7 est la salle du tempo)
@@ -4802,7 +4814,20 @@ const Challenge = (() => {
       c.sw = []; const order = rng.shuffle([0, 1, 2]);
       for (let i = 0; i < 3; i++) { let p; for (let k = 0; k < 20; k++) { p = randFreeTile(room, rng, 2); if (!c.sw.some(s => dist(s.tx, s.ty, p.x, p.y) < 5)) break; } c.sw.push({ tx: p.x, ty: p.y, x: tileX(p.x), y: tileY(p.y), on: false, label: ['I', 'II', 'III'][i] }); }
       c.order = order; c.step = 0; c.showT = 4; c.fails = 0;
-    } else if (id === 'lights') { c.radius = 210; }
+    } else if (id === 'lights') {
+      /* Boîte de nuit : au départ un seul halo au centre. Dès qu'on le rejoint, les ennemis arrivent et les projecteurs
+         se mettent à balayer la salle en musique. La lampe du joueur reste minuscule : c'est la lumière qu'il faut suivre. */
+      c.radius = 96; c.phase = 'lure'; c.lure = { x: ROOM_X + ROOM_W / 2, y: ROOM_Y + ROOM_H / 2, r: 120 }; c.t2 = 0;
+      const rndPt = () => ({ x: RNG.range(ROOM_X + 80, ROOM_X + ROOM_W - 80), y: RNG.range(ROOM_Y + 70, ROOM_Y + ROOM_H - 70) });
+      c.beams = [
+        { kind: 'round', r: 150, x: c.lure.x, y: c.lure.y, tx: c.lure.x, ty: c.lure.y, speed: 2.4, color: '#fff6d8', main: true },
+        { kind: 'round', r: 78, ...rndPt(), speed: 4.5, color: '#9fd8ff' },
+        { kind: 'rect', w: 120, h: 0, axis: 'v', x: ROOM_X + ROOM_W * 0.3, y: 0, tx: ROOM_X + ROOM_W * 0.3, ty: 0, speed: 3, color: '#c9a3ff' },
+        { kind: 'rect', w: 0, h: 96, axis: 'h', x: 0, y: ROOM_Y + ROOM_H * 0.6, tx: 0, ty: ROOM_Y + ROOM_H * 0.6, speed: 3, color: '#7fff9a' },
+        { kind: 'mirror', n: 7, r: 34, spin: 0.7, orbit: 230, color: '#ffd166' },
+      ];
+      for (const b of c.beams) { if (b.tx === undefined) { const p = rndPt(); b.tx = p.x; b.ty = p.y; } }
+    }
     else if (id === 'timer') { c.limit = 60; c.enraged = false; }
     return c;
   }
@@ -4842,7 +4867,29 @@ const Challenge = (() => {
         else { c.fails++; for (const q of c.sw) q.on = false; c.step = 0; Combat.hitPlayer(8, { type: 'trap', x: s.x, y: s.y, trapName: 'Décharge' }); G.room.beams.push({ ax: s.x, ay: s.y, bx: pl.x, by: pl.y, t: 0, life: 0.25, color: '#c9a3ff', width: 4, jag: true }); UI.banner('Mauvais ordre', '#ff5e7a'); s.cool = 1; }
       }
       c.hud = `Ordre : ${c.order.map(i => c.sw[i].label).join(' → ')} · ${c.step}/3`;
-    } else if (c.id === 'lights') { c.hud = 'Lampe : ' + Math.round(c.radius) + ' px'; if (room.state === 'clear') c.done = true; }
+    } else if (c.id === 'lights') {
+      c.t2 += dt;
+      if (c.phase === 'lure') {
+        c.hud = 'Rejoins le halo';
+        if (dist(pl.x, pl.y, c.lure.x, c.lure.y) < c.lure.r * 0.8) {   // le joueur a rejoint la lumière : le spectacle commence
+          c.phase = 'show'; AudioEngine.bossPhase({ intensity: 0.6 }); UI.banner('Les projecteurs s\'allument', c.def.color, 'Suis la lumière : tuer dans un faisceau rapporte +50 % d\'XP.');
+        }
+      } else {
+        c.hud = 'Suis la lumière';
+        /* les projecteurs changent de cible sur les temps forts et pulsent sur chaque temps : la salle danse avec la piste */
+        const bar = Beat.crossedFrame(1) && Beat.beatInBar() === 0, beat = Beat.crossedFrame(1);
+        for (const b of c.beams) {
+          if (b.kind === 'mirror') { b.a = (b.a || 0) + b.spin * dt; continue; }
+          if (bar || (beat && RNG.chance(0.35))) {
+            if (b.kind === 'rect') { if (b.axis === 'v') b.tx = RNG.range(ROOM_X + 60, ROOM_X + ROOM_W - 60); else b.ty = RNG.range(ROOM_Y + 50, ROOM_Y + ROOM_H - 50); }
+            else if (b.main && RNG.chance(0.3)) { b.tx = clamp(pl.x + RNG.range(-380, 380), ROOM_X + 90, ROOM_X + ROOM_W - 90); b.ty = clamp(pl.y + RNG.range(-280, 280), ROOM_Y + 80, ROOM_Y + ROOM_H - 80); }   // il passe près du joueur sans le coller : c'est à lui de suivre
+            else { b.tx = RNG.range(ROOM_X + 80, ROOM_X + ROOM_W - 80); b.ty = RNG.range(ROOM_Y + 70, ROOM_Y + ROOM_H - 70); }
+          }
+          const k = Math.min(1, b.speed * dt); b.x = lerp(b.x, b.tx, k); b.y = lerp(b.y, b.ty, k);
+        }
+      }
+      if (room.state === 'clear') c.done = true;
+    }
     else if (c.id === 'timer') {
       const left = Math.max(0, c.limit - room.time);
       if (room.state === 'clear' && !c.done) { c.done = true; if (left > 0) { room.challengeOk = true; const bonus = 30; G.run.coinsPending += bonus; UI.toast(`Chrono tenu : +${bonus} crédits`); } }
@@ -4917,11 +4964,61 @@ const Challenge = (() => {
     }
   }
   /* ---------- rendu monde (au-dessus des entités) : lumières coupées ---------- */
+  let darkC = null;
+  /* Masque d'obscurité : un calque noir dans lequel on « perce » chaque source de lumière (destination-out), puis une passe
+     colorée en fondu additif pour la teinte des projecteurs. Un seul calque hors écran, redimensionné avec la vue. */
+  function lightMask(ctx, c, pl) {
+    const V = Engine.view; const w = Math.ceil(V.w), h = Math.ceil(V.h);
+    if (!darkC) darkC = document.createElement('canvas');
+    if (darkC.width !== w || darkC.height !== h) { darkC.width = w; darkC.height = h; }
+    const g = darkC.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h);
+    g.fillStyle = 'rgba(2,3,8,.96)'; g.fillRect(0, 0, w, h);
+    g.save(); g.translate(V.ox, V.oy); g.globalCompositeOperation = 'destination-out';
+    const ph = Beat.phase(); const pulse = 1 + 0.12 * Math.max(0, 1 - ph * 2.5);   // les faisceaux respirent sur le temps
+    const disc = (x, y, r) => { const rg = g.createRadialGradient(x, y, r * 0.25, x, y, r); rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.65, 'rgba(0,0,0,.85)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
+    disc(pl.x, pl.y, c.radius);                                                     // lampe du joueur : juste ses pieds
+    if (c.phase === 'lure') { disc(c.lure.x, c.lure.y, c.lure.r * (1 + 0.08 * Math.sin(Time.now * 3))); }
+    else for (const b of c.beams) {
+      if (b.kind === 'round') disc(b.x, b.y, b.r * pulse);
+      else if (b.kind === 'rect') {
+        const rw = b.axis === 'v' ? b.w * pulse : ROOM_W + 200, rh = b.axis === 'v' ? ROOM_H + 200 : b.h * pulse;
+        const x0 = b.axis === 'v' ? b.x - rw / 2 : ROOM_X - 100, y0 = b.axis === 'v' ? ROOM_Y - 100 : b.y - rh / 2;
+        const lg = b.axis === 'v' ? g.createLinearGradient(x0, 0, x0 + rw, 0) : g.createLinearGradient(0, y0, 0, y0 + rh);
+        lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(0.5, 'rgba(0,0,0,.92)'); lg.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = lg; g.fillRect(x0, y0, rw, rh);
+      } else if (b.kind === 'mirror') {
+        for (let i = 0; i < b.n; i++) { const a = (b.a || 0) + i * TAU / b.n; disc(ROOM_X + ROOM_W / 2 + Math.cos(a) * b.orbit, ROOM_Y + ROOM_H / 2 + Math.sin(a * 1.3) * b.orbit * 0.5, b.r * pulse); }
+      }
+    }
+    g.restore();
+    ctx.drawImage(darkC, -V.ox, -V.oy);
+    /* teinte des faisceaux, par-dessus, en lumière additive */
+    if (c.phase !== 'lure') {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.13;
+      for (const b of c.beams) {
+        ctx.fillStyle = b.color;
+        if (b.kind === 'round') { ctx.beginPath(); ctx.arc(b.x, b.y, b.r * pulse, 0, TAU); ctx.fill(); }
+        else if (b.kind === 'rect') { if (b.axis === 'v') ctx.fillRect(b.x - b.w * pulse / 2, ROOM_Y, b.w * pulse, ROOM_H); else ctx.fillRect(ROOM_X, b.y - b.h * pulse / 2, ROOM_W, b.h * pulse); }
+        else for (let i = 0; i < b.n; i++) { const a = (b.a || 0) + i * TAU / b.n; ctx.beginPath(); ctx.arc(ROOM_X + ROOM_W / 2 + Math.cos(a) * b.orbit, ROOM_Y + ROOM_H / 2 + Math.sin(a * 1.3) * b.orbit * 0.5, b.r * pulse, 0, TAU); ctx.fill(); }
+      }
+      ctx.restore();
+    }
+  }
+  /* vrai si le point est dans un faisceau (bonus d'XP, lisibilité du bot) */
+  function lit(c, x, y) {
+    if (!c || c.id !== 'lights') return true;
+    if (c.phase === 'lure') return dist(x, y, c.lure.x, c.lure.y) < c.lure.r;
+    for (const b of c.beams) {
+      if (b.kind === 'round' && dist(x, y, b.x, b.y) < b.r) return true;
+      if (b.kind === 'rect' && (b.axis === 'v' ? Math.abs(x - b.x) < b.w / 2 : Math.abs(y - b.y) < b.h / 2)) return true;
+      if (b.kind === 'mirror') for (let i = 0; i < b.n; i++) { const a = (b.a || 0) + i * TAU / b.n; if (dist(x, y, ROOM_X + ROOM_W / 2 + Math.cos(a) * b.orbit, ROOM_Y + ROOM_H / 2 + Math.sin(a * 1.3) * b.orbit * 0.5) < b.r) return true; }
+    }
+    return false;
+  }
   function renderOverlay(ctx, room) {
     const c = room.challenge; if (!c || c.id !== 'lights' || c.done) return; const pl = G.player;
-    ctx.save(); const V = Engine.view;
-    const g = ctx.createRadialGradient(pl.x, pl.y, c.radius * 0.35, pl.x, pl.y, c.radius); g.addColorStop(0, 'rgba(2,3,8,0)'); g.addColorStop(0.7, 'rgba(2,3,8,.75)'); g.addColorStop(1, 'rgba(2,3,8,.94)');
-    ctx.fillStyle = g; ctx.fillRect(-V.ox - W, -V.oy - H, 3 * W + V.w, 3 * H + V.h);
+    ctx.save();
+    lightMask(ctx, c, pl);
     /* yeux des ennemis */
     for (const e of G.enemies) { if (e.dead) continue; ctx.fillStyle = e.tele ? '#ffd166' : '#ff5e7a'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(e.x - 4, e.y - 4, 2.2, 0, TAU); ctx.arc(e.x + 4, e.y - 4, 2.2, 0, TAU); ctx.fill(); }
     ctx.restore();
@@ -4940,17 +5037,20 @@ const Challenge = (() => {
     return 0;
   }
   /* objectif pour le bot */
+  /* les ennemis n'arrivent qu'une fois le halo d'accueil rejoint */
+  function waveGate(room) { const c = room.challenge; return !(c && c.id === 'lights' && !c.done && c.phase === 'lure'); }
   function goal(room) {
     const c = room.challenge; if (!c) return null;
     if (c.done && c.id !== 'collapse') return null;
+    if (c.id === 'lights') return c.phase === 'lure' ? c.lure : (c.beams.find(b => b.main) || null);
     if (c.id === 'capture') return c.zones[c.zi];
     if (c.id === 'collapse' && c.done && c.path && c.path.length) { const pl = G.player; let bi = 0, bd = 1e9; c.path.forEach((p, i) => { const d = dist(pl.x, pl.y, p.x, p.y); if (d < bd) { bd = d; bi = i; } }); return c.path[Math.min(bi + (bd < 20 ? 1 : 0), c.path.length - 1)]; }
     if (c.id === 'switches' && Room.alive() === 0) { const i = c.order[c.step]; return c.sw[i]; }
     return null;
   }
   const xpMul = room => { const c = room.challenge; if (!c || c.done) return 1; if (c.id === 'lights') return 1.25; return 1; };
-  const killBonus = (room, e) => { const c = room.challenge; if (!c || c.done || c.id !== 'capture') return 1; const z = c.zones[c.zi]; return dist(e.x, e.y, z.x, z.y) < c.r ? 1.5 : 1; };
-  return { pick, create, update, renderFloor, renderOverlay, renderHud, dangerAt, goal, xpMul, killBonus, enrage, DEFS: CHALLENGE_DEFS };
+  const killBonus = (room, e) => { const c = room.challenge; if (!c || c.done) return 1; if (c.id === 'lights') return lit(c, e.x, e.y) ? 1.5 : 1; if (c.id !== 'capture') return 1; const z = c.zones[c.zi]; return dist(e.x, e.y, z.x, z.y) < c.r ? 1.5 : 1; };
+  return { pick, create, update, renderFloor, renderOverlay, renderHud, dangerAt, goal, waveGate, lit, xpMul, killBonus, enrage, DEFS: CHALLENGE_DEFS };
 })();
 
 </script>
@@ -5012,10 +5112,10 @@ const Tempo = {
   /* bandeau d'accueil : dit ce qui va se passer, pour ne pas confondre avec une salle de boss */
   intro(room) {
     const tp = room.tempo; const first = room.traps.find(t => t.id === tp.groups[0]);
-    UI.banner('SALLE DU TEMPO', Tempo.COLOR, 'Tout joue en musique. Tire sur le temps : dégâts bonus. Un piège de plus à chaque vague' + (first ? ' — on commence par : ' + first.name : '') + '.');
+    UI.banner('SALLE DU TEMPO', Tempo.COLOR, 'Tout joue en musique. Tire sur le temps : dégâts bonus. Aucun piège au départ, un de plus à chaque vague — toujours annoncé' + (first ? ' (premier : ' + first.name + ')' : '') + '.');
   },
   create(room) {
-    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: true, bigFlash: 0, groups: [], groupIdx: 0, newTrapT: 9 };
+    room.tempo = { phase: 'wait', count: 0, countT: 9, started: false, div: 1, combo: 0, best: 0, onBeat: 0, lastAction: -99, lastIdx: -1, lastMul: 1, pulses: [], flashes: [], pendingDoor: false, goT: 9, syncTraps: true, bigFlash: 0, groups: [], groupIdx: -1, newTrapT: 9, pendingGroup: null, cueBeats: 0, cueName: '' };   // groupIdx -1 : on commence sans aucun piège
     /* Les pièges arrivent par familles, une de plus à chaque vague : on entre sur un seul type, on finit avec tous.
        Les familles gardent l'ordre de la salle (le premier piège déclaré est celui d'accueil). */
     const seen = []; for (const t of room.traps) { if (!seen.includes(t.id)) seen.push(t.id); t.disabled = true; }
@@ -5038,21 +5138,35 @@ const Tempo = {
     if (room.state === 'intro') return;
     if (tp.phase === 'wait') { if (down) { tp.phase = 'count'; tp.count = 8; tp.countT = 0; AudioEngine.tempoTick({ intensity: 0.7 }); } return; }   // attend le début d'une mesure ; 8 temps = deux mesures pour lire la salle
     if (tp.phase === 'count') {
-      if (crossed) { tp.count--; tp.countT = 0; if (tp.count <= 0) { tp.phase = 'go'; tp.started = true; tp.goT = 0; Tempo.armGroup(room, 0); AudioEngine.tempoTick({ intensity: 1 }); } else AudioEngine.tempoTick({ intensity: 0.7 }); }
+      /* la salle démarre sans aucun piège : le premier est annoncé avec la première vague */
+      if (crossed) { tp.count--; tp.countT = 0; if (tp.count <= 0) { tp.phase = 'go'; tp.started = true; tp.goT = 0; AudioEngine.tempoTick({ intensity: 1 }); } else AudioEngine.tempoTick({ intensity: 0.7 }); }
       return;
+    }
+    /* avertisseur : quatre temps annoncés (bip qui monte), puis la famille de pièges s'arme */
+    if (tp.pendingGroup != null && crossed) {
+      tp.cueBeats--;
+      if (tp.cueBeats <= 0) { const n = tp.pendingGroup; tp.pendingGroup = null; Tempo.armGroup(room, n); }
+      else AudioEngine.tempoCue({ intensity: 0.6, hz: Beat.noteHz(4 - tp.cueBeats) });
     }
     if (tp.combo > 0 && Beat.t - tp.lastAction > Beat.beatLen() * 8) tp.combo = 0;   // deux mesures sans action en rythme : le combo retombe
     if (tp.pendingDoor && down) { tp.pendingDoor = false; room.doorOpen = true; AudioEngine.roomClear({}); UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a'); for (const p of Pickups.list) p.magnet = true; }
   },
-  /* arme la famille de pièges n (et toutes les précédentes) et l'annonce */
+  /* arme la famille de pièges n (et toutes les précédentes) */
   armGroup(room, n) {
     const tp = room.tempo; if (n >= tp.groups.length) return;
-    tp.groupIdx = n; const id = tp.groups[n]; let name = '';
+    tp.groupIdx = n; let name = '';
     for (const t of room.traps) { const i = tp.groups.indexOf(t.id); if (i <= n) { if (t.disabled && i === n) name = t.name; t.disabled = false; } }
-    if (name && n > 0) { UI.banner('Nouveau piège : ' + name, Tempo.COLOR); AudioEngine.trapWarn({ intensity: 0.9 }); tp.newTrapT = 0; }
+    if (name) { UI.banner('Piège en place : ' + name, Tempo.COLOR); AudioEngine.tempoTick({ intensity: 1 }); tp.newTrapT = 0; }
   },
-  /* une vague vient d'entrer : la famille de pièges suivante s'arme */
-  onWave(room) { const tp = room.tempo; if (!tp || !tp.started || tp.boss) return; Tempo.armGroup(room, tp.groupIdx + 1); },
+  /* une vague vient d'entrer : la famille suivante est annoncée, puis armée une mesure plus tard */
+  onWave(room) {
+    const tp = room.tempo; if (!tp || !tp.started || tp.boss) return;
+    const n = tp.groupIdx + 1; if (n >= tp.groups.length || tp.pendingGroup != null) return;
+    const first = room.traps.find(t => t.id === tp.groups[n]);
+    tp.pendingGroup = n; tp.cueBeats = 4; tp.cueName = first ? first.name : '';
+    UI.banner('⚠ ' + (tp.cueName || 'Nouveau piège') + ' dans 4 temps', '#ff9a3c');
+    AudioEngine.tempoCue({ intensity: 0.9, hz: Beat.noteHz(0) });
+  },
   /* les vagues n'entrent que sur le premier temps d'une mesure, une fois le compte à rebours fini */
   waveGate(room) {
     const tp = room.tempo; if (!tp.started) return false;
@@ -5130,6 +5244,13 @@ const Tempo = {
         if (seg === 1) { const k = (pp.p - pp.smallEnd) / (pp.bigBeat - pp.smallEnd); ctx.globalAlpha = 0.9; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 24, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.stroke(); }
         ctx.shadowBlur = 0;
       }
+    }
+    /* avertisseur de piège : bandeau orange qui bat au centre haut */
+    if (tp.pendingGroup != null) {
+      const kk = Math.max(0, 1 - ph * 2); ctx.globalAlpha = 0.55 + 0.45 * kk; ctx.fillStyle = '#ff9a3c'; ctx.shadowColor = '#ff9a3c'; ctx.shadowBlur = 18;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 34px "Segoe UI", system-ui, sans-serif';
+      ctx.fillText('⚠ ' + (tp.cueName || 'Nouveau piège') + ' · ' + tp.cueBeats, ROOM_X + ROOM_W / 2, ROOM_Y + 46);
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     }
     if (tp.phase === 'count' || tp.goT < 0.5) {
       const txt = tp.phase === 'count' ? (tp.count > 4 ? '' : String(tp.count)) : 'GO';   // la 1re mesure sert à souffler : on ne compte qu'à partir de 4
@@ -5283,7 +5404,7 @@ const Room = {
       for (const w of r.waves) {
         if (w.done) continue;
         const trig = w.at === 'start' ? r.stateT >= 0 : w.at === 'clear' ? (alive === 0 && r.wavesStarted && r.lastWaveT < r.stateT - 0.5) : typeof w.at === 'number' ? r.stateT >= w.at : false;
-        if (trig && (!r.tempo || Tempo.waveGate(r))) { w.done = true; if (r.wavesStarted && r.tempo) Tempo.onWave(r); r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
+        if (trig && (!r.tempo || Tempo.waveGate(r)) && Challenge.waveGate(r)) { w.done = true; if (r.wavesStarted && r.tempo) Tempo.onWave(r); r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
       }
       if ((r.type === 'MINIBOSS' || r.type === 'BOSS_REVENGE') && !r.boss && r.stateT > 0.2 && !r.waves.length) Room.spawnBoss();
       /* fragments d'énergie */
