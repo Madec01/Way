@@ -4830,7 +4830,7 @@ const Challenge = (() => {
   const LIGHT_PATTERNS = [
     { id: 'chase', name: 'Poursuite', bars: 4, make: () => [{ kind: 'round', r: 165, ...pt(), speed: 2.2, color: '#fff6d8', near: true }] },
     { id: 'fireflies', name: 'Lucioles', bars: 4, make: () => [
-      { kind: 'round', r: 84, ...pt(), speed: 6, color: '#9fd8ff', jump: true }, { kind: 'round', r: 84, ...pt(), speed: 6, color: '#ffd166', jump: true }] },
+      { kind: 'round', r: 84, ...pt(), speed: 6, color: '#9fd8ff', jump: true }, { kind: 'round', r: 84, ...pt(), speed: 6, color: '#ffd166', jump: true }] },   // jump : une destination par temps, atteinte en un temps
     { id: 'sweep', name: 'Balayage', bars: 4, make: () => [{ kind: 'rect', axis: 'v', w: 150, x: ROOM_X + 40, y: 0, speed: 1.2, color: '#c9a3ff', sweep: 1 }] },
     { id: 'cross', name: 'Croix', bars: 4, make: () => [
       { kind: 'rect', axis: 'v', w: 130, x: ROOM_X + ROOM_W * 0.5, y: 0, speed: 2, color: '#c9a3ff' },
@@ -4894,24 +4894,35 @@ const Challenge = (() => {
         }
       } else {
         c.hud = c.patName || 'Suis la lumière';
-        const bar = Beat.crossedFrame(1) && Beat.beatInBar() === 0, beat = Beat.crossedFrame(1);
+        const bar = Beat.crossedFrame(1) && Beat.beatInBar() === 0, beat = Beat.crossedFrame(1), ph2 = Beat.phase();
         /* un seul motif à la fois : il cède la place au suivant sur un temps fort, une fois ses mesures écoulées */
         if (bar && Math.floor(Beat.index() / 4) - c.barAt >= c.patBars) nextPattern(c);
         c.fade = Math.min(1, c.fade + dt * 3);
         c.flash = Math.max(0, c.flash - dt * 6);
         if (c.patId === 'strobe' && bar) c.flash = 1;
+        const L = Beat.beatLen();
         for (const b of c.beams) {
-          if (b.kind === 'mirror') { b.a = (b.a || 0) + b.spin * dt; continue; }
+          if (b.kind === 'mirror') { b.a = (b.a || 0) + b.spin * dt * (1 + 0.5 * Math.max(0, 1 - ph2 * 2)); continue; }   // la rotation s'emballe sur le temps
           if (b.kind === 'strobe') continue;
-          /* balayage : traversée régulière de gauche à droite, puis retour au bord */
-          if (b.sweep) { b.x += b.sweep * 150 * dt; if (b.x > ROOM_X + ROOM_W - 30) b.x = ROOM_X + 30; b.tx = b.x; continue; }
-          if (bar || (beat && b.jump) || (beat && RNG.chance(0.25))) {
+          /* balayage : traversée continue, plus rapide au milieu de la salle qu'aux bords */
+          if (b.sweep) { const u = (b.x - ROOM_X) / ROOM_W; b.x += b.sweep * (90 + 190 * Math.sin(Math.PI * clamp(u, 0, 1))) * dt; if (b.x > ROOM_X + ROOM_W - 30) b.x = ROOM_X + 30; b.tx = b.x; continue; }
+          /* nouvelle destination seulement quand la précédente est atteinte, et toujours sur un temps : le trajet dure
+             un ou deux temps (parfois un demi-temps : la lumière file d'un coup), avec départ et arrivée adoucis */
+          if (b.moveK == null) b.moveK = 1;
+          if (b.moveK >= 1 && (bar || (beat && b.jump) || (beat && RNG.chance(0.2)))) {
+            b.fx = b.x; b.fy = b.y;
             if (b.kind === 'rect') { if (b.axis === 'v') b.tx = RNG.range(ROOM_X + 70, ROOM_X + ROOM_W - 70); else b.ty = RNG.range(ROOM_Y + 60, ROOM_Y + ROOM_H - 60); }
             /* le halo « poursuite » passe près du joueur sans le coller : c'est à lui de suivre */
             else if (b.near && RNG.chance(0.3)) { b.tx = clamp(pl.x + RNG.range(-380, 380), ROOM_X + 90, ROOM_X + ROOM_W - 90); b.ty = clamp(pl.y + RNG.range(-280, 280), ROOM_Y + 80, ROOM_Y + ROOM_H - 80); }
             else { const p = pt(); b.tx = p.x; b.ty = p.y; }
+            const dash = RNG.chance(0.25);                              // de temps en temps, un déplacement éclair
+            b.moveDur = L * (dash ? 0.5 : b.jump ? 1 : 2); b.moveK = 0;
           }
-          const k = Math.min(1, b.speed * dt); b.x = lerp(b.x, b.tx, k); b.y = lerp(b.y, b.ty, k);
+          if (b.moveK < 1) {
+            b.moveK = Math.min(1, b.moveK + dt / Math.max(0.05, b.moveDur || L));
+            const e = b.moveK < 0.5 ? 4 * b.moveK * b.moveK * b.moveK : 1 - Math.pow(-2 * b.moveK + 2, 3) / 2;   // accélère puis freine
+            b.x = lerp(b.fx != null ? b.fx : b.x, b.tx, e); b.y = lerp(b.fy != null ? b.fy : b.y, b.ty, e);
+          }
         }
       }
       if (room.state === 'clear') c.done = true;
