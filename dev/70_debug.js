@@ -24,7 +24,7 @@ const Debug = (() => {
       <div class="drow"><label>Arme <select id="d-weapon">${Content.weapons().map(w => `<option value="${w.id}">${w.name}</option>`).join('')}</select></label><label>Comp. <select id="d-skill">${Content.skills().map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select></label><button class="btn small" id="d-equip">Équiper</button></div>
       <div class="drow"><label>Greffe <select id="d-upg">${Content.upgrades().map(u => `<option value="${u.id}">[${RARITY[u.rarity].label[0]}] ${u.name}</option>`).join('')}</select></label><button class="btn small" id="d-give">Donner</button></div>
       <div class="drow"><label>Vitesse <span id="d-ts-v">1×</span><input type="range" min="0.25" max="4" step="0.25" value="1" id="d-ts"></label></div>
-      <div class="drow"><button class="btn small" id="d-audio">Test audio</button><button class="btn small" id="d-auto">Autoplay ×1</button><button class="btn small" id="d-auto5">Autoplay ×5</button></div>
+      <div class="drow"><button class="btn small" id="d-audio">Test audio</button><button class="btn small" id="d-props">Accessoires</button><button class="btn small" id="d-auto">Autoplay ×1</button><button class="btn small" id="d-auto5">Autoplay ×5</button></div>
       <pre id="d-out" class="dout"></pre>
       <div id="d-audiopanel" hidden></div>`;
     const bind = (id, fn) => { const e = $(id); e.oninput = e.onchange = () => fn(e); };
@@ -48,11 +48,52 @@ const Debug = (() => {
     $('#d-drop').onclick = () => { if (!G.run) return; const k = $('#d-pick').value; const pl = G.player; const x = pl.x + 80, y = pl.y; if (k === 'weapon') { const w = RNG.pick(Content.weapons().filter(w => w.id !== pl.weapon.id)); Pickups.spawn(x, y, 'weapon', 1, { weapon: w.id, vx: 0, vy: 0 }); } else if (k === 'relic') Pickups.spawn(x, y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else if (k === 'purse') Pickups.spawn(x, y, 'purse', 10); else if (k === 'heart') Pickups.spawn(x, y, 'heart', 15); else Pickups.spawn(x, y, k, 1); };
     bind('#d-tier', e => { G.debug.forceTier = e.value === '' ? null : +e.value; });
     $('#d-audio').onclick = toggleAudioPanel;
+    $('#d-props').onclick = toggleProps;
     $('#d-auto').onclick = () => runAuto(1); $('#d-auto5').onclick = () => runAuto(5);
+  }
+  /* ---------- Comparateur d'accessoires ----------
+     Les sprites déposés dans assets/sprites/pixel/ (une ou plusieurs versions du même accessoire) sont montrés côte à
+     côte, à la taille qu'ils ont en salle. Un clic choisit la version : elle est retenue dans le navigateur et devient
+     celle du jeu tout de suite. « Copier la sélection » sort la liste des fichiers retenus, à renvoyer pour ne garder
+     que ceux-là dans le dépôt. */
+  let propsBox = null;
+  function toggleProps() { propsBox && propsBox.parentNode ? closeProps() : openProps(); }
+  function closeProps() { if (propsBox && propsBox.parentNode) propsBox.parentNode.removeChild(propsBox); propsBox = null; }
+  function openProps() {
+    const vars = Sprites.variants || {}; const names = Object.keys(vars).sort();
+    propsBox = document.createElement('div'); propsBox.id = 'propsel';
+    if (!names.length) {
+      propsBox.innerHTML = `<div class="pshead"><b>ACCESSOIRES</b><span class="muted tiny">Aucun sprite dans assets/sprites/pixel/ — dépose des PNG, relance <code>node dev/index-pixel.js</code>, recharge.</span><button class="btn small ghost" id="ps-close">×</button></div>`;
+    } else {
+      const picks = Sprites.picks;
+      propsBox.innerHTML = `<div class="pshead"><b>ACCESSOIRES</b><span class="muted tiny">${names.length} accessoire(s) · clic = version retenue · taille réelle en salle</span>
+          <button class="btn small" id="ps-copy">Copier la sélection</button><button class="btn small ghost" id="ps-reset">Tout remettre à v1</button><button class="btn small ghost" id="ps-close">×</button></div>
+        <div class="psgrid">${names.map(n => { const list = vars[n] || []; const sel = Math.min(picks[n] || 0, list.length - 1);
+          return `<div class="psrow"><div class="psname">${n}${list.length > 1 ? ` <span class="muted tiny">${list.length} versions</span>` : ''}</div>
+            <div class="psvars">${list.map((c, i) => `<button class="psvar ${i === sel ? 'on' : ''}" data-n="${n}" data-i="${i}"><span class="pslab">v${i + 1}</span></button>`).join('')}</div></div>`; }).join('')}</div>
+        <div class="psout" id="ps-out" hidden></div>`;
+    }
+    document.body.appendChild(propsBox);
+    propsBox.querySelector('#ps-close').onclick = closeProps;
+    for (const b of propsBox.querySelectorAll('.psvar')) {
+      const n = b.dataset.n, i = +b.dataset.i; const src = (Sprites.variants[n] || [])[i];
+      if (src) { const cv = document.createElement('canvas'); const s2 = Math.min(2, 108 / Math.max(src.width, src.height));
+        cv.width = Math.round(src.width * s2); cv.height = Math.round(src.height * s2);
+        const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(src, 0, 0, cv.width, cv.height); b.insertBefore(cv, b.firstChild); }
+      b.onclick = () => { Sprites.setVariant(n, i); for (const o of propsBox.querySelectorAll(`.psvar[data-n="${n}"]`)) o.classList.remove('on'); b.classList.add('on'); AudioEngine.uiClick({}); };
+    }
+    const copy = propsBox.querySelector('#ps-copy');
+    if (copy) copy.onclick = () => {
+      const picks = Sprites.picks; const keep = Object.keys(Sprites.variants).sort().map(n => { const i = picks[n] || 0; return i ? `${n}_v${i + 1}` : n; });
+      const out = propsBox.querySelector('#ps-out'); out.hidden = false; out.textContent = keep.join(', ');
+      try { navigator.clipboard && navigator.clipboard.writeText(keep.join(', ')); } catch (e) { /* pas de presse-papiers : le texte reste affiché, à sélectionner à la main */ }
+    };
+    const reset = propsBox.querySelector('#ps-reset');
+    if (reset) reset.onclick = () => { try { localStorage.removeItem('way.props'); } catch (e) { /* */ } closeProps(); openProps(); };
   }
   function toggle() { open ? hide() : show(); }
   function show() { if (G.mode !== 'test') { UI.toast('Panneau debug : mode Test uniquement'); return; } open = true; panel.hidden = false; G.debug.open = true; }
-  function hide() { open = false; if (panel) panel.hidden = true; G.debug.open = false; }
+  function hide() { open = false; if (panel) panel.hidden = true; G.debug.open = false; closeProps(); }
   function gotoRoom(n) {
     const wantBiome = (panel && $('#d-biome') && $('#d-biome').value) || Content.biomes()[0].id;
     if (!G.run || G.run.attract || G.run.biome.id !== wantBiome) { Meta.setMode('test'); UI.hideAll(); Run.start({ character: Meta.profile.character, biome: wantBiome, weapon: Content.weapons()[0].id, skill: Content.skills()[0].id }); }
@@ -153,5 +194,5 @@ const Debug = (() => {
       const watchdog = () => { if (!G.autoplay) return; if (Time.now - G.autoplay.startedAt > c.maxSeconds) { finishAuto('timeout'); return; } if (G.run && G.room && G.room.index > c.maxRooms) { finishAuto('maxRooms'); return; } setTimeout(watchdog, 200); }; setTimeout(watchdog, 200);
     });
   }
-  return { init, toggle, show, hide, gotoRoom, renderOverlay, autoplay, autoPrep, autoChoice, autoEnd, botControl };
+  return { init, toggle, show, hide, gotoRoom, renderOverlay, autoplay, autoPrep, autoChoice, autoEnd, botControl, toggleProps };
 })();

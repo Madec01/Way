@@ -136,17 +136,34 @@ const Sprites = (() => {
     g.putImageData(im, 0, 0); return c;
   }
   /* Un PNG déposé dans assets/sprites/pixel/ (listé par son index.json) remplace l'icône : sprites dessinés à la main ou
-     générés, repris tels quels, sans traitement. C'est la porte d'entrée pour remplacer le décor pièce par pièce. */
+     générés, repris tels quels, sans traitement. C'est la porte d'entrée pour remplacer le décor pièce par pièce.
+     Plusieurs essais du même accessoire cohabitent : « cactus.png », « cactus_v2.png », « cactus_v3.png »… Tous sont
+     chargés, le panneau debug (F1 → Accessoires) permet de les comparer en jeu et d'en choisir un ; le choix est retenu
+     dans le navigateur (`way.props`) le temps de trancher, ensuite on ne garde que le fichier retenu dans le dépôt. */
+  const propVars = {};            // nom → [canvas, canvas…] dans l'ordre des variantes
+  const VAR_RE = /_v(\d+)$/;
+  function propPicks() { try { return JSON.parse(localStorage.getItem('way.props') || '{}'); } catch (e) { return {}; } }
+  function applyPicks() { const picks = propPicks(); for (const name in propVars) { const list = propVars[name]; const i = Math.min(picks[name] || 0, list.length - 1); if (list[i]) props[name] = list[i]; } }
+  function setVariant(name, i) {
+    const list = propVars[name]; if (!list || !list[i]) return;
+    const picks = propPicks(); picks[name] = i;
+    try { localStorage.setItem('way.props', JSON.stringify(picks)); } catch (e) { /* navigation privée : le choix ne survit pas au rechargement */ }
+    props[name] = list[i]; floorCache.clear();
+  }
   function loadProps() {
     if (typeof fetch !== 'function') return;
     fetch(ASSET_BASE + 'sprites/pixel/index.json').then(r => r.ok ? r.json() : null).then(list => {
-      const custom = new Set(Array.isArray(list) ? list : []);
-      for (const name of custom) {
+      const files = Array.isArray(list) ? list : [];
+      const bases = new Set();
+      for (const file of files) {
+        const m = VAR_RE.exec(file); const name = m ? file.slice(0, m.index) : file; const idx = m ? +m[1] - 1 : 0;
+        if (!PROP_DEFS[name]) continue;   // un fichier dont le nom ne correspond à aucun accessoire est ignoré
+        bases.add(name); const slot = propVars[name] || (propVars[name] = []);
         const img = new Image();
-        img.onload = () => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0); props[name] = c; };
-        img.src = ASSET_BASE + 'sprites/pixel/' + name + '.png';
+        img.onload = () => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0); slot[idx] = c; applyPicks(); };
+        img.src = ASSET_BASE + 'sprites/pixel/' + file + '.png';
       }
-      loadIcons(custom);
+      loadIcons(bases);
     }).catch(() => loadIcons(new Set()));
   }
   function loadIcons(skip) {
@@ -343,7 +360,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, get variants() { return propVars; }, get picks() { return propPicks(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

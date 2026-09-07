@@ -283,6 +283,23 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 .card.level .pairs{margin-top:.3em}
 .card.level:not(.selected) .pairs,.card.level:not(.selected) .lvlmeta+.muted.tiny{display:none}
 
+/* ---- comparateur d'accessoires (debug, F1 → Accessoires) : les versions d'un même sprite côte à côte ---- */
+#propsel{position:fixed;left:2vw;right:2vw;bottom:2vh;max-height:54vh;z-index:60;display:flex;flex-direction:column;gap:.6em;background:rgba(8,10,18,.96);border:1px solid var(--line);border-radius:12px;padding:1em 1.2em;box-shadow:0 0 60px rgba(0,0,0,.7);color:var(--text);font-size:14px;overflow:hidden}
+#propsel .pshead{display:flex;align-items:center;gap:.8em;flex:none}
+#propsel .pshead b{font-family:"Silkscreen",monospace;letter-spacing:.12em;color:var(--accent)}
+#propsel .pshead .muted{flex:1}
+#propsel .psgrid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(15em,1fr));gap:.7em;align-content:start}
+#propsel .psrow{border:1px solid var(--line);border-radius:8px;padding:.5em .6em;background:rgba(16,20,34,.6)}
+#propsel .psname{font-family:"VT323",monospace;font-size:1.15em;color:#dfe6ff;margin-bottom:.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#propsel .psvars{display:flex;flex-wrap:wrap;gap:.4em}
+#propsel .psvar{position:relative;display:flex;align-items:flex-end;justify-content:center;min-width:64px;min-height:64px;padding:.3em;background:#241c33;border:1px solid rgba(110,231,255,.2);border-radius:6px;cursor:pointer}
+#propsel .psvar canvas{image-rendering:pixelated;display:block}
+#propsel .psvar .pslab{position:absolute;left:3px;top:2px;font:10px monospace;color:#7f8aa0}
+#propsel .psvar:hover{border-color:var(--accent)}
+#propsel .psvar.on{border-color:#ffb347;box-shadow:0 0 14px rgba(255,179,71,.45)}
+#propsel .psvar.on .pslab{color:#ffb347}
+#propsel .psout{flex:none;font:12px monospace;color:#9fd8ff;background:rgba(4,6,12,.8);border:1px solid var(--line);border-radius:6px;padding:.5em .7em;max-height:5em;overflow:auto;user-select:all}
+
 </style>
 </head>
 <body>
@@ -3181,17 +3198,34 @@ const Sprites = (() => {
     g.putImageData(im, 0, 0); return c;
   }
   /* Un PNG déposé dans assets/sprites/pixel/ (listé par son index.json) remplace l'icône : sprites dessinés à la main ou
-     générés, repris tels quels, sans traitement. C'est la porte d'entrée pour remplacer le décor pièce par pièce. */
+     générés, repris tels quels, sans traitement. C'est la porte d'entrée pour remplacer le décor pièce par pièce.
+     Plusieurs essais du même accessoire cohabitent : « cactus.png », « cactus_v2.png », « cactus_v3.png »… Tous sont
+     chargés, le panneau debug (F1 → Accessoires) permet de les comparer en jeu et d'en choisir un ; le choix est retenu
+     dans le navigateur (`way.props`) le temps de trancher, ensuite on ne garde que le fichier retenu dans le dépôt. */
+  const propVars = {};            // nom → [canvas, canvas…] dans l'ordre des variantes
+  const VAR_RE = /_v(\d+)$/;
+  function propPicks() { try { return JSON.parse(localStorage.getItem('way.props') || '{}'); } catch (e) { return {}; } }
+  function applyPicks() { const picks = propPicks(); for (const name in propVars) { const list = propVars[name]; const i = Math.min(picks[name] || 0, list.length - 1); if (list[i]) props[name] = list[i]; } }
+  function setVariant(name, i) {
+    const list = propVars[name]; if (!list || !list[i]) return;
+    const picks = propPicks(); picks[name] = i;
+    try { localStorage.setItem('way.props', JSON.stringify(picks)); } catch (e) { /* navigation privée : le choix ne survit pas au rechargement */ }
+    props[name] = list[i]; floorCache.clear();
+  }
   function loadProps() {
     if (typeof fetch !== 'function') return;
     fetch(ASSET_BASE + 'sprites/pixel/index.json').then(r => r.ok ? r.json() : null).then(list => {
-      const custom = new Set(Array.isArray(list) ? list : []);
-      for (const name of custom) {
+      const files = Array.isArray(list) ? list : [];
+      const bases = new Set();
+      for (const file of files) {
+        const m = VAR_RE.exec(file); const name = m ? file.slice(0, m.index) : file; const idx = m ? +m[1] - 1 : 0;
+        if (!PROP_DEFS[name]) continue;   // un fichier dont le nom ne correspond à aucun accessoire est ignoré
+        bases.add(name); const slot = propVars[name] || (propVars[name] = []);
         const img = new Image();
-        img.onload = () => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0); props[name] = c; };
-        img.src = ASSET_BASE + 'sprites/pixel/' + name + '.png';
+        img.onload = () => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0); slot[idx] = c; applyPicks(); };
+        img.src = ASSET_BASE + 'sprites/pixel/' + file + '.png';
       }
-      loadIcons(custom);
+      loadIcons(bases);
     }).catch(() => loadIcons(new Set()));
   }
   function loadIcons(skip) {
@@ -3388,7 +3422,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, get variants() { return propVars; }, get picks() { return propPicks(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */
@@ -6833,7 +6867,7 @@ const Debug = (() => {
       <div class="drow"><label>Arme <select id="d-weapon">${Content.weapons().map(w => `<option value="${w.id}">${w.name}</option>`).join('')}</select></label><label>Comp. <select id="d-skill">${Content.skills().map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select></label><button class="btn small" id="d-equip">Équiper</button></div>
       <div class="drow"><label>Greffe <select id="d-upg">${Content.upgrades().map(u => `<option value="${u.id}">[${RARITY[u.rarity].label[0]}] ${u.name}</option>`).join('')}</select></label><button class="btn small" id="d-give">Donner</button></div>
       <div class="drow"><label>Vitesse <span id="d-ts-v">1×</span><input type="range" min="0.25" max="4" step="0.25" value="1" id="d-ts"></label></div>
-      <div class="drow"><button class="btn small" id="d-audio">Test audio</button><button class="btn small" id="d-auto">Autoplay ×1</button><button class="btn small" id="d-auto5">Autoplay ×5</button></div>
+      <div class="drow"><button class="btn small" id="d-audio">Test audio</button><button class="btn small" id="d-props">Accessoires</button><button class="btn small" id="d-auto">Autoplay ×1</button><button class="btn small" id="d-auto5">Autoplay ×5</button></div>
       <pre id="d-out" class="dout"></pre>
       <div id="d-audiopanel" hidden></div>`;
     const bind = (id, fn) => { const e = $(id); e.oninput = e.onchange = () => fn(e); };
@@ -6857,11 +6891,52 @@ const Debug = (() => {
     $('#d-drop').onclick = () => { if (!G.run) return; const k = $('#d-pick').value; const pl = G.player; const x = pl.x + 80, y = pl.y; if (k === 'weapon') { const w = RNG.pick(Content.weapons().filter(w => w.id !== pl.weapon.id)); Pickups.spawn(x, y, 'weapon', 1, { weapon: w.id, vx: 0, vy: 0 }); } else if (k === 'relic') Pickups.spawn(x, y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else if (k === 'purse') Pickups.spawn(x, y, 'purse', 10); else if (k === 'heart') Pickups.spawn(x, y, 'heart', 15); else Pickups.spawn(x, y, k, 1); };
     bind('#d-tier', e => { G.debug.forceTier = e.value === '' ? null : +e.value; });
     $('#d-audio').onclick = toggleAudioPanel;
+    $('#d-props').onclick = toggleProps;
     $('#d-auto').onclick = () => runAuto(1); $('#d-auto5').onclick = () => runAuto(5);
+  }
+  /* ---------- Comparateur d'accessoires ----------
+     Les sprites déposés dans assets/sprites/pixel/ (une ou plusieurs versions du même accessoire) sont montrés côte à
+     côte, à la taille qu'ils ont en salle. Un clic choisit la version : elle est retenue dans le navigateur et devient
+     celle du jeu tout de suite. « Copier la sélection » sort la liste des fichiers retenus, à renvoyer pour ne garder
+     que ceux-là dans le dépôt. */
+  let propsBox = null;
+  function toggleProps() { propsBox && propsBox.parentNode ? closeProps() : openProps(); }
+  function closeProps() { if (propsBox && propsBox.parentNode) propsBox.parentNode.removeChild(propsBox); propsBox = null; }
+  function openProps() {
+    const vars = Sprites.variants || {}; const names = Object.keys(vars).sort();
+    propsBox = document.createElement('div'); propsBox.id = 'propsel';
+    if (!names.length) {
+      propsBox.innerHTML = `<div class="pshead"><b>ACCESSOIRES</b><span class="muted tiny">Aucun sprite dans assets/sprites/pixel/ — dépose des PNG, relance <code>node dev/index-pixel.js</code>, recharge.</span><button class="btn small ghost" id="ps-close">×</button></div>`;
+    } else {
+      const picks = Sprites.picks;
+      propsBox.innerHTML = `<div class="pshead"><b>ACCESSOIRES</b><span class="muted tiny">${names.length} accessoire(s) · clic = version retenue · taille réelle en salle</span>
+          <button class="btn small" id="ps-copy">Copier la sélection</button><button class="btn small ghost" id="ps-reset">Tout remettre à v1</button><button class="btn small ghost" id="ps-close">×</button></div>
+        <div class="psgrid">${names.map(n => { const list = vars[n] || []; const sel = Math.min(picks[n] || 0, list.length - 1);
+          return `<div class="psrow"><div class="psname">${n}${list.length > 1 ? ` <span class="muted tiny">${list.length} versions</span>` : ''}</div>
+            <div class="psvars">${list.map((c, i) => `<button class="psvar ${i === sel ? 'on' : ''}" data-n="${n}" data-i="${i}"><span class="pslab">v${i + 1}</span></button>`).join('')}</div></div>`; }).join('')}</div>
+        <div class="psout" id="ps-out" hidden></div>`;
+    }
+    document.body.appendChild(propsBox);
+    propsBox.querySelector('#ps-close').onclick = closeProps;
+    for (const b of propsBox.querySelectorAll('.psvar')) {
+      const n = b.dataset.n, i = +b.dataset.i; const src = (Sprites.variants[n] || [])[i];
+      if (src) { const cv = document.createElement('canvas'); const s2 = Math.min(2, 108 / Math.max(src.width, src.height));
+        cv.width = Math.round(src.width * s2); cv.height = Math.round(src.height * s2);
+        const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(src, 0, 0, cv.width, cv.height); b.insertBefore(cv, b.firstChild); }
+      b.onclick = () => { Sprites.setVariant(n, i); for (const o of propsBox.querySelectorAll(`.psvar[data-n="${n}"]`)) o.classList.remove('on'); b.classList.add('on'); AudioEngine.uiClick({}); };
+    }
+    const copy = propsBox.querySelector('#ps-copy');
+    if (copy) copy.onclick = () => {
+      const picks = Sprites.picks; const keep = Object.keys(Sprites.variants).sort().map(n => { const i = picks[n] || 0; return i ? `${n}_v${i + 1}` : n; });
+      const out = propsBox.querySelector('#ps-out'); out.hidden = false; out.textContent = keep.join(', ');
+      try { navigator.clipboard && navigator.clipboard.writeText(keep.join(', ')); } catch (e) { /* pas de presse-papiers : le texte reste affiché, à sélectionner à la main */ }
+    };
+    const reset = propsBox.querySelector('#ps-reset');
+    if (reset) reset.onclick = () => { try { localStorage.removeItem('way.props'); } catch (e) { /* */ } closeProps(); openProps(); };
   }
   function toggle() { open ? hide() : show(); }
   function show() { if (G.mode !== 'test') { UI.toast('Panneau debug : mode Test uniquement'); return; } open = true; panel.hidden = false; G.debug.open = true; }
-  function hide() { open = false; if (panel) panel.hidden = true; G.debug.open = false; }
+  function hide() { open = false; if (panel) panel.hidden = true; G.debug.open = false; closeProps(); }
   function gotoRoom(n) {
     const wantBiome = (panel && $('#d-biome') && $('#d-biome').value) || Content.biomes()[0].id;
     if (!G.run || G.run.attract || G.run.biome.id !== wantBiome) { Meta.setMode('test'); UI.hideAll(); Run.start({ character: Meta.profile.character, biome: wantBiome, weapon: Content.weapons()[0].id, skill: Content.skills()[0].id }); }
@@ -6962,7 +7037,7 @@ const Debug = (() => {
       const watchdog = () => { if (!G.autoplay) return; if (Time.now - G.autoplay.startedAt > c.maxSeconds) { finishAuto('timeout'); return; } if (G.run && G.room && G.room.index > c.maxRooms) { finishAuto('maxRooms'); return; } setTimeout(watchdog, 200); }; setTimeout(watchdog, 200);
     });
   }
-  return { init, toggle, show, hide, gotoRoom, renderOverlay, autoplay, autoPrep, autoChoice, autoEnd, botControl };
+  return { init, toggle, show, hide, gotoRoom, renderOverlay, autoplay, autoPrep, autoChoice, autoEnd, botControl, toggleProps };
 })();
 
 </script>
