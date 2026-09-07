@@ -6,7 +6,8 @@
 CONTENT.biomes.push({
   id: 'biome_2', name: 'LA SERRE', order: 2, tagline: 'Une serre envahie : végétation agressive, gaz, ennemis qui se multiplient. Un cran au-dessus.',
   desc: 'Palier -2. L\'ancienne unité de culture des greffons : cuves éclatées, végétation qui a pris le contrôle des cellules d\'essai, sol humide qui conduit tout. Le Bureau y a laissé pousser ce qu\'il ne comprenait pas. Taux de perte : 84 %.',
-  palette: { tint: 'rgba(40,120,70,.30)', neon: ['#7ed957', '#ffd166'], wall: 'rgba(30,90,60,.4)' },
+  palette: { tint: 'rgba(40,120,70,.30)', neon: ['#7ed957', '#ffd166'], wall: 'rgba(30,90,60,.4)',
+    terrain: { water: { fill: '#1e5a4a', edge: '#6ae0b0' }, bridge: { fill: '#4a5a2e', edge: '#8fbf6a' } } },
   levelPassives: [
     { bonus: { name: 'Photosynthèse', desc: 'Régénération +1,5 PV/s.', mods: [{ stat: 'regen', add: 1.5 }], hooks: {} }, malus: { name: 'Air lourd', desc: '-15 % vitesse de déplacement.', mods: [{ stat: 'speed', mul: 0.85 }], hooks: {} } },
     { bonus: { name: 'Greffon sauvage', desc: '+1 projectile par tir.', mods: [{ stat: 'projectiles', add: 1 }], hooks: {} }, malus: { name: 'Sève corrosive', desc: 'Les pièges infligent +50 % de dégâts, armure -1.', mods: [{ stat: 'trapDamageMul', mul: 1.5 }, { stat: 'armor', add: -1 }], hooks: {} } },
@@ -68,7 +69,24 @@ CONTENT.bosses.push({
 
 /* Salles du biome 2 : mêmes types que le biome 1, plus d'ennemis, des élites, pièges plus serrés. */
 CONTENT.rooms.push(
-  { id: 'room_b2_1', biome: 'biome_2', index: 1, type: 'PREP_COMBAT', refTime: 55,
+  /* Plan « la rivière » : deux bras d'eau, trois passages secs. Rien n'est interdit, tout est taxé —
+     le pont est sûr mais prévisible, le gué est libre mais coûte 28 % de vitesse. */
+  { id: 'room_b2_1', biome: 'biome_2', index: 1, type: 'PREP_COMBAT', refTime: 62,
+    terrain: [
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........===....~~.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........~~~....==.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........===....~~.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+    ],
     obstacles: [ { x: 5, y: 2, w: 1, h: 2 }, { x: 18, y: 2, w: 1, h: 2 }, { x: 5, y: 9, w: 1, h: 2 }, { x: 18, y: 9, w: 1, h: 2 }, { x: 11, y: 6, w: 2, h: 1 } ],
     waves: [
       { at: 'start', spawns: [ { enemy: 'enemy_ronce', count: 2, x: 20, y: 3 }, { enemy: 'enemy_ronce', count: 2, x: 20, y: 9 } ] },
@@ -90,7 +108,7 @@ CONTENT.rooms.push(
       { at: 'start', spawns: [ { enemy: 'enemy_ronce', count: 4, x: 20, y: 6 }, { enemy: 'enemy_pollinisateur', count: 2, x: 21, y: 2 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_racine', count: 1, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 4, x: -1, y: -1 }, { enemy: 'enemy_spore', count: 2, x: 2, y: 11 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_spore', count: 3, x: 2, y: 1 }, { enemy: 'enemy_pollinisateur', count: 3, x: 21, y: 10 }, { enemy: 'enemy_moucherons', count: 1, x: 21, y: 2 } ] },
-      { at: 'clear', spawns: [ { enemy: 'enemy_liane', count: 2, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_racine', count: 1, x: 12, y: 11, elite: true } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_liane', count: 2, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_racine', count: 1, x: 12, y: 10, elite: true } ] },
     ],
     traps: [
       { trap: 'trap_tourniquet', x: 11, y: 6, phase: 0, params: { arms: 3, lengthTiles: 5, angularSpeed: 1.4 } },

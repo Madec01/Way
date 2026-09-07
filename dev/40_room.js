@@ -34,6 +34,7 @@ const Room = {
       challenge: null, challengeOk: false, drops: 0,   // phase 2 : éléments de décor animés avec collision (murs coulissants, plateformes, zone sûre mobile)
       floorSeed: (def.index * 7919) ^ 0x5bd1, label: `${STR.room} ${def.index}/9 — ${ROOM_TYPES[def.type] ? ROOM_TYPES[def.type].label : def.type}`,
     };
+    Terrain.compile(r, def);   // le plan ASCII devient une grille + des rectangles poussés dans r.obstacles
     for (const t of (def.traps || [])) { const td = Content.trap(t.trap); if (!td) { console.warn('piège inconnu', t.trap); continue; } r.traps.push(new Trap(td, t)); }
     return r;
   },
@@ -168,7 +169,7 @@ const Room = {
     if (r.dressed) return; r.dressed = true;
     const set = Room.DRESS[(G.run && G.run.biome && G.run.biome.id) || 'biome_1']; if (!set) return;
     const rng = makeRng(r.floorSeed ^ 0x9e37);
-    for (let i = 0; i < r.obstacles.length; i++) { const o = r.obstacles[i]; if (!o.kind) o.kind = set.blocks[Math.floor(rng() * set.blocks.length)]; }
+    for (let i = 0; i < r.obstacles.length; i++) { const o = r.obstacles[i]; if (o.terrain) continue; if (!o.kind) o.kind = set.blocks[Math.floor(rng() * set.blocks.length)]; }   // le terrain a déjà son rendu : pas de cactus dans un muret
     if (r.deco.length) return;
     /* décor au sol : tuiles libres, loin du départ du joueur (colonnes 0-2) et du couloir de la porte */
     const taken = t => r.obstacles.some(o => t.x >= o.x - 1 && t.x <= o.x + o.w && t.y >= o.y - 1 && t.y <= o.y + o.h);
@@ -177,6 +178,7 @@ const Room = {
     for (let k = 0; k < n * 6 && r.deco.length < n; k++) {
       const t = { x: 3 + Math.floor(rng() * (ROOM_COLS - 5)), y: Math.floor(rng() * ROOM_ROWS) };
       if (taken(t) || door(t) || r.deco.some(d => Math.abs(d.x - t.x) < 3 && Math.abs(d.y - t.y) < 2)) continue;
+      if (r.grid && !Terrain.plain(t.x, t.y, r)) continue;   // pas de tapis au fond du bassin ni de plante sur un pont
       r.deco.push({ x: t.x, y: t.y, kind: set.deco[Math.floor(rng() * set.deco.length)], big: rng() < 0.25 });
     }
   },
@@ -196,11 +198,12 @@ const Room = {
   render(ctx) {
     const r = G.room; if (!r) return;
     Sprites.drawFloor(ctx, r);
+    if (r.grid) Terrain.render(ctx, r);   // miroitement de l'eau : la seule partie animée, le reste est peint dans le cache du sol
     for (const d of r.deco) Sprites.drawDeco(ctx, d);
     /* obstacles */
     if (r.challenge) Challenge.renderFloor(ctx, r);
     if (r.tempo) Tempo.renderFloor(ctx, r);
-    for (const o of r.obstacles) if (!o.dyn) Sprites.drawBlock(ctx, o);
+    for (const o of r.obstacles) if (!o.dyn && !o.terrain) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */
     const dx = ROOM_X + ROOM_W, dy = ROOM_Y + ROOM_H / 2;

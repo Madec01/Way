@@ -234,7 +234,7 @@ const Sprites = (() => {
   /* sol + murs, mis en cache par salle dans un canvas hors écran */
   function drawFloor(ctx, room) {
     const pal = (G.run && G.run.biome && G.run.biome.palette) || { tint: 'rgba(40,70,110,.28)', neon: ['#6ee7ff', '#ff9a3c'], wall: 'rgba(40,70,110,.35)' };
-    const cacheKey = room.floorSeed + ':' + (G.run && G.run.biome ? G.run.biome.id : '');
+    const cacheKey = room.floorSeed + ':' + (G.run && G.run.biome ? G.run.biome.id : '') + ':' + (room.def ? room.def.id : '');   // floorSeed est le même pour toutes les salles d'un même index : sans l'id, deux salles partageraient leur sol
     let c = floorCache.get(cacheKey);
     if (!c) {
       c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
@@ -247,6 +247,8 @@ const Sprites = (() => {
       }
       /* teinte froide (labo) + vignette */
       g.fillStyle = pal.tint; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
+      /* terrain peint ici, une fois par salle : eau, boue, ponts, murets, moucharabiehs. Gratuit à l'usage. */
+      if (room.grid && typeof Terrain !== 'undefined') Terrain.paint(g, room);
       const v = g.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, 760); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)'); g.fillStyle = v; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
       /* grille discrète */
       g.strokeStyle = 'rgba(110,231,255,.035)'; g.lineWidth = 1; for (let tx = 0; tx <= ROOM_COLS; tx++) { g.beginPath(); g.moveTo(ROOM_X + tx * TILE, ROOM_Y); g.lineTo(ROOM_X + tx * TILE, ROOM_Y + ROOM_H); g.stroke(); } for (let ty = 0; ty <= ROOM_ROWS; ty++) { g.beginPath(); g.moveTo(ROOM_X, ROOM_Y + ty * TILE); g.lineTo(ROOM_X + ROOM_W, ROOM_Y + ty * TILE); g.stroke(); }

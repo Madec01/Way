@@ -49,6 +49,7 @@ function resolveRoomCollision(e) {
   const r = e.r;
   e.x = clamp(e.x, ROOM_X + r, ROOM_X + ROOM_W - r); e.y = clamp(e.y, ROOM_Y + r, ROOM_Y + ROOM_H - r);
   for (const o of G.room.obstacles) {
+    if (o.dashOver && e === G.player && e.dashing) continue;   // le dash franchit les murets : c'est ce qui leur donne leur intérêt
     if (!circleRect(e.x, e.y, r, o.px, o.py, o.pw, o.ph)) continue;
     /* pousser hors du bloc selon l'axe de moindre pénétration */
     const cx = o.px + o.pw / 2, cy = o.py + o.ph / 2;
@@ -64,15 +65,26 @@ function resolveRoomCollision(e) {
     if (d < min) { const nx = d > 0.001 ? (e.x - px) / d : -dy / Math.sqrt(l2 || 1), ny = d > 0.001 ? (e.y - py) / d : dx / Math.sqrt(l2 || 1); e.x += nx * (min - d + 0.5); e.y += ny * (min - d + 0.5); e.hitWall = true; if (c.vx != null) { e.x += c.vx * FIXED_DT; e.y += c.vy * FIXED_DT; } }
   }
 }
-function pointBlocked(x, y, r = 0) {
+/* `mask` : 'move' (par défaut) = ce qui arrête les pas · 'shot' = ce qui arrête les balles · 'sight' = ce qui coupe la vue.
+   Un muret bloque les pas mais pas les balles, un moucharabieh coupe la vue mais ne bloque rien : sans ces trois
+   masques, tout obstacle faisait les trois à la fois. */
+function pointBlocked(x, y, r = 0, mask) {
   if (x < ROOM_X + r || x > ROOM_X + ROOM_W - r || y < ROOM_Y + r || y > ROOM_Y + ROOM_H - r) return true;
-  for (const o of G.room.obstacles) if (circleRect(x, y, r, o.px, o.py, o.pw, o.ph)) return true;
+  for (const o of G.room.obstacles) {
+    if (mask === 'shot' && o.stopsShot === false) continue;
+    if (mask === 'sight' && o.blocksSight === false) continue;
+    if (circleRect(x, y, r, o.px, o.py, o.pw, o.ph)) return true;
+  }
   for (const c of G.room.colliders) if (segCircle(c.ax, c.ay, c.bx, c.by, x, y, r + c.r)) return true;
   return false;
 }
 function lineOfSight(ax, ay, bx, by) {
   const n = Math.ceil(dist(ax, ay, bx, by) / 16);
-  for (let i = 1; i < n; i++) { const t = i / n; if (pointBlocked(lerp(ax, bx, t), lerp(ay, by, t))) return false; }
+  for (let i = 1; i < n; i++) {
+    const t = i / n, px = lerp(ax, bx, t), py = lerp(ay, by, t);
+    if (pointBlocked(px, py, 0, 'sight')) return false;
+    if (G.room.grid && Terrain.screenAt(px, py)) return false;   // moucharabieh, feuillage, vapeur : opaques sans rien bloquer d'autre
+  }
   return true;
 }
 
@@ -106,6 +118,7 @@ const Projectiles = {
       if (p.x < ROOM_X + p.r || p.x > ROOM_X + ROOM_W - p.r) { if (p.bounce > 0) { p.vx = -p.vx; p.bounce--; bounced = true; p.x = clamp(p.x, ROOM_X + p.r, ROOM_X + ROOM_W - p.r); } else if (!p.returning) { this.list.splice(i, 1); continue; } }
       if (p.y < ROOM_Y + p.r || p.y > ROOM_Y + ROOM_H - p.r) { if (p.bounce > 0) { p.vy = -p.vy; p.bounce--; bounced = true; p.y = clamp(p.y, ROOM_Y + p.r, ROOM_Y + ROOM_H - p.r); } else if (!p.returning) { this.list.splice(i, 1); continue; } }
       if (!p.ghost) for (const o of G.room.obstacles) {
+        if (o.stopsShot === false) continue;   // muret : on tire par-dessus
         if (!circleRect(p.x, p.y, p.r, o.px, o.py, o.pw, o.ph)) continue;
         if (p.bounce > 0 || p.returning) {
           const cx = o.px + o.pw / 2, cy = o.py + o.ph / 2; const dx = (p.x - cx) / o.pw, dy = (p.y - cy) / o.ph;
@@ -604,6 +617,7 @@ class Player {
     } else {
       let sp = this.stats.speed; if (Time.now < this.killSpeedUntil) sp *= this.killSpeedMul;
       if (this.charge > 0) sp *= 0.6; if (this.gasSlowUntil > Time.now) sp *= 0.7; if (this.jamUntil > Time.now) sp *= (this.jamScale || 0.55);
+      if (G.room && G.room.grid) sp *= Terrain.speedAt(this.x, this.y);   // eau, boue : on ralentit sans rien perdre
       if (Time.now < Time.slowUntil && this.slowImmune > Time.now) sp /= Time.slow;  // ralenti du temps : le joueur garde sa vitesse
       this.vx = mv.x * sp; this.vy = mv.y * sp; this.x += this.vx * dt; this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);

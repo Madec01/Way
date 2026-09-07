@@ -50,6 +50,9 @@ class Enemy {
   update(dt) {
     if (this.dead) return; const pl = G.player;
     this.slow = updateStatus(this, dt); if (this.dead) return;
+    /* eau et boue ralentissent les ennemis par le même canal que le gel : un seul champ couvre marche, ruée,
+       charge et dash. Les boss l'ignorent : les coincer ou les ralentir casserait leurs phrases rythmiques. */
+    if (!this.isBoss && G.room && G.room.grid) this.slow *= Terrain.speedAt(this.x, this.y);
     this.stateT += dt; this.anim += dt; if (this.flash > 0) this.flash -= dt; this.fireCd -= dt; this.contactCd -= dt;
     /* recul */
     this.x += this.kvx * dt; this.y += this.kvy * dt; this.kvx -= this.kvx * Math.min(1, 10 * dt); this.kvy -= this.kvy * Math.min(1, 10 * dt);

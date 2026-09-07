@@ -2488,7 +2488,8 @@ const CONTENT = {
 CONTENT.biomes.push({
   id: 'biome_2', name: 'LA SERRE', order: 2, tagline: 'Une serre envahie : végétation agressive, gaz, ennemis qui se multiplient. Un cran au-dessus.',
   desc: 'Palier -2. L\'ancienne unité de culture des greffons : cuves éclatées, végétation qui a pris le contrôle des cellules d\'essai, sol humide qui conduit tout. Le Bureau y a laissé pousser ce qu\'il ne comprenait pas. Taux de perte : 84 %.',
-  palette: { tint: 'rgba(40,120,70,.30)', neon: ['#7ed957', '#ffd166'], wall: 'rgba(30,90,60,.4)' },
+  palette: { tint: 'rgba(40,120,70,.30)', neon: ['#7ed957', '#ffd166'], wall: 'rgba(30,90,60,.4)',
+    terrain: { water: { fill: '#1e5a4a', edge: '#6ae0b0' }, bridge: { fill: '#4a5a2e', edge: '#8fbf6a' } } },
   levelPassives: [
     { bonus: { name: 'Photosynthèse', desc: 'Régénération +1,5 PV/s.', mods: [{ stat: 'regen', add: 1.5 }], hooks: {} }, malus: { name: 'Air lourd', desc: '-15 % vitesse de déplacement.', mods: [{ stat: 'speed', mul: 0.85 }], hooks: {} } },
     { bonus: { name: 'Greffon sauvage', desc: '+1 projectile par tir.', mods: [{ stat: 'projectiles', add: 1 }], hooks: {} }, malus: { name: 'Sève corrosive', desc: 'Les pièges infligent +50 % de dégâts, armure -1.', mods: [{ stat: 'trapDamageMul', mul: 1.5 }, { stat: 'armor', add: -1 }], hooks: {} } },
@@ -2550,7 +2551,24 @@ CONTENT.bosses.push({
 
 /* Salles du biome 2 : mêmes types que le biome 1, plus d'ennemis, des élites, pièges plus serrés. */
 CONTENT.rooms.push(
-  { id: 'room_b2_1', biome: 'biome_2', index: 1, type: 'PREP_COMBAT', refTime: 55,
+  /* Plan « la rivière » : deux bras d'eau, trois passages secs. Rien n'est interdit, tout est taxé —
+     le pont est sûr mais prévisible, le gué est libre mais coûte 28 % de vitesse. */
+  { id: 'room_b2_1', biome: 'biome_2', index: 1, type: 'PREP_COMBAT', refTime: 62,
+    terrain: [
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........===....~~.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........~~~....==.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........===....~~.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+      '........~~~....~~.......',
+    ],
     obstacles: [ { x: 5, y: 2, w: 1, h: 2 }, { x: 18, y: 2, w: 1, h: 2 }, { x: 5, y: 9, w: 1, h: 2 }, { x: 18, y: 9, w: 1, h: 2 }, { x: 11, y: 6, w: 2, h: 1 } ],
     waves: [
       { at: 'start', spawns: [ { enemy: 'enemy_ronce', count: 2, x: 20, y: 3 }, { enemy: 'enemy_ronce', count: 2, x: 20, y: 9 } ] },
@@ -2572,7 +2590,7 @@ CONTENT.rooms.push(
       { at: 'start', spawns: [ { enemy: 'enemy_ronce', count: 4, x: 20, y: 6 }, { enemy: 'enemy_pollinisateur', count: 2, x: 21, y: 2 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_racine', count: 1, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 4, x: -1, y: -1 }, { enemy: 'enemy_spore', count: 2, x: 2, y: 11 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_spore', count: 3, x: 2, y: 1 }, { enemy: 'enemy_pollinisateur', count: 3, x: 21, y: 10 }, { enemy: 'enemy_moucherons', count: 1, x: 21, y: 2 } ] },
-      { at: 'clear', spawns: [ { enemy: 'enemy_liane', count: 2, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_racine', count: 1, x: 12, y: 11, elite: true } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_liane', count: 2, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_racine', count: 1, x: 12, y: 10, elite: true } ] },
     ],
     traps: [
       { trap: 'trap_tourniquet', x: 11, y: 6, phase: 0, params: { arms: 3, lengthTiles: 5, angularSpeed: 1.4 } },
@@ -2645,7 +2663,8 @@ CONTENT.rooms.push(
 CONTENT.biomes.push({
   id: 'biome_3', name: 'LA CONCESSION', order: 3, tagline: 'Une mine abandonnée en plein désert : bandits, bêtes, dynamite et wagonnets fous. Le niveau des durs.',
   desc: 'Niveau 3. La concession minière au bout de la piste : rails rouillés, poudrière éventrée, saloon vide. Ce qui vit ici a appris à survivre au soleil et aux hommes. Taux de perte : 91 %.',
-  palette: { tint: 'rgba(210,150,60,.30)', neon: ['#ffb347', '#ff6b3c'], wall: 'rgba(120,70,30,.42)', sand: true },
+  palette: { tint: 'rgba(210,150,60,.30)', neon: ['#ffb347', '#ff6b3c'], wall: 'rgba(120,70,30,.42)', sand: true,
+    terrain: { wall: { fill: '#2e2016', edge: '#9a8768' } } },
   levelPassives: [
     { bonus: { name: 'Gâchette rapide', desc: '+15 % cadence de tir.', mods: [{ stat: 'fireRate', mul: 1.15 }], hooks: {} }, malus: { name: 'Soleil de plomb', desc: '-15 % PV max.', mods: [{ stat: 'maxHp', mul: 0.85 }], hooks: {} } },
     { bonus: { name: 'Prime de chasse', desc: '+50 % pièces, +10 % XP.', mods: [{ stat: 'coinGain', mul: 1.5 }, { stat: 'xpGain', mul: 1.1 }], hooks: {} }, malus: { name: 'Sable mouvant', desc: 'Pièges +50 % de dégâts, -8 % vitesse.', mods: [{ stat: 'trapDamageMul', mul: 1.5 }, { stat: 'speed', mul: 0.92 }], hooks: {} } },
@@ -2742,19 +2761,36 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_baril', count: 2, x: 21, y: 2 }, { enemy: 'enemy_coyote', count: 2, x: -1, y: -1 }, { enemy: 'enemy_crotale', count: 1, x: 2, y: 11 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_bandit', count: 2, x: 21, y: 6 }, { enemy: 'enemy_coyote', count: 3, x: -1, y: -1 }, { enemy: 'enemy_scorpions', count: 1, x: 12, y: 1 } ] },
     ], traps: [], fragments: [], modular: [] },
-  { id: 'room_b3_3', biome: 'biome_3', index: 3, type: 'COMBAT_TRAP', refTime: 90,
+  /* Plan « l'entonnoir » : deux masses rocheuses convergent en un col de 3 tuiles. Chambre large, goulot,
+     chambre de sortie. Le col passe pour un bison (2 tuiles minimum), le combat change de nature en le franchissant. */
+  { id: 'room_b3_3', biome: 'biome_3', index: 3, type: 'COMBAT_TRAP', refTime: 105,
+    terrain: [
+      '........#########.......',
+      '.........#######........',
+      '..........#####.........',
+      '...........###..........',
+      '............#...........',
+      '........................',
+      '........................',
+      '........................',
+      '............#...........',
+      '...........###..........',
+      '..........#####.........',
+      '.........#######........',
+      '........#########.......',
+    ],
     obstacles: [ { x: 4, y: 3, w: 2, h: 1, kind: 'crate' }, { x: 4, y: 9, w: 2, h: 1, kind: 'crate' }, { x: 18, y: 3, w: 1, h: 2, kind: 'cactus' }, { x: 18, y: 8, w: 1, h: 2, kind: 'cactus' } ],
     deco: [ { x: 1, y: 11, kind: 'skull' }, { x: 22, y: 1, kind: 'tumbleweed' } ],
     waves: [
       { at: 'start', spawns: [ { enemy: 'enemy_coyote', count: 4, x: 20, y: 6 }, { enemy: 'enemy_bandit', count: 2, x: 21, y: 2 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_bison', count: 1, x: 21, y: 6 }, { enemy: 'enemy_coyote', count: 3, x: -1, y: -1 }, { enemy: 'enemy_baril', count: 2, x: 2, y: 11 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_baril', count: 3, x: 2, y: 1 }, { enemy: 'enemy_bandit', count: 3, x: 21, y: 10 }, { enemy: 'enemy_scorpions', count: 1, x: 21, y: 2 } ] },
-      { at: 'clear', spawns: [ { enemy: 'enemy_crotale', count: 2, x: 21, y: 6 }, { enemy: 'enemy_coyote', count: 2, x: -1, y: -1 }, { enemy: 'enemy_bison', count: 1, x: 12, y: 11 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_crotale', count: 2, x: 21, y: 6 }, { enemy: 'enemy_coyote', count: 2, x: -1, y: -1 }, { enemy: 'enemy_bison', count: 1, x: 19, y: 11 } ] },
     ],
     traps: [
-      { trap: 'trap_moulin', x: 11, y: 6, phase: 0 },
+      { trap: 'trap_moulin', x: 5, y: 6, phase: 0 },
       { trap: 'trap_ours', x: 1, y: 1, w: 3, h: 3, phase: 0 }, { trap: 'trap_ours', x: 20, y: 9, w: 3, h: 3, phase: 1 },
-      { trap: 'trap_embuscade', x: 7, y: 0, phase: 0 }, { trap: 'trap_embuscade', x: 16, y: 12, phase: 1.2 },
+      { trap: 'trap_embuscade', x: 7, y: 0, phase: 0 }, { trap: 'trap_embuscade', x: 19, y: 12, phase: 1.2 },
       { trap: 'trap_poudre', x: 6, y: 6, phase: 2 },
     ], fragments: [], modular: [] },
   { id: 'room_b3_4', biome: 'biome_3', index: 4, type: 'CHEST', refTime: 20,
@@ -2827,7 +2863,8 @@ CONTENT.rooms.push(
 CONTENT.biomes.push({
   id: 'biome_4', name: 'LE SÉRAIL', order: 4, tagline: 'Un palais enseveli sous les dunes : derviches, djinns, naphte et sable qui traverse les salles. Le niveau des tenaces.',
   desc: 'Niveau 4. Le sérail au bout de la piste : cour aux fontaines taries, bazar figé, colonnes cassées. Le sable est entré par les fenêtres et n\'est jamais ressorti. Taux de perte : 96 %.',
-  palette: { tint: 'rgba(72,50,140,.30)', neon: ['#ffd166', '#8f6ad8'], wall: 'rgba(84,58,145,.42)' },
+  palette: { tint: 'rgba(72,50,140,.30)', neon: ['#ffd166', '#8f6ad8'], wall: 'rgba(84,58,145,.42)',
+    terrain: { ledge: { fill: '#3a2f52', edge: '#e2d3ae' }, screen: { fill: '#241d38', edge: '#c9a05a' } } },
   levelPassives: [
     { bonus: { name: 'Pas du derviche', desc: '+12 % vitesse, +10 % de réduction de recharge.', mods: [{ stat: 'speed', mul: 1.12 }, { stat: 'cooldownReduction', add: 0.1 }], hooks: {} }, malus: { name: 'Sable dans les yeux', desc: '-30 % rayon de ramassage, -10 % portée.', mods: [{ stat: 'pickupRadius', mul: 0.7 }, { stat: 'range', mul: 0.9 }], hooks: {} } },
     { bonus: { name: 'Trésor du bazar', desc: '+70 % pièces.', mods: [{ stat: 'coinGain', mul: 1.7 }], hooks: {} }, malus: { name: 'Dette du marchand', desc: '-20 % PV max.', mods: [{ stat: 'maxHp', mul: 0.8 }], hooks: {} } },
@@ -2922,7 +2959,25 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_jarre', count: 2, x: 21, y: 2 }, { enemy: 'enemy_derviche', count: 2, x: -1, y: -1 }, { enemy: 'enemy_djinn', count: 1, x: 2, y: 11 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_archer', count: 2, x: 21, y: 6 }, { enemy: 'enemy_derviche', count: 3, x: -1, y: -1 }, { enemy: 'enemy_cobras', count: 1, x: 12, y: 1 } ] },
     ], traps: [], fragments: [], modular: [] },
-  { id: 'room_b4_3', biome: 'biome_4', index: 3, type: 'COMBAT_TRAP', refTime: 95,
+  /* Plan « les terrasses » : deux murets à brèches décalées (les balles passent, pas toi) et deux moucharabiehs
+     (la vue ne passe pas, tout le reste si). Le combat ne s'interrompt jamais, mais chaque déplacement demande
+     un détour — ou un dash, qui franchit les murets. */
+  { id: 'room_b4_3', biome: 'biome_4', index: 3, type: 'COMBAT_TRAP', refTime: 108,
+    terrain: [
+      '........................',
+      '.......n...::...n.......',
+      '.......n...::...n.......',
+      '...........::...n.......',
+      '.......n................',
+      '.......n........n.......',
+      '.......n........n.......',
+      '.......n........n.......',
+      '.......n................',
+      '...........::...n.......',
+      '.......n...::...n.......',
+      '.......n...::...n.......',
+      '........................',
+    ],
     obstacles: [ { x: 4, y: 3, w: 2, h: 1, kind: 'basket' }, { x: 4, y: 9, w: 2, h: 1, kind: 'basket' }, { x: 18, y: 3, w: 1, h: 2, kind: 'palm' }, { x: 18, y: 8, w: 1, h: 2, kind: 'palm' } ],
     deco: [],
     waves: [
@@ -3296,7 +3351,7 @@ const Sprites = (() => {
   /* sol + murs, mis en cache par salle dans un canvas hors écran */
   function drawFloor(ctx, room) {
     const pal = (G.run && G.run.biome && G.run.biome.palette) || { tint: 'rgba(40,70,110,.28)', neon: ['#6ee7ff', '#ff9a3c'], wall: 'rgba(40,70,110,.35)' };
-    const cacheKey = room.floorSeed + ':' + (G.run && G.run.biome ? G.run.biome.id : '');
+    const cacheKey = room.floorSeed + ':' + (G.run && G.run.biome ? G.run.biome.id : '') + ':' + (room.def ? room.def.id : '');   // floorSeed est le même pour toutes les salles d'un même index : sans l'id, deux salles partageraient leur sol
     let c = floorCache.get(cacheKey);
     if (!c) {
       c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
@@ -3309,6 +3364,8 @@ const Sprites = (() => {
       }
       /* teinte froide (labo) + vignette */
       g.fillStyle = pal.tint; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
+      /* terrain peint ici, une fois par salle : eau, boue, ponts, murets, moucharabiehs. Gratuit à l'usage. */
+      if (room.grid && typeof Terrain !== 'undefined') Terrain.paint(g, room);
       const v = g.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, 760); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)'); g.fillStyle = v; g.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
       /* grille discrète */
       g.strokeStyle = 'rgba(110,231,255,.035)'; g.lineWidth = 1; for (let tx = 0; tx <= ROOM_COLS; tx++) { g.beginPath(); g.moveTo(ROOM_X + tx * TILE, ROOM_Y); g.lineTo(ROOM_X + tx * TILE, ROOM_Y + ROOM_H); g.stroke(); } for (let ty = 0; ty <= ROOM_ROWS; ty++) { g.beginPath(); g.moveTo(ROOM_X, ROOM_Y + ty * TILE); g.lineTo(ROOM_X + ROOM_W, ROOM_Y + ty * TILE); g.stroke(); }
@@ -3719,6 +3776,7 @@ function resolveRoomCollision(e) {
   const r = e.r;
   e.x = clamp(e.x, ROOM_X + r, ROOM_X + ROOM_W - r); e.y = clamp(e.y, ROOM_Y + r, ROOM_Y + ROOM_H - r);
   for (const o of G.room.obstacles) {
+    if (o.dashOver && e === G.player && e.dashing) continue;   // le dash franchit les murets : c'est ce qui leur donne leur intérêt
     if (!circleRect(e.x, e.y, r, o.px, o.py, o.pw, o.ph)) continue;
     /* pousser hors du bloc selon l'axe de moindre pénétration */
     const cx = o.px + o.pw / 2, cy = o.py + o.ph / 2;
@@ -3734,15 +3792,26 @@ function resolveRoomCollision(e) {
     if (d < min) { const nx = d > 0.001 ? (e.x - px) / d : -dy / Math.sqrt(l2 || 1), ny = d > 0.001 ? (e.y - py) / d : dx / Math.sqrt(l2 || 1); e.x += nx * (min - d + 0.5); e.y += ny * (min - d + 0.5); e.hitWall = true; if (c.vx != null) { e.x += c.vx * FIXED_DT; e.y += c.vy * FIXED_DT; } }
   }
 }
-function pointBlocked(x, y, r = 0) {
+/* `mask` : 'move' (par défaut) = ce qui arrête les pas · 'shot' = ce qui arrête les balles · 'sight' = ce qui coupe la vue.
+   Un muret bloque les pas mais pas les balles, un moucharabieh coupe la vue mais ne bloque rien : sans ces trois
+   masques, tout obstacle faisait les trois à la fois. */
+function pointBlocked(x, y, r = 0, mask) {
   if (x < ROOM_X + r || x > ROOM_X + ROOM_W - r || y < ROOM_Y + r || y > ROOM_Y + ROOM_H - r) return true;
-  for (const o of G.room.obstacles) if (circleRect(x, y, r, o.px, o.py, o.pw, o.ph)) return true;
+  for (const o of G.room.obstacles) {
+    if (mask === 'shot' && o.stopsShot === false) continue;
+    if (mask === 'sight' && o.blocksSight === false) continue;
+    if (circleRect(x, y, r, o.px, o.py, o.pw, o.ph)) return true;
+  }
   for (const c of G.room.colliders) if (segCircle(c.ax, c.ay, c.bx, c.by, x, y, r + c.r)) return true;
   return false;
 }
 function lineOfSight(ax, ay, bx, by) {
   const n = Math.ceil(dist(ax, ay, bx, by) / 16);
-  for (let i = 1; i < n; i++) { const t = i / n; if (pointBlocked(lerp(ax, bx, t), lerp(ay, by, t))) return false; }
+  for (let i = 1; i < n; i++) {
+    const t = i / n, px = lerp(ax, bx, t), py = lerp(ay, by, t);
+    if (pointBlocked(px, py, 0, 'sight')) return false;
+    if (G.room.grid && Terrain.screenAt(px, py)) return false;   // moucharabieh, feuillage, vapeur : opaques sans rien bloquer d'autre
+  }
   return true;
 }
 
@@ -3776,6 +3845,7 @@ const Projectiles = {
       if (p.x < ROOM_X + p.r || p.x > ROOM_X + ROOM_W - p.r) { if (p.bounce > 0) { p.vx = -p.vx; p.bounce--; bounced = true; p.x = clamp(p.x, ROOM_X + p.r, ROOM_X + ROOM_W - p.r); } else if (!p.returning) { this.list.splice(i, 1); continue; } }
       if (p.y < ROOM_Y + p.r || p.y > ROOM_Y + ROOM_H - p.r) { if (p.bounce > 0) { p.vy = -p.vy; p.bounce--; bounced = true; p.y = clamp(p.y, ROOM_Y + p.r, ROOM_Y + ROOM_H - p.r); } else if (!p.returning) { this.list.splice(i, 1); continue; } }
       if (!p.ghost) for (const o of G.room.obstacles) {
+        if (o.stopsShot === false) continue;   // muret : on tire par-dessus
         if (!circleRect(p.x, p.y, p.r, o.px, o.py, o.pw, o.ph)) continue;
         if (p.bounce > 0 || p.returning) {
           const cx = o.px + o.pw / 2, cy = o.py + o.ph / 2; const dx = (p.x - cx) / o.pw, dy = (p.y - cy) / o.ph;
@@ -4274,6 +4344,7 @@ class Player {
     } else {
       let sp = this.stats.speed; if (Time.now < this.killSpeedUntil) sp *= this.killSpeedMul;
       if (this.charge > 0) sp *= 0.6; if (this.gasSlowUntil > Time.now) sp *= 0.7; if (this.jamUntil > Time.now) sp *= (this.jamScale || 0.55);
+      if (G.room && G.room.grid) sp *= Terrain.speedAt(this.x, this.y);   // eau, boue : on ralentit sans rien perdre
       if (Time.now < Time.slowUntil && this.slowImmune > Time.now) sp /= Time.slow;  // ralenti du temps : le joueur garde sa vitesse
       this.vx = mv.x * sp; this.vy = mv.y * sp; this.x += this.vx * dt; this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);
@@ -4393,6 +4464,9 @@ class Enemy {
   update(dt) {
     if (this.dead) return; const pl = G.player;
     this.slow = updateStatus(this, dt); if (this.dead) return;
+    /* eau et boue ralentissent les ennemis par le même canal que le gel : un seul champ couvre marche, ruée,
+       charge et dash. Les boss l'ignorent : les coincer ou les ralentir casserait leurs phrases rythmiques. */
+    if (!this.isBoss && G.room && G.room.grid) this.slow *= Terrain.speedAt(this.x, this.y);
     this.stateT += dt; this.anim += dt; if (this.flash > 0) this.flash -= dt; this.fireCd -= dt; this.contactCd -= dt;
     /* recul */
     this.x += this.kvx * dt; this.y += this.kvy * dt; this.kvx -= this.kvx * Math.min(1, 10 * dt); this.kvy -= this.kvy * Math.min(1, 10 * dt);
@@ -5066,6 +5140,196 @@ class Trap {
   }
   d_turret_fixed(x, y) { return dist(x, y, this.cx, this.cy) < 60 ? 0.5 : 0; }
 }
+
+</script>
+<script>
+/* ==== 35_terrain.js ==== */
+/* =========================================================================
+   WAY — 35_terrain.js
+   Couche de terrain : une salle déclare un plan ASCII (13 lignes de 24 caractères), compilé au chargement en
+   une grille `room.grid` (un code par tuile) et en rectangles poussés dans `room.obstacles`.
+
+   Pourquoi une grille plutôt qu'une liste d'entités : `pointBlocked` et `lineOfSight` sont appelés une fois par
+   ennemi et par image (jusqu'à 60 ennemis), et bouclaient sur toute la liste d'obstacles. Une lecture de tableau
+   coûte moins cher qu'une boucle, donc ajouter du terrain ne coûte rien en performances.
+
+   Le point clé : « bloque les pas », « arrête les balles » et « coupe la vue » sont trois choses distinctes.
+   Un muret arrête le joueur mais pas les balles ; un moucharabieh coupe la vue mais laisse tout passer.
+   Les obstacles portent donc `stopsShot` et `blocksSight` (absents = vrai, comportement d'avant).
+   ========================================================================= */
+
+const TERRAIN = {
+  /* ch : caractère du plan · solid : bloque les pas · stopsShot : arrête les balles · blocksSight : coupe la vue
+     speed : multiplicateur de vitesse en surface · dashOver : franchissable pendant le dash du joueur */
+  '.': { id: 0, name: 'floor' },
+  '#': { id: 1, name: 'wall', solid: true, stopsShot: true, blocksSight: true },
+  'n': { id: 2, name: 'ledge', solid: true, stopsShot: false, blocksSight: false, dashOver: true },
+  ':': { id: 3, name: 'screen', blocksSight: true, speed: 0.9 },
+  '=': { id: 4, name: 'bridge' },
+  '~': { id: 5, name: 'water', speed: 0.72 },
+  ',': { id: 6, name: 'mud', speed: 0.55 },
+};
+const TERRAIN_BY_ID = []; for (const ch in TERRAIN) { TERRAIN_BY_ID[TERRAIN[ch].id] = Object.assign({ ch }, TERRAIN[ch]); }
+
+const Terrain = (() => {
+  const idx = (tx, ty) => ty * ROOM_COLS + tx;
+  const inside = (tx, ty) => tx >= 0 && ty >= 0 && tx < ROOM_COLS && ty < ROOM_ROWS;
+  const defOf = code => TERRAIN_BY_ID[code] || TERRAIN_BY_ID[0];
+  /* tuile sous un point du monde */
+  const tileOf = (x, y) => [Math.floor((x - ROOM_X) / TILE), Math.floor((y - ROOM_Y) / TILE)];
+  function codeAt(x, y) {
+    const g = G.room && G.room.grid; if (!g) return 0;
+    const [tx, ty] = tileOf(x, y); if (!inside(tx, ty)) return 0;
+    return g[idx(tx, ty)];
+  }
+  const at = (x, y) => defOf(codeAt(x, y));
+  /* on peut se tenir ici : ni terrain solide, ni obstacle déclaré */
+  function walkable(tx, ty, room) {
+    const r = room || G.room; if (!r) return false;
+    if (!inside(tx, ty)) return false;
+    if (r.grid && defOf(r.grid[idx(tx, ty)]).solid) return false;
+    const px = ROOM_X + (tx + 0.5) * TILE, py = ROOM_Y + (ty + 0.5) * TILE;
+    for (const o of r.obstacles) { if (o.terrain) continue; if (circleRect(px, py, TILE * 0.35, o.px, o.py, o.pw, o.ph)) return false; }
+    return true;
+  }
+  /* tuile praticable la plus proche d'un point (replacement après une poussée dans un mur) */
+  function nearestWalkable(x, y, room) {
+    const r = room || G.room; const [cx, cy] = tileOf(x, y);
+    if (walkable(cx, cy, r)) return { x, y };
+    for (let ring = 1; ring < 12; ring++) {
+      let best = null, bd = Infinity;
+      for (let ty = cy - ring; ty <= cy + ring; ty++) for (let tx = cx - ring; tx <= cx + ring; tx++) {
+        if (Math.max(Math.abs(tx - cx), Math.abs(ty - cy)) !== ring || !walkable(tx, ty, r)) continue;
+        const px = ROOM_X + (tx + 0.5) * TILE, py = ROOM_Y + (ty + 0.5) * TILE; const d = dist(x, y, px, py);
+        if (d < bd) { bd = d; best = { x: px, y: py }; }
+      }
+      if (best) return best;
+    }
+    return { x: W / 2, y: H / 2 };
+  }
+  /* sol nu : ni terrain solide, ni surface (eau, boue, pont, moucharabieh). C'est là et nulle part ailleurs
+     qu'on sème du décor — un tapis au fond du bassin ou une plante sur un pont se voient tout de suite. */
+  function plain(tx, ty, room) { const r = room || G.room; return !r.grid || (inside(tx, ty) && r.grid[idx(tx, ty)] === 0); }
+  /* multiplicateur de vitesse de la surface (1 hors terrain ralentissant) */
+  function speedAt(x, y) { const t = at(x, y); return t.speed || 1; }
+  /* le point coupe-t-il la vue sans bloquer les pas (moucharabieh, feuillage, vapeur) */
+  function screenAt(x, y) { const t = at(x, y); return !t.solid && !!t.blocksSight; }
+
+  /* ---------- compilation du plan ---------- */
+  /* Les tuiles solides voisines sont fusionnées en bandes horizontales : 40 rectangles au lieu de 200 tuiles,
+     et le reste du moteur (collision, projectiles, rendu) continue de ne voir que des rectangles. */
+  function compile(room, def) {
+    const plan = def.terrain, rects = def.terrainRects;
+    if (!plan && !rects) return;
+    const g = room.grid = new Uint8Array(ROOM_COLS * ROOM_ROWS);
+    if (plan) {
+      for (let ty = 0; ty < Math.min(plan.length, ROOM_ROWS); ty++) {
+        const line = plan[ty];
+        for (let tx = 0; tx < Math.min(line.length, ROOM_COLS); tx++) {
+          const t = TERRAIN[line[tx]];
+          if (!t) { console.warn('[Terrain] caractère inconnu « ' + line[tx] + ' » en ' + tx + ',' + ty + ' (' + def.id + ')'); continue; }
+          g[idx(tx, ty)] = t.id;
+        }
+      }
+      if (plan.length !== ROOM_ROWS) console.warn('[Terrain] ' + def.id + ' : ' + plan.length + ' lignes au lieu de ' + ROOM_ROWS);
+      for (const line of plan) if (line.length !== ROOM_COLS) { console.warn('[Terrain] ' + def.id + ' : une ligne fait ' + line.length + ' caractères au lieu de ' + ROOM_COLS); break; }
+    }
+    for (const rc of (rects || [])) {
+      const t = TERRAIN[rc.ch] || Object.values(TERRAIN).find(v => v.name === rc.kind);
+      if (!t) { console.warn('[Terrain] rectangle de type inconnu', rc); continue; }
+      for (let ty = rc.y; ty < rc.y + (rc.h || 1); ty++) for (let tx = rc.x; tx < rc.x + (rc.w || 1); tx++) if (inside(tx, ty)) g[idx(tx, ty)] = t.id;
+    }
+    /* fusion en bandes horizontales, par type de solide */
+    for (let ty = 0; ty < ROOM_ROWS; ty++) {
+      let run = 0, code = 0;
+      for (let tx = 0; tx <= ROOM_COLS; tx++) {
+        const c = tx < ROOM_COLS ? g[idx(tx, ty)] : 0;
+        const solid = tx < ROOM_COLS && defOf(c).solid;
+        if (solid && c === code) { run++; continue; }
+        if (run) pushRect(room, tx - run, ty, run, 1, code);
+        run = solid ? 1 : 0; code = solid ? c : 0;
+      }
+    }
+    room.hasTerrain = true;
+    if (!connected(room)) console.warn('[Terrain] ' + def.id + ' : la porte n\'est pas atteignable depuis l\'entrée');
+  }
+  function pushRect(room, tx, ty, w, h, code) {
+    const t = defOf(code);
+    room.obstacles.push({ x: tx, y: ty, w, h, kind: t.name, terrain: true, code,
+      stopsShot: t.stopsShot !== false, blocksSight: t.blocksSight !== false, dashOver: !!t.dashOver,
+      px: ROOM_X + tx * TILE, py: ROOM_Y + ty * TILE, pw: w * TILE, ph: h * TILE });
+  }
+  /* parcours en largeur de l'entrée vers la porte : une salle coupée en deux est une run perdue */
+  function connected(room) {
+    const seen = new Uint8Array(ROOM_COLS * ROOM_ROWS); const q = [[1, Math.floor(ROOM_ROWS / 2)]];
+    const start = q[0]; if (!walkable(start[0], start[1], room)) return false;
+    seen[idx(start[0], start[1])] = 1;
+    const goal = [ROOM_COLS - 1, Math.floor(ROOM_ROWS / 2)];
+    while (q.length) {
+      const [x, y] = q.shift();
+      if (x === goal[0] && y === goal[1]) return true;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (!inside(nx, ny) || seen[idx(nx, ny)] || !walkable(nx, ny, room)) continue;
+        seen[idx(nx, ny)] = 1; q.push([nx, ny]);
+      }
+    }
+    return false;
+  }
+
+  /* ---------- rendu ---------- */
+  /* Les surfaces sont peintes une fois dans le cache du sol (gratuit). Seul le miroitement est redessiné par
+     image, dans une passe légère : jamais de floorCache.clear() en boucle, ce serait 1280×720 soixante fois par seconde. */
+  const SKIN = {
+    water:  { fill: '#2a5a7a', edge: '#7fd8ff', alpha: 0.85 },
+    mud:    { fill: '#4a3a26', edge: '#8a6a44', alpha: 0.9 },
+    bridge: { fill: '#5a4630', edge: '#8b6a44', alpha: 0.95, planks: true },
+    ledge:  { fill: '#3a4058', edge: '#8a94ac', alpha: 1 },
+    screen: { fill: '#2a2438', edge: '#9a8ac0', alpha: 0.75, lattice: true },
+    wall:   { fill: '#1a1e2e', edge: '#4a5470', alpha: 1 },
+  };
+  function skinOf(name) {
+    const pal = (G.run && G.run.biome && G.run.biome.palette && G.run.biome.palette.terrain) || {};
+    return Object.assign({}, SKIN[name], pal[name] || {});
+  }
+  function paint(g, room) {
+    if (!room.grid) return;
+    const grid = room.grid;
+    for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
+      const t = defOf(grid[idx(tx, ty)]); if (t.id === 0) continue;
+      const s = skinOf(t.name); if (!s || !s.fill) continue;
+      const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE;
+      g.globalAlpha = s.alpha != null ? s.alpha : 1; g.fillStyle = s.fill; g.fillRect(x, y, TILE, TILE);
+      /* liseré de rive : c'est lui qui rend la surface lisible d'un coup d'œil, pas le remplissage */
+      g.globalAlpha = 1; g.fillStyle = s.edge;
+      const same = (ax, ay) => inside(ax, ay) && grid[idx(ax, ay)] === grid[idx(tx, ty)];
+      if (!same(tx, ty - 1)) g.fillRect(x, y, TILE, 3);
+      if (!same(tx, ty + 1)) g.fillRect(x, y + TILE - 3, TILE, 3);
+      if (!same(tx - 1, ty)) g.fillRect(x, y, 3, TILE);
+      if (!same(tx + 1, ty)) g.fillRect(x + TILE - 3, y, 3, TILE);
+      if (s.planks) { g.globalAlpha = 0.5; for (let k = 6; k < TILE; k += 12) g.fillRect(x + 2, y + k, TILE - 4, 2); g.globalAlpha = 1; }
+      if (s.lattice) { g.globalAlpha = 0.45; for (let k = 6; k < TILE; k += 10) { g.fillRect(x + k, y, 2, TILE); g.fillRect(x, y + k, TILE, 2); } g.globalAlpha = 1; }
+    }
+    g.globalAlpha = 1;
+  }
+  /* passe animée : reflets sur l'eau, remous dans la boue. Rien d'autre ne bouge. */
+  function render(ctx, room) {
+    if (!room.grid) return;
+    const grid = room.grid; const t = Time.now;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
+      const d = defOf(grid[idx(tx, ty)]);
+      if (d.name !== 'water') continue;
+      const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE;
+      const k = 0.5 + 0.5 * Math.sin(t * 1.6 + tx * 0.7 + ty * 0.4);
+      ctx.globalAlpha = 0.05 + 0.07 * k; ctx.fillStyle = '#9fd8ff';
+      ctx.fillRect(x + 4, y + 10 + Math.sin(t * 1.2 + tx) * 3, TILE - 8, 3);
+      ctx.fillRect(x + 10, y + 30 + Math.sin(t * 1.5 + ty) * 3, TILE - 22, 2);
+    }
+    ctx.restore();
+  }
+  return { compile, connected, walkable, plain, nearestWalkable, codeAt, at, speedAt, screenAt, paint, render, tileOf, defOf };
+})();
 
 </script>
 <script>
@@ -5834,6 +6098,7 @@ const Room = {
       challenge: null, challengeOk: false, drops: 0,   // phase 2 : éléments de décor animés avec collision (murs coulissants, plateformes, zone sûre mobile)
       floorSeed: (def.index * 7919) ^ 0x5bd1, label: `${STR.room} ${def.index}/9 — ${ROOM_TYPES[def.type] ? ROOM_TYPES[def.type].label : def.type}`,
     };
+    Terrain.compile(r, def);   // le plan ASCII devient une grille + des rectangles poussés dans r.obstacles
     for (const t of (def.traps || [])) { const td = Content.trap(t.trap); if (!td) { console.warn('piège inconnu', t.trap); continue; } r.traps.push(new Trap(td, t)); }
     return r;
   },
@@ -5968,7 +6233,7 @@ const Room = {
     if (r.dressed) return; r.dressed = true;
     const set = Room.DRESS[(G.run && G.run.biome && G.run.biome.id) || 'biome_1']; if (!set) return;
     const rng = makeRng(r.floorSeed ^ 0x9e37);
-    for (let i = 0; i < r.obstacles.length; i++) { const o = r.obstacles[i]; if (!o.kind) o.kind = set.blocks[Math.floor(rng() * set.blocks.length)]; }
+    for (let i = 0; i < r.obstacles.length; i++) { const o = r.obstacles[i]; if (o.terrain) continue; if (!o.kind) o.kind = set.blocks[Math.floor(rng() * set.blocks.length)]; }   // le terrain a déjà son rendu : pas de cactus dans un muret
     if (r.deco.length) return;
     /* décor au sol : tuiles libres, loin du départ du joueur (colonnes 0-2) et du couloir de la porte */
     const taken = t => r.obstacles.some(o => t.x >= o.x - 1 && t.x <= o.x + o.w && t.y >= o.y - 1 && t.y <= o.y + o.h);
@@ -5977,6 +6242,7 @@ const Room = {
     for (let k = 0; k < n * 6 && r.deco.length < n; k++) {
       const t = { x: 3 + Math.floor(rng() * (ROOM_COLS - 5)), y: Math.floor(rng() * ROOM_ROWS) };
       if (taken(t) || door(t) || r.deco.some(d => Math.abs(d.x - t.x) < 3 && Math.abs(d.y - t.y) < 2)) continue;
+      if (r.grid && !Terrain.plain(t.x, t.y, r)) continue;   // pas de tapis au fond du bassin ni de plante sur un pont
       r.deco.push({ x: t.x, y: t.y, kind: set.deco[Math.floor(rng() * set.deco.length)], big: rng() < 0.25 });
     }
   },
@@ -5996,11 +6262,12 @@ const Room = {
   render(ctx) {
     const r = G.room; if (!r) return;
     Sprites.drawFloor(ctx, r);
+    if (r.grid) Terrain.render(ctx, r);   // miroitement de l'eau : la seule partie animée, le reste est peint dans le cache du sol
     for (const d of r.deco) Sprites.drawDeco(ctx, d);
     /* obstacles */
     if (r.challenge) Challenge.renderFloor(ctx, r);
     if (r.tempo) Tempo.renderFloor(ctx, r);
-    for (const o of r.obstacles) if (!o.dyn) Sprites.drawBlock(ctx, o);
+    for (const o of r.obstacles) if (!o.dyn && !o.terrain) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */
     const dx = ROOM_X + ROOM_W, dy = ROOM_Y + ROOM_H / 2;

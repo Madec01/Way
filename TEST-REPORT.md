@@ -499,3 +499,26 @@ Retouches entre les deux versions : difficulté du palier 1,75 / 1,42 / 1,15 →
 Séquenceur rythmique du Vizir (`boss.js`, salle 5 puis 9) : une phrase de 4 mesures = CIMETERRES sur le temps 5, MIRAGE sur le temps 8, TEMPÊTE sur le temps fort de la dernière mesure ; en revanche tout est décalé d'un demi-temps (`ph ≈ 0,5`), conforme. Le mirage a été rendu **seule** attaque utilitaire : avec une invocation en rotation, la fenêtre de faiblesse ne s'ouvrait qu'une phrase sur deux.
 
 À surveiller en playtest humain : les morts du bot en **salle 2** (salle à défi) sur deux graines — le défi est tiré au sort et le bot en joue certains mal ; le palier 4 tape plus fort que le 3, donc l'erreur pardonne moins. Biome 1 rejoué après coup : aucun changement (5 / 9 / 9✔ / 9✔).
+
+---
+
+## 12. Terrain de salle — jalons 0 et 1
+
+**Mécaniques (17 contrôles, `terrainmech.js`) : 17/17.** Le muret bloque les pas, laisse passer les balles et la vue, sa brèche est franchissable, et le dash le franchit (x = 868 en dash contre 386 à pied, muret à x = 424). Le moucharabieh coupe la vue sans rien bloquer. L'eau ralentit à ×0,72, le pont et le sol nu à ×1. Le col de l'entonnoir fait bien 3 tuiles, la roche bloque pas et balles, et la salle reste traversable.
+
+**Intégrité des 36 salles (`spawncheck.js`)** : chaque salle est compilée et l'on vérifie tous les spawns à coordonnées fixes, tous les pièges, la tuile d'entrée, celle devant la porte et la connexité. **Aucun problème après correction** — le contrôle a trouvé un défaut préexistant : en salle 3 de LA SERRE, un spawn de racine élite en (12,11) tombait dans l'obstacle (11,11) 2×1. Corrigé en (12,10).
+
+**Balayages `levels.js` (4 armes, salle atteinte)** :
+
+| Palier | Avant | Après | Lecture |
+|---|---|---|---|
+| Biome 1 (aucun terrain) | 5 / 9 / 9✔ / 9✔ | 9 / 5 / 5 / 9✔ | dans la dispersion (voir ci-dessous) |
+| Biome 2 (rivière en salle 1) | — | 6 / 5 / 5 / 7 | |
+| Biome 3 (entonnoir en salle 3) | 5 / 3 / 5 / 5 | **5 / 3 / 5 / 5** | identique |
+| Biome 4 (terrasses en salle 3) | 5 / 3 / 5 / 2 | 5 / 3 / 5 / 2 | identique |
+
+Aucune erreur JS, aucune salle bloquée, le bot franchit le col, traverse la rivière et contourne les murets.
+
+**Attention à ne pas surinterpréter ces balayages : `__autoplay` n'est pas déterministe d'une exécution à l'autre.** Preuve mesurée dans cette session : le même build, à la même graine 900 sur le biome 4, a donné `5 / 3 / 5 / 2` puis `5 / 2 / 5 / 2`. `Attract.start` resème le RNG avec `Date.now()` et `VFX_RNG` est semé au temps. Un balayage isolé ne peut donc pas prouver une non-régression — la non-régression du jalon 0 a été établie **par lecture des chemins de code** (tout le terrain est derrière `if (room.grid)`, absent des salles sans plan), le balayage ne servant qu'à confirmer l'absence d'erreur et de blocage.
+
+**Régressions** : clavier/souris 8/8, progression des pièges de la salle du tempo inchangée, phrase rythmique du Vizir intacte (cimeterres au temps 5, mirage au 8, tempête sur le temps fort de la dernière mesure).

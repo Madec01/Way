@@ -7,7 +7,8 @@
 CONTENT.biomes.push({
   id: 'biome_4', name: 'LE SÉRAIL', order: 4, tagline: 'Un palais enseveli sous les dunes : derviches, djinns, naphte et sable qui traverse les salles. Le niveau des tenaces.',
   desc: 'Niveau 4. Le sérail au bout de la piste : cour aux fontaines taries, bazar figé, colonnes cassées. Le sable est entré par les fenêtres et n\'est jamais ressorti. Taux de perte : 96 %.',
-  palette: { tint: 'rgba(72,50,140,.30)', neon: ['#ffd166', '#8f6ad8'], wall: 'rgba(84,58,145,.42)' },
+  palette: { tint: 'rgba(72,50,140,.30)', neon: ['#ffd166', '#8f6ad8'], wall: 'rgba(84,58,145,.42)',
+    terrain: { ledge: { fill: '#3a2f52', edge: '#e2d3ae' }, screen: { fill: '#241d38', edge: '#c9a05a' } } },
   levelPassives: [
     { bonus: { name: 'Pas du derviche', desc: '+12 % vitesse, +10 % de réduction de recharge.', mods: [{ stat: 'speed', mul: 1.12 }, { stat: 'cooldownReduction', add: 0.1 }], hooks: {} }, malus: { name: 'Sable dans les yeux', desc: '-30 % rayon de ramassage, -10 % portée.', mods: [{ stat: 'pickupRadius', mul: 0.7 }, { stat: 'range', mul: 0.9 }], hooks: {} } },
     { bonus: { name: 'Trésor du bazar', desc: '+70 % pièces.', mods: [{ stat: 'coinGain', mul: 1.7 }], hooks: {} }, malus: { name: 'Dette du marchand', desc: '-20 % PV max.', mods: [{ stat: 'maxHp', mul: 0.8 }], hooks: {} } },
@@ -102,7 +103,25 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_jarre', count: 2, x: 21, y: 2 }, { enemy: 'enemy_derviche', count: 2, x: -1, y: -1 }, { enemy: 'enemy_djinn', count: 1, x: 2, y: 11 } ] },
       { at: 'clear', spawns: [ { enemy: 'enemy_archer', count: 2, x: 21, y: 6 }, { enemy: 'enemy_derviche', count: 3, x: -1, y: -1 }, { enemy: 'enemy_cobras', count: 1, x: 12, y: 1 } ] },
     ], traps: [], fragments: [], modular: [] },
-  { id: 'room_b4_3', biome: 'biome_4', index: 3, type: 'COMBAT_TRAP', refTime: 95,
+  /* Plan « les terrasses » : deux murets à brèches décalées (les balles passent, pas toi) et deux moucharabiehs
+     (la vue ne passe pas, tout le reste si). Le combat ne s'interrompt jamais, mais chaque déplacement demande
+     un détour — ou un dash, qui franchit les murets. */
+  { id: 'room_b4_3', biome: 'biome_4', index: 3, type: 'COMBAT_TRAP', refTime: 108,
+    terrain: [
+      '........................',
+      '.......n...::...n.......',
+      '.......n...::...n.......',
+      '...........::...n.......',
+      '.......n................',
+      '.......n........n.......',
+      '.......n........n.......',
+      '.......n........n.......',
+      '.......n................',
+      '...........::...n.......',
+      '.......n...::...n.......',
+      '.......n...::...n.......',
+      '........................',
+    ],
     obstacles: [ { x: 4, y: 3, w: 2, h: 1, kind: 'basket' }, { x: 4, y: 9, w: 2, h: 1, kind: 'basket' }, { x: 18, y: 3, w: 1, h: 2, kind: 'palm' }, { x: 18, y: 8, w: 1, h: 2, kind: 'palm' } ],
     deco: [],
     waves: [
