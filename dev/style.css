@@ -240,3 +240,11 @@ body.touch .menu2{padding:calc(16px*var(--ui-scale)) calc(28px*var(--ui-scale))}
 .hubcol.subject h3{color:#7fff9a}.hubcol.center h3{color:#ffb347}
 .card.char.selected{border-color:#7fff9a;box-shadow:0 0 20px rgba(127,255,154,.3)}
 .card.char.selected .lvlstate{color:#7fff9a;font-weight:700}
+/* le bouton JOUER reste visible même quand la liste des niveaux dépasse la hauteur de la colonne */
+.hubcol.center{position:relative;padding-bottom:0}
+.hubcol.center .cta{position:sticky;bottom:0;margin-top:.6em;z-index:2}
+.hubcol.center::after{content:"";position:sticky;bottom:0;display:block;height:.9em;margin-top:-.9em;background:linear-gradient(180deg,rgba(8,10,18,0),rgba(8,10,18,.85));pointer-events:none}
+.card.level{padding:.6em .9em}
+.card.level .lvldesc{margin-bottom:.2em}
+.card.level .pairs{margin-top:.3em}
+.card.level:not(.selected) .pairs,.card.level:not(.selected) .lvlmeta+.muted.tiny{display:none}

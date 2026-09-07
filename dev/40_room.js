@@ -24,6 +24,7 @@ const Room = {
     const r = {
       def, index: def.index, type: def.type, state: 'intro', time: 0, stateT: 0, refTime: def.refTime || 45,
       obstacles: (def.obstacles || []).map(o => ({ x: o.x, y: o.y, w: o.w, h: o.h, kind: o.kind, px: ROOM_X + o.x * TILE, py: ROOM_Y + o.y * TILE, pw: o.w * TILE, ph: o.h * TILE })), deco: def.deco || [],
+      dressed: false,
       colliders: [], lastDamageT: 0, traps: [], waves: (def.waves || []).map(w => Object.assign({ done: false }, w)), waveIdx: 0,
       fragmentsDef: (def.fragments || []).slice(), fragmentsSpawned: 0, fragments: 0,
       hits: 0, kills: 0, combo: 0, comboUntil: 0, bestCombo: 0, comboTarget: 8, died: false,
@@ -42,6 +43,7 @@ const Room = {
     G.run.roomIndex = index; applyDifficulty();
     G.enemies = []; Projectiles.list = []; Pickups.list = []; Particles.list = []; Floaters.list = [];
     G.room = Room.create(def);
+    Room.dress(G.room);   // habillage : accessoires du biome sur les obstacles et décor au sol
     /* défi de salle (salles 2, 3, 6, 7) */
     const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
     if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
@@ -143,6 +145,29 @@ const Room = {
     /* cosmétique */
     const tick = a => { for (let i = a.length - 1; i >= 0; i--) { a[i].t += dt; if (a[i].t > a[i].life) a.splice(i, 1); } };
     tick(r.beams); tick(r.blasts); tick(r.slashes);
+  },
+  /* Habillage d'une salle : donne un accessoire du biome aux obstacles qui n'en ont pas (`kind`) et sème du décor au sol.
+     Déterministe (graine du sol) : la même salle est toujours habillée pareil. Le décor n'a aucune collision. */
+  DRESS: {
+    biome_1: { blocks: ['tank', 'fuel', 'locker', 'pipe', 'drip', 'microscope', 'bin'], deco: ['cross', 'hazard', 'fan', 'valve', 'cog', 'battery', 'tubes', 'pack', 'bin'] },
+    biome_2: { blocks: ['planter', 'bush', 'roots', 'trap_plant', 'flask', 'fountain'], deco: ['leaf', 'mushrooms', 'mushroom', 'seedling', 'sprout', 'roots', 'flower', 'pot'] },
+    biome_3: { blocks: ['cactus', 'rock', 'barrel', 'crate', 'wagon', 'cart'], deco: ['skull', 'tumbleweed', 'rails', 'wanted'] },
+  },
+  dress(r) {
+    if (r.dressed) return; r.dressed = true;
+    const set = Room.DRESS[(G.run && G.run.biome && G.run.biome.id) || 'biome_1']; if (!set) return;
+    const rng = makeRng(r.floorSeed ^ 0x9e37);
+    for (let i = 0; i < r.obstacles.length; i++) { const o = r.obstacles[i]; if (!o.kind) o.kind = set.blocks[Math.floor(rng() * set.blocks.length)]; }
+    if (r.deco.length) return;
+    /* décor au sol : tuiles libres, loin du départ du joueur (colonnes 0-2) et du couloir de la porte */
+    const taken = t => r.obstacles.some(o => t.x >= o.x - 1 && t.x <= o.x + o.w && t.y >= o.y - 1 && t.y <= o.y + o.h);
+    const door = t => t.x >= ROOM_COLS - 2 && Math.abs(t.y - Math.floor(ROOM_ROWS / 2)) <= 1;
+    const n = 5 + Math.floor(rng() * 4);
+    for (let k = 0; k < n * 6 && r.deco.length < n; k++) {
+      const t = { x: 3 + Math.floor(rng() * (ROOM_COLS - 5)), y: Math.floor(rng() * ROOM_ROWS) };
+      if (taken(t) || door(t) || r.deco.some(d => Math.abs(d.x - t.x) < 3 && Math.abs(d.y - t.y) < 2)) continue;
+      r.deco.push({ x: t.x, y: t.y, kind: set.deco[Math.floor(rng() * set.deco.length)], big: rng() < 0.25 });
+    }
   },
   /* horloge des pièges : temps musical dans la salle du tempo, temps de salle ailleurs */
   trapTime(r) { return r.tempo && r.tempo.syncTraps ? Beat.t : r.time; },

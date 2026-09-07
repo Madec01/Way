@@ -56,11 +56,22 @@ const Sprites = (() => {
   }
   /* ---- accessoires western : icônes SVG (game-icons.net, CC BY 3.0) rastérisées en 20 px puis agrandies sans lissage = pixel art ---- */
   const PROP_DEFS = {
-    cactus: { color: '#4f9a4f', px: 22 }, rock: { color: '#8a7a66', px: 20 }, barrel: { color: '#8b5a2b', px: 18 }, 'wooden-crate': { color: '#a0744a', px: 18 },
-    'old-wagon': { color: '#6e4a2e', px: 26 }, 'mine-wagon': { color: '#5a5a5a', px: 22 }, windmill: { color: '#c9a27a', px: 26 }, 'rail-road': { color: '#6a5a4a', px: 20 },
-    'desert-skull': { color: '#e8e2cf', px: 16 }, 'animal-skull': { color: '#e8e2cf', px: 18 }, tumbleweed: { color: '#b39a5a', px: 18 }, 'saloon-doors': { color: '#a0744a', px: 22 },
-    'wanted-reward': { color: '#e0d2a8', px: 18 }, rattlesnake: { color: '#9a9a3a', px: 20 }, scorpion: { color: '#3a2a1a', px: 18 }, vulture: { color: '#3a3a3a', px: 20 },
-    bull: { color: '#4a2e1a', px: 26 }, dynamite: { color: '#c0392b', px: 16 }, 'cellar-barrels': { color: '#8b5a2b', px: 22 },
+    /* biome 3 — western (assets/sprites/western/) */
+    cactus: { d: 'western', color: '#4f9a4f', px: 22 }, rock: { d: 'western', color: '#8a7a66', px: 20 }, barrel: { d: 'western', color: '#8b5a2b', px: 18 }, 'wooden-crate': { d: 'western', color: '#a0744a', px: 18 },
+    'old-wagon': { d: 'western', color: '#6e4a2e', px: 26 }, 'mine-wagon': { d: 'western', color: '#5a5a5a', px: 22 }, windmill: { d: 'western', color: '#c9a27a', px: 26 }, 'rail-road': { d: 'western', color: '#6a5a4a', px: 20 },
+    'desert-skull': { d: 'western', color: '#e8e2cf', px: 16 }, 'animal-skull': { d: 'western', color: '#e8e2cf', px: 18 }, tumbleweed: { d: 'western', color: '#b39a5a', px: 18 }, 'saloon-doors': { d: 'western', color: '#a0744a', px: 22 },
+    'wanted-reward': { d: 'western', color: '#e0d2a8', px: 18 }, rattlesnake: { d: 'western', color: '#9a9a3a', px: 20 }, scorpion: { d: 'western', color: '#3a2a1a', px: 18 }, vulture: { d: 'western', color: '#3a3a3a', px: 20 },
+    bull: { d: 'western', color: '#4a2e1a', px: 26 }, dynamite: { d: 'western', color: '#c0392b', px: 16 }, 'cellar-barrels': { d: 'western', color: '#8b5a2b', px: 22 },
+    /* biome 1 — ADMISSION, hôpital désaffecté (assets/sprites/lab/) */
+    'chemical-tank': { d: 'lab', color: '#7fa8c8', px: 22 }, 'fuel-tank': { d: 'lab', color: '#8a94b0', px: 22 }, 'medical-pack': { d: 'lab', color: '#d8e4f0', px: 18 }, 'medical-drip': { d: 'lab', color: '#9fd8ff', px: 20 },
+    'hospital-cross': { d: 'lab', color: '#ff8a9a', px: 18 }, 'test-tube-rack': { d: 'lab', color: '#8fd8d0', px: 20 }, microscope: { d: 'lab', color: '#b0bdd8', px: 20 }, lockers: { d: 'lab', color: '#6e7a9a', px: 24 },
+    'trash-can': { d: 'lab', color: '#6a748c', px: 18 }, 'computer-fan': { d: 'lab', color: '#8aa0c0', px: 20 }, valve: { d: 'lab', color: '#9aa4bc', px: 18 }, 'straight-pipe': { d: 'lab', color: '#7a86a4', px: 20 },
+    cog: { d: 'lab', color: '#8a94ac', px: 18 }, 'hazard-sign': { d: 'lab', color: '#ffd166', px: 18 }, 'battery-pack-alt': { d: 'lab', color: '#7fe0c8', px: 18 },
+    /* biome 2 — LA SERRE (assets/sprites/greenhouse/) */
+    'flower-pot': { d: 'greenhouse', color: '#8fbf6a', px: 20 }, 'cactus-pot': { d: 'greenhouse', color: '#6aa85a', px: 20 }, vines: { d: 'greenhouse', color: '#5aa06a', px: 22 }, 'curled-leaf': { d: 'greenhouse', color: '#7ed957', px: 18 },
+    'mushrooms-cluster': { d: 'greenhouse', color: '#c9a3ff', px: 20 }, 'grass-mushroom': { d: 'greenhouse', color: '#b7ff7a', px: 18 }, seedling: { d: 'greenhouse', color: '#9cff57', px: 16 }, 'sprout-disc': { d: 'greenhouse', color: '#8fd86a', px: 18 },
+    'plant-roots': { d: 'greenhouse', color: '#5a8a4a', px: 22 }, 'bubbling-flask': { d: 'greenhouse', color: '#8fd8d0', px: 20 }, 'water-fountain': { d: 'greenhouse', color: '#9fd8ff', px: 22 }, 'carnivorous-plant': { d: 'greenhouse', color: '#ff9adb', px: 24 },
+    'vine-flower': { d: 'greenhouse', color: '#ffb3e0', px: 18 }, 'tree-roots': { d: 'greenhouse', color: '#4f8a5a', px: 24 },
   };
   const props = {};
   /* charge chaque SVG, remplace currentColor par la couleur du décor, rastérise en petit dans un canvas (pixel art) */
@@ -68,7 +79,7 @@ const Sprites = (() => {
     if (typeof fetch !== 'function') return;
     for (const name of Object.keys(PROP_DEFS)) {
       const pd = PROP_DEFS[name];
-      fetch(ASSET_BASE + 'sprites/western/' + name + '.svg').then(r => r.ok ? r.text() : null).then(txt => {
+      fetch(ASSET_BASE + 'sprites/' + (pd.d || 'western') + '/' + name + '.svg').then(r => r.ok ? r.text() : null).then(txt => {
         if (!txt) return; const svg = txt.replace(/currentColor/g, pd.color); const img = new Image();
         img.onload = () => { const c = document.createElement('canvas'); c.width = pd.px; c.height = pd.px; const g = c.getContext('2d'); g.drawImage(img, 0, 0, pd.px, pd.px); props[name] = c; };
         img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
@@ -84,9 +95,11 @@ const Sprites = (() => {
     else ctx.drawImage(c, -dw / 2, -dh / 2, dw, dh);
     ctx.restore(); return true;
   }
-  const DECO_KIND = { skull: 'desert-skull', tumbleweed: 'tumbleweed', rails: 'rail-road', wanted: 'wanted-reward', saloon: 'saloon-doors', windmill: 'windmill', barrels: 'cellar-barrels' };
+  const DECO_KIND = { skull: 'desert-skull', tumbleweed: 'tumbleweed', rails: 'rail-road', wanted: 'wanted-reward', saloon: 'saloon-doors', windmill: 'windmill', barrels: 'cellar-barrels',
+    /* biome 1 */ cross: 'hospital-cross', hazard: 'hazard-sign', fan: 'computer-fan', valve: 'valve', cog: 'cog', battery: 'battery-pack-alt', tubes: 'test-tube-rack', pack: 'medical-pack', bin: 'trash-can',
+    /* biome 2 */ leaf: 'curled-leaf', mushrooms: 'mushrooms-cluster', mushroom: 'grass-mushroom', seedling: 'seedling', sprout: 'sprout-disc', roots: 'plant-roots', flower: 'vine-flower', pot: 'cactus-pot' };
   /* décor au sol sans collision (salles du biome 3) */
-  function drawDeco(ctx, d) { const name = DECO_KIND[d.kind] || d.kind; const x = ROOM_X + (d.x + 0.5) * TILE, y = ROOM_Y + (d.y + 0.5) * TILE; ctx.save(); ctx.globalAlpha = 0.85; if (!drawProp(ctx, name, x, y, TILE * 0.9, TILE * 0.9)) { ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fillRect(x - 10, y - 10, 20, 20); } ctx.restore(); }
+  function drawDeco(ctx, d) { const name = DECO_KIND[d.kind] || d.kind; const x = ROOM_X + (d.x + 0.5) * TILE, y = ROOM_Y + (d.y + 0.5) * TILE; ctx.save(); ctx.globalAlpha = 0.8; drawProp(ctx, name, x, y, TILE * (d.big ? 1.3 : 0.9), TILE * (d.big ? 1.3 : 0.9)); ctx.restore(); }   // rien si l'accessoire n'est pas encore chargé (pas de carré de repli)
   /* dessine un sprite nommé centré en (x, y) ; opts : flip, walk (temps de marche, anim run si > 0), flash, scale, fallback() */
   function draw(ctx, key, x, y, opts = {}) {
     const d = SPRITE_DEFS[key];
@@ -154,16 +167,23 @@ const Sprites = (() => {
     }
     ctx.drawImage(c, 0, 0);
   }
-  const BLOCK_KIND = { cactus: 'cactus', rock: 'rock', barrel: 'barrel', crate: 'wooden-crate', wagon: 'old-wagon', cart: 'mine-wagon', barrels: 'cellar-barrels', skull: 'animal-skull', windmill: 'windmill' };
+  /* obstacle décoré : `kind` de la salle → accessoire. Un même kind peut avoir une variante par biome (cf. BLOCK_BY_BIOME). */
+  const BLOCK_KIND = { cactus: 'cactus', rock: 'rock', barrel: 'barrel', crate: 'wooden-crate', wagon: 'old-wagon', cart: 'mine-wagon', barrels: 'cellar-barrels', skull: 'animal-skull', windmill: 'windmill',
+    tank: 'chemical-tank', fuel: 'fuel-tank', locker: 'lockers', pipe: 'straight-pipe', drip: 'medical-drip', microscope: 'microscope', bin: 'trash-can',
+    planter: 'flower-pot', bush: 'vines', roots: 'tree-roots', trap_plant: 'carnivorous-plant', flask: 'bubbling-flask', fountain: 'water-fountain' };
   function drawBlock(ctx, o) {
-    if (o.kind && BLOCK_KIND[o.kind] && props[BLOCK_KIND[o.kind]]) {
-      /* accessoire western : ombre, halo sombre pour la lisibilité, image ajustée à l'emprise (déborde un peu vers le haut) */
+    const name = o.kind && BLOCK_KIND[o.kind];
+    if (name && props[name]) {
+      /* accessoire : ombre elliptique au sol puis image ajustée à l'emprise (elle déborde un peu vers le haut). Aucun cadre : la
+         silhouette suffit, un rectangle derrière se verrait comme une « ombre carrée ». */
       ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.ellipse(o.px + o.pw / 2, o.py + o.ph - 4, o.pw * 0.5, Math.min(14, o.ph * 0.28), 0, 0, TAU); ctx.fill();
-      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(o.px + 2, o.py + 2, o.pw - 4, o.ph - 4);
-      ctx.strokeStyle = 'rgba(255,209,102,.35)'; ctx.lineWidth = 1.5; ctx.strokeRect(o.px + 1.5, o.py + 1.5, o.pw - 3, o.ph - 3);
+      /* socle : marque l'emprise qui bloque (sans le rectangle plein derrière l'objet, qui se lisait comme une « ombre carrée ») */
+      const bh = Math.min(14, o.ph * 0.3), by = o.py + o.ph - bh; const pal = (G.run && G.run.biome && G.run.biome.palette) || {};
+      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(o.px + o.pw / 2, o.py + o.ph - 3, o.pw * 0.46, Math.min(10, o.ph * 0.2), 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(8,10,18,.5)'; ctx.fillRect(o.px + 2, by, o.pw - 4, bh);
+      ctx.strokeStyle = (pal.neon && pal.neon[0]) || '#ffd166'; ctx.globalAlpha = 0.5; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(o.px + 3, by + bh - 1); ctx.lineTo(o.px + o.pw - 3, by + bh - 1); ctx.stroke(); ctx.globalAlpha = 1;
       const over = o.kind === 'cactus' ? 14 : 8;
-      drawProp(ctx, BLOCK_KIND[o.kind], o.px + o.pw / 2, o.py + o.ph / 2 - over / 2, o.pw + 6, o.ph + over);
+      drawProp(ctx, name, o.px + o.pw / 2, o.py + o.ph / 2 - over / 2, o.pw + 6, o.ph + over);
       ctx.restore(); return;
     }
     ctx.save();

@@ -560,3 +560,15 @@ Mine abandonnée en plein désert. Difficulté ×1,55 PV, ×1,35 dégâts, ×1,1
 **Salles** : mêmes types que les autres biomes. Obstacles avec `kind` (cactus, rock, barrel, crate, wagon, cart, barrels, skull, windmill) dessinés par `Sprites.drawBlock` à partir des icônes ; décor au sol sans collision via `deco: [{ x, y, kind }]` (skull, tumbleweed, rails, wanted, saloon, windmill, barrels). Salle 7 (tempo) : pièges à ours sur le 1 et le 3, dynamite en éventail toutes les 2 mesures, nuages de poudre alternés, tireurs embusqués alternés.
 
 **Accessoires** : `assets/sprites/western/*.svg`, icônes game-icons.net (CC BY 3.0, voir CREDITS.md) rastérisées en 16 à 26 px puis agrandies sans lissage (`Sprites.loadProps` / `drawProp`).
+
+---
+
+## 22. Habillage des salles (`Room.dress`, tous les biomes)
+
+Chaque salle est habillée à son chargement, de façon déterministe (graine du sol) : la même salle est toujours habillée pareil.
+
+| Élément | Règle |
+|---|---|
+| Obstacles | Un obstacle sans `kind` explicite en reçoit un du biome : ADMISSION cuves, réservoirs, casiers, tuyaux, perfusions, microscopes, poubelles ; LA SERRE jardinières, buissons, racines, plante carnivore, fioles, fontaines ; LA CONCESSION cactus, rochers, tonneaux, caisses, chariots. Rendu : ombre elliptique + socle sombre liseré de la couleur du biome (marque l'emprise qui bloque) + accessoire qui déborde vers le haut. |
+| Décor au sol | 5 à 8 accessoires sans collision, semés sur des tuiles libres, à l'écart du départ du joueur (colonnes 0-2) et du couloir de la porte, jamais à moins de 3 tuiles l'un de l'autre. Un quart d'entre eux sont agrandis (`big`). Une salle qui déclare son propre `deco` n'est pas semée. |
+| Accessoires | `assets/sprites/{western,lab,greenhouse}/*.svg`, icônes game-icons.net (CC BY 3.0) recolorées et rastérisées en 16 à 26 px puis agrandies sans lissage (`Sprites.loadProps` / `drawProp`). Aucun repli dessiné tant qu'un accessoire n'est pas chargé. |
