@@ -12,7 +12,25 @@ Le nom de fichier doit être celui de l'accessoire, c'est-à-dire une clé de `P
 Plusieurs essais du même accessoire cohabitent : `cactus.png`, `cactus_v2.png`, `cactus_v3.png`.
 Tous sont chargés ; le jeu affiche celui retenu dans le comparateur.
 
-## Après chaque dépôt
+## Depuis PixelLab
+
+Mettre **le nom du fichier visé au tout début du prompt**, suivi d'une tabulation :
+
+```
+cactus.png	tall saguaro cactus with two arms, dusty green, pale spines
+```
+
+PixelLab le recopie dans `metadata.json`, ce qui permet d'installer les exports sans les renommer :
+
+```
+node dev/install-sprites.js <dossier des .zip>   # range, numérote les variantes, reconstruit l'index
+node dev/build.js
+```
+
+Le nom du zip ne sert à rien (PixelLab enlève les tirets : `wooden-crate` y devient `woodencrate`), c'est le
+prompt qui décide. Un accessoire inconnu est signalé, jamais installé au hasard.
+
+## Après un dépôt à la main
 
 ```
 node dev/index-pixel.js   # reconstruit index.json et signale les noms inconnus
