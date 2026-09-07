@@ -190,7 +190,8 @@ const Pickups = {
   },
   /* arme d'essai posée au sol, une fois par palier */
   placeWeaponDrop(room) {
-    const pl = G.player; const pool = Content.weapons().filter(w => w.id !== pl.weapon.id && !(pl.trialWeapon && w.id === pl.trialWeapon.prev.id));
+    const pl = G.player; const cur = pl.weapon ? pl.weapon.id : null;
+    const pool = Content.weapons().filter(w => w.id !== cur && !(pl.trialWeapon && w.id === pl.trialWeapon.prev.id));
     const notOwned = pool.filter(w => !Meta.weaponUnlocked(w.id)); const w = RNG.pick(notOwned.length ? notOwned : pool); if (!w) return;
     for (let k = 0; k < 30; k++) { const tx = RNG.int(4, ROOM_COLS - 4), ty = RNG.int(2, ROOM_ROWS - 3); if (!pointBlocked(tileX(tx), tileY(ty), 16) && dist(tileX(tx), tileY(ty), pl.x, pl.y) > 200) { this.spawn(tileX(tx), tileY(ty), 'weapon', 1, { weapon: w.id, vx: 0, vy: 0 }); return; } }
   },

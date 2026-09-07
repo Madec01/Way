@@ -27,6 +27,7 @@ function render(ctx) {
     ctx.restore();
     if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); if (G.room.tempo) Tempo.renderHud(ctx, G.room); }
   } else UI.renderBackdrop(ctx);
+  UI.renderMenuFx(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);
 }
 async function boot() {
@@ -43,7 +44,7 @@ async function boot() {
   UI.init(); Debug.init(); Touch.init();
   Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));
   await Sprites.load(); Sprites.loadProps(); Beat.load();
-  UI.showMenu();
+  UI.showTitle();
   Engine.start(update, render);
   Attract.start();
   window.__autoplay = Debug.autoplay;

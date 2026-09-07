@@ -52,7 +52,8 @@ const Room = {
     if (pl.trialWeapon) { pl.weapon = pl.trialWeapon.prev; pl.trialWeapon = null; }
     if (pl.buffs.some(b => b.roomOnly)) pl.buffs = pl.buffs.filter(b => !b.roomOnly);
     pl.recompute();
-    if (G.run.weaponDropRoom === index && !G.run.attract) Pickups.placeWeaponDrop(G.room);
+    /* arme d'essai : en salle 1 le joueur n'a pas encore choisi son arme (écran de préparation), on pose le tirage à l'entrée en combat */
+    if (G.run.weaponDropRoom === index && !G.run.attract) { if (G.player.weapon) Pickups.placeWeaponDrop(G.room); else G.room.pendingWeaponDrop = true; }
     for (const h of pl.hooks.onRoomStart) { if (h.effect === 'shield_on_room') { pl.shield = Math.max(pl.shield, h.amount * (h.stacks || 1)); pl.shieldUntil = Time.now + 999; } else if (h.effect === 'heal_on_room') pl.heal(pl.stats.maxHp * h.fraction * (h.stacks || 1)); }
     G.run.roomIndex = index; G.run.stats.roomsEntered++;
     Modular.init(G.room);
@@ -66,7 +67,7 @@ const Room = {
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Music.play('boss'); else Music.play('biome');
     return true;
   },
-  begin() { G.room.state = 'fight'; G.room.stateT = 0; },
+  begin() { G.room.state = 'fight'; G.room.stateT = 0; if (G.room.pendingWeaponDrop && G.player.weapon) { G.room.pendingWeaponDrop = false; Pickups.placeWeaponDrop(G.room); } },
   spawnEnemy(def, x, y, opts = {}) {
     if (!def) return null;
     if (G.enemies.filter(e => !e.dead).length > 60) return null;

@@ -575,3 +575,28 @@ Chaque salle est habillée à son chargement, de façon déterministe (graine du
 | Obstacles | Un obstacle sans `kind` explicite en reçoit un du biome : ADMISSION cuves, réservoirs, casiers, tuyaux, perfusions, microscopes, poubelles ; LA SERRE jardinières, buissons, racines, plante carnivore, fioles, fontaines ; LA CONCESSION cactus, rochers, tonneaux, caisses, chariots. Rendu : ombre elliptique + socle sombre liseré de la couleur du biome (marque l'emprise qui bloque) + accessoire qui déborde vers le haut. |
 | Décor au sol | 5 à 8 accessoires sans collision, semés sur des tuiles libres, à l'écart du départ du joueur (colonnes 0-2) et du couloir de la porte, jamais à moins de 3 tuiles l'un de l'autre. Un quart d'entre eux sont agrandis (`big`). Une salle qui déclare son propre `deco` n'est pas semée. |
 | Accessoires | `assets/sprites/{western,lab,greenhouse}/*.svg`, icônes game-icons.net (CC BY 3.0) recolorées et rastérisées en 16 à 26 px puis agrandies sans lissage (`Sprites.loadProps` / `drawProp`). Aucun repli dessiné tant qu'un accessoire n'est pas chargé. |
+
+---
+
+## 23. Menu en deux temps (écran-titre + menu principal)
+
+Le menu s'ouvre sur un **écran-titre** (`UI.showTitle`, appelé au démarrage) : titre, accroche et l'invite « Cliquez pour commencer », tout centré, la scène d'attraction passant en ombres chinoises derrière. Un clic, un tap ou n'importe quelle touche fait basculer sur le **menu principal** (`UI.showMenu`) au temps fort suivant ; le titre monte et rétrécit, il ne disparaît jamais.
+
+| Effet | Source | Détail |
+|---|---|---|
+| Respiration du titre | CSS `--beat` | `.titlepulse` grossit de 3 % et s'éclaircit à chaque temps. |
+| W doré | CSS `--down` | Le `W` grossit de 7 % et son halo triple sur le temps fort de la mesure. |
+| Onde de choc | `renderMenuFx` | Un anneau part du titre à chaque mesure, cyan et or en alternance. |
+| Saccade des lettres | CSS `--gx` | Le calque fantôme du titre se décale de ±4 px sur les contretemps, réaligné sur le temps fort. |
+| Grain de pellicule | `renderMenuFx` | Trame de bruit 96 px animée, opacité 0,05 → 0,16 selon le volume de la piste (`AudioEngine.spectrum`). |
+| Balayage de couleur | `renderMenuFx` | Une bande traverse l'écran en une mesure, largeur 80 → 380 px selon les graves, cyan/or en alternance. |
+| Invite clignotante | CSS `--beat` | « Cliquez pour commencer » pulse exactement sur le temps. |
+| Silhouettes | `renderAttractVeil` | Voile `rgba(4,5,9,.6)` supplémentaire sur l'écran-titre : le combat d'attraction n'est plus qu'une ombre. |
+| Transition | `enterMenu` | `uiConfirm` au clic, puis sur le temps fort : flash blanc, grande onde, `bossBreath`, changement d'écran. |
+| Arrivée des boutons | `menuUpdate` | Un bouton révélé par temps (classe `on`), chacun avec sa note de la pentatonique. |
+| Projecteur | CSS `.mbtn::after` | Halo elliptique sur le bouton survolé ou sélectionné (or pour le bouton principal). |
+| Note de sélection | `menuStep` | Flèches et survol jouent `uiHover` avec le degré de gamme du bouton (une note différente par ligne). |
+| Validation sur la mesure | `barSync` | Le bouton s'allume (`armed`) et l'action part au temps fort suivant (repli : le temps suivant si la mesure est à plus d'un temps, 0,12 s sans musique). Le plein écran, lui, part immédiatement : il exige un geste de l'utilisateur. |
+| Attraction arcade | `menuUpdate` | 20 s sans geste sur l'écran-titre : le voile se lève, la démo de jeu apparaît en clair avec la mention « DÉMONSTRATION ». Le moindre mouvement le referme. |
+
+Pas d'égaliseur : écarté volontairement.

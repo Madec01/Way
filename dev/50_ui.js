@@ -15,16 +15,18 @@ const UI = (() => {
     for (const s of ['menu', 'hub', 'prep', 'choice', 'pause', 'end', 'credits', 'lore']) { const d = el('div', 'screen', ''); d.id = 'screen-' + s; d.hidden = true; root.appendChild(d); screens[s] = d; }
     /* son de survol : une seule fois par bouton/carte, jamais plus d'un toutes les 90 ms (sinon ça grésille) */
     let lastHover = null, lastHoverT = 0;
-    root.addEventListener('mouseover', e => { const el = e.target.closest('button, .card'); if (!el || el === lastHover) return; lastHover = el; const now = performance.now(); if (now - lastHoverT < 90) return; lastHoverT = now; AudioEngine.uiHover({ intensity: 0.25 }); });
+    root.addEventListener('mouseover', e => { const el = e.target.closest('button, .card'); if (!el || el === lastHover) return; lastHover = el; const now = performance.now(); if (now - lastHoverT < 90) return; lastHoverT = now; AudioEngine.uiHover({ intensity: 0.25, step: menuStep(el) }); });
     root.addEventListener('mouseout', e => { const el = e.target.closest('button, .card'); if (el && el === lastHover && !el.contains(e.relatedTarget)) lastHover = null; });
+    for (const ev of ['pointerdown', 'pointermove', 'keydown', 'wheel']) window.addEventListener(ev, () => { if (G.state === 'menu') menuIdle(); }, { passive: true });
     window.addEventListener('keydown', e => {
       if (e.code === 'F1' && G.mode === 'test') { e.preventDefault(); Debug.toggle(); }
       if (G.state === 'run' && (e.code === 'Escape' || e.code === 'KeyP') && !G.overlay) togglePause();
       else if (G.state === 'run' && e.code === 'Escape' && G.overlay === 'pause') togglePause();
+      if (G.overlay === 'menu' && menuFx.phase === 'splash') { if (e.code !== 'F11' && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); enterMenu(); } return; }
       if (G.overlay === 'menu') {
         const btns = [...screens[G.overlay].querySelectorAll('.mbtn, .btn')].filter(b => !b.disabled && b.offsetParent !== null); if (!btns.length) return;
         let i = btns.indexOf(document.activeElement);
-        if (e.code === 'ArrowDown' || e.code === 'ArrowUp' || (e.code === 'Tab' && G.overlay === 'menu')) { e.preventDefault(); i = (i + (e.code === 'ArrowUp' || (e.code === 'Tab' && e.shiftKey) ? -1 : 1) + btns.length) % btns.length; btns[i].focus(); AudioEngine.uiHover({ intensity: 0.25 }); }
+        if (e.code === 'ArrowDown' || e.code === 'ArrowUp' || (e.code === 'Tab' && G.overlay === 'menu')) { e.preventDefault(); i = (i + (e.code === 'ArrowUp' || (e.code === 'Tab' && e.shiftKey) ? -1 : 1) + btns.length) % btns.length; btns[i].focus(); AudioEngine.uiHover({ intensity: 0.35, step: menuStep(btns[i]) }); }
         else if ((e.code === 'Enter' || e.code === 'Space') && i >= 0) { e.preventDefault(); btns[i].click(); }
       }
       if (G.overlay === 'choice' && state.choice) { const k = parseInt(e.key); if (k >= 1 && k <= state.choice.choices.length) state.choice.pick(state.choice.choices[k - 1]); if (e.code === 'KeyR') state.choice.reroll && state.choice.reroll(); }
@@ -34,15 +36,65 @@ const UI = (() => {
   function hideAll() { show(null); }
 
   /* ---------- Menu ---------- */
-  function showMenu() {
+  /* Le menu se joue en deux temps : un écran-titre (« splash ») qui respire avec la musique, puis au clic le menu
+     principal centré, titre compris. Tout ce qui bouge est calé sur Beat : temps, temps forts, mesures. */
+  const menuFx = { phase: null, rings: [], flash: 0, glitch: 0, gxCss: null, vol: 0, bass: 0, idle: 0, arcade: false, anchor: 0.4, btns: null, reveal: 0, revealMax: 0, pending: null, pendT: 0 };
+  function menuActive() { return G.state === 'menu' && !!menuFx.phase; }
+  function menuIdle() { menuFx.idle = 0; menuFx.arcade = false; }
+  /* degré de la gamme associé à un bouton : chaque changement de sélection sonne une note différente de la piste */
+  function menuStep(el) { if (!el || !el.parentElement) return 0; const i = [...el.parentElement.children].indexOf(el); return i < 0 ? 0 : i % 5; }
+  /* Une validation tombe sur la mesure : on attend le prochain temps fort, jamais plus d'un temps si la musique est absente. */
+  function barSync(fn) {
+    let wait = Music.isPlaying() ? Beat.timeToNextBar() : 0.12;
+    if (wait > 1.05) wait = (1 - Beat.phase()) * Beat.beatLen();
+    menuFx.pending = fn; menuFx.pendT = Math.max(0.08, wait);
+  }
+  const MENU_TAGLINE = 'Neuf salles par palier. Une seule sortie.';
+  function menuFoot(p) {
+    const hint = Input.touch.active ? 'Joystick à gauche · TIR / COMP. / E à droite' : 'ZQSD · souris · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause';
+    return `<div class="menufoot"><div class="hint">${hint}</div><div class="save">Sauvegarde : ${p.runs} run(s) · ${p.wins} case(s) 9 cochée(s) · ◈ ${fmt(p.coins)}</div></div>`;
+  }
+
+  /* Écran-titre : le titre, la musique, rien d'autre. Un clic (ou une touche) fait basculer sur le menu au temps fort suivant. */
+  function showTitle() {
     G.state = 'menu'; G.paused = false;
-    const s = screens.menu; const p = Meta.profile; const nb = Meta.mode === 'test' ? '' : '';
+    menuFx.phase = 'splash'; menuFx.anchor = 0.42; menuFx.idle = 0; menuFx.arcade = false; menuFx.pending = null; menuFx.btns = null; menuFx.reveal = menuFx.revealMax = 0;
+    const s = screens.menu; const p = Meta.profile;
     s.innerHTML = `
-      <div class="menu2">
+      <div class="menuscreen splash">
         <div class="stamp"><span>Way</span><span class="sep">·</span><span>Roguelite à salles</span><span class="sep">·</span><span>Phase 2</span></div>
         <div class="titlebox">
-          <h1 class="bigtitle" data-text="WAY"><span class="accent">W</span><span>AY</span></h1>
-          <div class="tagline">Neuf salles par palier. Une seule sortie.</div>
+          <div class="titlepulse">
+            <h1 class="bigtitle" data-text="WAY"><span class="accent">W</span><span>AY</span></h1>
+            <div class="tagline">${MENU_TAGLINE}</div>
+          </div>
+        </div>
+        <div class="splashprompt">Cliquez pour commencer</div>
+        ${menuFoot(p)}
+      </div>`;
+    s.querySelector('.menuscreen').onclick = enterMenu;
+    show('menu'); Music.play('menu');
+    if (!Attract.running) Attract.start();
+  }
+  /* Passage écran-titre → menu : flash et souffle sur le temps fort, le titre monte et rétrécit. */
+  function enterMenu() {
+    if (menuFx.phase !== 'splash' || menuFx.pending) return;
+    AudioEngine.uiConfirm({ intensity: 0.85 });
+    barSync(() => { menuFx.flash = 1; menuFx.rings.push({ t: 0, gold: true, big: true }); AudioEngine.bossBreath({ intensity: 0.35 }); showMenu(); });
+  }
+
+  function showMenu() {
+    G.state = 'menu'; G.paused = false;
+    menuFx.phase = 'main'; menuFx.anchor = 0.2; menuFx.idle = 0; menuFx.arcade = false; menuFx.pending = null;
+    const s = screens.menu; const p = Meta.profile;
+    s.innerHTML = `
+      <div class="menuscreen main">
+        <div class="stamp"><span>Way</span><span class="sep">·</span><span>Roguelite à salles</span><span class="sep">·</span><span>Phase 2</span></div>
+        <div class="titlebox">
+          <div class="titlepulse">
+            <h1 class="bigtitle" data-text="WAY"><span class="accent">W</span><span>AY</span></h1>
+            <div class="tagline">${MENU_TAGLINE}</div>
+          </div>
         </div>
         <nav class="menunav">
           <button class="mbtn primary" id="btn-normal"><span class="k">01</span><span class="l">Mode Normal</span><span class="d">Progression réelle, sauvegarde locale</span></button>
@@ -52,20 +104,83 @@ const UI = (() => {
           <button class="mbtn ghost" id="btn-reset"><span class="k">—</span><span class="l">Réinitialiser</span><span class="d">Effacer la sauvegarde du mode Normal</span></button>
         </nav>
         <div class="audiohint">▶ Cliquez ou appuyez sur une touche pour lancer le son</div>
-        <div class="menufoot">
-          <div class="hint">${Input.touch.active ? 'Joystick à gauche · TIR / COMP. / E à droite' : 'ZQSD · souris · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause'}</div>
-          <div class="save">Sauvegarde : ${p.runs} run(s) · ${p.wins} case(s) 9 cochée(s) · ◈ ${fmt(p.coins)}</div>
-        </div>
+        ${menuFoot(p)}
       </div>`;
     const go = mode => { Attract.stop(); Meta.setMode(mode); Debug.hide(); Run.toHub(); if (mode === 'test') toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5); };
-    s.querySelector('#btn-normal').onclick = () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); go('normal'); };
-    s.querySelector('#btn-test').onclick = () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); go('test'); };
-    s.querySelector('#btn-credits').onclick = showCredits;
+    /* Validation calée sur la mesure : le bouton s'allume, l'action part au temps fort suivant. */
+    const onBar = (sel, fn) => { const b = s.querySelector(sel); b.onclick = () => { if (menuFx.pending) return; b.classList.add('armed'); AudioEngine.uiConfirm({ intensity: 0.75 }); barSync(() => { b.classList.remove('armed'); fn(); }); }; };
+    /* le plein écran exige un geste de l'utilisateur : il part tout de suite, seule la transition attend la mesure */
+    onBar('#btn-normal', () => go('normal')); s.querySelector('#btn-normal').addEventListener('pointerdown', () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); });
+    onBar('#btn-test', () => go('test')); s.querySelector('#btn-test').addEventListener('pointerdown', () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); });
+    onBar('#btn-credits', showCredits);
     s.querySelector('#btn-fs').onclick = () => { Fullscreen.toggle(); setTimeout(showMenu, 400); };
     s.querySelector('#btn-reset').onclick = () => { if (confirm('Effacer la sauvegarde du mode Normal ?')) { Meta.reset(); showMenu(); } };
+    menuFx.btns = [...s.querySelectorAll('.mbtn')]; menuFx.reveal = 0; menuFx.revealMax = menuFx.btns.length;
     show('menu'); Music.play('menu');
     if (!Attract.running) Attract.start();
     setTimeout(() => { const b = s.querySelector('#btn-normal'); if (b && !Input.touch.active) b.focus({ preventScroll: true }); }, 50);
+  }
+
+  /* Effets du menu pilotés par la musique : ondes de mesure, saccade du titre, grain, apparition des boutons. */
+  function menuUpdate(dt) {
+    menuFx.flash = Math.max(0, menuFx.flash - dt * 2.6);
+    for (let i = menuFx.rings.length - 1; i >= 0; i--) { menuFx.rings[i].t += dt; if (menuFx.rings[i].t > 2) menuFx.rings.splice(i, 1); }
+    const sp = AudioEngine.spectrum ? AudioEngine.spectrum(12) : null;
+    if (sp) {
+      let lo = 0, all = 0; for (let i = 0; i < 3; i++) lo = Math.max(lo, sp[i]); for (let i = 0; i < sp.length; i++) all += sp[i]; all /= sp.length;
+      const a = Math.min(1, dt * 12); menuFx.bass += (lo - menuFx.bass) * a; menuFx.vol += (all - menuFx.vol) * Math.min(1, dt * 7);
+    } else { menuFx.bass *= Math.max(0, 1 - dt * 3); menuFx.vol *= Math.max(0, 1 - dt * 3); }
+    const crossed = Beat.crossedFrame(1), bib = Beat.beatInBar();
+    if (crossed && bib === 0) menuFx.rings.push({ t: 0, gold: ((Beat.index() >> 2) & 1) === 0 });
+    if (crossed) {
+      /* saccade discrète des lettres sur les contretemps, remise à zéro sur le temps fort */
+      menuFx.glitch = bib === 0 ? 0 : Math.round((Math.random() * 2 - 1) * 4);
+      const gx = menuFx.glitch + 'px'; if (gx !== menuFx.gxCss) { menuFx.gxCss = gx; document.documentElement.style.setProperty('--gx', gx); }
+    }
+    if (menuFx.phase === 'main' && menuFx.btns && menuFx.reveal < menuFx.revealMax && crossed) {
+      const b = menuFx.btns[menuFx.reveal++]; if (b) { b.classList.add('on'); AudioEngine.uiHover({ intensity: 0.5, step: menuFx.reveal }); }
+    }
+    if (menuFx.pending) { menuFx.pendT -= dt; if (menuFx.pendT <= 0) { const fn = menuFx.pending; menuFx.pending = null; fn(); } }
+    menuFx.idle += dt; if (menuFx.idle > 20 && menuFx.phase === 'splash') menuFx.arcade = true;
+  }
+  /* Calque canvas du menu : ondes de choc issues du titre, balayage de couleur sur les graves, grain au volume, flash. */
+  function renderMenuFx(ctx) {
+    if (!menuActive()) return;
+    const V = Engine.view, x0 = -V.ox, y0 = -V.oy, vw = V.w, vh = V.h;
+    const ax = W / 2, ay = H * menuFx.anchor;
+    ctx.save();
+    ctx.lineWidth = 2;
+    for (const r of menuFx.rings) {
+      const a = r.t / (r.big ? 1.2 : 1.9); if (a > 1) continue;
+      ctx.globalAlpha = (r.big ? 0.5 : 0.26) * (1 - a) * (1 - a);
+      ctx.strokeStyle = r.gold ? '#ffb347' : '#6ee7ff';
+      ctx.beginPath(); ctx.arc(ax, ay, 30 + a * (r.big ? 1200 : 760), 0, TAU); ctx.stroke();
+    }
+    /* une bande de couleur traverse l'écran à chaque mesure, sa largeur suit les graves */
+    const bl = Beat.beatLen(), barK = 1 - Beat.timeToNextBar() / (4 * bl);
+    const cx = x0 + barK * vw, bw = 80 + 300 * menuFx.bass;
+    const gold = ((Beat.index() >> 2) & 1) === 0;
+    const gr = ctx.createLinearGradient(cx - bw, 0, cx + bw, 0);
+    const col = gold ? '255,179,71' : '110,231,255';
+    gr.addColorStop(0, `rgba(${col},0)`); gr.addColorStop(0.5, `rgba(${col},${(0.05 + 0.1 * menuFx.bass).toFixed(3)})`); gr.addColorStop(1, `rgba(${col},0)`);
+    ctx.globalAlpha = 1; ctx.fillStyle = gr; ctx.fillRect(x0, y0, vw, vh);
+    /* grain de pellicule : densité pilotée par le volume de la piste */
+    const pat = grainPattern(ctx);
+    if (pat) { ctx.save(); ctx.globalAlpha = 0.05 + 0.11 * menuFx.vol; ctx.translate(-(Time.now * 130 % 96), -(Time.now * 91 % 96)); ctx.fillStyle = pat; ctx.fillRect(x0 - 96, y0 - 96, vw + 192, vh + 192); ctx.restore(); }
+    if (menuFx.arcade) { ctx.globalAlpha = 0.55 + 0.35 * Math.pow(1 - Beat.phase(), 2); ctx.fillStyle = '#6ee7ff'; ctx.font = '19px "VT323", monospace'; ctx.textAlign = 'center'; ctx.fillText('DÉMONSTRATION', W / 2, H - 58); }
+    if (menuFx.flash > 0) { ctx.globalAlpha = Math.min(1, menuFx.flash) * 0.75; ctx.fillStyle = '#dff6ff'; ctx.fillRect(x0, y0, vw, vh); }
+    ctx.restore();
+  }
+  let grainTile = null, grainPat = null;
+  function grainPattern(ctx) {
+    if (grainPat) return grainPat;
+    if (typeof document === 'undefined' || !document.createElement) return null;
+    grainTile = document.createElement('canvas'); grainTile.width = grainTile.height = 96;
+    const g = grainTile.getContext('2d'); if (!g) return null;
+    const im = g.createImageData(96, 96);
+    for (let i = 0; i < im.data.length; i += 4) { const v = 90 + Math.floor(Math.random() * 165); im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 40; }
+    g.putImageData(im, 0, 0); grainPat = ctx.createPattern(grainTile, 'repeat');
+    return grainPat;
   }
 
   /* ---------- Hub ---------- */
@@ -297,6 +412,7 @@ const UI = (() => {
   function update(dt) {
     for (let i = banners.length - 1; i >= 0; i--) { banners[i].t += dt; if (banners[i].t > banners[i].life) banners.splice(i, 1); }
     for (let i = toasts.length - 1; i >= 0; i--) { toasts[i].t += dt; if (toasts[i].t > toasts[i].life) toasts.splice(i, 1); }
+    if (menuActive()) menuUpdate(dt);
     if (fade.dir === 1) { fade.t += dt * 4; if (fade.t >= 1) { fade.t = 1; fade.dir = -1; if (fade.cb) { const cb = fade.cb; fade.cb = null; cb(); } } }
     else if (fade.dir === -1) { fade.t -= dt * 3; if (fade.t <= 0) { fade.t = 0; fade.dir = 0; } }
   }
@@ -366,11 +482,15 @@ const UI = (() => {
   function renderAttractVeil(ctx) {
     ctx.save(); const V = Engine.view; const x0 = -V.ox, y0 = -V.oy, vw = V.w, vh = V.h;
     const k = beatPulse();
+    /* écran-titre : la scène d'attraction passe en ombres chinoises tant que l'attraction arcade ne s'est pas déclenchée */
+    if (menuFx.phase === 'splash' && !menuFx.arcade) { ctx.globalAlpha = 0.6; ctx.fillStyle = '#04050b'; ctx.fillRect(x0, y0, vw, vh); ctx.globalAlpha = 1; }
     /* ondes depuis le centre sur chaque temps fort, léger flash sur chaque temps */
     ctx.strokeStyle = '#6ee7ff'; ctx.lineWidth = 2; for (const p of beatPulses) { const a = (Time.now - p.t0) / 1.6; if (a > 1) continue; ctx.globalAlpha = 0.18 * (1 - a); ctx.beginPath(); ctx.arc(W / 2, H / 2, 40 + a * 900, 0, TAU); ctx.stroke(); }
     ctx.globalAlpha = 0.045 * k; ctx.fillStyle = '#6ee7ff'; ctx.fillRect(x0, y0, vw, vh); ctx.globalAlpha = 1;
     const g = ctx.createLinearGradient(x0, 0, x0 + vw, 0); g.addColorStop(0, 'rgba(4,5,9,.86)'); g.addColorStop(0.5, 'rgba(4,5,9,.5)'); g.addColorStop(1, 'rgba(4,5,9,.3)'); ctx.fillStyle = g; ctx.fillRect(x0, y0, vw, vh);
     const v = ctx.createLinearGradient(0, y0, 0, y0 + vh); v.addColorStop(0, 'rgba(4,5,9,.7)'); v.addColorStop(0.25, 'rgba(4,5,9,0)'); v.addColorStop(0.8, 'rgba(4,5,9,0)'); v.addColorStop(1, 'rgba(4,5,9,.85)'); ctx.fillStyle = v; ctx.fillRect(x0, y0, vw, vh);
+    /* menu : le texte est centré, on creuse une flaque sombre derrière lui pour rester lisible sur la scène */
+    if (menuActive()) { const rg = ctx.createRadialGradient(W / 2, H * 0.42, 60, W / 2, H * 0.42, 640); rg.addColorStop(0, 'rgba(4,5,9,.7)'); rg.addColorStop(1, 'rgba(4,5,9,0)'); ctx.fillStyle = rg; ctx.fillRect(x0, y0, vw, vh); }
     /* lignes de balayage */
     ctx.globalAlpha = 0.06; ctx.fillStyle = '#6ee7ff'; for (let y = y0 + (Time.now * 40) % 6; y < y0 + vh; y += 6) ctx.fillRect(x0, y, vw, 1);
     ctx.restore();
@@ -384,5 +504,5 @@ const UI = (() => {
     ctx.save(); ctx.globalAlpha = 0.5; for (let i = 0; i < 14; i++) { const t = Time.now * 0.05 + i * 0.37; const x = ((i * 137.5) % W + Math.sin(t) * 40 + W) % W, y = ((i * 91.7) % H + Math.cos(t * 1.3) * 30 + H) % H; const g = ctx.createRadialGradient(x, y, 0, x, y, 160); g.addColorStop(0, i % 3 ? 'rgba(110,231,255,.10)' : 'rgba(255,154,60,.08)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 160, y - 160, 320, 320); } ctx.restore();
     ctx.strokeStyle = 'rgba(110,231,255,.05)'; ctx.lineWidth = 1; for (let x = -V.ox + ((V.ox) % 48); x < W + V.ox; x += 48) { ctx.beginPath(); ctx.moveTo(x, -V.oy); ctx.lineTo(x, H + V.oy); ctx.stroke(); } for (let y = -V.oy + (V.oy % 48); y < H + V.oy; y += 48) { ctx.beginPath(); ctx.moveTo(-V.ox, y); ctx.lineTo(W + V.ox, y); ctx.stroke(); }
   }
-  return { init, show, hideAll, showMenu, showHub, renderAttractVeil, showPrep, showChoice, hideChoice, togglePause, showEnd, showCredits, banner, toast, transition, update, renderHud, renderToasts, renderFade, renderBackdrop, state, esc, roundRect };
+  return { init, show, hideAll, showTitle, showMenu, showHub, renderAttractVeil, renderMenuFx, showPrep, showChoice, hideChoice, togglePause, showEnd, showCredits, banner, toast, transition, update, renderHud, renderToasts, renderFade, renderBackdrop, state, esc, roundRect };
 })();
