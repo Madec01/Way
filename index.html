@@ -4998,12 +4998,12 @@ const Challenge = (() => {
     if (!darkC) darkC = document.createElement('canvas');
     if (darkC.width !== w || darkC.height !== h) { darkC.width = w; darkC.height = h; }
     const g = darkC.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h);
-    g.fillStyle = 'rgba(2,3,8,.96)'; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(2,3,8,.985)'; g.fillRect(0, 0, w, h);   // noir presque total : dans l'ombre on ne devine plus les silhouettes
     g.save(); g.translate(V.ox, V.oy); g.globalCompositeOperation = 'destination-out';
     /* respiration sur le temps, plus le fondu d'entrée du motif courant */
     const ph = Beat.phase(); const pulse = (1 + 0.12 * Math.max(0, 1 - ph * 2.5)) * (c.phase === 'lure' ? 1 : 0.4 + 0.6 * c.fade);
     const disc = (x, y, r) => { const rg = g.createRadialGradient(x, y, r * 0.25, x, y, r); rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.65, 'rgba(0,0,0,.85)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
-    disc(pl.x, pl.y, c.radius);                                                     // lampe du joueur : juste ses pieds
+    if (c.phase === 'lure') disc(pl.x, pl.y, c.radius);   // pas de lampe personnelle pendant le spectacle : hors des faisceaux, le joueur disparaît lui aussi
     if (c.phase === 'lure') { disc(c.lure.x, c.lure.y, c.lure.r * (1 + 0.08 * Math.sin(Time.now * 3))); }
     else for (const b of c.beams) {
       if (b.kind === 'round') disc(b.x, b.y, b.r * pulse);
@@ -5050,6 +5050,14 @@ const Challenge = (() => {
     const c = room.challenge; if (!c || c.id !== 'lights' || c.done) return; const pl = G.player;
     ctx.save();
     lightMask(ctx, c, pl);
+    /* Le joueur dans le noir : seuls ses yeux restent, en blanc, pour ne pas le confondre avec les ennemis (yeux rouges
+       ou jaunes). Ses projectiles restent visibles : une balle qui file éclaire, et sans ça on tirerait à l'aveugle. */
+    if (!pl.dead && !lit(c, pl.x, pl.y)) {
+      const f = pl.facing < 0 ? -1 : 1;
+      ctx.fillStyle = '#fff'; ctx.shadowColor = '#cfe8ff'; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(pl.x - 4 * f, pl.y - 6, 2.4, 0, TAU); ctx.arc(pl.x + 4 * f, pl.y - 6, 2.4, 0, TAU); ctx.fill();
+    }
+    for (const p of Projectiles.list) { if (p.owner !== 'player') continue; ctx.fillStyle = p.color || '#fff'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(2, p.r * 0.8), 0, TAU); ctx.fill(); }
     /* yeux des ennemis */
     for (const e of G.enemies) { if (e.dead) continue; ctx.fillStyle = e.tele ? '#ffd166' : '#ff5e7a'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(e.x - 4, e.y - 4, 2.2, 0, TAU); ctx.arc(e.x + 4, e.y - 4, 2.2, 0, TAU); ctx.fill(); }
     ctx.restore();
