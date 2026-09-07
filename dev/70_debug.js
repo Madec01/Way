@@ -66,8 +66,8 @@ const Debug = (() => {
       propsBox.innerHTML = `<div class="pshead"><b>ACCESSOIRES</b><span class="muted tiny">Aucun sprite dans assets/sprites/pixel/ — dépose des PNG, relance <code>node dev/index-pixel.js</code>, recharge.</span><button class="btn small ghost" id="ps-close">×</button></div>`;
     } else {
       const picks = Sprites.picks;
-      propsBox.innerHTML = `<div class="pshead"><b>ACCESSOIRES</b><span class="muted tiny">${names.length} accessoire(s) · clic = version retenue · taille réelle en salle</span>
-          <button class="btn small" id="ps-copy">Copier la sélection</button><button class="btn small ghost" id="ps-reset">Tout remettre à v1</button><button class="btn small ghost" id="ps-close">×</button></div>
+      propsBox.innerHTML = `<div class="pshead"><b>ACCESSOIRES</b><span class="muted tiny">${names.length} accessoire(s) · toutes les versions installées tournent en jeu · clic = en imposer une pour la regarder</span>
+          <button class="btn small" id="ps-copy">Copier la sélection</button><button class="btn small ghost" id="ps-reset">Variété (aucune imposée)</button><button class="btn small ghost" id="ps-close">×</button></div>
         <div class="psgrid">${names.map(n => { const list = vars[n] || []; const sel = Math.min(picks[n] || 0, list.length - 1);
           return `<div class="psrow"><div class="psname">${n}${list.length > 1 ? ` <span class="muted tiny">${list.length} versions</span>` : ''}</div>
             <div class="psvars">${list.map((c, i) => `<button class="psvar ${i === sel ? 'on' : ''}" data-n="${n}" data-i="${i}"><span class="pslab">v${i + 1}</span></button>`).join('')}</div></div>`; }).join('')}</div>
@@ -89,7 +89,7 @@ const Debug = (() => {
       try { navigator.clipboard && navigator.clipboard.writeText(keep.join(', ')); } catch (e) { /* pas de presse-papiers : le texte reste affiché, à sélectionner à la main */ }
     };
     const reset = propsBox.querySelector('#ps-reset');
-    if (reset) reset.onclick = () => { try { localStorage.removeItem('way.props'); } catch (e) { /* */ } closeProps(); openProps(); };
+    if (reset) reset.onclick = () => { Sprites.clearVariants(); closeProps(); openProps(); };
   }
   function toggle() { open ? hide() : show(); }
   function show() { if (G.mode !== 'test') { UI.toast('Panneau debug : mode Test uniquement'); return; } open = true; panel.hidden = false; G.debug.open = true; }

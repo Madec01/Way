@@ -142,14 +142,24 @@ const Sprites = (() => {
      dans le navigateur (`way.props`) le temps de trancher, ensuite on ne garde que le fichier retenu dans le dépôt. */
   const propVars = {};            // nom → [canvas, canvas…] dans l'ordre des variantes
   const VAR_RE = /_v(\d+)$/;
-  function propPicks() { try { return JSON.parse(localStorage.getItem('way.props') || '{}'); } catch (e) { return {}; } }
-  function applyPicks() { const picks = propPicks(); for (const name in propVars) { const list = propVars[name]; const i = Math.min(picks[name] || 0, list.length - 1); if (list[i]) props[name] = list[i]; } }
+  /* Toutes les versions installées servent de variété : deux cactus dans une salle ne sont pas le même dessin. Chaque
+     obstacle tire la sienne à partir de sa position (déterministe : la même salle est toujours meublée pareil).
+     Le comparateur peut en imposer une le temps de la regarder — c'est le rôle de `forced`. */
+  function propForced() { try { return JSON.parse(localStorage.getItem('way.props') || '{}'); } catch (e) { return {}; } }
+  function applyPicks() { const f = propForced(); for (const name in propVars) { const list = propVars[name]; const i = f[name]; props[name] = (i != null && list[i]) || list[0] || props[name]; } }
+  /* variante n° `k` d'un accessoire (k quelconque : ramené sur la liste), ou la version forcée si le comparateur en tient une */
+  function variantOf(name, k) {
+    const list = propVars[name]; if (!list || !list.length) return props[name];
+    const f = propForced()[name]; if (f != null && list[f]) return list[f];
+    return list[((k | 0) % list.length + list.length) % list.length] || list[0];
+  }
   function setVariant(name, i) {
     const list = propVars[name]; if (!list || !list[i]) return;
-    const picks = propPicks(); picks[name] = i;
-    try { localStorage.setItem('way.props', JSON.stringify(picks)); } catch (e) { /* navigation privée : le choix ne survit pas au rechargement */ }
+    const f = propForced(); f[name] = i;
+    try { localStorage.setItem('way.props', JSON.stringify(f)); } catch (e) { /* navigation privée : le choix ne survit pas au rechargement */ }
     props[name] = list[i]; floorCache.clear();
   }
+  function clearVariants() { try { localStorage.removeItem('way.props'); } catch (e) { /* */ } applyPicks(); floorCache.clear(); }
   function loadProps() {
     if (typeof fetch !== 'function') return;
     fetch(ASSET_BASE + 'sprites/pixel/index.json').then(r => r.ok ? r.json() : null).then(list => {
@@ -179,9 +189,10 @@ const Sprites = (() => {
   }
   /* dessine un accessoire rastérisé, centré, ajusté dans w×h (ratio conservé), sans lissage */
   function drawProp(ctx, name, x, y, w, h, opts = {}) {
-    const c = props[name]; if (!c) return false;
+    const c = opts.variant != null ? variantOf(name, opts.variant) : props[name]; if (!c) return false;
     const s = Math.min(w / c.width, h / c.height); const dw = c.width * s, dh = c.height * s;
-    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y); if (opts.flip) ctx.scale(-1, 1); if (opts.rot) ctx.rotate(opts.rot); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+    /* `foot` : y est la ligne de sol, pas le centre — sinon un sprite carré dans une case plus haute flotte au-dessus du socle */
+    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, opts.foot ? y - dh / 2 : y); if (opts.flip) ctx.scale(-1, 1); if (opts.rot) ctx.rotate(opts.rot); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     if (opts.flash || opts.tint) { const fx = flashCanvas(dw, dh); const g = fx.getContext('2d'); g.imageSmoothingEnabled = false; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, dw, dh); g.drawImage(c, 0, 0, dw, dh); g.globalCompositeOperation = 'source-atop'; g.fillStyle = opts.flash ? 'rgba(255,255,255,.8)' : opts.tint; g.fillRect(0, 0, dw, dh); ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2, dw, dh); }
     else ctx.drawImage(c, -dw / 2, -dh / 2, dw, dh);
     ctx.restore(); return true;
@@ -192,7 +203,7 @@ const Sprites = (() => {
     /* biome 4 */ lamp: 'magic-lamp', lantern: 'paper-lantern', spices: 'hot-spices', teapot: 'teapot', gems: 'gems', scarab: 'scarab-beetle', eye: 'all-seeing-eye', mosque: 'samara-mosque',
     oasis: 'oasis', chalice: 'jeweled-chalice', hourglass: 'sands-of-time', carpet: 'red-carpet', incense: 'incense', sabre: 'crescent-blade', snakejar: 'snake-jar' };
   /* décor au sol sans collision (salles du biome 3) */
-  function drawDeco(ctx, d) { const name = DECO_KIND[d.kind] || d.kind; const x = ROOM_X + (d.x + 0.5) * TILE, y = ROOM_Y + (d.y + 0.5) * TILE; ctx.save(); ctx.globalAlpha = 0.8; drawProp(ctx, name, x, y, TILE * (d.big ? 1.3 : 0.9), TILE * (d.big ? 1.3 : 0.9)); ctx.restore(); }   // rien si l'accessoire n'est pas encore chargé (pas de carré de repli)
+  function drawDeco(ctx, d) { const name = DECO_KIND[d.kind] || d.kind; const x = ROOM_X + (d.x + 0.5) * TILE, y = ROOM_Y + (d.y + 0.5) * TILE; ctx.save(); ctx.globalAlpha = 0.8; drawProp(ctx, name, x, y, TILE * (d.big ? 1.3 : 0.9), TILE * (d.big ? 1.3 : 0.9), { variant: hash2(d.x + 7, d.y + 3) }); ctx.restore(); }   // rien si l'accessoire n'est pas encore chargé (pas de carré de repli)
   /* dessine un sprite nommé centré en (x, y) ; opts : flip, walk (temps de marche, anim run si > 0), flash, scale, fallback() */
   function draw(ctx, key, x, y, opts = {}) {
     const d = SPRITE_DEFS[key];
@@ -266,6 +277,10 @@ const Sprites = (() => {
     tank: 'chemical-tank', fuel: 'fuel-tank', locker: 'lockers', pipe: 'straight-pipe', drip: 'medical-drip', microscope: 'microscope', bin: 'trash-can',
     planter: 'flower-pot', bush: 'vines', roots: 'tree-roots', trap_plant: 'carnivorous-plant', flask: 'bubbling-flask', fountain: 'water-fountain',
     column: 'ancient-columns', jar: 'amphora', vase: 'porcelain-vase', basin: 'fountain', palm: 'palm-tree', basket: 'basket', brazier: 'fire-bowl', archway: 'arabic-door', drapes: 'theater-curtains' };
+  /* certains accessoires débordent volontairement de leur case : un saguaro d'une tuile de large est plus haut qu'elle */
+  const BLOCK_GROW = { cactus: 1.7, palm: 1.4, column: 1.2, windmill: 1.3, drapes: 1.2, archway: 1.2 };
+  /* mélange de deux entiers : sans ça, une rangée d'obstacles alignés tirait tous la même variante (x pair, y constant → même parité) */
+  function hash2(x, y) { let h = ((x | 0) * 374761393 + (y | 0) * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return (h ^ (h >>> 16)) >>> 0; }
   function drawBlock(ctx, o) {
     const name = o.kind && BLOCK_KIND[o.kind];
     if (name && props[name]) {
@@ -277,8 +292,9 @@ const Sprites = (() => {
       ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(o.px + o.pw / 2, o.py + o.ph - 3, o.pw * 0.46, Math.min(10, o.ph * 0.2), 0, 0, TAU); ctx.fill();
       ctx.fillStyle = 'rgba(8,10,18,.5)'; ctx.fillRect(o.px + 2, by, o.pw - 4, bh);
       ctx.strokeStyle = (pal.neon && pal.neon[0]) || '#ffd166'; ctx.globalAlpha = 0.5; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(o.px + 3, by + bh - 1); ctx.lineTo(o.px + o.pw - 3, by + bh - 1); ctx.stroke(); ctx.globalAlpha = 1;
-      const over = o.kind === 'cactus' ? 14 : 8;
-      drawProp(ctx, name, o.px + o.pw / 2, o.py + o.ph / 2 - over / 2, o.pw + 6, o.ph + over);
+      /* posé sur le sol, agrandi selon le kind (BLOCK_GROW), variante tirée de la position de l'obstacle */
+      const grow = BLOCK_GROW[o.kind] || 1;
+      drawProp(ctx, name, o.px + o.pw / 2, o.py + o.ph + 3, (o.pw + 6) * grow, (o.ph + 10) * grow, { foot: true, variant: hash2(o.x, o.y) });
       ctx.restore(); return;
     }
     ctx.save();
@@ -360,7 +376,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, get variants() { return propVars; }, get picks() { return propPicks(); }, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

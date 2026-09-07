@@ -9,8 +9,10 @@ Un PNG déposé ici **remplace** l'icône correspondante : il est repris tel que
 Le nom de fichier doit être celui de l'accessoire, c'est-à-dire une clé de `PROP_DEFS` (`dev/15_sprites.js`) :
 `cactus.png`, `amphora.png`, `ancient-columns.png`…
 
-Plusieurs essais du même accessoire cohabitent : `cactus.png`, `cactus_v2.png`, `cactus_v3.png`.
-Tous sont chargés ; le jeu affiche celui retenu dans le comparateur.
+Plusieurs versions du même accessoire cohabitent : `cactus.png`, `cactus_v2.png`, `cactus_v3.png`.
+**Toutes servent de variété** : chaque obstacle d'une salle tire la sienne à partir de sa position, donc deux
+cactus côte à côte ne sont pas le même dessin. Le tirage est déterministe : la même salle est toujours
+meublée pareil. Élaguer = supprimer les fichiers qu'on ne veut plus.
 
 ## Depuis PixelLab
 
@@ -41,9 +43,9 @@ node dev/build.js
 
 En mode Test, **F1 → Accessoires** : les versions de chaque accessoire sont montrées côte à côte, à la
 taille qu'elles ont en salle, le panneau en bas de l'écran pour que la salle reste visible. Un clic
-choisit ; le choix est retenu dans le navigateur (`localStorage`, clé `way.props`) et s'applique tout de
-suite. « Copier la sélection » sort la liste des fichiers retenus — ensuite on ne garde que ceux-là dans
-le dépôt et on renomme en version 1.
+**impose** cette version partout, le temps de la regarder (retenu dans `localStorage`, clé `way.props`).
+Le bouton « Variété » rend la main au tirage aléatoire. « Copier la sélection » sort la liste des fichiers,
+pratique pour dire lesquels garder.
 
 ## Contraintes
 
