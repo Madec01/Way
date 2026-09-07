@@ -162,6 +162,7 @@ const Room = {
     biome_1: { blocks: ['tank', 'fuel', 'locker', 'pipe', 'drip', 'microscope', 'bin'], deco: ['cross', 'hazard', 'fan', 'valve', 'cog', 'battery', 'tubes', 'pack', 'bin'] },
     biome_2: { blocks: ['planter', 'bush', 'roots', 'trap_plant', 'flask', 'fountain'], deco: ['leaf', 'mushrooms', 'mushroom', 'seedling', 'sprout', 'roots', 'flower', 'pot'] },
     biome_3: { blocks: ['cactus', 'rock', 'barrel', 'crate', 'wagon', 'cart'], deco: ['skull', 'tumbleweed', 'rails', 'wanted'] },
+    biome_4: { blocks: ['column', 'jar', 'vase', 'basin', 'palm', 'basket', 'brazier', 'drapes'], deco: ['lamp', 'lantern', 'spices', 'teapot', 'gems', 'scarab', 'eye', 'carpet', 'incense', 'chalice'] },
   },
   dress(r) {
     if (r.dressed) return; r.dressed = true;

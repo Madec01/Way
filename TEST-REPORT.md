@@ -480,3 +480,22 @@ Coffres : le bot est touché dans presque toutes les salles, donc ses coffres to
 8. Toutes les cibles atteintes sauf : mini-boss test 64 % (cible 40-60, à 4 points) et lame/marteau à 0 % de salle 4 en normal (bot au contact ; buffs lame 22 → 28 dégâts, marteau 60 → 75).
 9. Descriptions mises à jour pour chaque chiffre modifié (armes, compétences, greffes, Sentinelle, Nappe de gaz, revanches).
 10. À valider en playtest humain : sensation de la lame (95 DPS), combat de la salle 5, revanche, biome 2 (0 victoire bot), fréquence de la foudre à l'oreille.
+
+---
+
+## 11. Biome 4 — LE SÉRAIL (balayages `levels.js`, 4 armes × 2 graines)
+
+Bot `__autoplay`, mode test, départ niveau 1 sans passif méta, `skill_dash`, `timeScale 40`. Salle atteinte par arme (pistolet / arc / chaîne / boomerang) :
+
+| Palier | graine 900 | graine 950 | Médiane |
+|---|---|---|---|
+| Biome 1 (référence) | 5 / 9 / 9✔ / 9✔ | — | 9 |
+| Biome 3 | 5 / 3 / 5 / 5 | 5 / 3 / 5 / 5 | 5 |
+| Biome 4 (1re version) | 3 / 3 / 5 / 3 | — | 3 |
+| Biome 4 (retenu) | 5 / 2 / 5 / 2 | 5 / 3 / 5 / 9 | 5 |
+
+Retouches entre les deux versions : difficulté du palier 1,75 / 1,42 / 1,15 → **1,62 / 1,34 / 1,12** ; roue à sabres 1,45 → **1,28 rad/s** ; archer du sérail 3 flèches à 1,15 s → **2 flèches à 1,35 s**, dégâts 11 → 10 ; derviche recharge 1,0 → **1,15 s** ; PV du Vizir 3400 → **3200**.
+
+Séquenceur rythmique du Vizir (`boss.js`, salle 5 puis 9) : une phrase de 4 mesures = CIMETERRES sur le temps 5, MIRAGE sur le temps 8, TEMPÊTE sur le temps fort de la dernière mesure ; en revanche tout est décalé d'un demi-temps (`ph ≈ 0,5`), conforme. Le mirage a été rendu **seule** attaque utilitaire : avec une invocation en rotation, la fenêtre de faiblesse ne s'ouvrait qu'une phrase sur deux.
+
+À surveiller en playtest humain : les morts du bot en **salle 2** (salle à défi) sur deux graines — le défi est tiré au sort et le bot en joue certains mal ; le palier 4 tape plus fort que le 3, donc l'erreur pardonne moins. Biome 1 rejoué après coup : aucun changement (5 / 9 / 9✔ / 9✔).

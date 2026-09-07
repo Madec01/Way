@@ -153,7 +153,8 @@ class Enemy {
     ctx.save(); ctx.globalAlpha = alpha;
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU); ctx.fill();
     /* ornement du boss : dessiné par-dessus le sprite pour que les trois boss ne se confondent jamais */
-    if (this.isBoss && this.bossDef && this.bossDef.crest) Boss.drawCrest(ctx, this, this.bossDef.crest, alpha);
+    if (this.isBoss && this.bossDef && this.bossDef.crest && !this.bossDef.crestOver) Boss.drawCrest(ctx, this, this.bossDef.crest, alpha);
+    if (this.isBoss && this.cur) Boss.renderPattern(ctx, this, this.cur, alpha);
     /* salle du tempo : voyant qui bat au-dessus de la tête */
     if (this.beatLock) { const k = Math.max(0, 1 - Beat.phase() * 3); ctx.strokeStyle = '#ffd166'; ctx.fillStyle = '#ffd166'; ctx.lineWidth = 2; ctx.globalAlpha = alpha * (0.3 + 0.7 * k); ctx.beginPath(); ctx.arc(this.x, this.y - this.r - 10, 3 + k * 3, 0, TAU); ctx.fill(); ctx.globalAlpha = alpha; }
     /* télégraphie : halo pulsant + ligne d'intention */
@@ -179,6 +180,7 @@ class Enemy {
         default: ctx.arc(this.x, this.y, this.r, 0, TAU);
       }
       ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = '#0b0d14'; ctx.beginPath(); ctx.arc(this.x + this.facing * 4, this.y - 2, 3, 0, TAU); ctx.fill(); } });
+    if (this.isBoss && this.bossDef && this.bossDef.crest && this.bossDef.crestOver) Boss.drawCrest(ctx, this, this.bossDef.crest, alpha);   // silhouette haute : l'ornement passe devant
     /* statuts : brûlure = flammes qui montent, gel = givre bleu sur le corps, poison = bulles vertes */
     if (this.status) {
       if (this.status.burn) {
@@ -248,7 +250,17 @@ class Boss extends Enemy {
   /* Ornements : « hat » chapeau de shérif + étoile (le Marshal), « crown » couronne de feuilles (la Serriste),
      « plate » plaque d'acier boulonnée et voyant (le Portier). Dessinés au canvas : aucun sprite à produire. */
   static drawCrest(ctx, e, kind, alpha) {
-    const r = e.r, x = e.x, y = e.y - r - 6 - (e.air || 0); ctx.save(); ctx.globalAlpha = alpha;
+    const r = e.r, x = e.x, y = e.y - r - 6 - (e.air || 0) + ((e.bossDef && e.bossDef.crestDy) || 0); ctx.save(); ctx.globalAlpha = alpha;
+    if (kind === 'lamp') {
+      /* le Vizir : sa lampe flotte au-dessus de lui dans un cercle d'or — reconnaissable de loin, même derrière ses doubles */
+      const bob = Math.sin(Time.now * 2.2) * 4, kk = 0.5 + 0.5 * Math.sin(Time.now * 3);
+      ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2.5; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10 + 10 * kk; ctx.globalAlpha = alpha * (0.45 + 0.35 * kk);
+      ctx.beginPath(); ctx.ellipse(x, y + 2 + bob, r * 0.8, r * 0.24, 0, 0, TAU); ctx.stroke(); ctx.shadowBlur = 0; ctx.globalAlpha = alpha;
+      if (!Sprites.drawProp(ctx, 'magic-lamp', x, y - 16 + bob, 34, 34, {})) { ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(x, y - 14 + bob, 11, 6, 0, 0, TAU); ctx.fill(); }
+      ctx.globalAlpha = alpha * 0.5; ctx.fillStyle = '#c9a3ff';
+      for (let i = 0; i < 3; i++) { const t = (Time.now * 0.6 + i * 0.33) % 1; ctx.beginPath(); ctx.arc(x + Math.sin(t * 6 + i) * 7, y - 26 + bob - t * 26, 3 - t * 2, 0, TAU); ctx.fill(); }
+      ctx.restore(); return;
+    }
     if (kind === 'hat') {
       ctx.fillStyle = '#4a3320'; ctx.fillRect(x - r * 0.95, y + 6, r * 1.9, 5);                       // bord
       ctx.fillRect(x - r * 0.45, y - 4, r * 0.9, 11); ctx.fillStyle = '#2e1f14'; ctx.fillRect(x - r * 0.45, y + 2, r * 0.9, 3);   // calotte + ruban
@@ -260,6 +272,13 @@ class Boss extends Enemy {
       for (let i = -2; i <= 2; i++) { const bx = x + i * r * 0.34, k = 1 - Math.abs(i) * 0.22;          // feuilles
         ctx.beginPath(); ctx.ellipse(bx, y + 4 - k * 8, 4 * k + 2, 8 * k + 2, i * 0.35, 0, TAU); ctx.fill(); ctx.stroke(); }
       ctx.fillStyle = '#ff9adb'; ctx.beginPath(); ctx.arc(x, y - 6, 4, 0, TAU); ctx.fill();             // fleur centrale
+    } else if (kind === 'turban') {
+      ctx.fillStyle = '#e8dcc0'; ctx.beginPath(); ctx.ellipse(x, y + 4, r * 0.7, r * 0.34, 0, 0, TAU); ctx.fill();          // turban
+      ctx.fillStyle = '#d6c8a4'; ctx.beginPath(); ctx.ellipse(x, y - 1, r * 0.52, r * 0.26, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#b9a87e'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - r * 0.6, y + 5); ctx.lineTo(x + r * 0.6, y + 2); ctx.stroke();
+      ctx.fillStyle = '#8f6ad8'; ctx.beginPath(); ctx.moveTo(x, y - 16); ctx.lineTo(x + 4, y - 6); ctx.lineTo(x, y - 3); ctx.lineTo(x - 4, y - 6); ctx.closePath(); ctx.fill();   // aigrette
+      const kk = 0.5 + 0.5 * Math.sin(Time.now * 4); ctx.fillStyle = '#7fe0ff'; ctx.globalAlpha = alpha * (0.5 + 0.5 * kk);
+      ctx.beginPath(); ctx.arc(x, y - 2, 3.2, 0, TAU); ctx.fill(); ctx.globalAlpha = alpha;                                  // gemme du turban
     } else if (kind === 'plate') {
       ctx.fillStyle = '#8a94ac'; ctx.fillRect(x - r * 0.8, y + 2, r * 1.6, 9);                          // plaque
       ctx.strokeStyle = '#cfd6e6'; ctx.lineWidth = 1.5; ctx.strokeRect(x - r * 0.8, y + 2, r * 1.6, 9);
@@ -268,6 +287,41 @@ class Boss extends Enemy {
       ctx.beginPath(); ctx.arc(x, y - 3, 3, 0, TAU); ctx.fill();                                        // voyant
     }
     ctx.restore();
+  }
+  /* décors d'attaque propres au Vizir : brèche annoncée puis mur de sable, et doubles du mirage */
+  static renderPattern(ctx, e, c, alpha) {
+    if (c.kind === 'sandstorm') {
+      if (c.gapY == null) return; const gh = c.gapH / 2;
+      ctx.save();
+      if (c.phase === 'tele') {
+        const k = 0.5 + 0.5 * Math.sin(Time.now * 8); ctx.globalAlpha = alpha * (0.35 + 0.45 * k);
+        ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3; ctx.setLineDash([16, 12]);
+        for (const yy of [c.gapY - gh, c.gapY + gh]) { ctx.beginPath(); ctx.moveTo(ROOM_X, yy); ctx.lineTo(ROOM_X + ROOM_W, yy); ctx.stroke(); }
+        ctx.setLineDash([]);
+      } else if (c.x != null) {
+        const half = c.thickness || 46;
+        for (const seg of [[ROOM_Y, c.gapY - gh], [c.gapY + gh, ROOM_Y + ROOM_H]]) {
+          if (seg[1] <= seg[0]) continue;
+          const g = ctx.createLinearGradient(c.x - half, 0, c.x + half, 0);
+          g.addColorStop(0, 'rgba(232,201,138,0)'); g.addColorStop(0.35, 'rgba(232,201,138,.55)'); g.addColorStop(0.5, 'rgba(255,236,190,.85)'); g.addColorStop(0.65, 'rgba(232,201,138,.55)'); g.addColorStop(1, 'rgba(232,201,138,0)');
+          ctx.globalAlpha = alpha; ctx.fillStyle = g; ctx.fillRect(c.x - half, seg[0], half * 2, seg[1] - seg[0]);
+        }
+        ctx.globalAlpha = alpha * 0.6; ctx.fillStyle = '#fff3c4';
+        for (let i = 0; i < 16; i++) { const yy = VFX_RNG.range(ROOM_Y, ROOM_Y + ROOM_H); if (Math.abs(yy - c.gapY) < gh) continue; ctx.fillRect(c.x + VFX_RNG.range(-half, half), yy, 3, 2); }
+      }
+      ctx.restore();
+    } else if (c.kind === 'mirage' && c.ghosts) {
+      ctx.save();
+      for (const g of c.ghosts) {
+        const a = alpha * 0.85 * g.k, wob = Math.sin(Time.now * 9 + g.x) * 2;
+        ctx.globalAlpha = a * 0.35; ctx.fillStyle = '#ffd166'; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 22;
+        ctx.beginPath(); ctx.ellipse(g.x, g.y - e.r * 0.4, e.r * 1.05, e.r * 1.5, 0, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+        Sprites.draw(ctx, e.def.sprite || 'boss', g.x + wob, g.y, { walk: Time.now, scale: 1.15, tint: 'rgba(255,209,102,.85)', alpha: a });
+        ctx.globalAlpha = a * 0.8; ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.ellipse(g.x, g.y + e.r - 2, e.r * 0.9, e.r * 0.35, 0, 0, TAU); ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
   /* coup dans le dos : renvoie true si la faiblesse s'applique */
   backHit() {
@@ -301,7 +355,7 @@ class Boss extends Enemy {
      cette moitié : attaque utilitaire (invocation, bouclier…) s'il y en a. Puis une mesure d'annonce : la grosse attaque (charge, onde,
      laser, aspiration) télégraphie jusqu'au temps fort de la dernière mesure, où elle part. Ensuite le boss « souffle » : faiblesse
      active jusqu'à la phrase suivante. Attaque libre hors rythme : un coup de pied si le joueur colle le boss plus d'une seconde. */
-  static patKind(p) { return ['charge', 'slam', 'laser_sweep', 'pull', 'duel', 'quake', 'mines'].includes(p.kind) ? 'big' : ['summon', 'shield', 'slow', 'roots'].includes(p.kind) ? 'util' : 'small'; }
+  static patKind(p) { return ['charge', 'slam', 'laser_sweep', 'pull', 'duel', 'quake', 'mines', 'sandstorm'].includes(p.kind) ? 'big' : ['summon', 'shield', 'slow', 'roots', 'mirage'].includes(p.kind) ? 'util' : 'small'; }
   startPattern(p, telegraph, t) {
     this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p, telegraph != null ? { telegraph } : {}); this.tele = 1;
     this.telegraph = { time: this.cur.telegraph || 0.8, color: p.color || this.color }; this.chargeA = angleTo(this.x, this.y, t.x, t.y);
@@ -351,6 +405,8 @@ class Boss extends Enemy {
     if (c.phase === 'tele') {
       if (c.kind === 'charge' || c.kind === 'slam') this.chargeA = lerp(this.chargeA, angleTo(this.x, this.y, t.x, t.y), 0.08);
       if (c.kind === 'slam') { c.tx = t.x; c.ty = t.y; }
+      /* tempête de sable : la brèche est tirée dès la télégraphie et dessinée par Boss.renderPattern, le joueur a le temps de la rejoindre */
+      if (c.kind === 'sandstorm' && c.gapY == null) { c.dir = pl.x > ROOM_X + ROOM_W / 2 ? -1 : 1; c.gapH = c.gap || 130; c.gapY = RNG.range(ROOM_Y + c.gapH, ROOM_Y + ROOM_H - c.gapH); c.x = c.dir > 0 ? ROOM_X - 50 : ROOM_X + ROOM_W + 50; }
       if (c.t >= (c.telegraph || 0.8)) { c.phase = 'act'; c.t = 0; this.tele = 0; if (c.kind === 'charge') AudioEngine.bossRoar({ intensity: 0.7 }); }
       return;
     }
@@ -403,6 +459,40 @@ class Boss extends Enemy {
           AudioEngine.trapGas({ intensity: 0.8 });
         }
         if (c.t >= 0.5) this.endPattern(); break;
+      }
+      /* --- tempête de sable (le Vizir) : un mur de sable traverse la salle, une seule brèche pour passer --- */
+      case 'sandstorm': {
+        if (!c.fired) { c.fired = 1; G.shake = 8; AudioEngine.trapGas({ intensity: 1 }); }
+        const sp = (c.speed || 420) * G.difficulty.speedMul; c.x += c.dir * sp * dt;
+        const half = c.thickness || 46, gh = c.gapH / 2;
+        const inWall = Math.abs(pl.x - c.x) < half && Math.abs(pl.y - c.gapY) > gh;
+        if (inWall && !c.hit) { c.hit = 1; Combat.hitPlayer(Math.round((c.damage || 24) * G.difficulty.damageMul), { type: 'trap', x: c.x, y: pl.y, trapName: 'Tempête de sable' }); }
+        if (inWall) { pl.x += c.dir * 210 * dt; resolveRoomCollision(pl); }
+        if (c.x < ROOM_X - 70 || c.x > ROOM_X + ROOM_W + 70) this.endPattern(); break;
+      }
+      /* --- mirage (le Vizir) : il se replace et laisse des doubles ; tous tirent la même salve, impossible de deviner d'où elle vient --- */
+      case 'mirage': {
+        const hold = c.hold || 0.85;
+        if (!c.fired) {
+          c.fired = 1; c.ghosts = []; const n = c.count || 3, rr = c.spread || 230;
+          const base = RNG.range(0, TAU);
+          for (let i = 1; i <= n; i++) { const a = base + i * TAU / (n + 1);
+            c.ghosts.push({ x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 40, ROOM_X + ROOM_W - 40), y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 40, ROOM_Y + ROOM_H - 40), k: 0 }); }
+          this.x = clamp(pl.x + Math.cos(base) * rr, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
+          this.y = clamp(pl.y + Math.sin(base) * rr, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
+          resolveRoomCollision(this); Particles.spawn(this.x, this.y, { count: 18, color: c.color || '#ffd166', glow: true }); AudioEngine.skillBlink({ intensity: 0.9 });
+        }
+        for (const g of c.ghosts) g.k = c.t < hold ? clamp(c.t / hold, 0, 1) : Math.max(0, 1 - (c.t - hold) / 0.3);   // les doubles s'effacent juste après la salve : le vrai reste seul
+        if (c.t >= hold && c.fired < 2) {
+          c.fired = 2; const nb = c.bullets || 3, sp2 = c.arc || 0.5;
+          const salve = (sx, sy) => { const a0 = angleTo(sx, sy, pl.x, pl.y); const src = { x: sx, y: sy, r: this.r, behavior: this.behavior, damage: this.damage, projColor: this.projColor };
+            for (let i = 0; i < nb; i++) enemyProjectile(src, a0 + lerp(-sp2 / 2, sp2 / 2, nb > 1 ? i / (nb - 1) : 0.5), { speed: c.projSpeed || 340, damage: c.projDamage || this.damage * 0.6, r: c.projSize || 7, color: c.color || '#ffd166' }); };
+          salve(this.x, this.y); for (const g of c.ghosts) salve(g.x, g.y);
+          AudioEngine.shootOrb({ intensity: 0.7 });
+          /* le mirage retombe : le vrai est démasqué et ouvert (faiblesse propre au Vizir) */
+          if (this.weak.rule === 'after_mirage') { this.weakActive = true; this.weakUntil = Time.now + (this.weak.window || 2.2); Floaters.add(this.x, this.y - this.r - 22, 'DÉMASQUÉ', '#ffd166', 18); AudioEngine.bossPhase({ intensity: 0.4 }); }
+        }
+        if (c.t >= hold + 0.35) this.endPattern(); break;
       }
       case 'summon': { if (!c.fired) { c.fired = 1; const def = Content.enemy(c.enemy); for (let i = 0; i < (c.count || 3); i++) { const a = RNG.range(0, TAU); const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 70, this.y + Math.sin(a) * 70, { hpMul: 0.8 }); if (e) { e.xp = Math.round(e.xp * 0.5); } } AudioEngine.trapGas({}); } if (c.t >= (c.duration || 0.5)) this.endPattern(); break; }
       case 'laser_sweep': { const sweep = c.sweep || Math.PI; const a0 = c.a0 != null ? c.a0 : (c.a0 = angleTo(this.x, this.y, pl.x, pl.y) - sweep / 2 * (c.dir = RNG.chance(0.5) ? 1 : -1)); const a = a0 + c.dir * sweep * (c.t / dur); const len = c.length || 700; G.room.beams.push({ ax: this.x, ay: this.y, bx: this.x + Math.cos(a) * len, by: this.y + Math.sin(a) * len, t: 0, life: 0.05, color: c.color || '#ff3b5c', width: 8 }); if (segCircle(this.x, this.y, this.x + Math.cos(a) * len, this.y + Math.sin(a) * len, pl.x, pl.y, pl.r)) Combat.hitPlayer(Math.round((c.damage || this.damage * 0.8) * G.difficulty.damageMul), { type: 'trap', x: this.x, y: this.y }); if (c.t >= dur) this.endPattern(); break; }

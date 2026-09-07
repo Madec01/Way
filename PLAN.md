@@ -139,5 +139,6 @@ Moi : architecture, moteur, intégration, arbitrage, cohérence.
 
 | Priorité | Chantier | Détail |
 |---|---|---|
+| Fait | **Biome 4 — LE SÉRAIL (oriental)** | 7 ennemis, 7 pièges, 9 salles, accessoires dédiés (`assets/sprites/orient/`) et boss propre au palier : le Vizir, silhouette haute et fine, tempête de sable à brèche unique et mirage à doubles. Détail : CONTENT.md §24. |
 | Faite | **Menu en deux temps** | Écran-titre (titre + effets sur la musique) puis, au clic, menu principal centré gardant le titre. Détail des effets : CONTENT.md §23. Égaliseur écarté sur demande de Martin. |
 | Haute | **Refonte complète de l'interface mobile** | Sur téléphone, tout est illisible et peu pratique : textes et cartes trop petits, écrans (menu, hub, préparation, choix de greffes, pause, fin) pensés pour un écran large. À refaire en mode « tactile d'abord » : polices et boutons plus gros, une colonne à la fois dans le hub, cartes de choix en plein écran, HUD de combat simplifié, joystick et boutons plus grands. Gros chantier : à planifier comme un jalon à part entière, avec captures sur un vrai format téléphone (390×844 et 360×780). |

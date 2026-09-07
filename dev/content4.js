@@ -1,0 +1,176 @@
+/* =========================================================================
+   WAY — content4.js — Biome 4 : LE SÉRAIL (niveau 4, oriental). Un palais-bazar enseveli sous les dunes.
+   Derviches, archers, colosses d'argile, jarres de naphte, charmeurs, cobras, djinns ; boss « le Vizir ».
+   Décor : colonnes, jarres, fontaines, palmiers, braseros, tentures (icônes game-icons.net rastérisées, voir Sprites.props).
+   ========================================================================= */
+
+CONTENT.biomes.push({
+  id: 'biome_4', name: 'LE SÉRAIL', order: 4, tagline: 'Un palais enseveli sous les dunes : derviches, djinns, naphte et sable qui traverse les salles. Le niveau des tenaces.',
+  desc: 'Niveau 4. Le sérail au bout de la piste : cour aux fontaines taries, bazar figé, colonnes cassées. Le sable est entré par les fenêtres et n\'est jamais ressorti. Taux de perte : 96 %.',
+  palette: { tint: 'rgba(72,50,140,.30)', neon: ['#ffd166', '#8f6ad8'], wall: 'rgba(84,58,145,.42)' },
+  levelPassives: [
+    { bonus: { name: 'Pas du derviche', desc: '+12 % vitesse, +10 % de réduction de recharge.', mods: [{ stat: 'speed', mul: 1.12 }, { stat: 'cooldownReduction', add: 0.1 }], hooks: {} }, malus: { name: 'Sable dans les yeux', desc: '-30 % rayon de ramassage, -10 % portée.', mods: [{ stat: 'pickupRadius', mul: 0.7 }, { stat: 'range', mul: 0.9 }], hooks: {} } },
+    { bonus: { name: 'Trésor du bazar', desc: '+70 % pièces.', mods: [{ stat: 'coinGain', mul: 1.7 }], hooks: {} }, malus: { name: 'Dette du marchand', desc: '-20 % PV max.', mods: [{ stat: 'maxHp', mul: 0.8 }], hooks: {} } },
+    { bonus: { name: 'Vœu du djinn', desc: '+20 % dégâts.', mods: [{ stat: 'damage', mul: 1.2 }], hooks: {} }, malus: { name: 'Prix du vœu', desc: '-30 % de puissance de compétence.', mods: [{ stat: 'skillPower', mul: 0.7 }], hooks: {} } },
+  ],
+  enemyPool: ['enemy_derviche', 'enemy_archer', 'enemy_colosse', 'enemy_jarre', 'enemy_charmeur', 'enemy_cobras', 'enemy_djinn'],
+  trapPool: ['trap_sabres', 'trap_brasero', 'trap_meurtriere', 'trap_encens', 'trap_pieux', 'trap_naphte', 'trap_moucharabieh'],
+  miniboss: 'boss_vizir',
+  difficulty: { hpMul: 1.62, damageMul: 1.34, speedMul: 1.12 },
+  unlockAfter: 'biome_3',
+});
+
+CONTENT.enemies.push(
+  { id: 'enemy_derviche', name: 'Derviche', archetype: 'rusher', desc: 'Tourne sur lui-même puis fond sur vous, lames tendues. Enchaîne vite.', hp: 62, speed: 250, damage: 14, radius: 14, xp: 8, coins: 3, color: '#ffd166', sprite: 'enemy_rusher4',
+    behavior: { lungeRange: 140, lungeWindup: 0.26, lungeSpeed: 680, lungeDuration: 0.3, lungeCooldown: 1.15 }, telegraph: { time: 0.26, color: '#ffe8a8' } },
+  { id: 'enemy_archer', name: 'Archer du sérail', archetype: 'shooter', desc: 'Deux flèches en éventail, puis il recule derrière une colonne.', hp: 52, speed: 155, damage: 10, radius: 14, xp: 11, coins: 4, color: '#5ad6cc', projColor: '#a8f0e8', sprite: 'enemy_shooter4',
+    behavior: { fireRate: 1.35, projSpeed: 430, projDamage: 10, projSize: 6, keepDistance: 350, aimTime: 0.45, burst: 1, count: 2, spread: 0.3 }, telegraph: { time: 0.45, color: '#a8f0e8' } },
+  { id: 'enemy_colosse', name: 'Colosse d\'argile', archetype: 'tank', desc: 'Statue de terre cuite : charge droit devant, se fend contre un mur.', hp: 360, speed: 92, damage: 20, radius: 28, xp: 26, coins: 7, color: '#c67440', sprite: 'enemy_tank4',
+    behavior: { chargeRange: 400, chargeWindup: 0.65, chargeSpeed: 700, chargeDuration: 0.95, chargeCooldown: 2.5, stunOnWallHit: 1.1, chargeDamageMul: 1.6 }, telegraph: { time: 0.65, color: '#ffb347' } },
+  { id: 'enemy_jarre', name: 'Jarre de naphte', archetype: 'kamikaze', desc: 'Roule vers vous et s\'ouvre en nappe de feu. Éclate aussi quand on la brise.', hp: 30, speed: 260, damage: 7, radius: 13, xp: 8, coins: 2, color: '#ff8c42', sprite: 'enemy_kamikaze4',
+    behavior: { fuse: 0.7, radius: 110, explosionDamage: 34, triggerRange: 74, explodeOnDeath: true }, telegraph: { time: 0.7, color: '#ffb347' } },
+  { id: 'enemy_charmeur', name: 'Charmeur', archetype: 'summoner', desc: 'Reste au loin, joue de la flûte et fait sortir des cobras par paquets de 3, jusqu\'à 6.', hp: 140, speed: 72, damage: 9, radius: 20, xp: 30, coins: 8, color: '#9a7aff', sprite: 'enemy_summoner4',
+    behavior: { summon: 'enemy_cobras', every: 3.0, max: 6, count: 3, keepDistance: 390, summonWindup: 0.6 }, telegraph: { time: 0.6, color: '#c9a3ff' } },
+  { id: 'enemy_cobras', name: 'Cobras', archetype: 'swarm', desc: 'Nuée de 5, morsure sèche et venimeuse.', hp: 13, speed: 320, damage: 7, radius: 8, xp: 4, coins: 1, color: '#3aa06a', sprite: 'enemy_swarm4',
+    behavior: { groupSize: 5, jitter: 55, biteWindup: 0.17, biteCooldown: 0.6 }, telegraph: { time: 0.17, color: '#7ed957' } },
+  { id: 'enemy_djinn', name: 'Djinn de poussière', archetype: 'dasher', desc: 'Se dissout, réapparaît dans votre dos et vous traverse. Longue pause après.', hp: 70, speed: 190, damage: 17, radius: 15, xp: 15, coins: 5, color: '#9a7aff', sprite: 'enemy_dasher4',
+    behavior: { blinkRange: 340, blinkWindup: 0.42, blinkCooldown: 1.5, dashSpeed: 860, dashDuration: 0.3, postDashPause: 0.6 }, telegraph: { time: 0.42, color: '#c9a3ff' } },
+);
+
+CONTENT.traps.push(
+  { id: 'trap_sabres', name: 'Roue à sabres', kind: 'laser_rotate', desc: '4 lames de 5 tuiles tournent (1,28 rad/s). Pause de 1 s toutes les 6 s.', damage: 15, telegraph: 1.0, period: 6.0, active: 5.0, color: '#d8dce8',
+    params: { arms: 4, lengthTiles: 5, angularSpeed: 1.28, startAngle: 0.4, thickness: 0.42 } },
+  { id: 'trap_brasero', name: 'Braséro roulant', kind: 'saw_rail', desc: 'Brasier sur rail qui fait des allers-retours sur 8 tuiles à 6 tuiles/s.', damage: 23, telegraph: 0.4, period: 3.2, active: 3.2, color: '#ff9a3c',
+    params: { axis: 'x', lengthTiles: 8, speedTiles: 6, pingpong: true, radiusTiles: 0.65, hitOnce: true } },
+  { id: 'trap_meurtriere', name: 'Meurtrière', kind: 'turret_fixed', desc: 'Depuis le mur : 0,7 s de visée puis une flèche vers vous toutes les 2 s.', damage: 12, telegraph: 0.7, period: 2.0, active: 0.3, color: '#a8f0e8',
+    params: { mode: 'aim', angle: 0, projSpeed: 430, count: 1, spread: 0, projSize: 6 } },
+  { id: 'trap_encens', name: 'Encens narcotique', kind: 'gas_zone', desc: 'Un brûle-parfum siffle 1,2 s puis lâche une fumée épaisse 3 s : 11 dégâts/s et -35 % vitesse.', damage: 11, telegraph: 1.2, period: 7.0, active: 3.0, color: '#c9a3ff',
+    params: { radiusTiles: 2.5, tickRate: 4, slow: 0.35, dps: true } },
+  { id: 'trap_pieux', name: 'Dalles à pieux', kind: 'spike_tiles', desc: 'Mosaïque piégée : les dalles paires sortent 0,8 s, puis les impaires.', damage: 13, telegraph: 0.5, period: 2.5, active: 0.8, color: '#e2d3ae',
+    params: { pattern: 'checker', groups: 2, hitOnce: true } },
+  { id: 'trap_naphte', name: 'Jarre de naphte', kind: 'wall_fireball', desc: 'Une jarre enflammée est lancée tout droit toutes les 2,4 s.', damage: 16, telegraph: 0.6, period: 2.4, active: 0.2, color: '#ff8c42',
+    params: { dir: 'down', projSpeed: 340, size: 12, count: 1, lifetime: 3.0 } },
+  { id: 'trap_moucharabieh', name: 'Moucharabieh', kind: 'laser_grid', desc: 'Le soleil passe par les claustras : rais brûlants tous les 4 tuiles, alternés. 1 s allumés, 2 s éteints.', damage: 13, telegraph: 0.5, period: 3.0, active: 1.0, color: '#ffd166',
+    params: { spacingTiles: 4, alternate: true, thickness: 0.3 } },
+);
+
+CONTENT.bosses.push({
+  id: 'boss_vizir', name: 'Étalon 27, dit « le Vizir »', subtitle: 'Il vous a vu entrer. Les trois autres aussi.',
+  desc: 'Le maître du sérail. Il ne court pas : il se déplace en laissant des doubles, appelle le sable et regarde. Quand le mirage retombe, il n\'en reste qu\'un — c\'est là qu\'il faut frapper.',
+  hp: 3200, speed: 128, radius: 34, damage: 24, xp: 260, coins: 95, color: '#c9a3ff', projColor: '#ffd166', sprite: 'boss4', crest: 'lamp', crestOver: true, crestDy: -22,
+  phases: [
+    { hpBelow: 1, patterns: [
+      { kind: 'fan', telegraph: 0.55, duration: 0.5, cooldown: 2.3, count: 7, spread: 1.0, projSpeed: 390, projDamage: 16, projSize: 7, color: '#ffd166', label: 'CIMETERRES' },
+      { kind: 'sandstorm', telegraph: 1.5, duration: 4, cooldown: 6.5, speed: 420, thickness: 46, gap: 140, damage: 26, label: 'TEMPÊTE' },
+      { kind: 'mirage', telegraph: 0.7, duration: 1.4, cooldown: 6, count: 3, spread: 230, hold: 0.85, bullets: 3, arc: 0.5, projSpeed: 340, projDamage: 15, projSize: 7, color: '#ffd166', label: 'MIRAGE' },
+    ] },
+    { hpBelow: 0.55, patterns: [
+      { kind: 'ring', telegraph: 0.55, duration: 0.3, cooldown: 2.8, count: 14, projSpeed: 310, projDamage: 15, projSize: 8, color: '#ffd166', label: 'ANNEAU' },
+      { kind: 'sandstorm', telegraph: 1.2, duration: 4, cooldown: 5.5, speed: 500, thickness: 52, gap: 120, damage: 28, label: 'TEMPÊTE' },
+      { kind: 'mirage', telegraph: 0.6, duration: 1.4, cooldown: 5, count: 4, spread: 250, hold: 0.75, bullets: 3, arc: 0.6, projSpeed: 370, projDamage: 16, projSize: 7, color: '#ffd166', label: 'MIRAGE' },
+      { kind: 'spiral', telegraph: 0.5, duration: 2.2, cooldown: 4, arms: 2, rate: 13, angularSpeed: 2.4, projSpeed: 270, projDamage: 14, projSize: 7, color: '#c9a3ff', label: 'SABLIER' },
+      { kind: 'fan', telegraph: 0.45, duration: 0.5, cooldown: 2.1, count: 9, spread: 1.4, projSpeed: 410, projDamage: 15, projSize: 7, color: '#ffd166', label: 'CIMETERRES' },
+    ] },
+  ],
+  weakness: { desc: 'Quand le mirage retombe, le vrai reste seul et à découvert : dégâts ×1,8 pendant 2,2 s.', rule: 'after_mirage', damageMul: 1.8, window: 2.2 },
+  revenge: { hpMul: 1.4, window: 1.6, name: 'Étalon 27 / rév. B', phaseText: 'DONNÉES CHARGÉES', mimic: true,
+    extraPhases: [ { hpBelow: 0.3, patterns: [
+      { kind: 'sandstorm', telegraph: 0.9, duration: 4, cooldown: 4.5, speed: 620, thickness: 58, gap: 105, damage: 32, label: 'TEMPÊTE' },
+      { kind: 'mirage', telegraph: 0.5, duration: 1.3, cooldown: 4, count: 5, spread: 260, hold: 0.65, bullets: 4, arc: 0.8, projSpeed: 400, projDamage: 17, projSize: 7, color: '#ffd166', label: 'MIRAGE' },
+      { kind: 'spiral', telegraph: 0.5, duration: 3, cooldown: 4.5, arms: 3, rate: 15, angularSpeed: 2.8, projSpeed: 290, projDamage: 15, projSize: 7, color: '#c9a3ff', label: 'SABLIER' },
+      { kind: 'ring', telegraph: 0.45, duration: 1.2, cooldown: 2.4, count: 16, rate: 3, rotate: 0.3, projSpeed: 330, projDamage: 17, projSize: 8, color: '#ffd166' },
+    ] } ],
+    desc: 'Salle 9 : rév. B, PV ×1,4, fenêtre de faiblesse plus courte (1,6 s), phase 3 sous 30 %.' },
+});
+
+/* Salles du biome 4. Obstacles avec `kind` : column, jar, vase, basin, palm, basket, brazier, drapes, archway (Sprites.drawBlock). */
+CONTENT.rooms.push(
+  { id: 'room_b4_1', biome: 'biome_4', index: 1, type: 'PREP_COMBAT', refTime: 65,
+    obstacles: [ { x: 5, y: 2, w: 1, h: 2, kind: 'column' }, { x: 18, y: 2, w: 1, h: 2, kind: 'column' }, { x: 5, y: 9, w: 1, h: 2, kind: 'column' }, { x: 18, y: 9, w: 1, h: 2, kind: 'column' }, { x: 11, y: 6, w: 2, h: 1, kind: 'basin' } ],
+    deco: [],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_derviche', count: 2, x: 20, y: 3 }, { enemy: 'enemy_derviche', count: 2, x: 20, y: 9 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_derviche', count: 3, x: -1, y: -1 }, { enemy: 'enemy_archer', count: 1, x: 21, y: 6 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_jarre', count: 2, x: 21, y: 2 }, { enemy: 'enemy_archer', count: 2, x: 21, y: 10 }, { enemy: 'enemy_derviche', count: 2, x: 2, y: 1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_derviche', count: 1, x: -1, y: -1, elite: true }, { enemy: 'enemy_djinn', count: 1, x: 12, y: 1 }, { enemy: 'enemy_derviche', count: 2, x: 2, y: 11 }, { enemy: 'enemy_archer', count: 1, x: 21, y: 6 } ] },
+    ], traps: [], fragments: [], modular: [] },
+  { id: 'room_b4_2', biome: 'biome_4', index: 2, type: 'COMBAT_CHALLENGE', refTime: 85,
+    obstacles: [ { x: 6, y: 4, w: 1, h: 1, kind: 'jar' }, { x: 17, y: 4, w: 1, h: 1, kind: 'jar' }, { x: 6, y: 8, w: 1, h: 1, kind: 'vase' }, { x: 17, y: 8, w: 1, h: 1, kind: 'vase' } ],
+    deco: [],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_derviche', count: 3, x: 20, y: 4 }, { enemy: 'enemy_archer', count: 1, x: 21, y: 8 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_jarre', count: 2, x: 21, y: 2 }, { enemy: 'enemy_derviche', count: 2, x: -1, y: -1 }, { enemy: 'enemy_djinn', count: 1, x: 2, y: 11 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_archer', count: 2, x: 21, y: 6 }, { enemy: 'enemy_derviche', count: 3, x: -1, y: -1 }, { enemy: 'enemy_cobras', count: 1, x: 12, y: 1 } ] },
+    ], traps: [], fragments: [], modular: [] },
+  { id: 'room_b4_3', biome: 'biome_4', index: 3, type: 'COMBAT_TRAP', refTime: 95,
+    obstacles: [ { x: 4, y: 3, w: 2, h: 1, kind: 'basket' }, { x: 4, y: 9, w: 2, h: 1, kind: 'basket' }, { x: 18, y: 3, w: 1, h: 2, kind: 'palm' }, { x: 18, y: 8, w: 1, h: 2, kind: 'palm' } ],
+    deco: [],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_derviche', count: 4, x: 20, y: 6 }, { enemy: 'enemy_archer', count: 2, x: 21, y: 2 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_colosse', count: 1, x: 21, y: 6 }, { enemy: 'enemy_derviche', count: 3, x: -1, y: -1 }, { enemy: 'enemy_jarre', count: 2, x: 2, y: 11 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_jarre', count: 3, x: 2, y: 1 }, { enemy: 'enemy_archer', count: 3, x: 21, y: 10 }, { enemy: 'enemy_cobras', count: 1, x: 21, y: 2 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_djinn', count: 2, x: 21, y: 6 }, { enemy: 'enemy_derviche', count: 2, x: -1, y: -1 }, { enemy: 'enemy_colosse', count: 1, x: 12, y: 11 } ] },
+    ],
+    traps: [
+      { trap: 'trap_sabres', x: 11, y: 6, phase: 0 },
+      { trap: 'trap_pieux', x: 1, y: 1, w: 3, h: 3, phase: 0 }, { trap: 'trap_pieux', x: 20, y: 9, w: 3, h: 3, phase: 1 },
+      { trap: 'trap_meurtriere', x: 7, y: 0, phase: 0 }, { trap: 'trap_meurtriere', x: 16, y: 12, phase: 1.2 },
+      { trap: 'trap_encens', x: 6, y: 6, phase: 2 },
+    ], fragments: [], modular: [] },
+  { id: 'room_b4_4', biome: 'biome_4', index: 4, type: 'CHEST', refTime: 20,
+    obstacles: [ { x: 8, y: 4, w: 1, h: 1, kind: 'jar' }, { x: 8, y: 8, w: 1, h: 1, kind: 'jar' }, { x: 15, y: 4, w: 1, h: 1, kind: 'brazier' }, { x: 15, y: 8, w: 1, h: 1, kind: 'brazier' } ],
+    deco: [ { x: 3, y: 2, kind: 'chalice' }, { x: 20, y: 10, kind: 'gems' }, { x: 12, y: 10, kind: 'carpet' } ], waves: [], traps: [], fragments: [], modular: [] },
+  { id: 'room_b4_5', biome: 'biome_4', index: 5, type: 'MINIBOSS', refTime: 150,
+    obstacles: [ { x: 5, y: 3, w: 1, h: 2, kind: 'column' }, { x: 18, y: 3, w: 1, h: 2, kind: 'column' }, { x: 5, y: 8, w: 1, h: 2, kind: 'column' }, { x: 18, y: 8, w: 1, h: 2, kind: 'column' } ],
+    deco: [ { x: 2, y: 1, kind: 'mosque' }, { x: 21, y: 11, kind: 'lamp' }, { x: 12, y: 11, kind: 'carpet' } ],
+    waves: [ { at: 'start', spawns: [ { enemy: 'boss_vizir', count: 1, x: 18, y: 6 } ] } ],
+    traps: [ { trap: 'trap_encens', x: 3, y: 6, phase: 3 }, { trap: 'trap_encens', x: 20, y: 6, phase: 7 } ], fragments: [], modular: [] },
+  { id: 'room_b4_6', biome: 'biome_4', index: 6, type: 'COMBAT_MODULAR', refTime: 100,
+    obstacles: [ { x: 11, y: 5, w: 2, h: 3, kind: 'basin' } ],
+    deco: [],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_djinn', count: 2, x: -1, y: -1 }, { enemy: 'enemy_archer', count: 3, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_charmeur', count: 1, x: 21, y: 6 }, { enemy: 'enemy_derviche', count: 5, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_colosse', count: 2, x: -1, y: -1 }, { enemy: 'enemy_jarre', count: 4, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_djinn', count: 2, x: -1, y: -1, elite: true }, { enemy: 'enemy_archer', count: 2, x: -1, y: -1 }, { enemy: 'enemy_cobras', count: 2, x: -1, y: -1 } ] },
+    ],
+    traps: [ { trap: 'trap_meurtriere', x: 0, y: 3, phase: 0 }, { trap: 'trap_meurtriere', x: 23, y: 9, phase: 1 } ], fragments: [],
+    modular: [
+      { kind: 'slide_wall', x: 3, y: 1, w: 1, h: 5, dx: 0, dy: 6, period: 6.5, phase: 0 },
+      { kind: 'slide_wall', x: 20, y: 7, w: 1, h: 5, dx: 0, dy: -6, period: 6.5, phase: 3.2 },
+      { kind: 'rotor', cx: 12, cy: 6.5, arms: 4, length: 4, angularSpeed: 0.8 },
+      { kind: 'floor_cycle', period: 7.5, telegraph: 1.5, configs: [
+        [ { x: 7, y: 3, w: 1, h: 1 }, { x: 16, y: 3, w: 1, h: 1 }, { x: 7, y: 9, w: 1, h: 1 }, { x: 16, y: 9, w: 1, h: 1 }, { x: 11, y: 1, w: 2, h: 1 } ],
+        [ { x: 5, y: 6, w: 2, h: 1 }, { x: 17, y: 6, w: 2, h: 1 }, { x: 9, y: 2, w: 1, h: 2 }, { x: 14, y: 9, w: 1, h: 2 } ]
+      ] },
+    ] },
+  { id: 'room_b4_7', biome: 'biome_4', index: 7, type: 'COMBAT_TEMPO', refTime: 115,
+    obstacles: [ { x: 5, y: 3, w: 1, h: 1, kind: 'jar' }, { x: 18, y: 3, w: 1, h: 1, kind: 'jar' }, { x: 5, y: 9, w: 1, h: 1, kind: 'jar' }, { x: 18, y: 9, w: 1, h: 1, kind: 'jar' } ],
+    waves: [
+      { at: 'start', spawns: [ { enemy: 'enemy_derviche', count: 3, x: -1, y: -1 }, { enemy: 'enemy_archer', count: 2, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_jarre', count: 3, x: -1, y: -1 }, { enemy: 'enemy_djinn', count: 2, x: -1, y: -1 }, { enemy: 'enemy_archer', count: 2, x: -1, y: -1 }, { enemy: 'enemy_cobras', count: 1, x: -1, y: -1 } ] },
+      { at: 'clear', spawns: [ { enemy: 'enemy_archer', count: 3, x: -1, y: -1 }, { enemy: 'enemy_derviche', count: 2, x: -1, y: -1 }, { enemy: 'enemy_jarre', count: 3, x: -1, y: -1 }, { enemy: 'enemy_djinn', count: 1, x: -1, y: -1 }, { enemy: 'enemy_colosse', count: 1, x: 21, y: 6 } ] },
+    ],
+    traps: [
+      { trap: 'trap_pieux', x: 2, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
+      { trap: 'trap_pieux', x: 18, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
+      { trap: 'trap_pieux', x: 18, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
+      { trap: 'trap_pieux', x: 2, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
+      { trap: 'trap_pieux', x: 10, y: 5, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 1 } } },
+      { trap: 'trap_naphte', x: 11, y: 0, params: { dir: 'down', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 1 } } },
+      { trap: 'trap_naphte', x: 12, y: 12, params: { dir: 'up', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 5 } } },
+      { trap: 'trap_encens', x: 4, y: 6, params: { beats: { period: 8, active: 2, telegraph: 2, on: 4 } } },
+      { trap: 'trap_encens', x: 19, y: 6, params: { beats: { period: 8, active: 2, telegraph: 2, on: 0 } } },
+      { trap: 'trap_meurtriere', x: 0, y: 10, params: { beats: { every: 8, telegraph: 1, on: 3 } } },
+      { trap: 'trap_meurtriere', x: 23, y: 2, params: { beats: { every: 8, telegraph: 1, on: 7 } } },
+    ], fragments: [], modular: [] },
+  { id: 'room_b4_8', biome: 'biome_4', index: 8, type: 'CHEST_FINAL', refTime: 20,
+    obstacles: [ { x: 8, y: 4, w: 1, h: 1, kind: 'basket' }, { x: 8, y: 8, w: 1, h: 1, kind: 'basket' }, { x: 15, y: 4, w: 1, h: 1, kind: 'vase' }, { x: 15, y: 8, w: 1, h: 1, kind: 'vase' } ],
+    deco: [ { x: 3, y: 10, kind: 'chalice' }, { x: 20, y: 2, kind: 'lamp' }, { x: 12, y: 10, kind: 'carpet' } ], waves: [], traps: [], fragments: [], modular: [] },
+  { id: 'room_b4_9', biome: 'biome_4', index: 9, type: 'BOSS_REVENGE', refTime: 180,
+    obstacles: [ { x: 5, y: 3, w: 1, h: 2, kind: 'column' }, { x: 18, y: 3, w: 1, h: 2, kind: 'column' }, { x: 5, y: 8, w: 1, h: 2, kind: 'column' }, { x: 18, y: 8, w: 1, h: 2, kind: 'column' } ],
+    deco: [ { x: 2, y: 1, kind: 'mosque' }, { x: 21, y: 11, kind: 'hourglass' }, { x: 12, y: 1, kind: 'lantern' } ],
+    waves: [ { at: 'start', spawns: [ { enemy: 'boss_vizir', count: 1, x: 18, y: 6 } ] } ],
+    traps: [ { trap: 'trap_meurtriere', x: 11, y: 0, phase: 0 }, { trap: 'trap_meurtriere', x: 12, y: 12, phase: 1.2 }, { trap: 'trap_encens', x: 3, y: 6, phase: 4 }, { trap: 'trap_encens', x: 20, y: 6, phase: 8 } ],
+    fragments: [], modular: [] },
+);

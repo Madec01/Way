@@ -600,3 +600,40 @@ Le menu s'ouvre sur un **écran-titre** (`UI.showTitle`, appelé au démarrage) 
 | Attraction arcade | `menuUpdate` | 20 s sans geste sur l'écran-titre : le voile se lève, la démo de jeu apparaît en clair avec la mention « DÉMONSTRATION ». Le moindre mouvement le referme. |
 
 Pas d'égaliseur : écarté volontairement.
+
+---
+
+## 24. Biome 4 — LE SÉRAIL (niveau 4, oriental)
+
+Palier 4, débloqué après le biome 3. Un palais-bazar enseveli sous les dunes : cour aux fontaines taries, colonnes cassées, moucharabiehs. Difficulté : PV ×1,75, dégâts ×1,42, vitesse ×1,15. Palette indigo et or (`tint rgba(72,50,140,.30)`, néons `#ffd166` / `#8f6ad8`). Musiques : `biome4-1.mp3` (salles 1-4), `biome4-2.mp3` (salles 6-8), `boss4.mp3` (salles 5 et 9) — 129,2 BPM, si majeur et mi mineur.
+
+| Ennemi | Archétype | PV | Particularité |
+|---|---|---|---|
+| Derviche | rusher | 62 | Tourne puis fond sur vous, enchaîne vite (recharge 1 s). |
+| Archer du sérail | shooter | 52 | Trois flèches en éventail, puis repli. |
+| Colosse d'argile | tank | 360 | Charge à 400 px, se fend contre un mur (1,1 s sonné). |
+| Jarre de naphte | kamikaze | 30 | Roule, nappe de feu de 110 px, explose aussi à la mort. |
+| Charmeur | summoner | 140 | Sort 3 cobras toutes les 3 s, jusqu'à 6. |
+| Cobras | swarm | 13 | Nuée de 5, morsure à 0,17 s. |
+| Djinn de poussière | dasher | 70 | Se dissout, réapparaît dans le dos, traverse à 860 px/s. |
+
+| Piège | Kind | Réglage |
+|---|---|---|
+| Roue à sabres | laser_rotate | 4 lames de 5 tuiles, 1,45 rad/s |
+| Braséro roulant | saw_rail | 8 tuiles, 6 tuiles/s, aller-retour |
+| Meurtrière | turret_fixed | visée 0,7 s, 1 flèche / 2 s |
+| Encens narcotique | gas_zone | 3 s de fumée, 11 dégâts/s, -35 % vitesse |
+| Dalles à pieux | spike_tiles | damier, 2 groupes alternés |
+| Jarre de naphte | wall_fireball | 1 jarre / 2,4 s |
+| Moucharabieh | laser_grid | rais tous les 4 tuiles, alternés |
+
+**Boss : Étalon 27, dit « le Vizir »** (3200 PV, sprite `boss4` = wizzard_m agrandi ×1,6 et teinté violet — une silhouette haute et fine, à l'opposé des trois colosses des paliers précédents ; ornement `lamp` dessiné **par-dessus** le sprite, `crestOver: true`, `crestDy: -22`). Deux attaques n'existent que chez lui :
+
+- **TEMPÊTE** (`sandstorm`, classée « big ») — un mur de sable traverse la salle de bord à bord. Une seule brèche, tirée au sort et **annoncée pendant la télégraphie** par deux traits dorés en pointillés : il faut rejoindre le couloir avant que le mur arrive. Toucher le mur coûte 26 dégâts et pousse le joueur.
+- **MIRAGE** (`mirage`, classée « util ») — il se replace et laisse 3 doubles (4 puis 5 en phases suivantes) autour du joueur ; tous tirent la même salve, impossible de deviner d'où elle vient. Les doubles s'effacent juste après : **c'est la faiblesse du Vizir** (`rule: 'after_mirage'`, ×1,8 pendant 2,2 s, 1,6 s en revanche).
+
+Le reste : CIMETERRES (éventail de 7 puis 9), ANNEAU, SABLIER (spirale). Il n'invoque rien — le mirage est sa **seule** attaque « utilitaire », pour qu'il revienne à chaque phrase de 4 mesures : sinon la rotation des utilitaires n'ouvrait la fenêtre de faiblesse qu'une phrase sur deux. Une phrase type : CIMETERRES sur le temps 5, MIRAGE sur le temps 8, TEMPÊTE sur le temps fort de la dernière mesure. Revanche : PV ×1,4, phase 3 sous 30 % (tempête à 620 px/s, mirage à 5 doubles, spirale à 3 bras).
+
+**Salles** : mêmes types que les autres paliers. Obstacles `kind` propres au biome : `column`, `jar`, `vase`, `basin`, `palm`, `basket`, `brazier`, `drapes`, `archway`. Décor au sol : `lamp`, `lantern`, `spices`, `teapot`, `gems`, `scarab`, `eye`, `mosque`, `oasis`, `chalice`, `hourglass`, `carpet`, `incense`. Salle 7 (tempo) : dalles à pieux sur le 1 et le 3, jarres de naphte en éventail toutes les 2 mesures, encens alternés, meurtrières alternées.
+
+**Accessoires** : `assets/sprites/orient/*.svg`, icônes game-icons.net (CC BY 3.0, voir CREDITS.md) rastérisées en 16 à 26 px.

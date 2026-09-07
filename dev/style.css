@@ -264,7 +264,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 .card.char.selected .lvlstate{color:#7fff9a;font-weight:700}
 /* le bouton JOUER reste visible même quand la liste des niveaux dépasse la hauteur de la colonne */
 .hubcol.center{position:relative;padding-bottom:0}
-.hubcol.center .cta{position:sticky;bottom:0;margin-top:.6em;z-index:2}
+.hubcol.center .cta{position:sticky;bottom:0;margin-top:.6em;z-index:2;flex:0 0 auto}   /* flex:0 0 auto : sans ça le bouton s'écrase quand il y a beaucoup de niveaux */
 .hubcol.center::after{content:"";position:sticky;bottom:0;display:block;height:.9em;margin-top:-.9em;background:linear-gradient(180deg,rgba(8,10,18,0),rgba(8,10,18,.85));pointer-events:none}
 .card.level{padding:.6em .9em}
 .card.level .lvldesc{margin-bottom:.2em}

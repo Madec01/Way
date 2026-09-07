@@ -40,6 +40,16 @@ const SPRITE_DEFS = {
   enemy_swarm3:    { prop: 'scorpion', size: 22 },
   enemy_dasher3:   { prop: 'rattlesnake', size: 30 },
   boss3:           { idle: [16, 270, 32, 34],  run: [144, 270, 32, 34], n: 4, foot: true, tint: 'rgba(224,176,96,.45)' },   // big_zombie : silhouette sèche, différente du démon (boss 1) et de l'ogre (boss 2)
+  /* biome 4 (oriental) : wizzard_f → derviche, elf_f → archer, ogre → colosse d'argile, orc_shaman → charmeur ; jarre, cobras et djinn = icônes rastérisées */
+  enemy_rusher4:   { idle: [128, 132, 16, 28], run: [192, 132, 16, 28], hit: [256, 132, 16, 28], n: 4, foot: true, tint: 'rgba(255,178,52,.55)' },
+  enemy_shooter4:  { idle: [128, 4, 16, 28],   run: [192, 4, 16, 28],   hit: [256, 4, 16, 28],   n: 4, foot: true, tint: 'rgba(90,214,204,.45)' },
+  enemy_tank4:     { idle: [16, 320, 32, 32],  run: [144, 320, 32, 32], n: 4, foot: true, tint: 'rgba(198,116,64,.6)' },
+  enemy_kamikaze4: { prop: 'covered-jar', size: 32, roll: true },
+  enemy_summoner4: { idle: [368, 236, 16, 20], run: [432, 236, 16, 20], n: 4, tint: 'rgba(150,100,220,.5)' },
+  enemy_swarm4:    { prop: 'cobra', size: 24 },
+  enemy_dasher4:   { prop: 'djinn', size: 32 },
+  /* le Vizir : silhouette haute et fine (wizzard_m agrandi), à l'opposé des trois colosses des autres paliers */
+  boss4:           { idle: [128, 164, 16, 28], run: [192, 164, 16, 28], hit: [256, 164, 16, 28], n: 4, foot: true, scale: 1.6, tint: 'rgba(140,110,235,.42)' },
 };
 const TILES = { floor: [[16, 64], [32, 64], [48, 64], [16, 80], [32, 80], [48, 80], [16, 96], [32, 96]], wallTop: [32, 0], wallFace: [32, 16], wallLeft: [0, 128], wallRight: [16, 128], cornerTL: [32, 112], cornerTR: [48, 112], cornerBL: [32, 144], cornerBR: [48, 144], column: [[80, 80], [80, 96], [80, 112]], banner: [32, 32], hole: [48, 32], goo: [64, 80] };
 
@@ -72,6 +82,17 @@ const Sprites = (() => {
     'mushrooms-cluster': { d: 'greenhouse', color: '#c9a3ff', px: 20 }, 'grass-mushroom': { d: 'greenhouse', color: '#b7ff7a', px: 18 }, seedling: { d: 'greenhouse', color: '#9cff57', px: 16 }, 'sprout-disc': { d: 'greenhouse', color: '#8fd86a', px: 18 },
     'plant-roots': { d: 'greenhouse', color: '#5a8a4a', px: 22 }, 'bubbling-flask': { d: 'greenhouse', color: '#8fd8d0', px: 20 }, 'water-fountain': { d: 'greenhouse', color: '#9fd8ff', px: 22 }, 'carnivorous-plant': { d: 'greenhouse', color: '#ff9adb', px: 24 },
     'vine-flower': { d: 'greenhouse', color: '#ffb3e0', px: 18 }, 'tree-roots': { d: 'greenhouse', color: '#4f8a5a', px: 24 },
+    /* biome 4 — LE SÉRAIL, palais oriental enseveli (assets/sprites/orient/) */
+    'ancient-columns': { d: 'orient', color: '#e2d3ae', px: 24 }, amphora: { d: 'orient', color: '#c07a4a', px: 20 }, 'porcelain-vase': { d: 'orient', color: '#5ad6cc', px: 20 },
+    fountain: { d: 'orient', color: '#7fd8ff', px: 22 }, 'palm-tree': { d: 'orient', color: '#5aa05a', px: 26 }, basket: { d: 'orient', color: '#c9a05a', px: 18 },
+    'fire-bowl': { d: 'orient', color: '#ff9a3c', px: 20 }, 'arabic-door': { d: 'orient', color: '#8f6ad8', px: 24 }, 'theater-curtains': { d: 'orient', color: '#a03a5a', px: 24 },
+    'covered-jar': { d: 'orient', color: '#8a5a3a', px: 18 }, 'magic-lamp': { d: 'orient', color: '#ffd166', px: 18 }, 'paper-lantern': { d: 'orient', color: '#ffb347', px: 18 },
+    'hot-spices': { d: 'orient', color: '#e06a3a', px: 18 }, teapot: { d: 'orient', color: '#d8c48a', px: 18 }, gems: { d: 'orient', color: '#7fe0ff', px: 16 },
+    'scarab-beetle': { d: 'orient', color: '#5ad6cc', px: 18 }, 'all-seeing-eye': { d: 'orient', color: '#8fd8ff', px: 18 }, 'samara-mosque': { d: 'orient', color: '#e2d3ae', px: 24 },
+    oasis: { d: 'orient', color: '#6ac8a0', px: 22 }, 'jeweled-chalice': { d: 'orient', color: '#ffd166', px: 18 }, 'sands-of-time': { d: 'orient', color: '#e8c98a', px: 18 },
+    'red-carpet': { d: 'orient', color: '#a8365a', px: 22 }, cobra: { d: 'orient', color: '#3aa06a', px: 22 }, djinn: { d: 'orient', color: '#9a7aff', px: 26 },
+    'crescent-blade': { d: 'orient', color: '#d8dce8', px: 20 }, incense: { d: 'orient', color: '#c9a3ff', px: 18 }, 'snake-jar': { d: 'orient', color: '#8a5a3a', px: 20 },
+    turban: { d: 'orient', color: '#e8dcc0', px: 18 },
   };
   const props = {};
   /* charge chaque SVG, remplace currentColor par la couleur du décor, rastérise en petit dans un canvas (pixel art) */
@@ -97,7 +118,9 @@ const Sprites = (() => {
   }
   const DECO_KIND = { skull: 'desert-skull', tumbleweed: 'tumbleweed', rails: 'rail-road', wanted: 'wanted-reward', saloon: 'saloon-doors', windmill: 'windmill', barrels: 'cellar-barrels',
     /* biome 1 */ cross: 'hospital-cross', hazard: 'hazard-sign', fan: 'computer-fan', valve: 'valve', cog: 'cog', battery: 'battery-pack-alt', tubes: 'test-tube-rack', pack: 'medical-pack', bin: 'trash-can',
-    /* biome 2 */ leaf: 'curled-leaf', mushrooms: 'mushrooms-cluster', mushroom: 'grass-mushroom', seedling: 'seedling', sprout: 'sprout-disc', roots: 'plant-roots', flower: 'vine-flower', pot: 'cactus-pot' };
+    /* biome 2 */ leaf: 'curled-leaf', mushrooms: 'mushrooms-cluster', mushroom: 'grass-mushroom', seedling: 'seedling', sprout: 'sprout-disc', roots: 'plant-roots', flower: 'vine-flower', pot: 'cactus-pot',
+    /* biome 4 */ lamp: 'magic-lamp', lantern: 'paper-lantern', spices: 'hot-spices', teapot: 'teapot', gems: 'gems', scarab: 'scarab-beetle', eye: 'all-seeing-eye', mosque: 'samara-mosque',
+    oasis: 'oasis', chalice: 'jeweled-chalice', hourglass: 'sands-of-time', carpet: 'red-carpet', incense: 'incense', sabre: 'crescent-blade', snakejar: 'snake-jar' };
   /* décor au sol sans collision (salles du biome 3) */
   function drawDeco(ctx, d) { const name = DECO_KIND[d.kind] || d.kind; const x = ROOM_X + (d.x + 0.5) * TILE, y = ROOM_Y + (d.y + 0.5) * TILE; ctx.save(); ctx.globalAlpha = 0.8; drawProp(ctx, name, x, y, TILE * (d.big ? 1.3 : 0.9), TILE * (d.big ? 1.3 : 0.9)); ctx.restore(); }   // rien si l'accessoire n'est pas encore chargé (pas de carré de repli)
   /* dessine un sprite nommé centré en (x, y) ; opts : flip, walk (temps de marche, anim run si > 0), flash, scale, fallback() */
@@ -111,6 +134,7 @@ const Sprites = (() => {
     }
     if (!ready || !d) { if (opts.fallback) opts.fallback(); return false; }   // TODO_SPRITE : fallback Canvas
     if (!opts.tint && d.tint) opts = Object.assign({}, opts, { tint: d.tint });   // teinte propre au sprite (variantes de biome)
+    if (d.scale) opts = Object.assign({}, opts, { scale: (opts.scale || 1) * d.scale });   // agrandissement propre au sprite (le Vizir, plus haut que les autres boss)
     const moving = opts.walk != null && opts.walk > 0 && (opts.walkFrame == null); const set = opts.flash && d.hit ? d.hit : (moving ? d.run : d.idle);
     const frame = opts.flash && d.hit ? 0 : Math.floor(((opts.walk != null ? opts.walk : Time.now) * (moving ? 10 : 6)) % d.n);
     const [sx, sy, sw, sh] = set; const s = SCALE * (opts.scale || 1); const dw = sw * s, dh = sh * s;
@@ -170,7 +194,8 @@ const Sprites = (() => {
   /* obstacle décoré : `kind` de la salle → accessoire. Un même kind peut avoir une variante par biome (cf. BLOCK_BY_BIOME). */
   const BLOCK_KIND = { cactus: 'cactus', rock: 'rock', barrel: 'barrel', crate: 'wooden-crate', wagon: 'old-wagon', cart: 'mine-wagon', barrels: 'cellar-barrels', skull: 'animal-skull', windmill: 'windmill',
     tank: 'chemical-tank', fuel: 'fuel-tank', locker: 'lockers', pipe: 'straight-pipe', drip: 'medical-drip', microscope: 'microscope', bin: 'trash-can',
-    planter: 'flower-pot', bush: 'vines', roots: 'tree-roots', trap_plant: 'carnivorous-plant', flask: 'bubbling-flask', fountain: 'water-fountain' };
+    planter: 'flower-pot', bush: 'vines', roots: 'tree-roots', trap_plant: 'carnivorous-plant', flask: 'bubbling-flask', fountain: 'water-fountain',
+    column: 'ancient-columns', jar: 'amphora', vase: 'porcelain-vase', basin: 'fountain', palm: 'palm-tree', basket: 'basket', brazier: 'fire-bowl', archway: 'arabic-door', drapes: 'theater-curtains' };
   function drawBlock(ctx, o) {
     const name = o.kind && BLOCK_KIND[o.kind];
     if (name && props[name]) {

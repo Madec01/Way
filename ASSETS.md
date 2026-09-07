@@ -228,7 +228,9 @@ Musique : "Basement Floor", "Latin Industries", "In a Heartbeat", "Ouroboros" Ke
 Polices : Silkscreen, VT323, Pixelify Sans (SIL Open Font License 1.1)
 ```
 
-### 1.8 Accessoires de décor — `assets/sprites/western/`, `lab/`, `greenhouse/` (248 Ko, 59 SVG)
+### 1.8 Accessoires de décor — `assets/sprites/western/`, `lab/`, `greenhouse/`, `orient/` (364 Ko, 87 SVG)
 - Source : **game-icons.net** via le paquet npm `@iconify-json/game-icons@1.2.4` (corps SVG, viewBox 512). Auteurs : Lorc, Delapouite, Skoll et contributeurs — Licence : **CC BY 3.0** (attribution dans `CREDITS.md`).
 - Fichiers : cactus, cactus-pot, tumbleweed, barrel, wooden-crate, cargo-crate, old-wagon, mine-wagon, coal-wagon, windmill, dynamite, rail-road, railway, desert-skull, animal-skull, rock, saloon-doors, wanted-reward, land-mine, rattlesnake, scorpion, vulture, bull, horse-head, revolver, lasso, cowboy-boot, cellar-barrels, gold-mine, desert.
-- Usage : `Sprites.loadProps()` remplace `currentColor` par la couleur du décor (`PROP_DEFS`), rastérise chaque icône dans un canvas de 16 à 26 px et l'agrandit sans lissage → rendu pixel art. Obstacles `kind` (biome 3), décor `deco`, et sprites des ennemis baril / scorpions / crotale.
+- Fichiers `orient/` (biome 4) : ancient-columns, amphora, porcelain-vase, fountain, palm-tree, basket, fire-bowl, arabic-door, theater-curtains, covered-jar, magic-lamp, paper-lantern, hot-spices, teapot, gems, scarab-beetle, all-seeing-eye, samara-mosque, oasis, jeweled-chalice, sands-of-time, red-carpet, cobra, djinn, crescent-blade, incense, snake-jar, turban.
+- Usage : `Sprites.loadProps()` remplace `currentColor` par la couleur du décor (`PROP_DEFS`), rastérise chaque icône dans un canvas de 16 à 26 px et l'agrandit sans lissage → rendu pixel art. Obstacles `kind`, décor `deco`, sprites des ennemis « accessoires » (baril, scorpions, crotale, jarre, cobras, djinn) et lampe du Vizir.
+- Extraction : script Python qui lit `package/icons.json` du paquet npm et écrit un SVG par icône (`<svg viewBox="0 0 512 512">` + corps tel quel).

@@ -18,5 +18,5 @@ Tous les assets tiers sont libres de droit. Détails, liens et coordonnées d'ut
 ## Sons
 - Synthèse Web Audio (bruit filtré, FM, saturation, réverbération par convolution) — module `AudioEngine`, propre au projet.
 
-## Accessoires western (biome 3)
-Icônes **game-icons.net** (Lorc, Delapouite, Skoll et contributeurs), licence **CC BY 3.0** — https://game-icons.net — récupérées via `@iconify-json/game-icons`, recolorées et rastérisées en pixel art dans `assets/sprites/western/`.
+## Accessoires de décor (biomes 1 à 4)
+Icônes **game-icons.net** (Lorc, Delapouite, Skoll et contributeurs), licence **CC BY 3.0** — https://game-icons.net — récupérées via `@iconify-json/game-icons`, recolorées et rastérisées en pixel art dans `assets/sprites/lab/` (biome 1), `greenhouse/` (biome 2), `western/` (biome 3) et `orient/` (biome 4).

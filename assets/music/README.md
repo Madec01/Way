@@ -11,6 +11,7 @@ Le jeu lit les fichiers de ce dossier par leur nom, sans modification de code :
 | `boss1.mp3` | Biome 1 : salle 5 (mini-boss) et salle 9 (revanche) |
 | `biome2-1.mp3`, `biome2-2.mp3`, `boss2.mp3` | Biome 2, même logique |
 | `biome3-1.mp3`, `biome3-2.mp3`, `boss3.mp3` | Biome 3, même logique |
+| `biome4-1.mp3`, `biome4-2.mp3`, `boss4.mp3` | Biome 4, même logique |
 
 L'ancien nom `biome1.mp3` reste accepté en repli si `biome1-1.mp3` manque.
 
