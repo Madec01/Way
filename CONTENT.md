@@ -798,3 +798,39 @@ Sous la ligne choisie viennent ses réglages : largeur, hauteur, annonce et dur�
 ### Garde-fous
 
 `atelier.js` (scratchpad, Playwright) vérifie l'ouverture, la salle vierge, la pose au clic, la grille, l'export, l'import, la tête de lecture, les murs et la fermeture — et surtout que le piège est **actif exactement sur les temps cochés** et **annoncé un temps avant**, en comparant les états de `cycleHits` à la liste attendue. Attention en écrivant ce genre de test : échantillonner pile sur les bornes d'une fenêtre donne des résultats faux à 10⁻¹⁴ près, il faut viser le milieu des cases.
+
+---
+
+## 29. Deux mécaniques de tir, et trois réparations de l'atelier
+
+### `emitter` — lanceur de projectiles en motif
+
+Un coup = une salve. Quatre paramètres suffisent à couvrir la couronne, la spirale, l'éventail et la visée :
+
+| Paramètre | Effet |
+|---|---|
+| `count` | projectiles par salve |
+| `arc` | ouverture en radians — `2π` = couronne complète, `0.5` = trois coups serrés |
+| `spin` | rotation de la salve d'un coup au suivant : c'est ce qui dessine la spirale |
+| `pattern: 'aimed'` | la salve part vers le joueur au lieu de suivre `angle` |
+| `burst` / `burstGap` | plusieurs salves coup sur coup, espacées de `burstGap` temps |
+
+L'espacement des rafales se compte en **temps réel** et non en temps musical : dans l'atelier la lecture revient en arrière à chaque boucle, une rafale en cours resterait coincée. Une rafale oubliée plus de 2 s est abandonnée.
+
+Neuf pièges neufs s'appuient dessus ou sur le rayon : **Diffuseur**, **Gyrophare**, **Rayon mural** (biomes 1 et 2), **Gatling**, **Revolver**, **Fil de détente** (biome 3), **Lanterne à braises**, **Derviche de lames**, **Rai de soleil** (biome 4). Ils sont dans les `trapPool`, donc dans la palette de l'atelier ; aucune salle existante n'en déclare, l'équilibre du jeu ne bouge pas.
+
+### `laser_beam` — rayon mural
+
+Un rayon fixe depuis son socle jusqu'au bord de la salle, taillé au rectangle de la pièce, qui s'allume et s'éteint franchement sur la partition. `angle` l'oriente, `length` le raccourcit, `thickness` l'épaissit. C'est la coupure nette qui manquait pour jouer en mesure : on passe entre deux allumages.
+
+### Trois réparations
+
+**Les tireurs sur des coups rapprochés.** Une bouche de feu à qui on donnait les temps 1 · 1,5 · 2 n'en tirait qu'un. Le déclenchement passait par un *cycle* dont le début était `coup − annonce` : avec une annonce d'un temps et des coups espacés d'un demi-temps, les cycles se chevauchaient et le suivant écrasait le précédent. `shotState` remplace ce découpage : un coup est un **instant**, pas un cycle. Il renvoie l'indice du dernier coup dû, celui du prochain, et la chaleur d'annonce.
+
+**Les tireurs après une boucle.** Plus grave et invisible en jeu : le déclenchement comparait l'indice du coup à un compteur croissant (`fireCount`). Dans l'atelier la lecture revient en arrière à chaque boucle, l'indice redescend, et le piège ne tirait **plus jamais** après le premier tour. La comparaison porte maintenant sur le dernier coup joué (`lastShot`), qui accepte que le temps recule. Au premier réveil le piège note l'indice courant sans tirer : il ne rejoue pas un coup déjà passé.
+
+**Les trajets continus dans l'atelier.** Un tourniquet posé sans réglage tournait à la vitesse du contenu (rad/s), sans rapport avec la boucle : il s'éteignait, tournait dans le noir et se rallumait à un angle arbitraire — vu comme « il clignote et revient en arrière ». L'atelier écrit maintenant `turn` (temps par tour) et `trip` (temps par aller) par défaut, et les pièges à trajet continu naissent allumés toute la boucle (`durée = 0` veut dire « toute la boucle »).
+
+### Réglages par élément
+
+La ligne choisie ouvre ce qui a du sens pour sa mécanique : largeur, hauteur, annonce, durée, **couleur** (`params.color`, qui surcharge celle du contenu), **orientation** en degrés, sens horizontal/vertical, tour et aller en temps, nombre de bras, de projectiles, ouverture, rotation par coup, rafale. Les repères de pose sont passés à une ligne sur quatre très effacée, avec une case pour les couper, et le **mode test** les retire tous — grille, cadres et partition au sol (`room.noScore`) — pour voir la salle telle qu'elle sera jouée.

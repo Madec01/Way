@@ -14,7 +14,7 @@ CONTENT.biomes.push({
     { bonus: { name: 'Récolte', desc: '+40 % pièces, +20 % XP.', mods: [{ stat: 'coinGain', mul: 1.4 }, { stat: 'xpGain', mul: 1.2 }], hooks: {} }, malus: { name: 'Serre chaude', desc: '-20 % PV max, invulnérabilité après un coup -0,15 s.', mods: [{ stat: 'maxHp', mul: 0.8 }, { stat: 'invulnTime', add: -0.15 }], hooks: {} } },
   ],
   enemyPool: ['enemy_ronce', 'enemy_pollinisateur', 'enemy_racine', 'enemy_spore', 'enemy_bourgeon', 'enemy_moucherons', 'enemy_liane'],
-  trapPool: ['trap_balayage', 'trap_tourniquet', 'trap_grille', 'trap_bouche', 'trap_dalles', 'trap_nappe', 'trap_rail', 'trap_tourelle'],
+  trapPool: ['trap_balayage', 'trap_tourniquet', 'trap_grille', 'trap_bouche', 'trap_dalles', 'trap_nappe', 'trap_rail', 'trap_tourelle', 'trap_diffuseur', 'trap_gyrophare', 'trap_rayon'],
   miniboss: 'boss_serriste',
   difficulty: { hpMul: 1.3, damageMul: 1.2, speedMul: 1.08 },
   unlockAfter: 'biome_1',

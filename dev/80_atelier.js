@@ -10,10 +10,26 @@
    ========================================================================= */
 const Atelier = (() => {
   const KEY = 'way_atelier_v1';
-  /* taille par défaut à la pose, en tuiles */
-  const SIZE = { laser_sweep: [6, 8], laser_rotate: [1, 1], laser_grid: [10, 8], wall_fireball: [1, 1], spike_tiles: [4, 3], gas_zone: [1, 1], saw_rail: [8, 1], turret_fixed: [1, 1] };
+  /* Réglages par défaut à la pose, et réglages proposés, selon la mécanique du piège.
+     `act` par défaut : un piège à trajet continu (bras qui tourne, scie sur rail) reste allumé toute la boucle —
+     sinon il s'éteint, tourne dans le noir et se rallume ailleurs. `turn` / `trip` calent ce trajet sur la mesure. */
+  const KIND = {
+    laser_sweep:   { size: [6, 8], act: 2, tele: 1, axis: 1 },
+    laser_rotate:  { size: [1, 1], act: 0, tele: 1, turn: 4, arms: 1 },
+    laser_grid:    { size: [10, 8], act: 1, tele: 1, axis: 1 },
+    wall_fireball: { size: [1, 1], act: 0.25, tele: 1, angle: 1, count: 1 },
+    spike_tiles:   { size: [4, 3], act: 0.5, tele: 1 },
+    gas_zone:      { size: [1, 1], act: 2, tele: 1 },
+    saw_rail:      { size: [8, 1], act: 0, tele: 1, trip: 4, axis: 1 },
+    turret_fixed:  { size: [1, 1], act: 0.25, tele: 1, angle: 1, count: 1 },
+    emitter:       { size: [1, 1], act: 0.25, tele: 1, angle: 1, count: 1, spin: 1, arc: 1, burst: 1 },
+    laser_beam:    { size: [1, 1], act: 1, tele: 1, angle: 1, len: 1 },
+  };
+  const kindOf = it => (Content.trap(it.trap) || {}).kind;
+  const defOf = it => KIND[kindOf(it)] || {};
+  const SIZE = Object.keys(KIND).reduce((o, k) => (o[k] = KIND[k].size, o), {});
   const SNAPS = [[1, 'noires'], [2, 'croches'], [4, 'doubles'], [3, 'triolets']];
-  const st = { biome: 'biome_1', track: 'a', bars: 2, snap: 2, items: [], sel: -1, pose: true, loop: true, metro: false, safe: true, brush: null, loopBar: 0 };
+  const st = { biome: 'biome_1', track: 'a', bars: 2, snap: 2, items: [], sel: -1, pose: true, loop: true, metro: false, safe: true, grid: true, brush: null, loopBar: 0 };
   let box = null, live = false, lastIdx = -1, headEl = null, canvas = null, headX0 = 0, headW = 0;
 
   const Lb = () => st.bars * 4;                       // temps par boucle
@@ -35,8 +51,10 @@ const Atelier = (() => {
   }
   /* un élément de l'atelier → une déclaration de piège de content*.js */
   function compile(it) {
-    return { trap: it.trap, x: it.x, y: it.y, w: it.w, h: it.h,
-      params: Object.assign({}, it.params, { beats: { bars: st.bars, hits: it.hits.slice().sort((a, b) => a - b), telegraph: it.tele, active: it.act } }) };
+    const b = { bars: st.bars, hits: it.hits.slice().sort((a, b) => a - b), telegraph: it.tele, active: it.act || Lb() };
+    if (it.turn) b.turn = it.turn;   // temps pour un tour : la rotation revient au même endroit à chaque boucle
+    if (it.trip) b.trip = it.trip;   // temps pour un aller sur le rail
+    return { trap: it.trap, x: it.x, y: it.y, w: it.w, h: it.h, params: Object.assign({}, it.params, { beats: b }) };
   }
   /* refabrique pièges et murs sans recharger la salle : la musique ne saute pas et le joueur ne bouge pas */
   function apply() {
@@ -101,6 +119,7 @@ const Atelier = (() => {
         <label class="chk"><input type="checkbox" id="a-loop"> boucler</label>
         <label class="chk"><input type="checkbox" id="a-metro"> métronome</label>
         <label class="chk"><input type="checkbox" id="a-safe"> invulnérable</label>
+        <label class="chk"><input type="checkbox" id="a-grid"> repères</label>
         <span class="asp"></span>
         <span class="anw"><button class="btn small" id="a-prev">◀</button><span id="a-win" class="amono"></span><button class="btn small" id="a-next">▶</button></span>
         <button class="btn small" id="a-export">Exporter</button><button class="btn small ghost" id="a-clear">Vider</button><button class="btn small ghost" id="a-fold">Réduire</button><button class="btn small ghost" id="a-close">Fermer (F2)</button>
@@ -111,7 +130,7 @@ const Atelier = (() => {
         <div class="arow"><button class="btn small" id="a-copy">Copier</button><button class="btn small" id="a-import">Importer ce texte</button><button class="btn small ghost" id="a-hide">Fermer</button></div></div>`;
     headEl = $('#a-head');
     $('#a-biome').value = st.biome; $('#a-track').value = st.track; $('#a-bars').value = st.bars; $('#a-snap').value = st.snap;
-    $('#a-loop').checked = st.loop; $('#a-metro').checked = st.metro; $('#a-safe').checked = st.safe;
+    $('#a-loop').checked = st.loop; $('#a-metro').checked = st.metro; $('#a-safe').checked = st.safe; $('#a-grid').checked = st.grid;
     $('#a-biome').onchange = e => { st.biome = e.target.value; st.brush = null; startRoom(); refresh(); };
     $('#a-track').onchange = e => setTrack(e.target.value);
     $('#a-bars').onchange = e => { st.bars = +e.target.value; st.loopBar = Math.floor(beatNow() / Lb()); apply(); refresh(); };
@@ -119,7 +138,8 @@ const Atelier = (() => {
     $('#a-loop').onchange = e => { st.loop = e.target.checked; };
     $('#a-metro').onchange = e => { st.metro = e.target.checked; };
     $('#a-safe').onchange = e => { st.safe = e.target.checked; G.debug.invuln = st.safe; };
-    $('#a-mode').onclick = () => { st.pose = !st.pose; refresh(); };
+    $('#a-grid').onchange = e => { st.grid = e.target.checked; };
+    $('#a-mode').onclick = () => { setPose(!st.pose); };
     $('#a-prev').onclick = () => jumpLoop(-1); $('#a-next').onclick = () => jumpLoop(1);
     $('#a-export').onclick = showIo; $('#a-hide').onclick = () => { $('#a-io').hidden = true; };
     $('#a-copy').onclick = () => { const t = $('#a-txt'); t.select(); try { navigator.clipboard.writeText(t.value); UI.toast('Copié'); } catch (e) { document.execCommand('copy'); } };
@@ -128,6 +148,12 @@ const Atelier = (() => {
     $('#a-close').onclick = close;
     $('#a-fold').onclick = () => { const f = box.classList.toggle('fold'); $('#a-fold').textContent = f ? 'Déplier' : 'Réduire'; if (!f) measure(); };
     canvas.addEventListener('mousedown', onCanvas);
+    refresh();
+  }
+  /* pose ↔ test : en test, plus de grille, plus de cadres, plus de partition au sol — la salle telle qu'elle sera jouée */
+  function setPose(v) {
+    st.pose = v; if (G.room) G.room.noScore = !v;
+    if (box) { box.classList.toggle('fold', !v); const f = $('#a-fold'); if (f) f.textContent = v ? 'Réduire' : 'Déplier'; }
     refresh();
   }
   function jumpLoop(d) { const b = st.loopBar + d; if (b < 0) return; if (!Music.seekBeat(b * Lb())) return; st.loopBar = b; refresh(); }
@@ -166,21 +192,47 @@ const Atelier = (() => {
     lanes.querySelectorAll('[data-del]').forEach(b => { b.onclick = () => { st.items.splice(+b.dataset.del, 1); st.sel = -1; apply(); refresh(); }; });
     measure();
     /* réglages de l'élément choisi */
-    const it = st.items[st.sel];
-    if (it && it.kind !== 'mur') {
-      const d = document.createElement('div'); d.className = 'arow atune';
-      d.innerHTML = `<b>${(Content.trap(it.trap) || {}).name || it.trap}</b>
-        <label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
-        <label>hauteur <input type="number" min="1" max="13" step="1" id="t-h" value="${it.h}"></label>
-        <label>annonce <input type="number" min="0" max="8" step="0.25" id="t-tele" value="${it.tele}"> temps</label>
-        <label>durée <input type="number" min="0.25" max="16" step="0.25" id="t-act" value="${it.act}"> temps</label>
-        <button class="btn small" id="t-dup">Dupliquer</button>`;
-      lanes.appendChild(d);
-      const bind = (id, f) => { const e = d.querySelector(id); e.onchange = () => { f(+e.value); apply(); refresh(); }; };
-      bind('#t-w', v => { it.w = clamp(Math.round(v), 1, ROOM_COLS); }); bind('#t-h', v => { it.h = clamp(Math.round(v), 1, ROOM_ROWS); });
-      bind('#t-tele', v => { it.tele = clamp(v, 0, 8); }); bind('#t-act', v => { it.act = clamp(v, 0.25, 16); });
-      d.querySelector('#t-dup').onclick = () => { const c = JSON.parse(JSON.stringify(it)); c.x = clamp(c.x + 1, 0, ROOM_COLS - 1); c.y = clamp(c.y + 1, 0, ROOM_ROWS - 1); st.items.push(c); st.sel = st.items.length - 1; apply(); refresh(); };
+    tune(lanes);
+  }
+  /* réglages de l'élément choisi : ce qui a du sens pour sa mécanique, rien de plus */
+  function tune(lanes) {
+    const it = st.items[st.sel]; if (!it) return;
+    const k = it.kind === 'mur' ? {} : defOf(it); const p = it.params || (it.params = {});
+    const d = document.createElement('div'); d.className = 'arow atune';
+    const nom = it.kind === 'mur' ? 'Mur' : ((Content.trap(it.trap) || {}).name || it.trap);
+    let h = `<b>${nom}</b>
+      <label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
+      <label>hauteur <input type="number" min="1" max="13" step="1" id="t-h" value="${it.h}"></label>`;
+    if (it.kind !== 'mur') {
+      h += `<label>annonce <input type="number" min="0" max="8" step="0.25" id="t-tele" value="${it.tele}"> temps</label>
+        <label>durée <input type="number" min="0" max="32" step="0.25" id="t-act" value="${it.act}"> temps <i class="amuted">(0 = toute la boucle)</i></label>
+        <label>couleur <input type="color" id="t-col" value="${p.color || (Content.trap(it.trap) || {}).color || '#ff5e7a'}"></label>`;
+      if (k.angle) h += `<label>orientation <input type="number" min="0" max="359" step="15" id="t-ang" value="${Math.round(((p.dir != null ? p.dir : p.angle || 0) * 180 / Math.PI + 360) % 360)}">°</label>`;
+      if (k.axis) h += `<label>sens <select id="t-axis"><option value="x">horizontal</option><option value="y">vertical</option></select></label>`;
+      if (k.turn) h += `<label>tour en <input type="number" min="0.5" max="32" step="0.5" id="t-turn" value="${it.turn || 4}"> temps</label>`;
+      if (k.trip) h += `<label>aller en <input type="number" min="0.5" max="32" step="0.5" id="t-trip" value="${it.trip || 4}"> temps</label>`;
+      if (k.arms) h += `<label>bras <input type="number" min="1" max="6" step="1" id="t-arms" value="${p.arms || 2}"></label>`;
+      if (k.count) h += `<label>projectiles <input type="number" min="1" max="16" step="1" id="t-count" value="${p.count || 1}"></label>`;
+      if (k.arc) h += `<label>ouverture <input type="number" min="0" max="360" step="15" id="t-arc" value="${Math.round((p.arc != null ? p.arc : TAU) * 180 / Math.PI)}">° <i class="amuted">(360 = couronne)</i></label>`;
+      if (k.spin) h += `<label>rotation <input type="number" min="-180" max="180" step="15" id="t-spin" value="${Math.round((p.spin || 0) * 180 / Math.PI)}">°/coup</label>`;
+      if (k.burst) h += `<label>rafale <input type="number" min="1" max="8" step="1" id="t-burst" value="${p.burst || 1}"> × <input type="number" min="0.125" max="4" step="0.125" id="t-bgap" value="${p.burstGap != null ? p.burstGap : 0.25}"> temps</label>`;
+      if (k.len) h += `<label>longueur <input type="number" min="1" max="26" step="1" id="t-len" value="${p.length || 26}"> tuiles</label>`;
     }
+    h += '<button class="btn small" id="t-dup">Dupliquer</button>';
+    d.innerHTML = h; lanes.appendChild(d);
+    const bind = (id, f) => { const e = d.querySelector(id); if (e) e.onchange = () => { f(e.type === 'number' ? +e.value : e.value); apply(); refresh(); }; };
+    bind('#t-w', v => { it.w = clamp(Math.round(v), 1, ROOM_COLS); }); bind('#t-h', v => { it.h = clamp(Math.round(v), 1, ROOM_ROWS); });
+    bind('#t-tele', v => { it.tele = clamp(v, 0, 8); }); bind('#t-act', v => { it.act = clamp(v, 0, 32); });
+    bind('#t-col', v => { p.color = v; });
+    bind('#t-ang', v => { const a = (v % 360) * Math.PI / 180; if (kindOf(it) === 'wall_fireball') p.dir = a; else p.angle = a; });
+    bind('#t-axis', v => { p.axis = v; p.orientation = v === 'y' ? 'horizontal' : 'vertical'; });
+    bind('#t-turn', v => { it.turn = clamp(v, 0.5, 32); }); bind('#t-trip', v => { it.trip = clamp(v, 0.5, 32); });
+    bind('#t-arms', v => { p.arms = clamp(Math.round(v), 1, 6); }); bind('#t-count', v => { p.count = clamp(Math.round(v), 1, 16); });
+    bind('#t-arc', v => { p.arc = clamp(v, 0, 360) * Math.PI / 180; }); bind('#t-spin', v => { p.spin = clamp(v, -180, 180) * Math.PI / 180; });
+    bind('#t-burst', v => { p.burst = clamp(Math.round(v), 1, 8); }); bind('#t-bgap', v => { p.burstGap = clamp(v, 0.125, 4); });
+    bind('#t-len', v => { p.length = clamp(Math.round(v), 1, 26); });
+    const ax = d.querySelector('#t-axis'); if (ax) ax.value = p.axis || 'x';
+    d.querySelector('#t-dup').onclick = () => { const c = JSON.parse(JSON.stringify(it)); c.x = clamp(c.x + 1, 0, ROOM_COLS - 1); c.y = clamp(c.y + 1, 0, ROOM_ROWS - 1); st.items.push(c); st.sel = st.items.length - 1; apply(); refresh(); };
   }
   /* position et largeur de la zone des cases : le curseur de lecture s'y aligne au pixel */
   function measure() {
@@ -209,8 +261,10 @@ const Atelier = (() => {
     if (st.brush === 'mur') st.items.push({ kind: 'mur', x: tx, y: ty, w: 1, h: 1 });
     else {
       const d = Content.trap(st.brush); if (!d) return;
-      const s = SIZE[d.kind] || [1, 1];
-      st.items.push({ kind: 'trap', trap: st.brush, x: clamp(tx, 0, ROOM_COLS - s[0]), y: clamp(ty, 0, ROOM_ROWS - s[1]), w: s[0], h: s[1], hits: [0], tele: 1, act: 1, params: {} });
+      const k = KIND[d.kind] || {}; const s = k.size || [1, 1];
+      const it = { kind: 'trap', trap: st.brush, x: clamp(tx, 0, ROOM_COLS - s[0]), y: clamp(ty, 0, ROOM_ROWS - s[1]), w: s[0], h: s[1], hits: [0], tele: k.tele || 1, act: k.act || 0, params: {} };
+      if (k.turn) it.turn = k.turn; if (k.trip) it.trip = k.trip;
+      st.items.push(it);
     }
     st.sel = st.items.length - 1; apply(); refresh();
   }
@@ -254,10 +308,13 @@ const Atelier = (() => {
   /* repères dans la salle : grille de pose, élément choisi, aperçu sous le curseur */
   function render(ctx) {
     if (!live || !st.pose) return;
-    ctx.save(); ctx.globalAlpha = 0.10; ctx.strokeStyle = '#6ee7ff'; ctx.lineWidth = 1;
-    for (let x = 0; x <= ROOM_COLS; x++) { ctx.beginPath(); ctx.moveTo(ROOM_X + x * TILE, ROOM_Y); ctx.lineTo(ROOM_X + x * TILE, ROOM_Y + ROOM_ROWS * TILE); ctx.stroke(); }
-    for (let y = 0; y <= ROOM_ROWS; y++) { ctx.beginPath(); ctx.moveTo(ROOM_X, ROOM_Y + y * TILE); ctx.lineTo(ROOM_X + ROOM_COLS * TILE, ROOM_Y + y * TILE); ctx.stroke(); }
-    ctx.restore();
+    /* Repères de pose : très effacés, et seulement toutes les quatre tuiles — un quadrillage plein masquait la salle. */
+    if (st.grid) {
+      ctx.save(); ctx.strokeStyle = '#6ee7ff'; ctx.lineWidth = 1;
+      for (let x = 0; x <= ROOM_COLS; x++) { ctx.globalAlpha = x % 4 === 0 ? 0.13 : 0.04; ctx.beginPath(); ctx.moveTo(ROOM_X + x * TILE, ROOM_Y); ctx.lineTo(ROOM_X + x * TILE, ROOM_Y + ROOM_ROWS * TILE); ctx.stroke(); }
+      for (let y = 0; y <= ROOM_ROWS; y++) { ctx.globalAlpha = y % 4 === 0 ? 0.13 : 0.04; ctx.beginPath(); ctx.moveTo(ROOM_X, ROOM_Y + y * TILE); ctx.lineTo(ROOM_X + ROOM_COLS * TILE, ROOM_Y + y * TILE); ctx.stroke(); }
+      ctx.restore();
+    }
     const it = st.items[st.sel];
     if (it) { ctx.save(); ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.strokeRect(ROOM_X + it.x * TILE + 1, ROOM_Y + it.y * TILE + 1, it.w * TILE - 2, it.h * TILE - 2); ctx.restore(); }
     if (st.brush) {

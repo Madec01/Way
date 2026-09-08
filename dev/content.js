@@ -374,7 +374,7 @@ const CONTENT = {
           malus: { name: 'Protocole d\'urgence', desc: 'Invulnérabilité après un coup réduite de 0,6 s à 0,3 s.', mods: [{ stat: 'invulnTime', add: -0.3 }], hooks: {} } }
       ],
       enemyPool: ['enemy_rodeur', 'enemy_sentinelle', 'enemy_bloc', 'enemy_meche', 'enemy_incubateur', 'enemy_nuee', 'enemy_eclipse'],
-      trapPool: ['trap_balayage', 'trap_tourniquet', 'trap_grille', 'trap_bouche', 'trap_dalles', 'trap_nappe', 'trap_rail', 'trap_tourelle'],
+      trapPool: ['trap_balayage', 'trap_tourniquet', 'trap_grille', 'trap_bouche', 'trap_dalles', 'trap_nappe', 'trap_rail', 'trap_tourelle', 'trap_diffuseur', 'trap_gyrophare', 'trap_rayon'],
       miniboss: 'boss_etalon_07',
       difficulty: { hpMul: 1, damageMul: 1, speedMul: 1 }
     }
@@ -491,6 +491,18 @@ const CONTENT = {
       desc: 'Scie circulaire qui fait des allers-retours sur un rail de 8 tuiles à 6 tuiles/s. Jamais de pause.',
       damage: 20, telegraph: 0.4, period: 3.2, active: 3.2,
       params: { axis: 'x', lengthTiles: 8, speedTiles: 6, pingpong: true, radiusTiles: 0.6, hitOnce: true } },
+    { id: 'trap_diffuseur', name: 'Diffuseur', kind: 'emitter',
+      desc: 'Bouche circulaire : une couronne de 8 billes part dans toutes les directions à chaque coup.',
+      damage: 11, telegraph: 0.7, period: 3.0, active: 0.3, color: '#6ee7ff',
+      params: { pattern: 'ring', count: 8, arc: 6.2832, speed: 210, size: 7, lifetime: 4 } },
+    { id: 'trap_gyrophare', name: 'Gyrophare', kind: 'emitter',
+      desc: 'Canon rotatif : 3 bras de billes qui tournent d\'un huitième de tour à chaque coup — une spirale se dessine.',
+      damage: 10, telegraph: 0.6, period: 2.0, active: 0.3, color: '#c9a3ff',
+      params: { pattern: 'spiral', count: 3, arc: 6.2832, spin: 0.7854, speed: 230, size: 6, lifetime: 5 } },
+    { id: 'trap_rayon', name: 'Rayon mural', kind: 'laser_beam',
+      desc: 'Un rayon fixe traverse la salle depuis le mur. Il s\'allume et s\'éteint franchement : on passe entre deux.',
+      damage: 16, telegraph: 0.6, period: 3.0, active: 1.0, color: '#ff5e7a',
+      params: { angle: 0, length: 26, thickness: 0.4 } },
     { id: 'trap_tourelle', name: 'Tourelle fixe', kind: 'turret_fixed',
       desc: 'Tourelle murale : 0,7 s de visée (rayon rouge) puis 1 balle vers le joueur toutes les 2,4 s. Destructible ? Non.',
       damage: 10, telegraph: 0.7, period: 2.4, active: 0.3,

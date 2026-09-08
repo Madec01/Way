@@ -171,6 +171,7 @@ const Tempo = {
     return sc;
   },
   renderScore(ctx, room) {
+    if (room.noScore) return;   // mode test de l'atelier : la salle sans ses repères d'édition
     if (!room.traps.some(t => t.beats && !t.disabled)) return;
     const sc = Tempo.scoreAt(room); ctx.save();
     for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
