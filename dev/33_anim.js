@@ -5,19 +5,31 @@
    Ils ne blessent jamais — c'est la lecture de la salle qu'ils portent, pas la difficulté.
    ========================================================================= */
 
+/* Coup en cours et coup suivant dans une partition triée, par dichotomie.
+   `at` / `idx` : le dernier coup à ou avant `t` (celui de la boucle précédente si `t` tombe avant le premier) ;
+   `nextAt` / `nextIdx` : le suivant. Indices croissants dans le temps, donc utilisables comme repère de tir. */
+function hitAround(hits, t, P, loop) {
+  const n = hits.length;
+  let lo = 0, hi = n - 1, i = -1;
+  while (lo <= hi) { const m = (lo + hi) >> 1; if (hits[m] <= t) { i = m; lo = m + 1; } else hi = m - 1; }
+  const at = i < 0 ? hits[n - 1] - P : hits[i];
+  const idx = (i < 0 ? loop - 1 : loop) * n + (i < 0 ? n - 1 : i);
+  const j = i + 1;
+  const nextAt = j >= n ? hits[0] + P : hits[j];
+  const nextIdx = (j >= n ? loop + 1 : loop) * n + (j >= n ? 0 : j);
+  return { at, idx, nextAt, nextIdx };
+}
+
 /* enveloppe rythmique commune : `since` = temps écoulé depuis le dernier coup, `k` = 0 au coup → 1 au bout de `active` */
 function beatPulse(b, rt) {
   const L = Beat.beatLen(); const bars = b.bars || 1; const P = bars * 4 * L;
-  const hits = (b.hits && b.hits.length) ? b.hits : [0];
+  const src = (b.hits && b.hits.length) ? b.hits : [0];
+  if (b.__L !== L || !b.__sec) { b.__L = L; b.__sec = src.map(h => h * L); }   // conversion en secondes refaite seulement quand le tempo change
+  const hits = b.__sec;
   const loop = Math.floor(rt / P), t = rt - loop * P;
-  let last = -Infinity, li = 0, ll = loop, next = Infinity;
-  for (let o = -1; o <= 1; o++) for (let i = 0; i < hits.length; i++) {
-    const h = hits[i] * L + o * P;
-    if (h <= t + 1e-9) { if (h > last) { last = h; li = i; ll = loop + o; } }
-    else if (h < next) next = h;
-  }
+  const c = hitAround(hits, t + 1e-9, P, loop);
   const dur = Math.max(0.02, (b.active || 1) * L);
-  return { since: t - last, until: next - t, idx: ll * hits.length + li, k: clamp((t - last) / dur, 0, 1) };
+  return { since: t - c.at, until: c.nextAt - t, idx: c.idx, k: clamp((t - c.at) / dur, 0, 1) };
 }
 const easeOut = k => 1 - Math.pow(1 - k, 3);
 
@@ -28,6 +40,7 @@ const ANIM_DEFS = {
   bouncer:    { name: 'Sauteur', size: [1, 1], act: 1, color: '#7fff9a', sprite: 1 },
   light:      { name: 'Lumière', size: [1, 1], act: 2, color: '#c9a3ff' },
   ring:       { name: 'Onde', size: [1, 1], act: 1, color: '#6ee7ff' },
+  mover:      { name: 'Objet mobile', size: [1, 1], act: 1, color: '#ffd166', sprite: 1, path: true },
 };
 
 class AnimProp {
@@ -118,6 +131,30 @@ class AnimProp {
     g.addColorStop(0, this.hue(u.idx)); g.addColorStop(0.45, this.hue(u.idx) + '80'); g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.cx, this.cy, r, 0, TAU); ctx.fill(); ctx.restore();
   }
+  /* --- objet mobile : il saute d'un point à l'autre du trajet tracé, un point par coup ---
+     Le trajet est une liste de tuiles (`params.path`). Sur chaque coup l'objet part vers le point suivant et met
+     `active` temps à y arriver : c'est le déplacement lui-même qui joue en mesure, pas un simple clignotement.
+     `pingpong` fait l'aller-retour au lieu de boucler. Aucune collision : c'est du décor, comme le reste du module. */
+  moverAt(u) {
+    const path = this.p.path; if (!path || !path.length) return { x: this.cx, y: this.cy, a: 0 };
+    const n = path.length; const pos = i => ({ x: ROOM_X + (path[i][0] + 0.5) * TILE, y: ROOM_Y + (path[i][1] + 0.5) * TILE });
+    if (n === 1) return Object.assign(pos(0), { a: 0 });
+    /* index du point courant : en boucle, il avance d'un cran par coup ; en aller-retour il repart en arrière */
+    const step = i => { const m = ((i % n) + n) % n; if (!this.p.pingpong) return m; const p2 = ((i % (2 * n - 2)) + 2 * n - 2) % (2 * n - 2); return p2 < n ? p2 : 2 * n - 2 - p2; };
+    const a = pos(step(u.idx)), b = pos(step(u.idx + 1));
+    const k = this.p.ease === false ? Math.min(1, u.k) : easeOut(Math.min(1, u.k));
+    return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), a: Math.atan2(b.y - a.y, b.x - a.x), k };
+  }
+  r_mover(ctx, u) {
+    const p = this.p; const m = this.moverAt(u); const s = TILE * (p.scale || 0.8);
+    ctx.save(); ctx.globalAlpha = 0.3; ctx.fillStyle = '#05070c';
+    ctx.beginPath(); ctx.ellipse(m.x, m.y + s * 0.36, s * 0.28, s * 0.1, 0, 0, TAU); ctx.fill(); ctx.restore();
+    const rot = p.spin ? m.a : 0;
+    if (p.sprite && Sprites.drawProp(ctx, p.sprite, m.x, m.y, s, s, { rot, flip: !p.spin && Math.cos(m.a) < 0 })) return;
+    ctx.save(); ctx.fillStyle = this.hue(u.idx); ctx.shadowColor = this.hue(u.idx); ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.arc(m.x, m.y, s * 0.3, 0, TAU); ctx.fill(); ctx.restore();
+  }
+
   /* --- onde : un anneau qui s'ouvre sur le coup --- */
   r_ring(ctx, u) {
     if (u.k >= 1) return; const r = (this.p.radius || 3) * TILE * easeOut(u.k);

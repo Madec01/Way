@@ -45,6 +45,7 @@ async function boot() {
   UI.init(); Debug.init(); Touch.init();
   Camera.setZoom(Meta.profile.zoom || (Touch.active ? 1.5 : 1));
   await Sprites.load(); Sprites.loadProps(); Sprites.loadCustoms(); Beat.load();
+  if (Meta.profile.lag) Beat.lag = Meta.profile.lag;   // décalage son/image calibré par l'auteur
   UI.showTitle();
   Engine.start(update, render);
   Attract.start();

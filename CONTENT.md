@@ -915,3 +915,44 @@ Les deux animations de dalles acceptent `params.cells` — une liste de tuiles p
 Dans l'atelier, le pinceau « Dalles colorées » ou « Dalles qui montent » pose **une tuile par clic**, ajoute au motif choisi, et retire la dalle si on reclique dessus. Le glissé bouton enfoncé peint une traînée (il n'efface jamais : une tuile déjà peinte est simplement sautée). « Nouveau motif » ouvre un second groupe avec sa propre partition. Le même glissé marche pour le pinceau de terrain.
 
 `AnimProp.eachCell` masque la différence : liste peinte si elle existe, rectangle sinon. Le damier et la vague se calculent sur les coordonnées de la tuile (`tx + ty`), donc un motif peint de travers garde un damier cohérent avec le sol.
+
+---
+
+## 33. Partitions longues, rythmes prédéfinis, objet mobile
+
+### La partition n'est plus la fenêtre
+
+Un niveau dure trois minutes ou plus ; une grille de deux mesures ne peut pas le décrire, et une grille de cent mesures est illisible. Les deux longueurs sont donc séparées :
+
+- **Partition** (`bars`) : la longueur réelle du motif, de 1 à 128 mesures — 128 mesures à 129 BPM font près de quatre minutes. C'est ce que reçoit `beats.bars`, et les positions des coups sont **absolues** dans cette longueur.
+- **Fenêtre** (1, 2, 4 ou 8 mesures) : ce que la grille montre. Elle coulisse dans la partition avec ◀ ▶, la règle reste numérotée en absolu (`5·1` = premier temps de la cinquième mesure), et le libellé dit où l'on est : *mesures 5–6 / 64*.
+
+**La lecture boucle sur la fenêtre**, pas sur la partition : on repasse deux mesures en boucle au milieu d'un morceau de trois minutes. Case « boucler » décochée, c'est la fenêtre qui suit la musique.
+
+Conséquence technique : une partition peut porter plusieurs centaines de coups, lus une fois par piège et par image. Le balayage linéaire (trois passages sur toute la liste) est remplacé par une **dichotomie** — `hitAround(hits, t, P, loop)` renvoie le dernier coup passé et le prochain. La durée d'activité étant la même pour tous les coups, si le dernier coup passé ne couvre pas l'instant, aucun plus ancien ne le couvre : un candidat de chaque côté suffit. Mesuré : 20 000 lectures sur une partition de 256 coups en 4 ms.
+
+### Rythmes prédéfinis
+
+Un menu **rythme** sur chaque ligne remplit la partition d'un coup : tous les temps, temps forts, temps 1 et 3, temps 2 et 4, croches, contretemps, doubles-croches, triolets, tresillo (3-3-2), clave 3-2, galop, charleston, montée, silence. Le motif est répété jusqu'au bout de la partition, quelle que soit sa longueur.
+
+### Réglages avant la pose
+
+Quand aucun élément n'est choisi, le panneau de réglages règle le **modèle du pinceau** (titre en cyan « Modèle : … »), et le prochain élément posé naît avec : couleur, rythme, durée, orientation, rayon, image… Un modèle par pinceau, gardé pour la session. Avant, il fallait poser puis régler, pour chaque objet.
+
+### Objet mobile
+
+Un décor qui **change de place**, sur un trajet tracé à la main. Chaque clic dans la salle ajoute un point (numéroté à l'écran, dans l'ordre du parcours), recliquer dessus l'enlève. À chaque coup de sa partition l'objet part vers le point suivant et met `active` temps à y arriver : c'est le déplacement qui joue en mesure, pas un clignotement. `pingpong` fait l'aller-retour au lieu de boucler, `spin` l'oriente vers sa direction de marche, et il porte n'importe quelle image du jeu. Comme tout le module d'animation, il n'a **ni collision ni dégât**.
+
+### Le métronome tombait à côté
+
+Mesuré : le clic arrivait **8 à 17 ms après le temps, systématiquement, jamais avant**. Il était déclenché au pas de simulation qui suivait le franchissement du temps — donc en retard d'une fraction d'image, toujours du même côté. Une horloge de métronome demande ±5 ms ; à ce régime elle « sonne faux » contre la musique.
+
+Le clic est maintenant **programmé à l'avance pour l'instant exact du temps** : `Beat.timeToBeat(1)` donne les secondes restantes, et `AudioEngine` accepte `delay` — l'instant visé, pas un supplément. Écart mesuré après correction : **0 ms**.
+
+L'horloge elle-même n'était pas en cause : mesurée sur 25 s de lecture bouclée, elle suit la piste à moins de 21 ms, sans dérive, sans repli sur le métronome interne et sans saut.
+
+### Décalage son/image
+
+Ce que l'oreille entend à un instant donné a été envoyé à la carte son un peu plus tôt : l'image est donc en avance sur le son de cette latence, qui dépend de la machine, du casque et du navigateur. Le réglage **décalage** (en ms) de l'atelier retarde l'horloge d'autant, se règle à l'oreille contre le métronome, et est gardé dans le profil — il s'applique aussi en partie. Le clic du métronome, lui, est avancé de la même valeur pour rester sur le temps entendu.
+
+À savoir : avec un décalage positif, les *autres* sons calés sur les temps (annonces de pièges, avertisseurs) partent d'autant plus tard, puisqu'ils sont déclenchés par l'horloge et non programmés à l'avance. C'est tolérable sur un effet, ça ne l'était pas sur un métronome.

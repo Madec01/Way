@@ -6,6 +6,10 @@
    vagues qui entrent sur le premier temps d'une mesure, bonus « en rythme » pour le joueur, porte qui s'ouvre sur la mesure. */
 const Beat = (() => {
   let meta = null, cur = { bpm: 120, offset: 0, key: 'D', mode: 'minor', internal: true };
+  /* Décalage son/image (s). Ce que l'oreille entend à un instant donné a été envoyé à la carte son un peu plus
+     tôt : sans correction, l'image est en avance sur le son de cette latence. Réglable à l'oreille dans l'atelier,
+     0 par défaut (la valeur juste dépend de la machine et du casque). */
+  let lag = 0;
   let t = 0, prevT = 0, lastRead = -1, sameFrames = 0, anchorT = 0, anchorNow = 0;
   async function load() { try { const r = await fetch(ASSET_BASE + 'music/tempo.json'); if (r.ok) meta = await r.json(); } catch (e) { meta = null; } }
   function trackFor(url) { if (!meta || !url) return null; let name = url.split('/').pop().split('?')[0]; try { name = decodeURIComponent(name); } catch (e) { /* */ } return meta[name] || null; }
@@ -14,7 +18,7 @@ const Beat = (() => {
     const m = AudioEngine.musicTime ? AudioEngine.musicTime() : null; const url = Music.currentUrl; const info = m && !m.paused && url ? trackFor(url) : null;
     if (info && m.t > 0) {
       if (m.t === lastRead) sameFrames++; else { sameFrames = 0; lastRead = m.t; }
-      if (sameFrames < 30) { cur = { bpm: info.bpm, offset: info.offset, key: info.key || 'D', mode: info.mode || 'minor', internal: false }; return m.t - info.offset; }
+      if (sameFrames < 30) { cur = { bpm: info.bpm, offset: info.offset, key: info.key || 'D', mode: info.mode || 'minor', internal: false }; return m.t - info.offset - lag; }
     }
     if (!cur.internal) cur = { bpm: 120, offset: 0, key: cur.key, mode: cur.mode, internal: true };
     return null;
@@ -45,7 +49,10 @@ const Beat = (() => {
   function rootHz() { const semi = { C: -9, 'C#': -8, D: -7, 'D#': -6, E: -5, F: -4, 'F#': -3, G: -2, 'G#': -1, A: 0, 'A#': 1, B: 2 }[cur.key]; return 440 * Math.pow(2, (semi == null ? -7 : semi) / 12); }
   /* fréquence de la n-ième note de la pentatonique de la piste (mode mineur ou majeur) */
   function noteHz(n) { const deg = cur.mode === 'major' ? [0, 2, 4, 7, 9] : [0, 3, 5, 7, 10]; const i = Math.max(0, n | 0); return rootHz() * Math.pow(2, (deg[i % 5] + 12 * Math.min(2, Math.floor(i / 5))) / 12); }
-  return { load, update, beatLen, index, phase, crossedFrame, beatInBar, distToBeat, timeToNextBar, trackInfo, rootHz, noteHz, get info() { return cur; }, get t() { return t; } };
+  /* secondes avant le n-ième temps à venir (n = 1 : le prochain) */
+  function timeToBeat(n) { const L = beatLen(); const next = Math.floor(t / L) + (n || 1); return { at: next * L - t, index: next }; }
+  return { load, update, beatLen, index, phase, crossedFrame, beatInBar, distToBeat, timeToNextBar, timeToBeat, trackInfo, rootHz, noteHz,
+    get info() { return cur; }, get t() { return t; }, get lag() { return lag; }, set lag(v) { lag = clamp(v || 0, -0.3, 0.3); } };
 })();
 
 const Tempo = {

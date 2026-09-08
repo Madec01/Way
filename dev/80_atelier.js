@@ -22,7 +22,7 @@ const Atelier = (() => {
     gas_zone:      { size: [1, 1], act: 2, tele: 1 },
     saw_rail:      { size: [8, 1], act: 0, tele: 1, trip: 4, axis: 1 },
     turret_fixed:  { size: [1, 1], act: 0.25, tele: 1, angle: 1, count: 1 },
-    emitter:       { size: [1, 1], act: 0.25, tele: 1, angle: 1, count: 1, spin: 1, arc: 1, burst: 1 },
+    emitter:       { size: [1, 1], act: 0.25, tele: 1, angle: 1, count: 1, spinDeg: 1, arc: 1, burst: 1 },
     laser_beam:    { size: [1, 1], act: 1, tele: 1, angle: 1, len: 1 },
   };
   /* réglages proposés pour le décor animé */
@@ -33,18 +33,58 @@ const Atelier = (() => {
     bouncer:    { sprite: 1, amp: 1, scale: 1 },
     light:      { radius: 1, gain: 1, color2: 1 },
     ring:       { radius: 1, color2: 1 },
+    mover:      { sprite: 1, scale: 1, path: 1, pingpong: 1, spin: 1, color2: 1 },
   };
   const SNAPS = [[1, 'noires'], [2, 'croches'], [4, 'doubles'], [3, 'triolets']];
+  /* Rythmes prédéfinis : un motif (`at`) répété tous les `per` temps jusqu'au bout de la boucle. On les applique
+     à un élément posé comme au modèle du pinceau — c'est ce qui évite de recocher la même chose à la main
+     pour chaque objet. */
+  const RHYTHMS = [
+    ['', 'rythme…'],
+    ['noires|1|0', 'tous les temps'],
+    ['forts|4|0', 'temps forts (1)'],
+    ['deuxquatre|4|1,3', 'temps 2 et 4'],
+    ['unetrois|4|0,2', 'temps 1 et 3'],
+    ['croches|1|0,0.5', 'croches'],
+    ['contretemps|1|0.5', 'contretemps'],
+    ['doubles|1|0,0.25,0.5,0.75', 'doubles-croches'],
+    ['triolets|1|0,0.333,0.667', 'triolets'],
+    ['tresillo|4|0,1.5,3', 'tresillo (3-3-2)'],
+    ['clave|8|0,1.5,3,5,6', 'clave 3-2'],
+    ['galop|2|0,0.75,1', 'galop'],
+    ['charleston|4|0,1.5', 'charleston'],
+    ['montee|4|0,1,1.5,2,2.25,2.5,2.75,3', 'montée'],
+    ['silence|0|', 'silence (aucun coup)'],
+  ];
+  /* déploie un rythme sur toute la boucle courante */
+  function rhythmHits(key) {
+    const row = RHYTHMS.find(r => r[0] && r[0].split('|')[0] === key); if (!row) return null;
+    const [, per, at] = row[0].split('|');
+    const step = +per; if (!step) return [];
+    const offs = at.split(',').filter(x => x !== '').map(Number);
+    const out = []; for (let b = 0; b < Lb(); b += step) for (const o of offs) { const v = Math.round((b + o) * 1000) / 1000; if (v < Lb()) out.push(v); }
+    return out.sort((a, b) => a - b);
+  }
   const TABS = [['anim', 'Animations'], ['trap', 'Pièges'], ['level', 'Niveau']];
   const BRUSH = { '.': 'sol', '#': 'mur plein', 'n': 'muret', ':': 'claustra', '=': 'pont', '~': 'eau', ',': 'boue' };
   const st = { biome: 'biome_1', track: 'a', bars: 2, snap: 2, items: [], terrain: null, sel: -1, tab: 'trap',
-    pose: true, loop: true, metro: false, safe: true, grid: true, brush: null, loopBar: 0 };
+    pose: true, loop: true, metro: false, safe: true, grid: true, brush: null, win: 2, winIdx: 0, tpl: {} };
+  /* Modèle du pinceau : les réglages affichés quand rien n'est choisi appartiennent au pinceau courant, et le
+     prochain élément posé naît avec. Sans ça il fallait poser puis régler, pour chaque objet. */
+  function tplOf(brush) { return st.tpl[brush] || (st.tpl[brush] = { params: {} }); }
   let box = null, live = false, lastIdx = -1, headEl = null, canvas = null, headX0 = 0, headW = 0;
 
-  const Lb = () => st.bars * 4;                       // temps par boucle
-  const nCells = () => Math.round(Lb() * st.snap);    // cases de la grille
+  /* Deux longueurs distinctes, et c'est tout le sujet des partitions longues :
+     `bars` est la longueur de la PARTITION (jusqu'à un morceau entier, plusieurs minutes) ;
+     `win` est la largeur de la FENÊTRE affichée dans la grille, qui coulisse dedans. */
+  const Lb = () => st.bars * 4;                        // temps dans la partition entière
+  const winBeats = () => Math.min(st.win, st.bars) * 4;  // temps affichés
+  const winStart = () => Math.min(st.winIdx * winBeats(), Math.max(0, Lb() - winBeats()));   // premier temps affiché
+  const winCount = () => Math.max(1, Math.ceil(Lb() / winBeats()));
+  const nCells = () => Math.round(winBeats() * st.snap);
   const beatNow = () => Beat.t / Beat.beatLen();
-  const inLoop = () => beatNow() - st.loopBar * Lb();
+  const cycle = () => Math.floor(beatNow() / Lb());     // n-ième passage de la partition sur la piste
+  const inLoop = () => beatNow() - cycle() * Lb();      // position dans la partition
   const q = n => Math.round(n * 1000) / 1000;
   const kindOf = it => (Content.trap(it.trap) || {}).kind;
   const defOf = it => KIND[kindOf(it)] || {};
@@ -53,6 +93,29 @@ const Atelier = (() => {
   const enemiesOf = () => (Content.biome(st.biome) || {}).enemyPool || [];
   const shown = () => st.items.map((it, i) => [it, i]).filter(([it]) => famOf(it) === st.tab);
   const $ = s => box.querySelector(s);
+
+  /* élément « modèle » du pinceau courant : même forme qu'un élément posé, mais il ne vit que dans le panneau */
+  function brushItem() {
+    const b = st.brush; if (!b || b === 'mur' || b.startsWith('t:') || b.startsWith('e:')) return null;
+    const t = tplOf(b); if (t.kind) return t;
+    if (b.startsWith('a:')) {
+      const a = b.slice(2); const ad = ANIM_DEFS[a] || {}; const sz = ad.size || [1, 1];
+      Object.assign(t, { kind: 'anim', anim: a, x: 0, y: 0, w: sz[0], h: sz[1], hits: [0], tele: 0, act: ad.act || 1, params: {} });
+    } else {
+      const d = Content.trap(b); if (!d) return null;
+      const kk = KIND[d.kind] || {}; const sz = kk.size || [1, 1];
+      Object.assign(t, { kind: 'trap', trap: b, x: 0, y: 0, w: sz[0], h: sz[1], hits: [0], tele: kk.tele || 1, act: kk.act || 0, params: {} });
+      if (kk.turn) t.turn = kk.turn; if (kk.trip) t.trip = kk.trip;
+    }
+    return t;
+  }
+  /* un élément neuf, né des réglages du pinceau */
+  function fromBrush(tx, ty) {
+    const t = brushItem(); if (!t) return null;
+    const it = JSON.parse(JSON.stringify(t)); delete it.params.cells; delete it.params.path;
+    it.x = clamp(tx, 0, ROOM_COLS - it.w); it.y = clamp(ty, 0, ROOM_ROWS - it.h);
+    return it;
+  }
 
   /* ---------- salle ---------- */
   function roomDef() {
@@ -156,14 +219,16 @@ const Atelier = (() => {
         <button class="btn small" id="a-mode"></button>
         <label>Biome <select id="a-biome">${Content.biomes().map(b => `<option value="${b.id}">${b.name}</option>`).join('')}</select></label>
         <label>Piste <select id="a-track"><option value="a">biome (1-4)</option><option value="b">biome (6-8)</option><option value="boss">boss</option></select></label>
-        <label>Boucle <select id="a-bars"><option value="1">1 mesure</option><option value="2">2 mesures</option><option value="4">4 mesures</option><option value="8">8 mesures</option></select></label>
+        <label>Partition <select id="a-bars">${[1, 2, 4, 8, 16, 32, 64, 128].map(b => `<option value="${b}">${b} mesure${b > 1 ? 's' : ''}${b >= 16 ? ' · ' + fmtDur(b) : ''}</option>`).join('')}</select></label>
+        <label>Fenêtre <select id="a-win"><option value="1">1 mesure</option><option value="2">2 mesures</option><option value="4">4 mesures</option><option value="8">8 mesures</option></select></label>
         <label>Grille <select id="a-snap">${SNAPS.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
         <label class="chk"><input type="checkbox" id="a-loop"> boucler</label>
         <label class="chk"><input type="checkbox" id="a-metro"> métronome</label>
         <label class="chk"><input type="checkbox" id="a-safe"> invulnérable</label>
         <label class="chk"><input type="checkbox" id="a-grid"> repères</label>
+        <label>décalage <input type="number" min="-200" max="200" step="5" id="a-lag" value="0"> ms</label>
         <span class="asp"></span>
-        <span class="anw"><button class="btn small" id="a-prev">◀</button><span id="a-win" class="amono"></span><button class="btn small" id="a-next">▶</button></span>
+        <span class="anw"><button class="btn small" id="a-prev">◀</button><span id="a-pos" class="amono"></span><button class="btn small" id="a-next">▶</button></span>
         <button class="btn small" id="a-export">Exporter</button><button class="btn small ghost" id="a-clear">Vider</button><button class="btn small ghost" id="a-fold">Réduire</button><button class="btn small ghost" id="a-close">Fermer (F2)</button>
       </div>
       <div class="apal" id="a-pal"></div>
@@ -173,14 +238,17 @@ const Atelier = (() => {
     headEl = $('#a-head');
     $('#a-biome').onchange = e => { st.biome = e.target.value; st.brush = null; startRoom(); refresh(); };
     $('#a-track').onchange = e => setTrack(e.target.value);
-    $('#a-bars').onchange = e => { st.bars = +e.target.value; st.loopBar = Math.floor(beatNow() / Lb()); apply(); refresh(); };
+    $('#a-bars').onchange = e => { st.bars = +e.target.value; st.winIdx = Math.min(st.winIdx, winCount() - 1); apply(); refresh(); };
+    $('#a-win').onchange = e => { st.win = +e.target.value; st.winIdx = Math.min(st.winIdx, winCount() - 1); refresh(); };
     $('#a-snap').onchange = e => { st.snap = +e.target.value; refresh(); };
     $('#a-loop').onchange = e => { st.loop = e.target.checked; };
     $('#a-metro').onchange = e => { st.metro = e.target.checked; };
     $('#a-safe').onchange = e => { st.safe = e.target.checked; G.debug.invuln = st.safe; };
     $('#a-grid').onchange = e => { st.grid = e.target.checked; };
+    $('#a-lag').value = Math.round(Beat.lag * 1000);
+    $('#a-lag').onchange = e => { Beat.lag = (+e.target.value || 0) / 1000; Meta.profile.lag = Beat.lag; Meta.save(); UI.toast('Décalage son/image : ' + Math.round(Beat.lag * 1000) + ' ms'); };
     $('#a-mode').onclick = () => setPose(!st.pose);
-    $('#a-prev').onclick = () => jumpLoop(-1); $('#a-next').onclick = () => jumpLoop(1);
+    $('#a-prev').onclick = () => jumpWin(-1); $('#a-next').onclick = () => jumpWin(1);
     $('#a-export').onclick = showIo; $('#a-hide').onclick = () => { $('#a-io').hidden = true; };
     $('#a-copy').onclick = () => { const t = $('#a-txt'); t.select(); try { navigator.clipboard.writeText(t.value); UI.toast('Copié'); } catch (e) { document.execCommand('copy'); } };
     $('#a-import').onclick = () => importText($('#a-txt').value);
@@ -199,16 +267,22 @@ const Atelier = (() => {
     if (box) { box.classList.toggle('fold', !v); const f = $('#a-fold'); if (f) f.textContent = v ? 'Réduire' : 'Déplier'; }
     refresh();
   }
-  function jumpLoop(d) { const b = st.loopBar + d; if (b < 0) return; if (!Music.seekBeat(b * Lb())) return; st.loopBar = b; refresh(); }
+  const fmtDur = bars => { const s0 = bars * 4 * (Beat.beatLen() || 0.5); return Math.floor(s0 / 60) + ' min ' + String(Math.round(s0 % 60)).padStart(2, '0'); };
+  function winLabel() { const b0 = winStart() / 4; return 'mesures ' + Math.round(b0 + 1) + '–' + Math.round(b0 + winBeats() / 4) + ' / ' + st.bars; }
+  /* la fenêtre coulisse dans la partition, et la lecture la suit */
+  function jumpWin(d) {
+    const i = clamp(st.winIdx + d, 0, winCount() - 1); if (i === st.winIdx) return;
+    st.winIdx = i; Music.seekBeat(cycle() * Lb() + winStart()); refresh();
+  }
 
   /* ---------- palette et partition ---------- */
   function refresh() {
     if (!box || box.hidden) return;
-    $('#a-biome').value = st.biome; $('#a-track').value = st.track; $('#a-bars').value = st.bars; $('#a-snap').value = st.snap;
+    $('#a-biome').value = st.biome; $('#a-track').value = st.track; $('#a-bars').value = st.bars; $('#a-snap').value = st.snap; $('#a-win').value = st.win;
     $('#a-loop').checked = st.loop; $('#a-metro').checked = st.metro; $('#a-safe').checked = st.safe; $('#a-grid').checked = st.grid;
     $('#a-mode').textContent = st.pose ? 'Mode : pose' : 'Mode : test';
     $('#a-mode').className = 'btn small' + (st.pose ? ' primary' : '');
-    $('#a-win').textContent = 'mesures ' + (st.loopBar * st.bars + 1) + '–' + (st.loopBar * st.bars + st.bars);
+    $('#a-pos').textContent = winLabel();
     box.querySelectorAll('.tab').forEach(b => { b.className = 'btn small tab' + (b.dataset.t === st.tab ? ' primary' : ''); });
     /* palette de l'établi courant */
     const pal = $('#a-pal'); const rows = [];
@@ -224,8 +298,9 @@ const Atelier = (() => {
     const rw = $('#a-rewave'); if (rw) rw.onclick = replay;
     /* règle + lignes de l'établi courant */
     const n = nCells(), lanes = $('#a-lanes');
+    const w0 = winStart();
     let html = '<div class="alane aruler"><span class="an"></span><div class="acells">';
-    for (let i = 0; i < n; i++) { const b = i / st.snap; const isBeat = Math.abs(b - Math.round(b)) < 1e-6; const bar = isBeat && Math.round(b) % 4 === 0;
+    for (let i = 0; i < n; i++) { const b = w0 + i / st.snap; const isBeat = Math.abs(b - Math.round(b)) < 1e-6; const bar = isBeat && Math.round(b) % 4 === 0;
       html += `<div class="ac ${bar ? 'bar' : isBeat ? 'beat' : ''}" data-c="${i}">${isBeat ? (Math.floor(Math.round(b) / 4) + 1) + '·' + (Math.round(b) % 4 + 1) : ''}</div>`; }
     html += '</div><span class="ax"></span></div>';
     for (const [it, k] of shown()) {
@@ -233,14 +308,14 @@ const Atelier = (() => {
         : it.kind === 'anim' ? (ANIM_DEFS[it.anim] || {}).name || it.anim : ((Content.trap(it.trap) || {}).name || it.trap);
       html += `<div class="alane${k === st.sel ? ' sel' : ''}" data-l="${k}"><span class="an" title="${name}">${name} <i>${it.x},${it.y}</i></span><div class="acells">`;
       if (!it.hits) html += '<div class="amur">décor sans partition</div>';
-      else for (let i = 0; i < n; i++) { const b = i / st.snap; const hit = it.hits.some(h => Math.abs(h - b) < 1e-6); const isBeat = Math.abs(b - Math.round(b)) < 1e-6; const bar = isBeat && Math.round(b) % 4 === 0;
+      else for (let i = 0; i < n; i++) { const b = w0 + i / st.snap; const hit = it.hits.some(h => Math.abs(h - b) < 1e-6); const isBeat = Math.abs(b - Math.round(b)) < 1e-6; const bar = isBeat && Math.round(b) % 4 === 0;
         html += `<div class="ac ${bar ? 'bar' : isBeat ? 'beat' : ''}${hit ? ' hit' : ''}" data-l="${k}" data-c="${i}"></div>`; }
       html += `</div><span class="ax"><button class="btn tiny" data-del="${k}">×</button></span></div>`;
     }
     if (st.tab === 'level') html += `<div class="alane"><span class="an amuted">terrain</span><div class="acells"><div class="amur">${st.terrain ? 'plan peint — « Vider » le remet à zéro' : 'aucun plan : peindre une tuile en crée un'}</div></div><span class="ax"></span></div>`;
     lanes.innerHTML = html;
-    lanes.querySelectorAll('.aruler .ac').forEach(c => { c.onclick = () => Music.seekBeat(st.loopBar * Lb() + (+c.dataset.c) / st.snap); });
-    lanes.querySelectorAll('.ac[data-l]').forEach(c => { c.onclick = () => toggleHit(+c.dataset.l, (+c.dataset.c) / st.snap); });
+    lanes.querySelectorAll('.aruler .ac').forEach(c => { c.onclick = () => Music.seekBeat(cycle() * Lb() + w0 + (+c.dataset.c) / st.snap); });
+    lanes.querySelectorAll('.ac[data-l]').forEach(c => { c.onclick = () => toggleHit(+c.dataset.l, w0 + (+c.dataset.c) / st.snap); });
     lanes.querySelectorAll('.alane[data-l] .an').forEach(e => { e.onclick = () => { st.sel = +e.parentNode.dataset.l; refresh(); }; });
     lanes.querySelectorAll('[data-del]').forEach(b => { b.onclick = () => { st.items.splice(+b.dataset.del, 1); st.sel = -1; apply(); refresh(); }; });
     measure();
@@ -248,15 +323,19 @@ const Atelier = (() => {
   }
   /* réglages de l'élément choisi : ce qui a du sens pour sa mécanique, rien de plus */
   function tune(lanes) {
-    const it = st.items[st.sel]; if (!it || famOf(it) !== st.tab) return;
+    let it = st.items[st.sel]; let tpl = false;
+    if (!it || famOf(it) !== st.tab) { it = brushItem(); tpl = true; if (!it) return; }   // rien de choisi : on règle le MODÈLE du pinceau
     if (it.kind === 'ennemi') return tuneEnemy(lanes, it);
     const anim = it.kind === 'anim'; const k = it.kind === 'mur' ? {} : anim ? (AKIND[it.anim] || {}) : defOf(it); const p = it.params || (it.params = {});
     const d = document.createElement('div'); d.className = 'arow atune';
     const nom = it.kind === 'mur' ? 'Bloc' : anim ? (ANIM_DEFS[it.anim] || {}).name : ((Content.trap(it.trap) || {}).name || it.trap);
     const col = p.color || (anim ? (ANIM_DEFS[it.anim] || {}).color : (Content.trap(it.trap) || {}).color) || '#ff5e7a';
-    let h = `<b>${nom}</b>`;
-    if (k.cells) h += `<span class="amuted">${(p.cells || []).length} dalle(s) — cliquez dans la salle pour en ajouter, recliquez pour retirer</span><button class="btn tiny" id="t-newzone">Nouveau motif</button>`;
-    else h += `<label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
+    let h = tpl ? `<b class="atpl">Modèle : ${nom}</b><span class="amuted">ces réglages seront ceux du prochain élément posé</span>`
+      : `<b>${nom}</b>`;
+    if (it.kind !== 'mur') h += `<label>rythme <select id="t-rhy">${RHYTHMS.map(r => `<option value="${r[0].split('|')[0]}">${r[1]}</option>`).join('')}</select></label>`;
+    if (k.path) h += `<span class="amuted">${(p.path || []).length} point(s) de trajet — cliquez dans la salle pour tracer, recliquez sur un point pour l'enlever</span>${tpl ? '' : '<button class="btn tiny" id="t-newzone">Nouveau trajet</button>'}`;
+    else if (k.cells) h += tpl ? '<span class="amuted">cliquez dans la salle pour peindre les dalles</span>' : `<span class="amuted">${(p.cells || []).length} dalle(s) — cliquez dans la salle pour en ajouter, recliquez pour retirer</span><button class="btn tiny" id="t-newzone">Nouveau motif</button>`;
+    if (!k.cells && !k.path) h += `<label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
       <label>hauteur <input type="number" min="1" max="13" step="1" id="t-h" value="${it.h}"></label>`;
     if (it.kind !== 'mur') {
       if (!anim) h += `<label>annonce <input type="number" min="0" max="8" step="0.25" id="t-tele" value="${it.tele}"> temps</label>`;
@@ -270,7 +349,7 @@ const Atelier = (() => {
       if (k.arms) h += `<label>bras <input type="number" min="1" max="6" step="1" id="t-arms" value="${p.arms || 2}"></label>`;
       if (k.count) h += `<label>projectiles <input type="number" min="1" max="16" step="1" id="t-count" value="${p.count || 1}"></label>`;
       if (k.arc) h += `<label>ouverture <input type="number" min="0" max="360" step="15" id="t-arc" value="${Math.round((p.arc != null ? p.arc : TAU) * 180 / Math.PI)}">° <i class="amuted">(360 = couronne)</i></label>`;
-      if (k.spin) h += `<label>rotation <input type="number" min="-180" max="180" step="15" id="t-spin" value="${Math.round((p.spin || 0) * 180 / Math.PI)}">°/coup</label>`;
+      if (k.spinDeg) h += `<label>rotation <input type="number" min="-180" max="180" step="15" id="t-spin" value="${Math.round((p.spin || 0) * 180 / Math.PI)}">°/coup</label>`;
       if (k.burst) h += `<label>rafale <input type="number" min="1" max="8" step="1" id="t-burst" value="${p.burst || 1}"> × <input type="number" min="0.125" max="4" step="0.125" id="t-bgap" value="${p.burstGap != null ? p.burstGap : 0.25}"> temps</label>`;
       if (k.len) h += `<label>longueur <input type="number" min="1" max="26" step="1" id="t-len" value="${p.length || 26}"> tuiles</label>`;
       if (k.mode) h += `<label>motif <select id="t-mode"><option value="all">toutes les dalles</option><option value="checker">damier</option><option value="sweep">vague</option></select></label>`;
@@ -280,11 +359,15 @@ const Atelier = (() => {
       if (k.gain) h += `<label>intensité <input type="number" min="0.1" max="1" step="0.1" id="t-gain" value="${p.gain != null ? p.gain : 0.5}"></label>`;
       if (k.step) h += `<label>pas <input type="number" min="15" max="360" step="15" id="t-step" value="${Math.round((p.step != null ? p.step : Math.PI / 2) * 180 / Math.PI)}">°/coup</label>`;
       if (k.scale) h += `<label>taille <input type="number" min="0.3" max="4" step="0.1" id="t-scale" value="${p.scale || 1}"></label>`;
+      if (k.pingpong) h += `<label class="chk"><input type="checkbox" id="t-ping"${p.pingpong ? ' checked' : ''}> aller-retour</label>`;
+      if (k.spin) h += `<label class="chk"><input type="checkbox" id="t-spin2"${p.spin ? ' checked' : ''}> tourne vers l'avant</label>`;
       if (k.sprite) h += `<label>image <select id="t-sprite"><option value="">— aucune —</option>${Sprites.propNames().map(s => `<option value="${s}">${s}</option>`).join('')}</select></label><label class="afile">+ image <input type="file" id="t-file" accept="image/*"></label>`;
     }
-    h += '<button class="btn small" id="t-dup">Dupliquer</button>';
+    if (!tpl) h += '<button class="btn small" id="t-dup">Dupliquer</button>';
     d.innerHTML = h; lanes.appendChild(d);
     const bind = (id, f) => { const e = d.querySelector(id); if (e) e.onchange = () => { f(e.type === 'number' ? +e.value : e.type === 'checkbox' ? e.checked : e.value); apply(); refresh(); }; };
+    bind('#t-rhy', v => { const hh = rhythmHits(v); if (hh) it.hits = hh; });
+    bind('#t-ping', v => { p.pingpong = v; }); bind('#t-spin2', v => { p.spin = v; });
     bind('#t-w', v => { it.w = clamp(Math.round(v), 1, ROOM_COLS); }); bind('#t-h', v => { it.h = clamp(Math.round(v), 1, ROOM_ROWS); });
     bind('#t-tele', v => { it.tele = clamp(v, 0, 8); }); bind('#t-act', v => { it.act = clamp(v, 0, 32); });
     bind('#t-col', v => { p.color = v; }); bind('#t-col2', v => { p.color2 = v; });
@@ -309,7 +392,7 @@ const Atelier = (() => {
       rd.onload = () => { const nm = f.name.replace(/\.[^.]+$/, ''); Sprites.addCustom(nm, rd.result).then(okk => { if (okk) { p.sprite = nm; apply(); refresh(); UI.toast('Image « ' + nm + ' » ajoutée'); } else UI.toast('Image illisible'); }); };
       rd.readAsDataURL(f);
     };
-    d.querySelector('#t-dup').onclick = () => { const c = JSON.parse(JSON.stringify(it)); c.x = clamp(c.x + 1, 0, ROOM_COLS - 1); c.y = clamp(c.y + 1, 0, ROOM_ROWS - 1); st.items.push(c); st.sel = st.items.length - 1; apply(); refresh(); };
+    const du = d.querySelector('#t-dup'); if (du) du.onclick = () => { const c = JSON.parse(JSON.stringify(it)); c.x = clamp(c.x + 1, 0, ROOM_COLS - 1); c.y = clamp(c.y + 1, 0, ROOM_ROWS - 1); st.items.push(c); st.sel = st.items.length - 1; apply(); refresh(); };
     const cx = d.querySelector('#t-col2x'); if (cx) cx.onclick = () => { delete p.color2; apply(); refresh(); };
     const nz = d.querySelector('#t-newzone'); if (nz) nz.onclick = () => { st.sel = -1; st.newZone = true; st.brush = 'a:' + it.anim; UI.toast('Motif suivant : la prochaine dalle posée en ouvre un nouveau'); refresh(); };
   }
@@ -332,6 +415,7 @@ const Atelier = (() => {
     r.waveIdx = 0; r.wavesStarted = false; r.lastWaveT = -99; r.state = 'fight'; r.stateT = 0; r.doorOpen = false;
   }
   /* position et largeur de la zone des cases : le curseur de lecture s'y aligne au pixel */
+  function syncPos() { if (box && !box.hidden) { const e = $('#a-pos'); if (e) e.textContent = winLabel(); } }
   function measure() {
     if (!box || box.hidden) { headW = 0; return; }
     const g = box.querySelector('.agrid'), c = box.querySelector('.aruler .acells');
@@ -373,6 +457,22 @@ const Atelier = (() => {
     else bbox(it);
     apply(); refresh();
   }
+  /* Ajoute (ou retire) un point au trajet de l'objet mobile. L'ordre des clics est l'ordre du parcours. */
+  function paintPath(anim, tx, ty) {
+    let it = st.items[st.sel];
+    if (!it || it.kind !== 'anim' || it.anim !== anim) {
+      it = st.newZone ? null : st.items.find(o => o.kind === 'anim' && o.anim === anim && o.params && o.params.path);
+      st.newZone = false;
+      if (!it) { it = fromBrush(tx, ty) || { kind: 'anim', anim, x: tx, y: ty, w: 1, h: 1, hits: [0], tele: 0, act: 1, params: {} }; it.params.path = []; st.items.push(it); }
+      st.sel = st.items.indexOf(it);
+    }
+    const path = it.params.path || (it.params.path = []);
+    const i = path.findIndex(c => c[0] === tx && c[1] === ty);
+    if (i >= 0) path.splice(i, 1); else path.push([tx, ty]);
+    if (!path.length) { st.items.splice(st.items.indexOf(it), 1); st.sel = -1; }
+    else { it.x = path[0][0]; it.y = path[0][1]; }
+    apply(); refresh();
+  }
   /* emprise du motif : ce que dessine le cadre de sélection et ce qu'affiche la ligne */
   function bbox(it) {
     const c = it.params.cells; if (!c || !c.length) return;
@@ -388,21 +488,23 @@ const Atelier = (() => {
     if (tx < 0 || ty < 0 || tx >= ROOM_COLS || ty >= ROOM_ROWS) return;
     dragSeen.add(tx + ',' + ty);
     if (st.brush && st.brush.startsWith('t:')) { paintTerrain(tx, ty, st.brush.slice(2)); apply(); refresh(); return; }
-    if (st.brush && st.brush.startsWith('a:') && (ANIM_DEFS[st.brush.slice(2)] || {}).cells) { paintCell(st.brush.slice(2), tx, ty); return; }
+    if (st.brush && st.brush.startsWith('a:')) {
+      const ad = ANIM_DEFS[st.brush.slice(2)] || {};
+      if (ad.cells) { paintCell(st.brush.slice(2), tx, ty); return; }
+      if (ad.path) { paintPath(st.brush.slice(2), tx, ty); return; }
+    }
     const k = st.items.findIndex(it => famOf(it) === st.tab && tx >= it.x && tx < it.x + it.w && ty >= it.y && ty < it.y + it.h);
     if (k >= 0 && (!st.brush || k !== st.sel)) { st.sel = k; refresh(); return; }   // clic sur un élément : on le choisit
     if (!st.brush) return;
     if (st.brush === 'mur') st.items.push({ kind: 'mur', x: tx, y: ty, w: 1, h: 1 });
     else if (st.brush.startsWith('e:')) st.items.push({ kind: 'ennemi', enemy: st.brush.slice(2), x: tx, y: ty, w: 1, h: 1, wave: 0, count: 1, elite: false });
-    else if (st.brush.startsWith('a:')) {
-      const a = st.brush.slice(2); const ad = ANIM_DEFS[a] || {}; const s = ad.size || [1, 1];
-      if (ad.cells) { paintCell(a, tx, ty); return; }   // dalles : on peint tuile par tuile dans le motif courant
-      st.items.push({ kind: 'anim', anim: a, x: clamp(tx, 0, ROOM_COLS - s[0]), y: clamp(ty, 0, ROOM_ROWS - s[1]), w: s[0], h: s[1], hits: [0], tele: 0, act: ad.act || 1, params: {} });
-    } else {
-      const dfn = Content.trap(st.brush); if (!dfn) return;
-      const kk = KIND[dfn.kind] || {}; const s = kk.size || [1, 1];
-      const it = { kind: 'trap', trap: st.brush, x: clamp(tx, 0, ROOM_COLS - s[0]), y: clamp(ty, 0, ROOM_ROWS - s[1]), w: s[0], h: s[1], hits: [0], tele: kk.tele || 1, act: kk.act || 0, params: {} };
-      if (kk.turn) it.turn = kk.turn; if (kk.trip) it.trip = kk.trip;
+    else {
+      if (st.brush.startsWith('a:')) {
+        const ad = ANIM_DEFS[st.brush.slice(2)] || {};
+        if (ad.cells) { paintCell(st.brush.slice(2), tx, ty); return; }   // dalles : on peint tuile par tuile
+        if (ad.path) { paintPath(st.brush.slice(2), tx, ty); return; }    // objet mobile : on trace le trajet point par point
+      }
+      const it = fromBrush(tx, ty); if (!it) return;
       st.items.push(it);
     }
     st.sel = st.items.length - 1; apply(); refresh();
@@ -459,15 +561,27 @@ const Atelier = (() => {
     if (!G.run || G.state !== 'run' || !G.room) { close(); return; }   // run quittée depuis la pause : on referme proprement
     if (G.room.doorOpen) G.room.doorOpen = false;   // on ne sort pas de l'atelier par la porte
     if (Input.keys.has('Delete') && st.sel >= 0) { st.items.splice(st.sel, 1); st.sel = -1; Input.keys.delete('Delete'); apply(); refresh(); }
-    const L = Lb(); let pos = inLoop();
-    if (pos >= L || pos < 0) {
-      if (!(st.loop && pos >= L && Music.seekBeat(st.loopBar * L))) { st.loopBar = Math.max(0, Math.floor(beatNow() / L)); if (box && !box.hidden) $('#a-win').textContent = 'mesures ' + (st.loopBar * st.bars + 1) + '–' + (st.loopBar * st.bars + st.bars); }
-      pos = clamp(inLoop(), 0, L);
+    /* La lecture boucle sur la FENÊTRE de travail, pas sur la partition entière : c'est ce qui permet de
+       repasser deux mesures en boucle au milieu d'un morceau de trois minutes. Boucle décochée, c'est la
+       fenêtre qui suit la musique. */
+    const w0 = winStart(), wl = winBeats(); let pos = inLoop();
+    if (pos < w0 || pos >= w0 + wl) {
+      if (st.loop) { if (!Music.seekBeat(cycle() * Lb() + w0)) { st.winIdx = Math.floor(pos / wl); syncPos(); } }
+      else { const i = clamp(Math.floor(pos / wl), 0, winCount() - 1); if (i !== st.winIdx) { st.winIdx = i; refresh(); } }
+      pos = clamp(inLoop(), w0, w0 + wl);
     }
     if (Time.frame % 30 === 0) measure();   // fenêtre redimensionnée, panneau replié : la tête de lecture se recale
-    if (headEl && headW) headEl.style.left = (headX0 + headW * pos / L) + 'px';
-    const idx = Beat.index();
-    if (idx !== lastIdx) { lastIdx = idx; if (st.metro) AudioEngine.tempoTick({ intensity: Beat.beatInBar() === 0 ? 1 : 0.45 }); }
+    if (headEl && headW) headEl.style.left = (headX0 + headW * (pos - w0) / wl) + 'px';
+    /* Métronome : on programme le clic pour l'instant EXACT du prochain temps, jusqu'à 250 ms à l'avance, au lieu
+       de le déclencher au pas de simulation qui suit — celui-ci tombait 8 à 17 ms trop tard, systématiquement.
+       `Beat.lag` avance encore le clic de la latence de sortie, pour qu'il soit entendu sur le temps. */
+    if (st.metro) {
+      const nb = Beat.timeToBeat(1);
+      if (nb.at < 0.25 && nb.index !== lastIdx) {
+        lastIdx = nb.index;
+        AudioEngine.tempoTick({ intensity: ((nb.index % 4) + 4) % 4 === 0 ? 1 : 0.45, delay: Math.max(0, nb.at - Beat.lag) });
+      }
+    } else lastIdx = -1;
   }
   /* repères dans la salle : grille de pose, élément choisi, aperçu sous le curseur */
   function render(ctx) {
@@ -481,6 +595,21 @@ const Atelier = (() => {
     }
     const it = st.items[st.sel];
     if (it) { ctx.save(); ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.strokeRect(ROOM_X + it.x * TILE + 1, ROOM_Y + it.y * TILE + 1, it.w * TILE - 2, it.h * TILE - 2); ctx.restore(); }
+    /* trajet d'un objet mobile : la ligne et les points numérotés, pour voir l'ordre du parcours */
+    for (const o2 of st.items) {
+      const path = o2.kind === 'anim' && o2.params && o2.params.path;
+      if (!path || !path.length) continue;
+      const sel = st.items[st.sel] === o2; const c = o2.params.color || (ANIM_DEFS[o2.anim] || {}).color || '#ffd166';
+      const px = i => ROOM_X + (path[i][0] + 0.5) * TILE, py = i => ROOM_Y + (path[i][1] + 0.5) * TILE;
+      ctx.save(); ctx.globalAlpha = sel ? 0.9 : 0.35; ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+      ctx.beginPath(); ctx.moveTo(px(0), py(0));
+      for (let i = 1; i < path.length; i++) ctx.lineTo(px(i), py(i));
+      if (!o2.params.pingpong && path.length > 2) ctx.lineTo(px(0), py(0));
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = 'bold 11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (let i = 0; i < path.length; i++) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(px(i), py(i), 9, 0, TAU); ctx.fill(); ctx.fillStyle = '#07080d'; ctx.fillText(String(i + 1), px(i), py(i) + 1); }
+      ctx.restore();
+    }
     if (st.brush) {
       const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y);
       const tx = Math.floor((wm.x - ROOM_X) / TILE), ty = Math.floor((wm.y - ROOM_Y) / TILE);

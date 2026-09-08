@@ -48,14 +48,15 @@ class Trap {
   cycleHits(rt) {
     const P = this.hitLoop, n = this.hitsSec.length;
     if (!P || !n) return { stage: 'idle', k: 0, idx: 0 };
-    const loop = Math.floor(rt / P), t = rt - loop * P; let warn = null;
+    const loop = Math.floor(rt / P), t = rt - loop * P;
     const E = 1e-9;   // un coup posé pile sur le début de la boucle ne doit pas tomber dans l'arrondi
-    for (let o = -1; o <= 1; o++) for (let i = 0; i < n; i++) {
-      const h = this.hitsSec[i] + o * P, idx = (loop + o) * n + i;
-      if (t >= h - E && t < h + this.active - E) return { stage: 'on', k: clamp((t - h) / this.active, 0, 1), idx };
-      if (!warn && t >= h - this.telegraph - E && t < h - E) warn = { stage: 'warn', k: (t - h + this.telegraph) / this.telegraph, idx };
-    }
-    return warn || { stage: 'idle', k: 0, idx: loop * n };
+    const c = hitAround(this.hitsSec, t + E, P, loop);
+    /* La durée d'activité est la même pour tous les coups : si le dernier coup passé ne couvre pas `t`, aucun
+       coup plus ancien ne le couvre non plus. Un seul candidat suffit donc de chaque côté — c'est ce qui permet
+       de tenir une partition de plusieurs centaines de coups sans balayer la liste à chaque image. */
+    if (t >= c.at - E && t < c.at + this.active - E) return { stage: 'on', k: clamp((t - c.at) / this.active, 0, 1), idx: c.idx };
+    if (t >= c.nextAt - this.telegraph - E && t < c.nextAt - E) return { stage: 'warn', k: (t - c.nextAt + this.telegraph) / this.telegraph, idx: c.nextIdx };
+    return { stage: 'idle', k: 0, idx: c.idx };
   }
   /* Bouches de feu et tourelles tirent sur leur propre horloge (`p.every`) et non sur cycle().
      Le déclenchement compare l'indice du coup au dernier joué (`lastShot`) au lieu de compter vers le haut :
@@ -70,13 +71,9 @@ class Trap {
       const P = this.hitLoop, n = this.hitsSec.length;
       if (!P || !n) return { shotIdx: -1, warnIdx: -1, warm: 0 };
       const E = 1e-9; const loop = Math.floor(rt / P), t = rt - loop * P;
-      let last = -Infinity, li = -1, ll = loop, next = Infinity, ni = -1, nl = loop;
-      for (let o = -1; o <= 1; o++) for (let i = 0; i < n; i++) {
-        const h = this.hitsSec[i] + o * P;
-        if (h <= t + E) { if (h > last) { last = h; li = i; ll = loop + o; } }
-        else if (h < next) { next = h; ni = i; nl = loop + o; }
-      }
-      return { shotIdx: li < 0 ? -1 : ll * n + li, warnIdx: ni < 0 ? -1 : nl * n + ni, warm: (next - t) < tele ? 1 - (next - t) / tele : 0 };
+      const c = hitAround(this.hitsSec, t + E, P, loop);
+      const d = c.nextAt - t;
+      return { shotIdx: c.idx, warnIdx: c.nextIdx, warm: d < tele ? 1 - d / tele : 0 };
     }
     const every = (this.p.every || fallback) / G.difficulty.fireRateMul; const t = this.lt(rt); const c = Math.floor(t / every); const inCycle = t - c * every;
     return { shotIdx: inCycle >= tele ? c : c - 1, warnIdx: c, warm: inCycle < tele ? inCycle / tele : 0, inCycle };

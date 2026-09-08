@@ -417,7 +417,10 @@
       try {
         const o = norm(opts); o.g *= trim * Math.pow(0.88, burst);
         if (TUNE[name]) { const f0 = TUNE[name]; o.p = nearestScale(f0 * scaleRatio(o.step)) / f0 * (1 + rnd(-0.004, 0.004)); }   // accordé sur la piste
-        fn(o, now + 0.005);
+        /* `delay` : programme le son à un instant précis à venir au lieu de « tout de suite ». Un clic de
+           métronome déclenché au pas de simulation qui suit le temps arrive jusqu'à 17 ms trop tard — audible. */
+        const d = isNum(opts && opts.delay) ? clamp(opts.delay, 0, 0.5) : 0;
+        fn(o, now + (d > 0.005 ? d : 0.005));   // `delay` est l'instant visé, pas un supplément : le clic tombe pile sur le temps
       } catch (e) { console.warn('[AudioEngine] ' + name, e); }
     };
   }
