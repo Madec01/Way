@@ -2357,6 +2357,30 @@ const CONTENT = {
   ],
 
   // =====================================================================
+  // COMPAGNONS — un animal ramassé en run, qui joue son unique tour EN MESURE
+  // =====================================================================
+  pets: [
+    { id: 'pet_faucon', name: 'Faucon', sprite: 'falcon-moon', color: '#9fd8ff', tag: 'pique toutes les 2 mesures',
+      desc: 'Il pique sur l\'ennemi le plus proche toutes les deux mesures, et rien ne l\'arrête en vol.',
+      behavior: 'strike', fly: true, damage: 26, every: 8, range: 360, speed: 300, diveSpeed: 660, knockback: 1.4, size: 32 },
+    { id: 'pet_chien', name: 'Chien de garde', sprite: 'sniffing-dog', color: '#d8b46a', tag: 'mord et attire les coups',
+      desc: 'Il court au contact et mord à chaque temps fort. Les ennemis proches s\'en prennent à lui plutôt qu\'à vous.',
+      behavior: 'bite', damage: 14, every: 4, range: 280, speed: 320, knockback: 2, taunt: 230, hp: 90, revive: 6, size: 34 },
+    { id: 'pet_serpent', name: 'Serpent cracheur', sprite: 'snake', color: '#9ade6a', tag: 'crache sur chaque temps',
+      desc: 'Il reste dans vos jambes et crache une gerbe de venin sur chaque temps, sur l\'ennemi le plus proche.',
+      behavior: 'spit', damage: 9, every: 2, range: 340, speed: 250, projSpeed: 480, projSize: 5, size: 30 },
+    { id: 'pet_scarabee', name: 'Scarabée fouineur', sprite: 'scarab-beetle', color: '#c9a3ff', tag: 'ramasse à votre place',
+      desc: 'Tout ce qui traîne à portée vient à vous : crédits, cœurs, fragments. Il ne se bat pas.',
+      behavior: 'collect', damage: 0, every: 4, radius: 260, speed: 280, size: 28 },
+    { id: 'pet_tortue', name: 'Tortue bouclier', sprite: 'turtle', color: '#6ee7ff', tag: 'brise 2 tirs par temps',
+      desc: 'Elle tourne autour de vous et brise les projectiles ennemis qu\'elle croise — deux par temps.',
+      behavior: 'guard', damage: 0, every: 1, block: 2, dist: 56, spin: 1.7, size: 30 },
+    { id: 'pet_crapaud', name: 'Crapaud guérisseur', sprite: 'frog', color: '#7fff9a', tag: 'soigne sur le temps fort',
+      desc: 'Il souffle un peu de vie à chaque temps fort. Lent, mais il ne s\'arrête jamais.',
+      behavior: 'mend', damage: 0, every: 4, heal: 4, speed: 230, size: 30 },
+  ],
+
+  // =====================================================================
   // PIÈGES — biome 1 (8 kinds)
   // =====================================================================
   traps: [
@@ -3171,6 +3195,7 @@ const Content = (() => {
     for (const r of CONTENT.rooms) { if (!ROOM_TYPES[r.type]) warn('type de salle inconnu', r.id, r.type); for (const w of (r.waves || [])) for (const s of w.spawns) if (!get('enemies', s.enemy) && !get('bosses', s.enemy)) warn('spawn inconnu', r.id, s.enemy); for (const t of (r.traps || [])) if (!get('traps', t.trap)) warn('piège inconnu', r.id, t.trap); }
     for (const e of CONTENT.enemies) if (!ENEMY_ARCHETYPES.includes(e.archetype)) warn('archétype inconnu', e.id, e.archetype);
     for (const t of CONTENT.traps) if (!TRAP_KINDS.includes(t.kind)) warn('kind de piège inconnu', t.id, t.kind);
+    for (const p of (CONTENT.pets || [])) if (!PET_BEHAVIORS.includes(p.behavior)) warn('comportement de compagnon inconnu', p.id, p.behavior);
     for (const u of CONTENT.upgrades) if (!RARITY[u.rarity]) warn('rareté inconnue', u.id, u.rarity);
   }
   return {
@@ -3185,6 +3210,7 @@ const Content = (() => {
     enemies: () => CONTENT.enemies, enemy: id => get('enemies', id),
     bosses: () => CONTENT.bosses, boss: id => get('bosses', id),
     traps: () => CONTENT.traps, trap: id => get('traps', id),
+    pets: () => CONTENT.pets || [], pet: id => get('pets', id),
     rooms: () => CONTENT.rooms, roomsOf: biome => CONTENT.rooms.filter(r => r.biome === biome).sort((a, b) => a.index - b.index),
     pick: key => LORE[key] ? LORE[key][Math.floor(VFX_RNG() * LORE[key].length)] : '',
     lore: LORE,
@@ -3273,6 +3299,14 @@ const Sprites = (() => {
     'hospital-cross': { d: 'lab', color: '#ff8a9a', px: 18 }, 'test-tube-rack': { d: 'lab', color: '#8fd8d0', px: 20 }, microscope: { d: 'lab', color: '#b0bdd8', px: 20 }, lockers: { d: 'lab', color: '#6e7a9a', px: 24 },
     'trash-can': { d: 'lab', color: '#6a748c', px: 18 }, 'computer-fan': { d: 'lab', color: '#8aa0c0', px: 20 }, valve: { d: 'lab', color: '#9aa4bc', px: 18 }, 'straight-pipe': { d: 'lab', color: '#7a86a4', px: 20 },
     cog: { d: 'lab', color: '#8a94ac', px: 18 }, 'hazard-sign': { d: 'lab', color: '#ffd166', px: 18 }, 'battery-pack-alt': { d: 'lab', color: '#7fe0c8', px: 18 },
+    /* compagnons et faune (assets/sprites/pets/) — servent aussi d'images pour le décor animé */
+    'falcon-moon': { d: 'pets', color: '#9fd8ff', px: 24 }, 'sniffing-dog': { d: 'pets', color: '#d8b46a', px: 24 }, 'sitting-dog': { d: 'pets', color: '#d8b46a', px: 22 },
+    snake: { d: 'pets', color: '#9ade6a', px: 24 }, 'scarab-beetle': { d: 'pets', color: '#c9a3ff', px: 22 }, turtle: { d: 'pets', color: '#6ee7ff', px: 22 },
+    frog: { d: 'pets', color: '#7fff9a', px: 22 }, owl: { d: 'pets', color: '#d8c9a0', px: 22 }, fox: { d: 'pets', color: '#ff9a3c', px: 24 },
+    rat: { d: 'pets', color: '#9aa4bc', px: 22 }, raven: { d: 'pets', color: '#6a7490', px: 24 }, hedgehog: { d: 'pets', color: '#b39a6a', px: 22 },
+    'wolf-head': { d: 'pets', color: '#8a94b0', px: 22 }, crab: { d: 'pets', color: '#ff7a6a', px: 22 }, butterfly: { d: 'pets', color: '#ffd166', px: 22 },
+    bee: { d: 'pets', color: '#ffd166', px: 20 }, monkey: { d: 'pets', color: '#a0744a', px: 24 }, armadillo: { d: 'pets', color: '#b0a08a', px: 22 },
+    seahorse: { d: 'pets', color: '#8fd8d0', px: 22 }, lizardman: { d: 'pets', color: '#7fa86a', px: 24 },
     /* biome 2 — LA SERRE (assets/sprites/greenhouse/) */
     'flower-pot': { d: 'greenhouse', color: '#8fbf6a', px: 20 }, 'cactus-pot': { d: 'greenhouse', color: '#6aa85a', px: 20 }, vines: { d: 'greenhouse', color: '#5aa06a', px: 26 }, 'curled-leaf': { d: 'greenhouse', color: '#7ed957', px: 18 },
     'mushrooms-cluster': { d: 'greenhouse', color: '#c9a3ff', px: 20 }, 'grass-mushroom': { d: 'greenhouse', color: '#b7ff7a', px: 18 }, seedling: { d: 'greenhouse', color: '#9cff57', px: 16 }, 'sprout-disc': { d: 'greenhouse', color: '#8fd86a', px: 18 },
@@ -4015,18 +4049,18 @@ const RELICS = [
   { id: 'bottes', name: 'Bottes de facteur', desc: 'Vitesse +30 % et cadence +15 % pour la salle', apply: pl => pl.addBuff('relic', 1e6, [{ stat: 'speed', mul: 1.3 }, { stat: 'fireRate', mul: 1.15 }], true) },
   { id: 'sifflet', name: 'Sifflet de chef de gare', desc: 'Appelle un allié pour 25 s', apply: pl => Pickups.summonAlly(pl.x, pl.y) },
 ];
-const NO_MAGNET = new Set(['fragment', 'weapon', 'ally', 'relic']);
+const NO_MAGNET = new Set(['fragment', 'weapon', 'ally', 'relic', 'pet']);
 const Pickups = {
   list: [],
   spawn(x, y, kind, value = 1, extra = {}) {
     const a = RNG.range(0, TAU), s = RNG.range(40, 120);
-    this.list.push(Object.assign({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, kind, value, t: 0, magnet: false, r: kind === 'fragment' ? 10 : (kind === 'weapon' || kind === 'relic' || kind === 'ally') ? 12 : 6 }, extra));
+    this.list.push(Object.assign({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, kind, value, t: 0, magnet: false, r: kind === 'fragment' ? 10 : (kind === 'weapon' || kind === 'relic' || kind === 'ally' || kind === 'pet') ? 12 : 6 }, extra));
   },
   /* tirage d'un objet à la mort d'un ennemi (élite : 35 % ; dernière vague : 6 % de bourse), 2 objets max par salle */
   maybeDrop(e) {
     const r = G.room; if (!r || r.drops >= 2 || e.isBoss) return;
     const lastWave = r.waves.length && r.waves.every(w => w.done);
-    if (e.elite && RNG.chance(0.35)) { const k = RNG(); r.drops++; if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14)); else if (k < 0.8) this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else this.spawn(e.x, e.y, 'ally', 1); }
+    if (e.elite && RNG.chance(0.35)) { const k = RNG(); r.drops++; if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14)); else if (k < 0.75) this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else if (k < 0.9) this.spawn(e.x, e.y, 'pet', 1, { pet: RNG.pick(Content.pets()).id }); else this.spawn(e.x, e.y, 'ally', 1); }
     else if (lastWave && RNG.chance(0.06)) { r.drops++; this.spawn(e.x, e.y, 'purse', RNG.int(4, 9)); }
   },
   /* arme d'essai posée au sol, une fois par palier */
@@ -4060,6 +4094,7 @@ const Pickups = {
       else if (p.kind === 'purse') { ctx.fillStyle = '#8b5a2b'; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p.x, p.y + bob + 2, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#c98a4b'; ctx.fillRect(p.x - 4, p.y + bob - 8, 8, 4); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(p.x, p.y + bob + 2, 3, 0, TAU); ctx.fill(); }
       else if (p.kind === 'weapon') { const w = Content.weapon(p.weapon); const col = w ? (WEAPON_COLORS[w.family] || '#fff') : '#fff'; ctx.save(); ctx.translate(p.x, p.y + bob); ctx.rotate(Math.PI / 4); ctx.fillStyle = 'rgba(8,10,18,.8)'; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = 16 + Math.sin(Time.now * 5) * 6; ctx.fillRect(-12, -12, 24, 24); ctx.strokeRect(-12, -12, 24, 24); ctx.rotate(-Math.PI / 4); ctx.fillStyle = col; ctx.font = 'bold 13px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((w ? w.family[0] : '?').toUpperCase(), 0, 1); ctx.restore(); ctx.fillStyle = '#e8ecf7'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(w ? w.name : '', p.x, p.y + bob - 20); }
       else if (p.kind === 'ally') { ctx.fillStyle = '#3a4260'; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(p.x, p.y + bob - 6, 5, 0, TAU); ctx.fill(); ctx.fillRect(p.x - 5, p.y + bob - 1, 10, 10); ctx.fillStyle = '#9ff'; ctx.beginPath(); ctx.arc(p.x, p.y + bob - 6, 2, 0, TAU); ctx.fill(); ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#9ff'; ctx.fillText('allié', p.x, p.y + bob - 18); }
+      else if (p.kind === 'pet') { const pd = Content.pet(p.pet) || {}; ctx.save(); ctx.globalAlpha = 0.9; if (!Sprites.drawProp(ctx, pd.sprite, p.x, p.y + bob - 4, 26, 26, {})) { ctx.fillStyle = pd.color || '#9fd8ff'; ctx.beginPath(); ctx.arc(p.x, p.y + bob - 4, 8, 0, TAU); ctx.fill(); } ctx.restore(); ctx.fillStyle = pd.color || '#9fd8ff'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(pd.name || 'Compagnon', p.x, p.y + bob - 22); }
       else if (p.kind === 'relic') { const rl = RELICS.find(r => r.id === p.relic); ctx.save(); ctx.translate(p.x, p.y + bob); ctx.rotate(Time.now * 1.5); ctx.fillStyle = '#c9a3ff'; ctx.shadowColor = '#c9a3ff'; ctx.shadowBlur = 16; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * TAU / 10, rr = i % 2 ? 11 : 5; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); ctx.restore(); ctx.fillStyle = '#e8ecf7'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(rl ? rl.name : 'Relique', p.x, p.y + bob - 18); }
       else if (p.kind === 'heart') { ctx.fillStyle = '#ff5e7a'; ctx.shadowColor = '#ff5e7a'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p.x - 3, p.y + bob - 2, 4, 0, TAU); ctx.arc(p.x + 3, p.y + bob - 2, 4, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(p.x - 7, p.y + bob - 1); ctx.lineTo(p.x + 7, p.y + bob - 1); ctx.lineTo(p.x, p.y + bob + 7); ctx.fill(); }
     }
@@ -4226,6 +4261,7 @@ const Combat = {
     else if (p.kind === 'purse') { G.run.coinsPending += p.value; G.run.stats.coins += p.value; Floaters.add(p.x, p.y - 16, '+' + p.value + ' ◈', '#ffd166', 16); AudioEngine.chestOpen({ intensity: 0.5 }); }
     else if (p.kind === 'weapon') { const w = Content.weapon(p.weapon); if (!w) return; if (!pl.trialWeapon) pl.trialWeapon = { prev: pl.weapon }; else Pickups.spawn(p.x, p.y, 'weapon', 1, { weapon: pl.weapon.id, vx: 0, vy: 0 }); pl.weapon = w; pl.orbs = null; pl.charge = 0; pl.recompute(); UI.toast(`Arme d'essai : ${w.name} (cette salle seulement)`, 4); UI.banner(w.name, WEAPON_COLORS[w.family] || '#fff', 'arme d\'essai'); AudioEngine.uiConfirm({}); }
     else if (p.kind === 'ally') { Pickups.summonAlly(p.x, p.y); }
+    else if (p.kind === 'pet') { Pets.give(p.pet); }
     else if (p.kind === 'relic') { const rl = RELICS.find(r => r.id === p.relic) || RELICS[0]; rl.apply(pl); UI.banner(rl.name, '#c9a3ff', rl.desc); AudioEngine.levelUp({ intensity: 0.6 }); }
   },
 };
@@ -4516,6 +4552,184 @@ class Player {
 
 </script>
 <script>
+/* ==== 31_pets.js ==== */
+/* =========================================================================
+   SALLE ZÉRO — 31_pets.js — compagnons
+   Un animal ramassé en cours de run suit le joueur jusqu'à la fin du niveau. Il n'a qu'un comportement, mais il le
+   joue EN MESURE : le faucon pique sur le temps, le chien mord sur le temps, le crapaud soigne sur le temps fort.
+   C'est ce qui les distingue d'une tourelle : on les entend arriver.
+
+   Un compagnon ne meurt jamais. Celui qui attire les coups (le chien) peut être assommé et revient au bout de
+   quelques secondes — perdre définitivement son animal au milieu d'une run serait une punition sans rattrapage.
+   ========================================================================= */
+
+const PET_BEHAVIORS = ['strike', 'bite', 'spit', 'collect', 'guard', 'mend'];
+
+class Pet {
+  constructor(def) {
+    this.def = def; this.id = def.id; this.name = def.name; this.color = def.color || '#9fd8ff';
+    const pl = G.player; this.x = pl ? pl.x - 34 : W / 2; this.y = pl ? pl.y : H / 2;
+    this.r = 11; this.t = 0; this.act = 0; this.facing = 1; this.moving = false;
+    this.state = 'follow'; this.target = null; this.lastBeat = -1; this.blocks = 0;
+    this.maxHp = def.hp || 0; this.hp = this.maxHp; this.downT = 0;
+  }
+  get airborne() { return !!this.def.fly; }
+  get down() { return this.downT > 0; }
+  get taunts() { return !!this.def.taunt && !this.down; }
+  dmg() { return Math.round(this.def.damage * (G.player ? G.player.stats.damage : 1)); }
+  /* replacé à côté du joueur : changement de salle, ou trop distancé */
+  snap() { const pl = G.player; if (!pl) return; this.x = pl.x - 34; this.y = pl.y; this.state = 'follow'; this.target = null; }
+  /* vrai une fois par temps utile (tous les `every` temps) */
+  beatTick() {
+    const b = Beat.index(); if (b === this.lastBeat) return false; this.lastBeat = b;
+    return ((b % (this.def.every || 4)) + (this.def.every || 4)) % (this.def.every || 4) === 0;
+  }
+  hurt(d) {
+    if (!this.maxHp || this.down) return;
+    this.hp -= d; Floaters.add(this.x, this.y - 20, Math.round(d), '#ff9a9a', 12);
+    if (this.hp <= 0) { this.hp = 0; this.downT = this.def.revive || 6; this.state = 'follow'; this.target = null; AudioEngine.uiBack && AudioEngine.uiBack({ intensity: 0.5 }); UI.toast(this.name + ' est sonné'); }
+  }
+  /* déplacement de suite : rejoint le joueur au-delà de `dist`, se pose en deçà */
+  follow(dt, mult) {
+    const pl = G.player; const d = dist(this.x, this.y, pl.x, pl.y); const want = this.def.dist || 46;
+    if (d > 460) { this.snap(); return; }   // distancé (porte franchie, téléportation) : il rattrape d'un coup
+    if (d > want) {
+      const a = angleTo(this.x, this.y, pl.x, pl.y); const sp = Math.min((this.def.speed || 260) * (mult || 1), 70 + (d - want) * 4.5);
+      this.x += Math.cos(a) * sp * dt; this.y += Math.sin(a) * sp * dt; this.facing = Math.cos(a) > 0 ? 1 : -1; this.moving = true;
+    } else this.moving = false;
+    if (!this.airborne) resolveRoomCollision(this);
+  }
+  update(dt) {
+    this.t += dt; this.act = Math.max(0, this.act - dt * 3);
+    if (this.downT > 0) { this.downT -= dt; if (this.downT <= 0) { this.hp = this.maxHp; this.snap(); UI.toast(this.name + ' est de retour'); } this.moving = false; return; }
+    const tick = this.beatTick(); const pl = G.player;
+    switch (this.def.behavior) {
+      /* --- faucon : pique sur l'ennemi le plus proche, revient ensuite --- */
+      case 'strike': {
+        if (this.state === 'dive') {
+          const t = this.target;
+          if (!t || t.dead) { this.state = 'follow'; this.target = null; break; }
+          const a = angleTo(this.x, this.y, t.x, t.y); const sp = this.def.diveSpeed || 640;
+          this.x += Math.cos(a) * sp * dt; this.y += Math.sin(a) * sp * dt; this.facing = Math.cos(a) > 0 ? 1 : -1; this.moving = true;
+          if (dist(this.x, this.y, t.x, t.y) < t.r + this.r) {
+            Combat.hitEnemy(t, this.dmg(), { x: t.x, y: t.y, knockback: this.def.knockback || 1.4, silent: true });
+            Particles.spawn(t.x, t.y, { count: 7, color: this.color, glow: true, speedMax: 160, life: 0.35, size: 2 });
+            AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.35 });
+            this.act = 1; this.state = 'follow'; this.target = null;
+          }
+        } else { this.follow(dt); if (tick) { const e = nearestEnemy(this.x, this.y, this.def.range || 340); if (e) { this.target = e; this.state = 'dive'; } } }
+        break;
+      }
+      /* --- chien : court au contact, mord en mesure, et attire les coups --- */
+      case 'bite': {
+        const e = nearestEnemy(this.x, this.y, this.def.range || 260);
+        if (e) {
+          const a = angleTo(this.x, this.y, e.x, e.y); const d = dist(this.x, this.y, e.x, e.y);
+          if (d > e.r + this.r + 4) { const sp = this.def.speed || 300; this.x += Math.cos(a) * sp * dt; this.y += Math.sin(a) * sp * dt; this.facing = Math.cos(a) > 0 ? 1 : -1; this.moving = true; }
+          else { this.moving = false; if (tick) { Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true }); Particles.spawn(e.x, e.y, { count: 5, color: this.color, speedMax: 120, life: 0.3, size: 2 }); this.act = 1; } }
+          resolveRoomCollision(this);
+        } else this.follow(dt);
+        break;
+      }
+      /* --- serpent : crache sur le temps, à distance --- */
+      case 'spit': {
+        this.follow(dt);
+        if (tick) {
+          const e = nearestEnemy(this.x, this.y, this.def.range || 320);
+          if (e) {
+            const a = angleTo(this.x, this.y, e.x, e.y); const sp = this.def.projSpeed || 460;
+            Projectiles.spawn({ x: this.x, y: this.y - 6, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: this.def.projSize || 5, damage: this.dmg(), owner: 'player', life: 1.4, color: this.color, kind: 'bullet', noCrit: true, knockback: 0.4 });
+            this.facing = Math.cos(a) > 0 ? 1 : -1; this.act = 1;
+            AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.3 });
+          }
+        }
+        break;
+      }
+      /* --- scarabée : aimante les ramassables autour de lui --- */
+      case 'collect': {
+        this.follow(dt);
+        const R = this.def.radius || 220;
+        for (const p of Pickups.list) { if (p.magnet || NO_MAGNET.has(p.kind)) continue; if (dist(p.x, p.y, this.x, this.y) < R) { p.magnet = true; this.act = Math.max(this.act, 0.6); } }
+        if (tick) this.act = Math.max(this.act, 0.5);
+        break;
+      }
+      /* --- tortue : tourne autour du joueur et brise les tirs ennemis --- */
+      case 'guard': {
+        const a = this.t * (this.def.spin || 1.7); const R = this.def.dist || 54;
+        this.x = pl.x + Math.cos(a) * R; this.y = pl.y + Math.sin(a) * R; this.facing = Math.cos(a) > 0 ? 1 : -1; this.moving = true;
+        if (tick) this.blocks = this.def.block || 2;
+        for (let i = Projectiles.list.length - 1; i >= 0 && this.blocks > 0; i--) {
+          const p = Projectiles.list[i]; if (p.owner === 'player') continue;
+          if (dist(p.x, p.y, this.x, this.y) < p.r + this.r + 4) {
+            Projectiles.list.splice(i, 1); this.blocks--; this.act = 1;
+            Particles.spawn(p.x, p.y, { count: 5, color: this.color, glow: true, speedMax: 140, life: 0.3, size: 2 });
+            AudioEngine.uiBack && AudioEngine.uiBack({ intensity: 0.25 });
+          }
+        }
+        break;
+      }
+      /* --- crapaud : soigne sur le temps fort --- */
+      case 'mend': {
+        this.follow(dt);
+        if (tick && pl.hp < pl.stats.maxHp && !pl.dead) {
+          const h = this.def.heal || 4; pl.heal(h); this.act = 1;
+          Floaters.add(pl.x, pl.y - 34, '+' + h, '#7fff9a', 13);
+          Particles.spawn(this.x, this.y - 8, { count: 4, color: '#7fff9a', glow: true, speedMax: 70, life: 0.5, size: 2 });
+        }
+        break;
+      }
+      default: this.follow(dt);
+    }
+  }
+  render(ctx) {
+    const s = this.def.size || 34; const lift = this.airborne ? 15 : 0;
+    const bob = this.moving ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5 : Math.sin(this.t * 3) * 2;
+    ctx.save(); ctx.globalAlpha = this.down ? 0.15 : 0.32; ctx.fillStyle = '#05070c';
+    ctx.beginPath(); ctx.ellipse(this.x, this.y + s * 0.34, s * 0.28, s * 0.1, 0, 0, TAU); ctx.fill(); ctx.restore();
+    const pop = 1 + this.act * 0.22;
+    const opts = { flip: this.facing < 0, rot: this.down ? 1.4 : 0, alpha: this.down ? 0.5 : 1 };
+    if (!Sprites.drawProp(ctx, this.def.sprite, this.x, this.y - bob - lift, s * pop, s * pop, opts)) {
+      ctx.save(); ctx.globalAlpha = this.down ? 0.5 : 1; ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(this.x, this.y - bob - lift, s * 0.24, 0, TAU); ctx.fill(); ctx.restore();
+    }
+    if (this.act > 0.05 && !this.down) { ctx.save(); ctx.globalAlpha = this.act * 0.7; ctx.strokeStyle = this.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.x, this.y - bob - lift, s * 0.4 + (1 - this.act) * 10, 0, TAU); ctx.stroke(); ctx.restore(); }
+    if (this.maxHp && this.hp < this.maxHp && !this.down) {
+      const w = 26; ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(this.x - w / 2, this.y - s * 0.55 - lift, w, 3);
+      ctx.fillStyle = '#7fff9a'; ctx.fillRect(this.x - w / 2, this.y - s * 0.55 - lift, w * (this.hp / this.maxHp), 3); ctx.restore();
+    }
+  }
+}
+
+const Pets = {
+  /* donne un compagnon (remplace celui en cours) */
+  give(id) {
+    const def = Content.pet(id); if (!def) return null;
+    G.pet = new Pet(def);
+    UI.banner(def.name, def.color || '#9fd8ff', def.desc); AudioEngine.levelUp({ intensity: 0.5 });
+    return G.pet;
+  },
+  clear() { G.pet = null; },
+  update(dt) { if (G.pet && G.player && G.room) G.pet.update(dt); },
+  render(ctx) { if (G.pet) G.pet.render(ctx); },
+  /* dégâts pris par un compagnon qui attire les coups */
+  hurt(d) { if (G.pet) G.pet.hurt(d); },
+  /* badge du compagnon, au-dessus de la ligne arme/compétence */
+  renderHud(ctx) {
+    const p = G.pet; if (!p) return;
+    const x = 16, y = H - 108;
+    ctx.save();
+    ctx.fillStyle = 'rgba(8,10,18,.72)'; UI.roundRect(ctx, x, y, 168, 30, 8); ctx.fill();
+    if (!Sprites.drawProp(ctx, p.def.sprite, x + 18, y + 15, 24, 24, { alpha: p.down ? 0.4 : 1 })) { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(x + 18, y + 15, 7, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = p.down ? '#8a93ad' : '#e8ecf7'; ctx.font = '12px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(p.name, x + 36, y + 14);
+    ctx.fillStyle = '#8a93ad'; ctx.font = '10px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(p.down ? 'sonné — ' + Math.ceil(p.downT) + ' s' : (p.def.tag || ''), x + 36, y + 25);
+    ctx.restore();
+  },
+};
+
+</script>
+<script>
 /* ==== 32_enemies.js ==== */
 /* =========================================================================
    SALLE ZÉRO — 32_enemies.js
@@ -4591,13 +4805,21 @@ class Enemy {
       if (Combat.hitPlayer(this.contactDamage(), { type: 'contact', source: this, x: this.x, y: this.y })) { this.contactCd = 0.6; const a = angleTo(pl.x, pl.y, this.x, this.y); this.kvx += Math.cos(a) * 120; this.kvy += Math.sin(a) * 120; }
     }
     for (const dc of G.room.decoys) if (dist(this.x, this.y, dc.x, dc.y) < this.r + dc.r && this.contactCd <= 0) { dc.hp -= this.damage; this.contactCd = 0.6; }
+    if (G.pet && G.pet.taunts && dist(this.x, this.y, G.pet.x, G.pet.y) < this.r + G.pet.r && this.contactCd <= 0) { Pets.hurt(this.damage); this.contactCd = 0.6; }
   }
   relocate() {
     this.stuckT = 0; const pl = G.player;
     for (let k = 0; k < 20; k++) { const x = RNG.range(ROOM_X + 40, ROOM_X + ROOM_W - 40), y = RNG.range(ROOM_Y + 40, ROOM_Y + ROOM_H - 40); if (dist(x, y, pl.x, pl.y) > 200 && !pointBlocked(x, y, this.r + 8)) { Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true }); this.x = x; this.y = y; this.lastX = x; this.lastY = y; Particles.spawn(x, y, { count: 8, color: this.color, glow: true }); Floaters.add(x, y - this.r - 10, 'relocalisé', '#9aa4c4', 11); return; } }
   }
   contactDamage() { return this.archetype === 'tank' && this.state === 'charge' ? Math.round(this.damage * (this.behavior.chargeDamageMul || 1.5)) : this.damage; }
-  pickTarget() { const pl = G.player; let t = pl; let bd = Infinity; for (const dc of G.room.decoys) { const d = dist(this.x, this.y, dc.x, dc.y); if (d < bd) { bd = d; t = dc; } } return t; }
+  /* Cible : le joueur, sauf s'il y a plus près un leurre ou un compagnon qui attire les coups (chien de garde). */
+  pickTarget() {
+    const pl = G.player; let t = pl; let bd = Infinity;
+    for (const dc of G.room.decoys) { const d = dist(this.x, this.y, dc.x, dc.y); if (d < bd) { bd = d; t = dc; } }
+    const pet = G.pet;
+    if (pet && pet.taunts) { const d = dist(this.x, this.y, pet.x, pet.y); if (d < pet.def.taunt && d < bd) { bd = d; t = pet; } }
+    return t;
+  }
   /* --- archétypes --- */
   ai_rusher(dt, t, d) {
     const b = this.behavior; const lr = b.lungeRange || 110;
@@ -5076,8 +5298,8 @@ function beatPulse(b, rt) {
 const easeOut = k => 1 - Math.pow(1 - k, 3);
 
 const ANIM_DEFS = {
-  tile_color: { name: 'Dalles colorées', size: [4, 3], act: 1, color: '#6ee7ff' },
-  tile_lift:  { name: 'Dalles qui montent', size: [4, 3], act: 1, color: '#8a94b0' },
+  tile_color: { name: 'Dalles colorées', size: [1, 1], act: 1, color: '#6ee7ff', cells: true },
+  tile_lift:  { name: 'Dalles qui montent', size: [1, 1], act: 1, color: '#8a94b0', cells: true },
   spinner:    { name: 'Rotatif', size: [1, 1], act: 1, color: '#ffd166', sprite: 1 },
   bouncer:    { name: 'Sauteur', size: [1, 1], act: 1, color: '#7fff9a', sprite: 1 },
   light:      { name: 'Lumière', size: [1, 1], act: 2, color: '#c9a3ff' },
@@ -5090,26 +5312,42 @@ class AnimProp {
     this.tx = inst.x; this.ty = inst.y; this.tw = inst.w || 1; this.th = inst.h || 1;
     this.x = ROOM_X + this.tx * TILE; this.y = ROOM_Y + this.ty * TILE; this.w = this.tw * TILE; this.h = this.th * TILE;
     this.cx = this.x + this.w / 2; this.cy = this.y + this.h / 2;
+    /* Dalles : soit un rectangle (tw × th), soit une liste de tuiles peintes une à une (`params.cells`).
+       La liste garde UNE seule partition pour tout le motif — poser douze dalles ne fait pas douze lignes. */
+    this.cells = Array.isArray(this.p.cells) && this.p.cells.length ? this.p.cells.map(c => [c[0], c[1]]) : null;
+    if (this.cells) {
+      const xs = this.cells.map(c => c[0]), ys = this.cells.map(c => c[1]);
+      this.tx = Math.min(...xs); this.ty = Math.min(...ys); this.tw = Math.max(...xs) - this.tx + 1; this.th = Math.max(...ys) - this.ty + 1;
+      this.x = ROOM_X + this.tx * TILE; this.y = ROOM_Y + this.ty * TILE; this.w = this.tw * TILE; this.h = this.th * TILE;
+      this.cx = this.x + this.w / 2; this.cy = this.y + this.h / 2;
+    }
     this.beats = inst.beats || this.p.beats || { bars: 1, hits: [0], active: 1 };
     this.color = this.p.color || (ANIM_DEFS[this.kind] || {}).color || '#6ee7ff';
   }
   /* couleur du coup courant : deux teintes alternées si `color2` est donnée */
   hue(idx) { return (this.p.color2 && idx % 2 === 1) ? this.p.color2 : this.color; }
   pulse(rt) { return beatPulse(this.beats, rt); }
+  /* parcourt les tuiles du motif : la liste peinte si elle existe, le rectangle sinon */
+  eachCell(fn) {
+    if (this.cells) { for (const c of this.cells) fn(c[0], c[1]); return; }
+    for (let i = 0; i < this.tw; i++) for (let j = 0; j < this.th; j++) fn(this.tx + i, this.ty + j);
+  }
   render(ctx, rt) { const f = this['r_' + this.kind]; if (f) f.call(this, ctx, this.pulse(rt)); }
   renderOver(ctx, rt) { const f = this['o_' + this.kind]; if (f) f.call(this, ctx, this.pulse(rt)); }
 
   /* --- dalles qui changent de couleur : la teinte frappe puis s'efface --- */
   r_tile_color(ctx, u) {
     const a = 1 - u.k; if (a <= 0.01) return;
-    const mode = this.p.mode || 'all';
+    const mode = this.p.mode || 'all'; const span = Math.max(1, this.tw + this.th - 2);
     ctx.save(); ctx.fillStyle = this.hue(u.idx);
-    for (let i = 0; i < this.tw; i++) for (let j = 0; j < this.th; j++) {
-      if (mode === 'checker' && (i + j) % 2 !== u.idx % 2) continue;
-      if (mode === 'sweep') { const k = (i + j) / Math.max(1, this.tw + this.th - 2); if (u.k < k * 0.6 || u.k > k * 0.6 + 0.5) continue; }
-      ctx.globalAlpha = 0.5 * a; ctx.fillRect(this.x + i * TILE + 1, this.y + j * TILE + 1, TILE - 2, TILE - 2);
-      ctx.globalAlpha = 0.9 * a * a; ctx.fillRect(this.x + i * TILE + 1, this.y + j * TILE + 1, TILE - 2, 3);
-    }
+    this.eachCell((tx, ty) => {
+      const i = tx - this.tx, j = ty - this.ty;
+      if (mode === 'checker' && (tx + ty) % 2 !== ((u.idx % 2) + 2) % 2) return;
+      if (mode === 'sweep') { const k = (i + j) / span; if (u.k < k * 0.6 || u.k > k * 0.6 + 0.5) return; }
+      const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE;
+      ctx.globalAlpha = 0.5 * a; ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+      ctx.globalAlpha = 0.9 * a * a; ctx.fillRect(x + 1, y + 1, TILE - 2, 3);
+    });
     ctx.restore();
   }
   /* --- dalles qui montent (ou s'enfoncent) : un léger relief, sans collision --- */
@@ -5117,13 +5355,13 @@ class AnimProp {
     const amp = (this.p.amp != null ? this.p.amp : 7) * (this.p.down ? -1 : 1);
     const dy = -amp * (1 - easeOut(u.k));
     ctx.save();
-    for (let i = 0; i < this.tw; i++) for (let j = 0; j < this.th; j++) {
-      if (this.p.mode === 'checker' && (i + j) % 2 !== u.idx % 2) continue;
-      const x = this.x + i * TILE + 2, y = this.y + j * TILE + 2, s = TILE - 4;
+    this.eachCell((tx, ty) => {
+      if (this.p.mode === 'checker' && (tx + ty) % 2 !== ((u.idx % 2) + 2) % 2) return;
+      const x = ROOM_X + tx * TILE + 2, y = ROOM_Y + ty * TILE + 2, s = TILE - 4;
       ctx.globalAlpha = 0.45; ctx.fillStyle = '#05070c'; ctx.fillRect(x, y + 2, s, s);              // creux laissé par la dalle
       ctx.globalAlpha = 0.85; ctx.fillStyle = this.hue(u.idx); ctx.fillRect(x, y + dy, s, s);
       ctx.globalAlpha = 0.35; ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y + dy, s, 3);
-    }
+    });
     ctx.restore();
   }
   /* --- rotatif : un quart de tour (ou l'angle donné) à chaque coup --- */
@@ -6481,7 +6719,7 @@ const Tempo = {
 const G = {
   state: 'boot',           // boot | menu | hub | run
   mode: 'normal',          // normal | test
-  player: null, enemies: [], room: null, run: null,
+  player: null, enemies: [], room: null, run: null, pet: null,
   paused: false, overlay: null, shake: 0,
   difficulty: { hpMul: 1, damageMul: 1, speedMul: 1, fireRateMul: 1 },
   debug: { difficulty: 1, xpMul: 1, coinMul: 1, forceRarity: null, invuln: false, hitboxes: false, showScores: false, open: false },
@@ -6524,6 +6762,7 @@ const Room = {
     /* défi de salle (salles 2, 3, 6, 7) */
     const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
     if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
+    if (G.pet) G.pet.snap();   // le compagnon franchit la porte avec le joueur
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.pulse = 0; Camera.snap(pl.x, pl.y);
     /* fin des effets « cette salle seulement » : arme d'essai rendue, reliques retirées */
     if (pl.trialWeapon) { pl.weapon = pl.trialWeapon.prev; pl.trialWeapon = null; }
@@ -6729,6 +6968,7 @@ const Run = {
       stats: { kills: 0, damageDealt: 0, damageTaken: 0, hitsTaken: 0, shots: 0, skillUses: 0, coins: 0, roomsEntered: 0, roomTimes: [], bossKilled: false, deathCause: null, deathRoom: null, levelReached: 1 },
       skillChoices: null, weaponDropRoom: RNG.pick([1, 3, 6, 7]),
     };
+    G.pet = null;
     G.player = new Player(charDef);
     G.player.hp = 0; G.player.recompute(); G.player.hp = G.player.stats.maxHp;
     G.state = 'run'; G.paused = false;
@@ -6825,7 +7065,7 @@ const Run = {
     if (!G.run || G.paused) return;
     const pl = G.player;
     if (!G.attract) Music.setState({ hp01: pl.hp / pl.stats.maxHp, slow: Time.now < Time.slowUntil ? Time.slow : 1, overdrive: pl.overdriveUntil > Time.now });
-    pl.update(dt);
+    pl.update(dt); Pets.update(dt);
     for (const e of G.enemies) e.update(dt);
     G.enemies = G.enemies.filter(e => !e.dead);
     Projectiles.update(dt); Pickups.update(dt); Room.update(dt); Particles.update(dt); Floaters.update(dt);
@@ -7564,6 +7804,7 @@ const Debug = (() => {
       <div class="drow"><label>Salle <select id="d-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => `<option value="${i}">${i}</option>`).join('')}</select></label><button class="btn small" id="d-goto">Aller</button><button class="btn small" id="d-kill">Tuer tout</button><button class="btn small" id="d-lvl">+ niveau</button><button class="btn small" id="d-heal">Soigner</button></div>
       <div class="drow"><label>Ennemi <select id="d-enemy">${Content.enemies().map(e => `<option value="${e.id}">${e.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawn">Spawn</button><label class="chk"><input type="checkbox" id="d-elite"> élite</label></div>
       <div class="drow"><label>Piège <select id="d-trap">${Content.traps().map(t => `<option value="${t.id}">${t.name}</option>`).join('')}</select></label><button class="btn small" id="d-spawntrap">Poser</button><button class="btn small" id="d-cleartraps">Retirer pièges</button></div>
+      <div class="drow"><label>Compagnon <select id="d-pet">${Content.pets().map(p => `<option value="${p.id}">${p.name}</option>`).join('')}</select></label><button class="btn small" id="d-givepet">Adopter</button><button class="btn small ghost" id="d-nopet">Renvoyer</button></div>
       <div class="drow"><label>Objet <select id="d-pick"><option value="purse">Bourse</option><option value="weapon">Arme d'essai</option><option value="ally">Allié</option><option value="relic">Relique</option><option value="heart">Cœur</option></select></label><button class="btn small" id="d-drop">Poser</button><label>Tenue <select id="d-tier"><option value="">auto</option><option value="0">nu</option><option value="1">vêtements</option><option value="2">armure</option><option value="3">chevalier</option></select></label></div>
       <div class="drow"><label>Arme <select id="d-weapon">${Content.weapons().map(w => `<option value="${w.id}">${w.name}</option>`).join('')}</select></label><label>Comp. <select id="d-skill">${Content.skills().map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select></label><button class="btn small" id="d-equip">Équiper</button></div>
       <div class="drow"><label>Greffe <select id="d-upg">${Content.upgrades().map(u => `<option value="${u.id}">[${RARITY[u.rarity].label[0]}] ${u.name}</option>`).join('')}</select></label><button class="btn small" id="d-give">Donner</button></div>
@@ -7591,6 +7832,8 @@ const Debug = (() => {
     $('#d-give').onclick = () => { if (!G.run) return; Run.takeUpgrade(Content.upgrade($('#d-upg').value)); };
     $('#d-drop').onclick = () => { if (!G.run) return; const k = $('#d-pick').value; const pl = G.player; const x = pl.x + 80, y = pl.y; if (k === 'weapon') { const w = RNG.pick(Content.weapons().filter(w => w.id !== pl.weapon.id)); Pickups.spawn(x, y, 'weapon', 1, { weapon: w.id, vx: 0, vy: 0 }); } else if (k === 'relic') Pickups.spawn(x, y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else if (k === 'purse') Pickups.spawn(x, y, 'purse', 10); else if (k === 'heart') Pickups.spawn(x, y, 'heart', 15); else Pickups.spawn(x, y, k, 1); };
     bind('#d-tier', e => { G.debug.forceTier = e.value === '' ? null : +e.value; });
+    $('#d-givepet').onclick = () => { if (G.run) Pets.give($('#d-pet').value); };
+    $('#d-nopet').onclick = () => Pets.clear();
     $('#d-audio').onclick = toggleAudioPanel;
     $('#d-props').onclick = toggleProps;
     $('#d-atelier').onclick = () => { hide(); Atelier.open(); };
@@ -7774,8 +8017,8 @@ const Atelier = (() => {
   };
   /* réglages proposés pour le décor animé */
   const AKIND = {
-    tile_color: { mode: 1, color2: 1 },
-    tile_lift:  { mode: 1, amp: 1, down: 1, color2: 1 },
+    tile_color: { mode: 1, color2: 1, cells: 1 },
+    tile_lift:  { mode: 1, amp: 1, down: 1, color2: 1, cells: 1 },
     spinner:    { sprite: 1, step: 1, scale: 1 },
     bouncer:    { sprite: 1, amp: 1, scale: 1 },
     light:      { radius: 1, gain: 1, color2: 1 },
@@ -7883,7 +8126,8 @@ const Atelier = (() => {
     if (!live) return; live = false; save();
     if (box) { box.hidden = true; box.innerHTML = ''; box.className = ''; }
     G.debug.invuln = false;
-    if (canvas) canvas.removeEventListener('mousedown', onCanvas);
+    if (canvas) { canvas.removeEventListener('mousedown', onCanvas); canvas.removeEventListener('mousemove', onDrag); }
+    window.removeEventListener('mouseup', onUp);
     if (G.run) Run.abort();
   }
   /* piste jouée : a = biome (salles 1-4), b = biome (salles 6-8), boss */
@@ -7935,6 +8179,8 @@ const Atelier = (() => {
     $('#a-fold').onclick = () => { const f = box.classList.toggle('fold'); $('#a-fold').textContent = f ? 'Déplier' : 'Réduire'; if (!f) measure(); };
     box.querySelectorAll('.tab').forEach(b => { b.onclick = () => { st.tab = b.dataset.t; st.brush = null; st.sel = -1; refresh(); }; });
     canvas.addEventListener('mousedown', onCanvas);
+    canvas.addEventListener('mousemove', onDrag);
+    window.addEventListener('mouseup', onUp);
     refresh();
   }
   /* pose ↔ test : en test, plus de grille, plus de cadres, plus de partition au sol — la salle telle qu'elle sera jouée */
@@ -7998,8 +8244,9 @@ const Atelier = (() => {
     const d = document.createElement('div'); d.className = 'arow atune';
     const nom = it.kind === 'mur' ? 'Bloc' : anim ? (ANIM_DEFS[it.anim] || {}).name : ((Content.trap(it.trap) || {}).name || it.trap);
     const col = p.color || (anim ? (ANIM_DEFS[it.anim] || {}).color : (Content.trap(it.trap) || {}).color) || '#ff5e7a';
-    let h = `<b>${nom}</b>
-      <label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
+    let h = `<b>${nom}</b>`;
+    if (k.cells) h += `<span class="amuted">${(p.cells || []).length} dalle(s) — cliquez dans la salle pour en ajouter, recliquez pour retirer</span><button class="btn tiny" id="t-newzone">Nouveau motif</button>`;
+    else h += `<label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
       <label>hauteur <input type="number" min="1" max="13" step="1" id="t-h" value="${it.h}"></label>`;
     if (it.kind !== 'mur') {
       if (!anim) h += `<label>annonce <input type="number" min="0" max="8" step="0.25" id="t-tele" value="${it.tele}"> temps</label>`;
@@ -8054,6 +8301,7 @@ const Atelier = (() => {
     };
     d.querySelector('#t-dup').onclick = () => { const c = JSON.parse(JSON.stringify(it)); c.x = clamp(c.x + 1, 0, ROOM_COLS - 1); c.y = clamp(c.y + 1, 0, ROOM_ROWS - 1); st.items.push(c); st.sel = st.items.length - 1; apply(); refresh(); };
     const cx = d.querySelector('#t-col2x'); if (cx) cx.onclick = () => { delete p.color2; apply(); refresh(); };
+    const nz = d.querySelector('#t-newzone'); if (nz) nz.onclick = () => { st.sel = -1; st.newZone = true; st.brush = 'a:' + it.anim; UI.toast('Motif suivant : la prochaine dalle posée en ouvre un nouveau'); refresh(); };
   }
   function tuneEnemy(lanes, it) {
     const d = document.createElement('div'); d.className = 'arow atune';
@@ -8093,12 +8341,44 @@ const Atelier = (() => {
     const row = st.terrain[ty]; st.terrain[ty] = row.slice(0, tx) + ch + row.slice(tx + 1);
     if (st.terrain.every(r => /^\.+$/.test(r))) st.terrain = null;   // plan entièrement effacé : on le retire
   }
+  /* Ajoute (ou retire) une dalle au motif courant. Un motif garde UNE partition, quel que soit le nombre de dalles :
+     c'est tout l'intérêt de peindre plutôt que de poser une zone rectangulaire par ligne. */
+  function paintCell(anim, tx, ty, erase) {
+    let it = st.items[st.sel];
+    if (!it || it.kind !== 'anim' || it.anim !== anim) {
+      it = st.newZone ? null : st.items.find(o => o.kind === 'anim' && o.anim === anim && o.params && o.params.cells);
+      st.newZone = false;
+      if (!it) {
+        const ad = ANIM_DEFS[anim] || {};
+        it = { kind: 'anim', anim, x: tx, y: ty, w: 1, h: 1, hits: [0], tele: 0, act: ad.act || 1, params: { cells: [] } };
+        st.items.push(it);
+      }
+      st.sel = st.items.indexOf(it);
+    }
+    const cells = it.params.cells || (it.params.cells = []);
+    const i = cells.findIndex(c => c[0] === tx && c[1] === ty);
+    if (i >= 0) { if (erase !== false) cells.splice(i, 1); }
+    else cells.push([tx, ty]);
+    if (!cells.length) { st.items.splice(st.items.indexOf(it), 1); st.sel = -1; }
+    else bbox(it);
+    apply(); refresh();
+  }
+  /* emprise du motif : ce que dessine le cadre de sélection et ce qu'affiche la ligne */
+  function bbox(it) {
+    const c = it.params.cells; if (!c || !c.length) return;
+    const xs = c.map(p => p[0]), ys = c.map(p => p[1]);
+    it.x = Math.min.apply(null, xs); it.y = Math.min.apply(null, ys);
+    it.w = Math.max.apply(null, xs) - it.x + 1; it.h = Math.max.apply(null, ys) - it.y + 1;
+  }
   function onCanvas(e) {
     if (!live || e.button !== 0 || !st.pose) return;
+    dragging = true; dragSeen = new Set();
     const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y);
     const tx = Math.floor((wm.x - ROOM_X) / TILE), ty = Math.floor((wm.y - ROOM_Y) / TILE);
     if (tx < 0 || ty < 0 || tx >= ROOM_COLS || ty >= ROOM_ROWS) return;
+    dragSeen.add(tx + ',' + ty);
     if (st.brush && st.brush.startsWith('t:')) { paintTerrain(tx, ty, st.brush.slice(2)); apply(); refresh(); return; }
+    if (st.brush && st.brush.startsWith('a:') && (ANIM_DEFS[st.brush.slice(2)] || {}).cells) { paintCell(st.brush.slice(2), tx, ty); return; }
     const k = st.items.findIndex(it => famOf(it) === st.tab && tx >= it.x && tx < it.x + it.w && ty >= it.y && ty < it.y + it.h);
     if (k >= 0 && (!st.brush || k !== st.sel)) { st.sel = k; refresh(); return; }   // clic sur un élément : on le choisit
     if (!st.brush) return;
@@ -8106,6 +8386,7 @@ const Atelier = (() => {
     else if (st.brush.startsWith('e:')) st.items.push({ kind: 'ennemi', enemy: st.brush.slice(2), x: tx, y: ty, w: 1, h: 1, wave: 0, count: 1, elite: false });
     else if (st.brush.startsWith('a:')) {
       const a = st.brush.slice(2); const ad = ANIM_DEFS[a] || {}; const s = ad.size || [1, 1];
+      if (ad.cells) { paintCell(a, tx, ty); return; }   // dalles : on peint tuile par tuile dans le motif courant
       st.items.push({ kind: 'anim', anim: a, x: clamp(tx, 0, ROOM_COLS - s[0]), y: clamp(ty, 0, ROOM_ROWS - s[1]), w: s[0], h: s[1], hits: [0], tele: 0, act: ad.act || 1, params: {} });
     } else {
       const dfn = Content.trap(st.brush); if (!dfn) return;
@@ -8116,6 +8397,22 @@ const Atelier = (() => {
     }
     st.sel = st.items.length - 1; apply(); refresh();
   }
+
+  /* Traînée : bouton enfoncé, on peint les tuiles survolées. Peindre une salle dalle par dalle au clic isolé
+     serait vite pénible ; une tuile n'est jamais traitée deux fois dans la même traînée. */
+  let dragging = false, dragSeen = null;
+  function onDrag() {
+    if (!dragging || !live || !st.pose || !st.brush) return;
+    const paintable = st.brush.startsWith('t:') || (st.brush.startsWith('a:') && (ANIM_DEFS[st.brush.slice(2)] || {}).cells);
+    if (!paintable) return;
+    const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y);
+    const tx = Math.floor((wm.x - ROOM_X) / TILE), ty = Math.floor((wm.y - ROOM_Y) / TILE);
+    if (tx < 0 || ty < 0 || tx >= ROOM_COLS || ty >= ROOM_ROWS) return;
+    const key = tx + ',' + ty; if (dragSeen.has(key)) return; dragSeen.add(key);
+    if (st.brush.startsWith('t:')) { paintTerrain(tx, ty, st.brush.slice(2)); apply(); refresh(); }
+    else paintCell(st.brush.slice(2), tx, ty, false);   // en traînée on ajoute seulement, jamais on n'efface
+  }
+  function onUp() { dragging = false; }
 
   /* ---------- import / export ---------- */
   function snippet() {
@@ -8132,7 +8429,8 @@ const Atelier = (() => {
     return out;
   }
   const bj = b => '{ ' + Object.keys(b).map(k => `${k}: ${Array.isArray(b[k]) ? '[' + b[k].map(q).join(', ') + ']' : q(b[k])}`).join(', ') + ' }';
-  const inner = p => Object.keys(p || {}).map(k => `${k}: ${typeof p[k] === 'string' ? `'${p[k]}'` : q(p[k])}, `).join('');
+  const val = v => Array.isArray(v) ? '[' + v.map(val).join(', ') + ']' : typeof v === 'string' ? `'${v}'` : typeof v === 'boolean' ? String(v) : q(v);
+  const inner = p => Object.keys(p || {}).map(k => `${k}: ${val(p[k])}, `).join('');
   const par = p => Object.keys(p || {}).length ? `, params: { ${inner(p).replace(/, $/, '')} }` : '';
   function showIo() { $('#a-io').hidden = false; $('#a-txt').value = snippet(); }
   /* relit le bloc « atelier:{…} » qu'écrit l'export : un aller-retour complet sans réécrire à la main */
@@ -8212,7 +8510,7 @@ function render(ctx) {
     ctx.fillStyle = '#07080d'; ctx.fillRect(-W, -H, 3 * W, 3 * H);
     Room.render(ctx);
     Pickups.render(ctx);
-    const ents = G.enemies.slice().sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
+    const ents = G.enemies.slice(); if (G.pet) ents.push(G.pet); ents.sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
     G.player.render(ctx);
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx);
     if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);
@@ -8220,7 +8518,7 @@ function render(ctx) {
     Floaters.render(ctx);
     Debug.renderOverlay(ctx); Atelier.render(ctx);
     ctx.restore();
-    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); if (G.room.tempo) Tempo.renderHud(ctx, G.room); }
+    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); Pets.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); if (G.room.tempo) Tempo.renderHud(ctx, G.room); }
   } else UI.renderBackdrop(ctx);
   UI.renderMenuFx(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);

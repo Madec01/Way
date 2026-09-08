@@ -6,7 +6,7 @@
 const G = {
   state: 'boot',           // boot | menu | hub | run
   mode: 'normal',          // normal | test
-  player: null, enemies: [], room: null, run: null,
+  player: null, enemies: [], room: null, run: null, pet: null,
   paused: false, overlay: null, shake: 0,
   difficulty: { hpMul: 1, damageMul: 1, speedMul: 1, fireRateMul: 1 },
   debug: { difficulty: 1, xpMul: 1, coinMul: 1, forceRarity: null, invuln: false, hitboxes: false, showScores: false, open: false },
@@ -49,6 +49,7 @@ const Room = {
     /* défi de salle (salles 2, 3, 6, 7) */
     const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
     if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
+    if (G.pet) G.pet.snap();   // le compagnon franchit la porte avec le joueur
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.pulse = 0; Camera.snap(pl.x, pl.y);
     /* fin des effets « cette salle seulement » : arme d'essai rendue, reliques retirées */
     if (pl.trialWeapon) { pl.weapon = pl.trialWeapon.prev; pl.trialWeapon = null; }
@@ -254,6 +255,7 @@ const Run = {
       stats: { kills: 0, damageDealt: 0, damageTaken: 0, hitsTaken: 0, shots: 0, skillUses: 0, coins: 0, roomsEntered: 0, roomTimes: [], bossKilled: false, deathCause: null, deathRoom: null, levelReached: 1 },
       skillChoices: null, weaponDropRoom: RNG.pick([1, 3, 6, 7]),
     };
+    G.pet = null;
     G.player = new Player(charDef);
     G.player.hp = 0; G.player.recompute(); G.player.hp = G.player.stats.maxHp;
     G.state = 'run'; G.paused = false;
@@ -350,7 +352,7 @@ const Run = {
     if (!G.run || G.paused) return;
     const pl = G.player;
     if (!G.attract) Music.setState({ hp01: pl.hp / pl.stats.maxHp, slow: Time.now < Time.slowUntil ? Time.slow : 1, overdrive: pl.overdriveUntil > Time.now });
-    pl.update(dt);
+    pl.update(dt); Pets.update(dt);
     for (const e of G.enemies) e.update(dt);
     G.enemies = G.enemies.filter(e => !e.dead);
     Projectiles.update(dt); Pickups.update(dt); Room.update(dt); Particles.update(dt); Floaters.update(dt);

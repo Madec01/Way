@@ -22,8 +22,8 @@ function beatPulse(b, rt) {
 const easeOut = k => 1 - Math.pow(1 - k, 3);
 
 const ANIM_DEFS = {
-  tile_color: { name: 'Dalles colorées', size: [4, 3], act: 1, color: '#6ee7ff' },
-  tile_lift:  { name: 'Dalles qui montent', size: [4, 3], act: 1, color: '#8a94b0' },
+  tile_color: { name: 'Dalles colorées', size: [1, 1], act: 1, color: '#6ee7ff', cells: true },
+  tile_lift:  { name: 'Dalles qui montent', size: [1, 1], act: 1, color: '#8a94b0', cells: true },
   spinner:    { name: 'Rotatif', size: [1, 1], act: 1, color: '#ffd166', sprite: 1 },
   bouncer:    { name: 'Sauteur', size: [1, 1], act: 1, color: '#7fff9a', sprite: 1 },
   light:      { name: 'Lumière', size: [1, 1], act: 2, color: '#c9a3ff' },
@@ -36,26 +36,42 @@ class AnimProp {
     this.tx = inst.x; this.ty = inst.y; this.tw = inst.w || 1; this.th = inst.h || 1;
     this.x = ROOM_X + this.tx * TILE; this.y = ROOM_Y + this.ty * TILE; this.w = this.tw * TILE; this.h = this.th * TILE;
     this.cx = this.x + this.w / 2; this.cy = this.y + this.h / 2;
+    /* Dalles : soit un rectangle (tw × th), soit une liste de tuiles peintes une à une (`params.cells`).
+       La liste garde UNE seule partition pour tout le motif — poser douze dalles ne fait pas douze lignes. */
+    this.cells = Array.isArray(this.p.cells) && this.p.cells.length ? this.p.cells.map(c => [c[0], c[1]]) : null;
+    if (this.cells) {
+      const xs = this.cells.map(c => c[0]), ys = this.cells.map(c => c[1]);
+      this.tx = Math.min(...xs); this.ty = Math.min(...ys); this.tw = Math.max(...xs) - this.tx + 1; this.th = Math.max(...ys) - this.ty + 1;
+      this.x = ROOM_X + this.tx * TILE; this.y = ROOM_Y + this.ty * TILE; this.w = this.tw * TILE; this.h = this.th * TILE;
+      this.cx = this.x + this.w / 2; this.cy = this.y + this.h / 2;
+    }
     this.beats = inst.beats || this.p.beats || { bars: 1, hits: [0], active: 1 };
     this.color = this.p.color || (ANIM_DEFS[this.kind] || {}).color || '#6ee7ff';
   }
   /* couleur du coup courant : deux teintes alternées si `color2` est donnée */
   hue(idx) { return (this.p.color2 && idx % 2 === 1) ? this.p.color2 : this.color; }
   pulse(rt) { return beatPulse(this.beats, rt); }
+  /* parcourt les tuiles du motif : la liste peinte si elle existe, le rectangle sinon */
+  eachCell(fn) {
+    if (this.cells) { for (const c of this.cells) fn(c[0], c[1]); return; }
+    for (let i = 0; i < this.tw; i++) for (let j = 0; j < this.th; j++) fn(this.tx + i, this.ty + j);
+  }
   render(ctx, rt) { const f = this['r_' + this.kind]; if (f) f.call(this, ctx, this.pulse(rt)); }
   renderOver(ctx, rt) { const f = this['o_' + this.kind]; if (f) f.call(this, ctx, this.pulse(rt)); }
 
   /* --- dalles qui changent de couleur : la teinte frappe puis s'efface --- */
   r_tile_color(ctx, u) {
     const a = 1 - u.k; if (a <= 0.01) return;
-    const mode = this.p.mode || 'all';
+    const mode = this.p.mode || 'all'; const span = Math.max(1, this.tw + this.th - 2);
     ctx.save(); ctx.fillStyle = this.hue(u.idx);
-    for (let i = 0; i < this.tw; i++) for (let j = 0; j < this.th; j++) {
-      if (mode === 'checker' && (i + j) % 2 !== u.idx % 2) continue;
-      if (mode === 'sweep') { const k = (i + j) / Math.max(1, this.tw + this.th - 2); if (u.k < k * 0.6 || u.k > k * 0.6 + 0.5) continue; }
-      ctx.globalAlpha = 0.5 * a; ctx.fillRect(this.x + i * TILE + 1, this.y + j * TILE + 1, TILE - 2, TILE - 2);
-      ctx.globalAlpha = 0.9 * a * a; ctx.fillRect(this.x + i * TILE + 1, this.y + j * TILE + 1, TILE - 2, 3);
-    }
+    this.eachCell((tx, ty) => {
+      const i = tx - this.tx, j = ty - this.ty;
+      if (mode === 'checker' && (tx + ty) % 2 !== ((u.idx % 2) + 2) % 2) return;
+      if (mode === 'sweep') { const k = (i + j) / span; if (u.k < k * 0.6 || u.k > k * 0.6 + 0.5) return; }
+      const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE;
+      ctx.globalAlpha = 0.5 * a; ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+      ctx.globalAlpha = 0.9 * a * a; ctx.fillRect(x + 1, y + 1, TILE - 2, 3);
+    });
     ctx.restore();
   }
   /* --- dalles qui montent (ou s'enfoncent) : un léger relief, sans collision --- */
@@ -63,13 +79,13 @@ class AnimProp {
     const amp = (this.p.amp != null ? this.p.amp : 7) * (this.p.down ? -1 : 1);
     const dy = -amp * (1 - easeOut(u.k));
     ctx.save();
-    for (let i = 0; i < this.tw; i++) for (let j = 0; j < this.th; j++) {
-      if (this.p.mode === 'checker' && (i + j) % 2 !== u.idx % 2) continue;
-      const x = this.x + i * TILE + 2, y = this.y + j * TILE + 2, s = TILE - 4;
+    this.eachCell((tx, ty) => {
+      if (this.p.mode === 'checker' && (tx + ty) % 2 !== ((u.idx % 2) + 2) % 2) return;
+      const x = ROOM_X + tx * TILE + 2, y = ROOM_Y + ty * TILE + 2, s = TILE - 4;
       ctx.globalAlpha = 0.45; ctx.fillStyle = '#05070c'; ctx.fillRect(x, y + 2, s, s);              // creux laissé par la dalle
       ctx.globalAlpha = 0.85; ctx.fillStyle = this.hue(u.idx); ctx.fillRect(x, y + dy, s, s);
       ctx.globalAlpha = 0.35; ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y + dy, s, 3);
-    }
+    });
     ctx.restore();
   }
   /* --- rotatif : un quart de tour (ou l'angle donné) à chaque coup --- */

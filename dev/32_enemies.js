@@ -72,13 +72,21 @@ class Enemy {
       if (Combat.hitPlayer(this.contactDamage(), { type: 'contact', source: this, x: this.x, y: this.y })) { this.contactCd = 0.6; const a = angleTo(pl.x, pl.y, this.x, this.y); this.kvx += Math.cos(a) * 120; this.kvy += Math.sin(a) * 120; }
     }
     for (const dc of G.room.decoys) if (dist(this.x, this.y, dc.x, dc.y) < this.r + dc.r && this.contactCd <= 0) { dc.hp -= this.damage; this.contactCd = 0.6; }
+    if (G.pet && G.pet.taunts && dist(this.x, this.y, G.pet.x, G.pet.y) < this.r + G.pet.r && this.contactCd <= 0) { Pets.hurt(this.damage); this.contactCd = 0.6; }
   }
   relocate() {
     this.stuckT = 0; const pl = G.player;
     for (let k = 0; k < 20; k++) { const x = RNG.range(ROOM_X + 40, ROOM_X + ROOM_W - 40), y = RNG.range(ROOM_Y + 40, ROOM_Y + ROOM_H - 40); if (dist(x, y, pl.x, pl.y) > 200 && !pointBlocked(x, y, this.r + 8)) { Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true }); this.x = x; this.y = y; this.lastX = x; this.lastY = y; Particles.spawn(x, y, { count: 8, color: this.color, glow: true }); Floaters.add(x, y - this.r - 10, 'relocalisé', '#9aa4c4', 11); return; } }
   }
   contactDamage() { return this.archetype === 'tank' && this.state === 'charge' ? Math.round(this.damage * (this.behavior.chargeDamageMul || 1.5)) : this.damage; }
-  pickTarget() { const pl = G.player; let t = pl; let bd = Infinity; for (const dc of G.room.decoys) { const d = dist(this.x, this.y, dc.x, dc.y); if (d < bd) { bd = d; t = dc; } } return t; }
+  /* Cible : le joueur, sauf s'il y a plus près un leurre ou un compagnon qui attire les coups (chien de garde). */
+  pickTarget() {
+    const pl = G.player; let t = pl; let bd = Infinity;
+    for (const dc of G.room.decoys) { const d = dist(this.x, this.y, dc.x, dc.y); if (d < bd) { bd = d; t = dc; } }
+    const pet = G.pet;
+    if (pet && pet.taunts) { const d = dist(this.x, this.y, pet.x, pet.y); if (d < pet.def.taunt && d < bd) { bd = d; t = pet; } }
+    return t;
+  }
   /* --- archétypes --- */
   ai_rusher(dt, t, d) {
     const b = this.behavior; const lr = b.lungeRange || 110;

@@ -460,6 +460,30 @@ const CONTENT = {
   ],
 
   // =====================================================================
+  // COMPAGNONS — un animal ramassé en run, qui joue son unique tour EN MESURE
+  // =====================================================================
+  pets: [
+    { id: 'pet_faucon', name: 'Faucon', sprite: 'falcon-moon', color: '#9fd8ff', tag: 'pique toutes les 2 mesures',
+      desc: 'Il pique sur l\'ennemi le plus proche toutes les deux mesures, et rien ne l\'arrête en vol.',
+      behavior: 'strike', fly: true, damage: 26, every: 8, range: 360, speed: 300, diveSpeed: 660, knockback: 1.4, size: 32 },
+    { id: 'pet_chien', name: 'Chien de garde', sprite: 'sniffing-dog', color: '#d8b46a', tag: 'mord et attire les coups',
+      desc: 'Il court au contact et mord à chaque temps fort. Les ennemis proches s\'en prennent à lui plutôt qu\'à vous.',
+      behavior: 'bite', damage: 14, every: 4, range: 280, speed: 320, knockback: 2, taunt: 230, hp: 90, revive: 6, size: 34 },
+    { id: 'pet_serpent', name: 'Serpent cracheur', sprite: 'snake', color: '#9ade6a', tag: 'crache sur chaque temps',
+      desc: 'Il reste dans vos jambes et crache une gerbe de venin sur chaque temps, sur l\'ennemi le plus proche.',
+      behavior: 'spit', damage: 9, every: 2, range: 340, speed: 250, projSpeed: 480, projSize: 5, size: 30 },
+    { id: 'pet_scarabee', name: 'Scarabée fouineur', sprite: 'scarab-beetle', color: '#c9a3ff', tag: 'ramasse à votre place',
+      desc: 'Tout ce qui traîne à portée vient à vous : crédits, cœurs, fragments. Il ne se bat pas.',
+      behavior: 'collect', damage: 0, every: 4, radius: 260, speed: 280, size: 28 },
+    { id: 'pet_tortue', name: 'Tortue bouclier', sprite: 'turtle', color: '#6ee7ff', tag: 'brise 2 tirs par temps',
+      desc: 'Elle tourne autour de vous et brise les projectiles ennemis qu\'elle croise — deux par temps.',
+      behavior: 'guard', damage: 0, every: 1, block: 2, dist: 56, spin: 1.7, size: 30 },
+    { id: 'pet_crapaud', name: 'Crapaud guérisseur', sprite: 'frog', color: '#7fff9a', tag: 'soigne sur le temps fort',
+      desc: 'Il souffle un peu de vie à chaque temps fort. Lent, mais il ne s\'arrête jamais.',
+      behavior: 'mend', damage: 0, every: 4, heal: 4, speed: 230, size: 30 },
+  ],
+
+  // =====================================================================
   // PIÈGES — biome 1 (8 kinds)
   // =====================================================================
   traps: [

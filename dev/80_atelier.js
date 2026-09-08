@@ -27,8 +27,8 @@ const Atelier = (() => {
   };
   /* réglages proposés pour le décor animé */
   const AKIND = {
-    tile_color: { mode: 1, color2: 1 },
-    tile_lift:  { mode: 1, amp: 1, down: 1, color2: 1 },
+    tile_color: { mode: 1, color2: 1, cells: 1 },
+    tile_lift:  { mode: 1, amp: 1, down: 1, color2: 1, cells: 1 },
     spinner:    { sprite: 1, step: 1, scale: 1 },
     bouncer:    { sprite: 1, amp: 1, scale: 1 },
     light:      { radius: 1, gain: 1, color2: 1 },
@@ -136,7 +136,8 @@ const Atelier = (() => {
     if (!live) return; live = false; save();
     if (box) { box.hidden = true; box.innerHTML = ''; box.className = ''; }
     G.debug.invuln = false;
-    if (canvas) canvas.removeEventListener('mousedown', onCanvas);
+    if (canvas) { canvas.removeEventListener('mousedown', onCanvas); canvas.removeEventListener('mousemove', onDrag); }
+    window.removeEventListener('mouseup', onUp);
     if (G.run) Run.abort();
   }
   /* piste jouée : a = biome (salles 1-4), b = biome (salles 6-8), boss */
@@ -188,6 +189,8 @@ const Atelier = (() => {
     $('#a-fold').onclick = () => { const f = box.classList.toggle('fold'); $('#a-fold').textContent = f ? 'Déplier' : 'Réduire'; if (!f) measure(); };
     box.querySelectorAll('.tab').forEach(b => { b.onclick = () => { st.tab = b.dataset.t; st.brush = null; st.sel = -1; refresh(); }; });
     canvas.addEventListener('mousedown', onCanvas);
+    canvas.addEventListener('mousemove', onDrag);
+    window.addEventListener('mouseup', onUp);
     refresh();
   }
   /* pose ↔ test : en test, plus de grille, plus de cadres, plus de partition au sol — la salle telle qu'elle sera jouée */
@@ -251,8 +254,9 @@ const Atelier = (() => {
     const d = document.createElement('div'); d.className = 'arow atune';
     const nom = it.kind === 'mur' ? 'Bloc' : anim ? (ANIM_DEFS[it.anim] || {}).name : ((Content.trap(it.trap) || {}).name || it.trap);
     const col = p.color || (anim ? (ANIM_DEFS[it.anim] || {}).color : (Content.trap(it.trap) || {}).color) || '#ff5e7a';
-    let h = `<b>${nom}</b>
-      <label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
+    let h = `<b>${nom}</b>`;
+    if (k.cells) h += `<span class="amuted">${(p.cells || []).length} dalle(s) — cliquez dans la salle pour en ajouter, recliquez pour retirer</span><button class="btn tiny" id="t-newzone">Nouveau motif</button>`;
+    else h += `<label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
       <label>hauteur <input type="number" min="1" max="13" step="1" id="t-h" value="${it.h}"></label>`;
     if (it.kind !== 'mur') {
       if (!anim) h += `<label>annonce <input type="number" min="0" max="8" step="0.25" id="t-tele" value="${it.tele}"> temps</label>`;
@@ -307,6 +311,7 @@ const Atelier = (() => {
     };
     d.querySelector('#t-dup').onclick = () => { const c = JSON.parse(JSON.stringify(it)); c.x = clamp(c.x + 1, 0, ROOM_COLS - 1); c.y = clamp(c.y + 1, 0, ROOM_ROWS - 1); st.items.push(c); st.sel = st.items.length - 1; apply(); refresh(); };
     const cx = d.querySelector('#t-col2x'); if (cx) cx.onclick = () => { delete p.color2; apply(); refresh(); };
+    const nz = d.querySelector('#t-newzone'); if (nz) nz.onclick = () => { st.sel = -1; st.newZone = true; st.brush = 'a:' + it.anim; UI.toast('Motif suivant : la prochaine dalle posée en ouvre un nouveau'); refresh(); };
   }
   function tuneEnemy(lanes, it) {
     const d = document.createElement('div'); d.className = 'arow atune';
@@ -346,12 +351,44 @@ const Atelier = (() => {
     const row = st.terrain[ty]; st.terrain[ty] = row.slice(0, tx) + ch + row.slice(tx + 1);
     if (st.terrain.every(r => /^\.+$/.test(r))) st.terrain = null;   // plan entièrement effacé : on le retire
   }
+  /* Ajoute (ou retire) une dalle au motif courant. Un motif garde UNE partition, quel que soit le nombre de dalles :
+     c'est tout l'intérêt de peindre plutôt que de poser une zone rectangulaire par ligne. */
+  function paintCell(anim, tx, ty, erase) {
+    let it = st.items[st.sel];
+    if (!it || it.kind !== 'anim' || it.anim !== anim) {
+      it = st.newZone ? null : st.items.find(o => o.kind === 'anim' && o.anim === anim && o.params && o.params.cells);
+      st.newZone = false;
+      if (!it) {
+        const ad = ANIM_DEFS[anim] || {};
+        it = { kind: 'anim', anim, x: tx, y: ty, w: 1, h: 1, hits: [0], tele: 0, act: ad.act || 1, params: { cells: [] } };
+        st.items.push(it);
+      }
+      st.sel = st.items.indexOf(it);
+    }
+    const cells = it.params.cells || (it.params.cells = []);
+    const i = cells.findIndex(c => c[0] === tx && c[1] === ty);
+    if (i >= 0) { if (erase !== false) cells.splice(i, 1); }
+    else cells.push([tx, ty]);
+    if (!cells.length) { st.items.splice(st.items.indexOf(it), 1); st.sel = -1; }
+    else bbox(it);
+    apply(); refresh();
+  }
+  /* emprise du motif : ce que dessine le cadre de sélection et ce qu'affiche la ligne */
+  function bbox(it) {
+    const c = it.params.cells; if (!c || !c.length) return;
+    const xs = c.map(p => p[0]), ys = c.map(p => p[1]);
+    it.x = Math.min.apply(null, xs); it.y = Math.min.apply(null, ys);
+    it.w = Math.max.apply(null, xs) - it.x + 1; it.h = Math.max.apply(null, ys) - it.y + 1;
+  }
   function onCanvas(e) {
     if (!live || e.button !== 0 || !st.pose) return;
+    dragging = true; dragSeen = new Set();
     const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y);
     const tx = Math.floor((wm.x - ROOM_X) / TILE), ty = Math.floor((wm.y - ROOM_Y) / TILE);
     if (tx < 0 || ty < 0 || tx >= ROOM_COLS || ty >= ROOM_ROWS) return;
+    dragSeen.add(tx + ',' + ty);
     if (st.brush && st.brush.startsWith('t:')) { paintTerrain(tx, ty, st.brush.slice(2)); apply(); refresh(); return; }
+    if (st.brush && st.brush.startsWith('a:') && (ANIM_DEFS[st.brush.slice(2)] || {}).cells) { paintCell(st.brush.slice(2), tx, ty); return; }
     const k = st.items.findIndex(it => famOf(it) === st.tab && tx >= it.x && tx < it.x + it.w && ty >= it.y && ty < it.y + it.h);
     if (k >= 0 && (!st.brush || k !== st.sel)) { st.sel = k; refresh(); return; }   // clic sur un élément : on le choisit
     if (!st.brush) return;
@@ -359,6 +396,7 @@ const Atelier = (() => {
     else if (st.brush.startsWith('e:')) st.items.push({ kind: 'ennemi', enemy: st.brush.slice(2), x: tx, y: ty, w: 1, h: 1, wave: 0, count: 1, elite: false });
     else if (st.brush.startsWith('a:')) {
       const a = st.brush.slice(2); const ad = ANIM_DEFS[a] || {}; const s = ad.size || [1, 1];
+      if (ad.cells) { paintCell(a, tx, ty); return; }   // dalles : on peint tuile par tuile dans le motif courant
       st.items.push({ kind: 'anim', anim: a, x: clamp(tx, 0, ROOM_COLS - s[0]), y: clamp(ty, 0, ROOM_ROWS - s[1]), w: s[0], h: s[1], hits: [0], tele: 0, act: ad.act || 1, params: {} });
     } else {
       const dfn = Content.trap(st.brush); if (!dfn) return;
@@ -369,6 +407,22 @@ const Atelier = (() => {
     }
     st.sel = st.items.length - 1; apply(); refresh();
   }
+
+  /* Traînée : bouton enfoncé, on peint les tuiles survolées. Peindre une salle dalle par dalle au clic isolé
+     serait vite pénible ; une tuile n'est jamais traitée deux fois dans la même traînée. */
+  let dragging = false, dragSeen = null;
+  function onDrag() {
+    if (!dragging || !live || !st.pose || !st.brush) return;
+    const paintable = st.brush.startsWith('t:') || (st.brush.startsWith('a:') && (ANIM_DEFS[st.brush.slice(2)] || {}).cells);
+    if (!paintable) return;
+    const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y);
+    const tx = Math.floor((wm.x - ROOM_X) / TILE), ty = Math.floor((wm.y - ROOM_Y) / TILE);
+    if (tx < 0 || ty < 0 || tx >= ROOM_COLS || ty >= ROOM_ROWS) return;
+    const key = tx + ',' + ty; if (dragSeen.has(key)) return; dragSeen.add(key);
+    if (st.brush.startsWith('t:')) { paintTerrain(tx, ty, st.brush.slice(2)); apply(); refresh(); }
+    else paintCell(st.brush.slice(2), tx, ty, false);   // en traînée on ajoute seulement, jamais on n'efface
+  }
+  function onUp() { dragging = false; }
 
   /* ---------- import / export ---------- */
   function snippet() {
@@ -385,7 +439,8 @@ const Atelier = (() => {
     return out;
   }
   const bj = b => '{ ' + Object.keys(b).map(k => `${k}: ${Array.isArray(b[k]) ? '[' + b[k].map(q).join(', ') + ']' : q(b[k])}`).join(', ') + ' }';
-  const inner = p => Object.keys(p || {}).map(k => `${k}: ${typeof p[k] === 'string' ? `'${p[k]}'` : q(p[k])}, `).join('');
+  const val = v => Array.isArray(v) ? '[' + v.map(val).join(', ') + ']' : typeof v === 'string' ? `'${v}'` : typeof v === 'boolean' ? String(v) : q(v);
+  const inner = p => Object.keys(p || {}).map(k => `${k}: ${val(p[k])}, `).join('');
   const par = p => Object.keys(p || {}).length ? `, params: { ${inner(p).replace(/, $/, '')} }` : '';
   function showIo() { $('#a-io').hidden = false; $('#a-txt').value = snippet(); }
   /* relit le bloc « atelier:{…} » qu'écrit l'export : un aller-retour complet sans réécrire à la main */

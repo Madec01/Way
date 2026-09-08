@@ -871,3 +871,47 @@ L'atelier se divise pour ne pas encombrer la page :
 Chaque établi ne montre que ses lignes. Le **mode test** replie le panneau, retire grille, cadres et partition au sol : la salle telle qu'elle sera jouée. La porte reste fermée en permanence — on ne sort pas de l'atelier en marchant dessus.
 
 L'export sort maintenant, dans l'ordre d'une déclaration de salle : `terrain`, `obstacles`, `anims`, `waves`, `traps`, plus le bloc `atelier:` que l'import relit.
+
+---
+
+## 31. Compagnons
+
+Un animal ramassé en cours de run suit le joueur jusqu'à la fin du niveau. Il n'a qu'un tour dans son sac, mais il le joue **en mesure** : c'est ce qui le distingue d'une tourelle — on l'entend arriver.
+
+| Compagnon | Comportement | Ce qu'il fait |
+|---|---|---|
+| **Faucon** | `strike` | Pique sur l'ennemi le plus proche toutes les deux mesures. Volant : rien ne l'arrête. |
+| **Chien de garde** | `bite` | Court au contact, mord à chaque temps fort, et **attire les coups** : les ennemis à moins de 230 px s'en prennent à lui. |
+| **Serpent cracheur** | `spit` | Reste dans les jambes et crache une gerbe sur chaque temps, à 340 px. |
+| **Scarabée fouineur** | `collect` | Aimante tout ce qui traîne à 260 px. Ne se bat pas. |
+| **Tortue bouclier** | `guard` | Tourne autour du joueur et brise deux projectiles ennemis par temps. |
+| **Crapaud guérisseur** | `mend` | Rend 4 PV sur chaque temps fort. |
+
+**Un compagnon ne meurt jamais.** Seul celui qui attire les coups a des PV : à zéro il est *sonné* six secondes, puis revient au complet. Perdre définitivement son animal au milieu d'une run serait une punition sans rattrapage, et le joueur ne peut pas le soigner.
+
+Les dégâts sont multipliés par `stats.damage` du joueur : le compagnon monte avec lui. Il franchit les portes (`Room.load` le replace à côté du joueur) et disparaît à la fin de la run. Un seul à la fois : en ramasser un autre remplace le premier.
+
+**Où on les trouve** : les élites en lâchent un dans 15 % des cas (leur table de butin passe de bourse / relique / allié à bourse / relique / **compagnon** / allié). Le panneau debug a « Adopter » et « Renvoyer » pour les essayer.
+
+Les vingt SVG de `assets/sprites/pets/` (extraits de game-icons, CC BY 3.0) sont tous déclarés dans `PROP_DEFS` : au-delà des six compagnons, ils servent d'images pour le décor animé (un rotatif « chauve-souris », un sauteur « grenouille »…).
+
+### Ajouter un compagnon
+
+Une entrée dans `CONTENT.pets` suffit si le comportement existe déjà :
+
+```js
+{ id: 'pet_corbeau', name: 'Corbeau', sprite: 'raven', color: '#6a7490', tag: 'crache sur chaque temps',
+  desc: '…', behavior: 'spit', damage: 11, every: 2, range: 380, speed: 260 }
+```
+
+Pour un comportement neuf : un `case` dans `Pet.update` et son nom dans `PET_BEHAVIORS` (le validateur de contenu refuse le reste).
+
+---
+
+## 32. Dalles peintes une par une
+
+Les deux animations de dalles acceptent `params.cells` — une liste de tuiles peintes — au lieu du rectangle `w × h`. **Le motif garde une seule partition** quel que soit le nombre de dalles : poser douze dalles ne fait pas douze lignes dans l'atelier.
+
+Dans l'atelier, le pinceau « Dalles colorées » ou « Dalles qui montent » pose **une tuile par clic**, ajoute au motif choisi, et retire la dalle si on reclique dessus. Le glissé bouton enfoncé peint une traînée (il n'efface jamais : une tuile déjà peinte est simplement sautée). « Nouveau motif » ouvre un second groupe avec sa propre partition. Le même glissé marche pour le pinceau de terrain.
+
+`AnimProp.eachCell` masque la différence : liste peinte si elle existe, rectangle sinon. Le damier et la vague se calculent sur les coordonnées de la tuile (`tx + ty`), donc un motif peint de travers garde un damier cohérent avec le sol.

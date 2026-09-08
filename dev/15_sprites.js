@@ -77,6 +77,14 @@ const Sprites = (() => {
     'hospital-cross': { d: 'lab', color: '#ff8a9a', px: 18 }, 'test-tube-rack': { d: 'lab', color: '#8fd8d0', px: 20 }, microscope: { d: 'lab', color: '#b0bdd8', px: 20 }, lockers: { d: 'lab', color: '#6e7a9a', px: 24 },
     'trash-can': { d: 'lab', color: '#6a748c', px: 18 }, 'computer-fan': { d: 'lab', color: '#8aa0c0', px: 20 }, valve: { d: 'lab', color: '#9aa4bc', px: 18 }, 'straight-pipe': { d: 'lab', color: '#7a86a4', px: 20 },
     cog: { d: 'lab', color: '#8a94ac', px: 18 }, 'hazard-sign': { d: 'lab', color: '#ffd166', px: 18 }, 'battery-pack-alt': { d: 'lab', color: '#7fe0c8', px: 18 },
+    /* compagnons et faune (assets/sprites/pets/) — servent aussi d'images pour le décor animé */
+    'falcon-moon': { d: 'pets', color: '#9fd8ff', px: 24 }, 'sniffing-dog': { d: 'pets', color: '#d8b46a', px: 24 }, 'sitting-dog': { d: 'pets', color: '#d8b46a', px: 22 },
+    snake: { d: 'pets', color: '#9ade6a', px: 24 }, 'scarab-beetle': { d: 'pets', color: '#c9a3ff', px: 22 }, turtle: { d: 'pets', color: '#6ee7ff', px: 22 },
+    frog: { d: 'pets', color: '#7fff9a', px: 22 }, owl: { d: 'pets', color: '#d8c9a0', px: 22 }, fox: { d: 'pets', color: '#ff9a3c', px: 24 },
+    rat: { d: 'pets', color: '#9aa4bc', px: 22 }, raven: { d: 'pets', color: '#6a7490', px: 24 }, hedgehog: { d: 'pets', color: '#b39a6a', px: 22 },
+    'wolf-head': { d: 'pets', color: '#8a94b0', px: 22 }, crab: { d: 'pets', color: '#ff7a6a', px: 22 }, butterfly: { d: 'pets', color: '#ffd166', px: 22 },
+    bee: { d: 'pets', color: '#ffd166', px: 20 }, monkey: { d: 'pets', color: '#a0744a', px: 24 }, armadillo: { d: 'pets', color: '#b0a08a', px: 22 },
+    seahorse: { d: 'pets', color: '#8fd8d0', px: 22 }, lizardman: { d: 'pets', color: '#7fa86a', px: 24 },
     /* biome 2 — LA SERRE (assets/sprites/greenhouse/) */
     'flower-pot': { d: 'greenhouse', color: '#8fbf6a', px: 20 }, 'cactus-pot': { d: 'greenhouse', color: '#6aa85a', px: 20 }, vines: { d: 'greenhouse', color: '#5aa06a', px: 26 }, 'curled-leaf': { d: 'greenhouse', color: '#7ed957', px: 18 },
     'mushrooms-cluster': { d: 'greenhouse', color: '#c9a3ff', px: 20 }, 'grass-mushroom': { d: 'greenhouse', color: '#b7ff7a', px: 18 }, seedling: { d: 'greenhouse', color: '#9cff57', px: 16 }, 'sprout-disc': { d: 'greenhouse', color: '#8fd86a', px: 18 },

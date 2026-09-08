@@ -187,18 +187,18 @@ const RELICS = [
   { id: 'bottes', name: 'Bottes de facteur', desc: 'Vitesse +30 % et cadence +15 % pour la salle', apply: pl => pl.addBuff('relic', 1e6, [{ stat: 'speed', mul: 1.3 }, { stat: 'fireRate', mul: 1.15 }], true) },
   { id: 'sifflet', name: 'Sifflet de chef de gare', desc: 'Appelle un allié pour 25 s', apply: pl => Pickups.summonAlly(pl.x, pl.y) },
 ];
-const NO_MAGNET = new Set(['fragment', 'weapon', 'ally', 'relic']);
+const NO_MAGNET = new Set(['fragment', 'weapon', 'ally', 'relic', 'pet']);
 const Pickups = {
   list: [],
   spawn(x, y, kind, value = 1, extra = {}) {
     const a = RNG.range(0, TAU), s = RNG.range(40, 120);
-    this.list.push(Object.assign({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, kind, value, t: 0, magnet: false, r: kind === 'fragment' ? 10 : (kind === 'weapon' || kind === 'relic' || kind === 'ally') ? 12 : 6 }, extra));
+    this.list.push(Object.assign({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, kind, value, t: 0, magnet: false, r: kind === 'fragment' ? 10 : (kind === 'weapon' || kind === 'relic' || kind === 'ally' || kind === 'pet') ? 12 : 6 }, extra));
   },
   /* tirage d'un objet à la mort d'un ennemi (élite : 35 % ; dernière vague : 6 % de bourse), 2 objets max par salle */
   maybeDrop(e) {
     const r = G.room; if (!r || r.drops >= 2 || e.isBoss) return;
     const lastWave = r.waves.length && r.waves.every(w => w.done);
-    if (e.elite && RNG.chance(0.35)) { const k = RNG(); r.drops++; if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14)); else if (k < 0.8) this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else this.spawn(e.x, e.y, 'ally', 1); }
+    if (e.elite && RNG.chance(0.35)) { const k = RNG(); r.drops++; if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14)); else if (k < 0.75) this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else if (k < 0.9) this.spawn(e.x, e.y, 'pet', 1, { pet: RNG.pick(Content.pets()).id }); else this.spawn(e.x, e.y, 'ally', 1); }
     else if (lastWave && RNG.chance(0.06)) { r.drops++; this.spawn(e.x, e.y, 'purse', RNG.int(4, 9)); }
   },
   /* arme d'essai posée au sol, une fois par palier */
@@ -232,6 +232,7 @@ const Pickups = {
       else if (p.kind === 'purse') { ctx.fillStyle = '#8b5a2b'; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p.x, p.y + bob + 2, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#c98a4b'; ctx.fillRect(p.x - 4, p.y + bob - 8, 8, 4); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(p.x, p.y + bob + 2, 3, 0, TAU); ctx.fill(); }
       else if (p.kind === 'weapon') { const w = Content.weapon(p.weapon); const col = w ? (WEAPON_COLORS[w.family] || '#fff') : '#fff'; ctx.save(); ctx.translate(p.x, p.y + bob); ctx.rotate(Math.PI / 4); ctx.fillStyle = 'rgba(8,10,18,.8)'; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = 16 + Math.sin(Time.now * 5) * 6; ctx.fillRect(-12, -12, 24, 24); ctx.strokeRect(-12, -12, 24, 24); ctx.rotate(-Math.PI / 4); ctx.fillStyle = col; ctx.font = 'bold 13px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((w ? w.family[0] : '?').toUpperCase(), 0, 1); ctx.restore(); ctx.fillStyle = '#e8ecf7'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(w ? w.name : '', p.x, p.y + bob - 20); }
       else if (p.kind === 'ally') { ctx.fillStyle = '#3a4260'; ctx.shadowColor = '#9ff'; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(p.x, p.y + bob - 6, 5, 0, TAU); ctx.fill(); ctx.fillRect(p.x - 5, p.y + bob - 1, 10, 10); ctx.fillStyle = '#9ff'; ctx.beginPath(); ctx.arc(p.x, p.y + bob - 6, 2, 0, TAU); ctx.fill(); ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#9ff'; ctx.fillText('allié', p.x, p.y + bob - 18); }
+      else if (p.kind === 'pet') { const pd = Content.pet(p.pet) || {}; ctx.save(); ctx.globalAlpha = 0.9; if (!Sprites.drawProp(ctx, pd.sprite, p.x, p.y + bob - 4, 26, 26, {})) { ctx.fillStyle = pd.color || '#9fd8ff'; ctx.beginPath(); ctx.arc(p.x, p.y + bob - 4, 8, 0, TAU); ctx.fill(); } ctx.restore(); ctx.fillStyle = pd.color || '#9fd8ff'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(pd.name || 'Compagnon', p.x, p.y + bob - 22); }
       else if (p.kind === 'relic') { const rl = RELICS.find(r => r.id === p.relic); ctx.save(); ctx.translate(p.x, p.y + bob); ctx.rotate(Time.now * 1.5); ctx.fillStyle = '#c9a3ff'; ctx.shadowColor = '#c9a3ff'; ctx.shadowBlur = 16; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * TAU / 10, rr = i % 2 ? 11 : 5; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); ctx.restore(); ctx.fillStyle = '#e8ecf7'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(rl ? rl.name : 'Relique', p.x, p.y + bob - 18); }
       else if (p.kind === 'heart') { ctx.fillStyle = '#ff5e7a'; ctx.shadowColor = '#ff5e7a'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p.x - 3, p.y + bob - 2, 4, 0, TAU); ctx.arc(p.x + 3, p.y + bob - 2, 4, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(p.x - 7, p.y + bob - 1); ctx.lineTo(p.x + 7, p.y + bob - 1); ctx.lineTo(p.x, p.y + bob + 7); ctx.fill(); }
     }
@@ -398,6 +399,7 @@ const Combat = {
     else if (p.kind === 'purse') { G.run.coinsPending += p.value; G.run.stats.coins += p.value; Floaters.add(p.x, p.y - 16, '+' + p.value + ' ◈', '#ffd166', 16); AudioEngine.chestOpen({ intensity: 0.5 }); }
     else if (p.kind === 'weapon') { const w = Content.weapon(p.weapon); if (!w) return; if (!pl.trialWeapon) pl.trialWeapon = { prev: pl.weapon }; else Pickups.spawn(p.x, p.y, 'weapon', 1, { weapon: pl.weapon.id, vx: 0, vy: 0 }); pl.weapon = w; pl.orbs = null; pl.charge = 0; pl.recompute(); UI.toast(`Arme d'essai : ${w.name} (cette salle seulement)`, 4); UI.banner(w.name, WEAPON_COLORS[w.family] || '#fff', 'arme d\'essai'); AudioEngine.uiConfirm({}); }
     else if (p.kind === 'ally') { Pickups.summonAlly(p.x, p.y); }
+    else if (p.kind === 'pet') { Pets.give(p.pet); }
     else if (p.kind === 'relic') { const rl = RELICS.find(r => r.id === p.relic) || RELICS[0]; rl.apply(pl); UI.banner(rl.name, '#c9a3ff', rl.desc); AudioEngine.levelUp({ intensity: 0.6 }); }
   },
 };

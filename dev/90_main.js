@@ -18,7 +18,7 @@ function render(ctx) {
     ctx.fillStyle = '#07080d'; ctx.fillRect(-W, -H, 3 * W, 3 * H);
     Room.render(ctx);
     Pickups.render(ctx);
-    const ents = G.enemies.slice().sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
+    const ents = G.enemies.slice(); if (G.pet) ents.push(G.pet); ents.sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
     G.player.render(ctx);
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx);
     if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);
@@ -26,7 +26,7 @@ function render(ctx) {
     Floaters.render(ctx);
     Debug.renderOverlay(ctx); Atelier.render(ctx);
     ctx.restore();
-    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); if (G.room.tempo) Tempo.renderHud(ctx, G.room); }
+    if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); Pets.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); if (G.room.tempo) Tempo.renderHud(ctx, G.room); }
   } else UI.renderBackdrop(ctx);
   UI.renderMenuFx(ctx);
   UI.renderToasts(ctx); UI.renderFade(ctx);

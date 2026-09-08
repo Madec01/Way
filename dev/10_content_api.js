@@ -37,6 +37,7 @@ const Content = (() => {
     for (const r of CONTENT.rooms) { if (!ROOM_TYPES[r.type]) warn('type de salle inconnu', r.id, r.type); for (const w of (r.waves || [])) for (const s of w.spawns) if (!get('enemies', s.enemy) && !get('bosses', s.enemy)) warn('spawn inconnu', r.id, s.enemy); for (const t of (r.traps || [])) if (!get('traps', t.trap)) warn('piège inconnu', r.id, t.trap); }
     for (const e of CONTENT.enemies) if (!ENEMY_ARCHETYPES.includes(e.archetype)) warn('archétype inconnu', e.id, e.archetype);
     for (const t of CONTENT.traps) if (!TRAP_KINDS.includes(t.kind)) warn('kind de piège inconnu', t.id, t.kind);
+    for (const p of (CONTENT.pets || [])) if (!PET_BEHAVIORS.includes(p.behavior)) warn('comportement de compagnon inconnu', p.id, p.behavior);
     for (const u of CONTENT.upgrades) if (!RARITY[u.rarity]) warn('rareté inconnue', u.id, u.rarity);
   }
   return {
@@ -51,6 +52,7 @@ const Content = (() => {
     enemies: () => CONTENT.enemies, enemy: id => get('enemies', id),
     bosses: () => CONTENT.bosses, boss: id => get('bosses', id),
     traps: () => CONTENT.traps, trap: id => get('traps', id),
+    pets: () => CONTENT.pets || [], pet: id => get('pets', id),
     rooms: () => CONTENT.rooms, roomsOf: biome => CONTENT.rooms.filter(r => r.biome === biome).sort((a, b) => a.index - b.index),
     pick: key => LORE[key] ? LORE[key][Math.floor(VFX_RNG() * LORE[key].length)] : '',
     lore: LORE,
