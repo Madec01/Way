@@ -211,7 +211,7 @@ const Atelier = (() => {
   function amisSave() { try { localStorage.setItem(AKEY, JSON.stringify(amis)); } catch (e) { UI.toast('Trop d\'images pour le navigateur : exportez dans content5.js'); } amisRegister(); }
   /* verse les amis dans le contenu du jeu (en remplaçant la fournée précédente) */
   function amisRegister() {
-    for (const a of amis.pets.concat(amis.chars)) { if (a.img && a.sprite) Sprites.addCustom(a.sprite, a.img); if (a.imgBody && a.spriteBody) Sprites.addCustom(a.spriteBody, a.imgBody); }
+    for (const a of amis.pets.concat(amis.chars)) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) Sprites.addCustom(a[k], a[f]);
     CONTENT.pets = CONTENT.pets.filter(p => !p.atelier).concat(amis.pets.map(petDef));
     CONTENT.characters = CONTENT.characters.filter(c => !c.atelier).concat(amis.chars.map(charDef));
     Content.invalidate(); Meta.ensure();
@@ -219,23 +219,28 @@ const Atelier = (() => {
   const roleOf = b => ROLES.find(r => r[0] === b) || ROLES[0];
   function petDef(p) {
     const base = Object.assign({}, roleOf(p.behavior)[2]);
-    return Object.assign(base, { id: p.id, name: p.name || 'Animal', sprite: p.sprite, color: p.color || '#9fd8ff',
+    const vues = (p.imgE || p.imgN) ? { s: p.sprite, e: p.imgE ? p.spriteE : null, n: p.imgN ? p.spriteN : null } : p.sprite;
+    return Object.assign(base, { id: p.id, name: p.name || 'Animal', sprite: vues, color: p.color || '#9fd8ff',
       tag: roleOf(p.behavior)[1], desc: p.desc || '', behavior: p.behavior, damage: +p.damage || 0, every: +p.every || 4,
       size: +p.size || 64, price: +p.price || 0, unlocked: true, atelier: true });
   }
   function charDef(c) {
     const tr = TRAITS.find(t => t[0] === c.trait) || TRAITS[0];
+    const corps = c.imgBody ? { s: c.spriteBody, e: c.imgBodyE ? c.spriteBodyE : null, n: c.imgBodyN ? c.spriteBodyN : null } : null;
     return { id: c.id, name: c.name || 'Copain', sprite: 'player', face: c.imgBody ? null : c.sprite,
-      body: c.imgBody ? c.spriteBody : null, size: +c.size || 64, atelier: true,
+      body: corps, size: +c.size || 64, atelier: true,
       desc: c.desc || '', stats: { maxHp: +c.maxHp || 100, speed: +c.speed || 260, damage: +c.damage || 1, luck: +c.luck || 2 },
       trait: { id: 'trait_' + c.id, name: c.traitName || tr[1], desc: c.traitDesc || tr[1], mods: tr[2], hooks: {} },
       startWeapon: c.weapon || 'weapon_blade', unlocked: true, price: 0 };
   }
   const uid = p => p + '_' + Math.random().toString(36).slice(2, 8);
+  /* toutes les images qu'un ami peut porter : champ de données ↔ nom d'accessoire */
+  const IMG_SLOTS = [['img', 'sprite'], ['imgE', 'spriteE'], ['imgN', 'spriteN'], ['imgBody', 'spriteBody'], ['imgBodyE', 'spriteBodyE'], ['imgBodyN', 'spriteBodyN']];
+  const VUES = [['', 'sud (face)'], ['E', 'est (profil)'], ['N', 'nord (dos)']];
   /* 64 px par défaut : le double d'une image de 32, donc des pixels carrés, et une bête un peu plus grande
      qu'une tuile (48) — c'est la taille qui « fait animal » à côté d'un joueur de 48 × 75. */
-  function addPet() { amis.pets.push({ id: uid('pet_ami'), sprite: uid('img'), name: '', desc: '', behavior: 'bite', damage: 14, every: 4, size: 64, price: 0, color: '#9fd8ff' }); amisSave(); refresh(); }
-  function addChar() { amis.chars.push({ id: uid('char_ami'), sprite: uid('face'), spriteBody: uid('body'), name: '', desc: '', trait: 'aucun', maxHp: 100, speed: 260, damage: 1, luck: 2, size: 64, weapon: 'weapon_blade' }); amisSave(); refresh(); }
+  function addPet() { const n = uid('img'); amis.pets.push({ id: uid('pet_ami'), sprite: n, spriteE: n + '_e', spriteN: n + '_n', name: '', desc: '', behavior: 'bite', damage: 14, every: 4, size: 64, price: 0, color: '#9fd8ff' }); amisSave(); refresh(); }
+  function addChar() { const n = uid('body'); amis.chars.push({ id: uid('char_ami'), sprite: uid('face'), spriteBody: n, spriteBodyE: n + '_e', spriteBodyN: n + '_n', name: '', desc: '', trait: 'aucun', maxHp: 100, speed: 260, damage: 1, luck: 2, size: 64, weapon: 'weapon_blade' }); amisSave(); refresh(); }
 
   /* ---------- ouverture / fermeture ---------- */
   function toggle() { live ? close() : open(); }
@@ -395,8 +400,8 @@ const Atelier = (() => {
         <div class="amitop"><span class="amiimg" data-img="p${i}"></span>
           <input type="text" class="aminom" data-f="name" value="${(p.name || '').replace(/"/g, '&quot;')}" placeholder="Nom de l'animal">
           <button class="btn tiny" data-try="${i}">Essayer</button><button class="btn tiny" data-dup="${i}">Copier</button><button class="btn tiny ghost" data-del="${i}">×</button></div>
-        <div class="amirow"><label>photo <input type="file" accept="image/*" data-file="${i}"></label>
-          <label>rôle <select data-f="behavior">${opt(ROLES, p.behavior)}</select></label>
+        <div class="amirow">${VUES.map(v => `<label class="amivue${p['img' + v[0]] ? ' ok' : ''}">${v[1]} <input type="file" accept="image/*" data-file="${i}" data-v="${v[0]}"></label>`).join('')}</div>
+        <div class="amirow"><label>rôle <select data-f="behavior">${opt(ROLES, p.behavior)}</select></label>
           <label>cadence <select data-f="every">${opt(CADENCES.map(c => [c[0], c[1]]), +p.every)}</select></label></div>
         <div class="amirow"><label>dégâts <input type="number" min="0" max="99" step="1" data-f="damage" value="${p.damage}"></label>
           <label>taille <input type="number" min="16" max="128" step="8" data-f="size" value="${p.size}"> px <i class="amuted">(image 32 px → 64 = ×2 net · tuile 48 · joueur 48×75)</i></label>
@@ -411,11 +416,12 @@ const Atelier = (() => {
         <div class="amitop"><span class="amiimg" data-img="c${i}"></span>
           <input type="text" class="aminom" data-f="name" value="${(c.name || '').replace(/"/g, '&quot;')}" placeholder="Son nom">
           <button class="btn tiny" data-tryc="${i}">Essayer</button><button class="btn tiny ghost" data-delc="${i}">×</button></div>
-        <div class="amirow"><label>visage <input type="file" accept="image/*" data-filec="${i}"></label>
-          <label>sprite entier <input type="file" accept="image/*" data-fileb="${i}"></label>
-          <label>taille <input type="number" min="32" max="128" step="8" data-f="size" value="${c.size || 64}"> px</label></div>
+        <div class="amirow"><label class="amivue${c.img ? ' ok' : ''}">visage <input type="file" accept="image/*" data-filec="${i}"></label>
+          <span class="amuted">ou sprite entier :</span>
+          ${VUES.map(v => `<label class="amivue${c['imgBody' + v[0]] ? ' ok' : ''}">${v[1]} <input type="file" accept="image/*" data-fileb="${i}" data-v="${v[0]}"></label>`).join('')}</div>
         <div class="amirow"><span class="amuted">${c.imgBody ? 'sprite entier utilisé — il remplace le corps dessiné' : 'visage collé sur le corps dessiné du jeu'}</span>
           ${c.imgBody ? `<button class="btn tiny ghost" data-nobody="${i}">retirer le sprite entier</button>` : ''}
+          <label>taille <input type="number" min="32" max="128" step="8" data-f="size" value="${c.size || 64}"> px</label>
           <label>caractère <select data-f="trait">${opt(TRAITS.map(t => [t[0], t[1]]), c.trait)}</select></label></div>
         <div class="amirow"><label>PV <input type="number" min="40" max="300" step="5" data-f="maxHp" value="${c.maxHp}"></label>
           <label>vitesse <input type="number" min="150" max="400" step="10" data-f="speed" value="${c.speed}"></label>
@@ -440,12 +446,12 @@ const Atelier = (() => {
     bindList('.amicard[data-p] [data-f]', amis.pets, (p, f) => { if (f !== 'behavior') return; const d = roleOf(p.behavior)[2]; if (d.damage != null) p.damage = d.damage; });
     bindList('.amicard[data-c] [data-f]', amis.chars);
     /* photos */
-    lanes.querySelectorAll('[data-file]').forEach(f => { f.onchange = () => readImg(f, amis.pets[+f.dataset.file], 'img', 'sprite'); });
+    lanes.querySelectorAll('[data-file]').forEach(f => { f.onchange = () => readImg(f, amis.pets[+f.dataset.file], 'img' + f.dataset.v, 'sprite' + f.dataset.v); });
     lanes.querySelectorAll('[data-filec]').forEach(f => { f.onchange = () => readImg(f, amis.chars[+f.dataset.filec], 'img', 'sprite'); });
-    lanes.querySelectorAll('[data-fileb]').forEach(f => { f.onchange = () => readImg(f, amis.chars[+f.dataset.fileb], 'imgBody', 'spriteBody'); });
+    lanes.querySelectorAll('[data-fileb]').forEach(f => { f.onchange = () => readImg(f, amis.chars[+f.dataset.fileb], 'imgBody' + f.dataset.v, 'spriteBody' + f.dataset.v); });
     lanes.querySelectorAll('[data-del]').forEach(bt => { bt.onclick = () => { amis.pets.splice(+bt.dataset.del, 1); amisSave(); refresh(); }; });
     lanes.querySelectorAll('[data-delc]').forEach(bt => { bt.onclick = () => { amis.chars.splice(+bt.dataset.delc, 1); amisSave(); refresh(); }; });
-    lanes.querySelectorAll('[data-nobody]').forEach(bt => { bt.onclick = () => { delete amis.chars[+bt.dataset.nobody].imgBody; amisSave(); refresh(); }; });
+    lanes.querySelectorAll('[data-nobody]').forEach(bt => { bt.onclick = () => { const c = amis.chars[+bt.dataset.nobody]; delete c.imgBody; delete c.imgBodyE; delete c.imgBodyN; amisSave(); refresh(); }; });
     lanes.querySelectorAll('[data-dup]').forEach(bt => { bt.onclick = () => { const c = JSON.parse(JSON.stringify(amis.pets[+bt.dataset.dup])); c.id = uid('pet_ami'); amis.pets.push(c); amisSave(); refresh(); }; });
     lanes.querySelectorAll('[data-try]').forEach(bt => { bt.onclick = () => { const p = amis.pets[+bt.dataset.try]; amisSave(); Pets.give(p.id); }; });
     lanes.querySelectorAll('[data-tryc]').forEach(bt => { bt.onclick = () => {
@@ -710,8 +716,8 @@ const Atelier = (() => {
   const par = p => Object.keys(p || {}).length ? `, params: { ${inner(p).replace(/, $/, '')} }` : '';
   /* export de l'établi Amis : le contenu complet de dev/content5.js, images comprises */
   function amisSnippet() {
-    const src = amis.pets.concat(amis.chars);
-    const imgs = src.filter(a => a.img).map(a => [a.sprite, a.img]).concat(src.filter(a => a.imgBody).map(a => [a.spriteBody, a.imgBody]));
+    const src = amis.pets.concat(amis.chars); const imgs = [];
+    for (const a of src) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) imgs.push([a[k], a[f]]);
     let out = '/* AMIS_DEBUT */\n';
     out += 'const FRIEND_IMAGES = {\n' + imgs.map(([k, v]) => `  '${k}': '${v}',`).join('\n') + '\n};\n\n';
     out += 'CONTENT.pets.push(\n' + amis.pets.map(p => '  ' + JSON.stringify(petDef(p)) + ',').join('\n') + '\n);\n\n';

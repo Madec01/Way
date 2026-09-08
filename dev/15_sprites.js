@@ -370,25 +370,48 @@ const Sprites = (() => {
      tier 0 : nu · 1 : vêtements · 2 : armure du sprite sans le casque (tête dessinée) · 3 : sprite complet.
      Dessin en « pixels » de 3 px sur une grille 16×28, même ancrage que les sprites (pieds). */
   const BODY_PALETTES = { player: { skin: '#e8b58f', skin2: '#c98d6b', hair: '#5a3a22', eye: '#1a1a2a', cloth: '#7a5a3a', pants: '#3a5a8a', boot: '#3a2a1a' }, player2: { skin: '#f0c4a0', skin2: '#d09a78', hair: '#e2c15a', eye: '#1a1a2a', cloth: '#3a6a4a', pants: '#5a3a5a', boot: '#3a2a1a' } };
+  /* Un sprite peut être une image unique ou un jeu de vues { s, e, n } — sud (face), est (profil), nord (dos).
+     L'ouest est l'est retourné : trois images suffisent aux quatre directions. Une vue manquante retombe sur le sud. */
+  function pickDir(spec, dir) {
+    if (!spec) return null;
+    if (typeof spec === 'string') return spec;
+    return spec[dir] || spec.s || spec.e || spec.n || null;
+  }
+  /* direction d'affichage à partir d'un déplacement ou d'une visée. Le profil est privilégié (marge de 1,2) :
+     c'est la vue la plus lisible, et souvent la mieux dessinée. */
+  function dirFrom(dx, dy) {
+    if (Math.abs(dy) > Math.abs(dx) * 1.2) return { dir: dy > 0 ? 's' : 'n', flip: false };
+    return { dir: 'e', flip: dx < 0 };
+  }
+  /* Démarche pour un sprite figé : un rebond, un léger balancement et une respiration. Ce n'est pas une animation,
+     c'est ce qui empêche une image unique de paraître collée au sol en attendant les vraies planches. */
+  function gait(walk) {
+    if (!(walk > 0)) return { bob: Math.sin(walk * 0 + Date.now() / 700) * 0.6, tilt: 0, sx: 1, sy: 1 };
+    const t = walk * 10;
+    return { bob: Math.abs(Math.sin(t)) * 2.5, tilt: Math.sin(t) * 0.05, sx: 1 - Math.abs(Math.sin(t)) * 0.04, sy: 1 + Math.abs(Math.sin(t)) * 0.05 };
+  }
   function drawBody(ctx, key, x, y, opts = {}) {
     /* `body` : sprite entier fourni par l'auteur, il remplace le corps dessiné. Il est posé sur la ligne de sol du
        corps standard (y + 25 px à l'échelle 3) et dessiné SANS lissage, à la taille demandée : une image de 32 px
        affichée en 64 garde des pixels carrés. Une image de 16 px et une de 32 px se valent ici, c'est le multiple
        d'affichage qui compte, pas la finesse de la source. */
-    const body = opts.body ? props[opts.body] : null;
+    const bodyName = pickDir(opts.body, opts.dir || 's');
+    const body = bodyName ? props[bodyName] : null;
     if (body) {
       const s = opts.size || 64; const sc = opts.scale || 1; const w = s * sc;
       const k = Math.min(w / body.width, w / body.height); const dw = body.width * k, dh = body.height * k;
-      const bob = opts.walk > 0 ? Math.abs(Math.sin(opts.walk * 10)) * 2 : 0;
-      ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y + 25 * sc - dh / 2 - bob);
-      if (opts.flip) ctx.scale(-1, 1); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+      const g2 = gait(opts.walk || 0);
+      ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y + 25 * sc - dh / 2 - g2.bob);
+      if (opts.flip) ctx.scale(-1, 1);
+      ctx.rotate(g2.tilt * (opts.flip ? -1 : 1)); ctx.scale(g2.sx, g2.sy);
+      if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
       ctx.drawImage(body, -dw / 2, -dh / 2, dw, dh);
       if (opts.flash) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(-dw / 2, -dh / 2, dw, dh); }
       ctx.restore(); return true;
     }
     /* `face` : image de l'auteur collée à la place de la tête. Un personnage qui en porte une garde toujours le corps
        dessiné en pixels (jamais la planche de sprites), sinon le visage disparaîtrait dès la tenue complète. */
-    const face = opts.face ? props[opts.face] : null;
+    const face = pickDir(opts.face, opts.dir || 's') ? props[pickDir(opts.face, opts.dir || 's')] : null;
     const tier = opts.tier == null ? 3 : (face ? Math.min(2, opts.tier) : opts.tier);
     if (tier >= 3) return draw(ctx, key, x, y, opts);
     const d = SPRITE_DEFS[key] || SPRITE_DEFS.player; const pal = BODY_PALETTES[key] || BODY_PALETTES.player;
@@ -435,7 +458,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, pickDir, dirFrom, gait, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

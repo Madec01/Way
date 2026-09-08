@@ -908,6 +908,18 @@ Une image déposée est **reprise telle quelle** si elle tient déjà dans 128 p
 
 Vérifié par un damier de 1 pixel importé en 32×32 : dessiné en 64, il ne compte que ses trois couleurs d'origine — aucune teinte intermédiaire, donc aucun lissage et une mise à l'échelle entière.
 
+### Trois images pour quatre directions
+
+Un sprite peut être une image unique ou un jeu de vues **sud (face), est (profil), nord (dos)**. L'ouest est l'est **retourné** : trois images suffisent aux quatre directions, et c'est la façon la plus économique de dessiner un personnage à la main.
+
+Une seule image fournie sert à toutes les directions — on peut donc commencer avec une vue et compléter plus tard, les emplacements remplis étant marqués en vert dans l'atelier.
+
+La vue affichée vient du **déplacement réel** (pour un compagnon, la différence de position d'une image à l'autre ; pour le joueur, sa direction de marche, ou de visée à l'arrêt). Le profil l'emporte en cas de diagonale, avec une marge de 1,2 : c'est la vue la plus lisible et souvent la mieux dessinée.
+
+### Une démarche sans animation
+
+En attendant de vraies planches, un sprite figé n'est pas figé pour autant : `Sprites.gait(walk)` donne un **rebond** (2,4 px d'amplitude), un **balancement** (0,1 rad) et une **respiration** (4 % de largeur, en sens inverse de la hauteur — le corps s'écrase en touchant le sol). À l'arrêt, tout cela retombe à zéro, seul un souffle très lent subsiste. Ce n'est pas une animation, c'est ce qui empêche une image unique de paraître collée au sol.
+
 ### Visage collé ou sprite entier
 
 Un copain accepte les deux :

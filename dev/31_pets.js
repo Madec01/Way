@@ -18,6 +18,7 @@ class Pet {
     this.t = 0; this.act = 0; this.facing = 1; this.moving = false;
     this.state = 'follow'; this.target = null; this.lastBeat = -1; this.blocks = 0;
     this.rollA = 0; this.rollT = 0; this.rolled = new Set();
+    this.px = this.x; this.py = this.y; this.dx = 1; this.dy = 0;   // déplacement réel de la dernière image : donne la vue à afficher
     this.maxHp = def.hp || 0; this.hp = this.maxHp; this.downT = 0;
   }
   get airborne() { return !!this.def.fly || this.state === 'roll'; }
@@ -47,6 +48,7 @@ class Pet {
     if (!this.airborne) resolveRoomCollision(this);
   }
   update(dt) {
+    this.px = this.x; this.py = this.y;
     this.t += dt; this.act = Math.max(0, this.act - dt * 3);
     if (this.downT > 0) { this.downT -= dt; if (this.downT <= 0) { this.hp = this.maxHp; this.snap(); UI.toast(this.name + ' est de retour'); } this.moving = false; return; }
     const tick = this.beatTick(); const pl = G.player;
@@ -179,15 +181,19 @@ class Pet {
       }
       default: this.follow(dt);
     }
+    const mx = this.x - this.px, my = this.y - this.py;
+    if (Math.abs(mx) + Math.abs(my) > 0.15) { const k = Math.min(1, dt * 12); this.dx += (mx - this.dx) * k; this.dy += (my - this.dy) * k; }
   }
   render(ctx) {
     const s = this.def.size || 48; const lift = this.airborne ? 15 : 0;
     const bob = this.moving ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5 : Math.sin(this.t * 3) * 2;
+    /* vue affichée : celle du déplacement réel, l'ouest étant l'est retourné */
+    const dv = Sprites.dirFrom(this.dx, this.dy); const sprite = Sprites.pickDir(this.def.sprite, dv.dir);
     ctx.save(); ctx.globalAlpha = this.down ? 0.15 : 0.32; ctx.fillStyle = '#05070c';
     ctx.beginPath(); ctx.ellipse(this.x, this.y + s * 0.34, s * 0.28, s * 0.1, 0, 0, TAU); ctx.fill(); ctx.restore();
     const pop = 1 + this.act * 0.22;
-    const opts = { flip: this.facing < 0, rot: this.down ? 1.4 : 0, alpha: this.down ? 0.5 : 1 };
-    if (!Sprites.drawProp(ctx, this.def.sprite, this.x, this.y - bob - lift, s * pop, s * pop, opts)) {
+    const opts = { flip: dv.flip, rot: this.down ? 1.4 : 0, alpha: this.down ? 0.5 : 1 };
+    if (!Sprites.drawProp(ctx, sprite, this.x, this.y - bob - lift, s * pop, s * pop, opts)) {
       ctx.save(); ctx.globalAlpha = this.down ? 0.5 : 1; ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 8;
       ctx.beginPath(); ctx.arc(this.x, this.y - bob - lift, s * 0.24, 0, TAU); ctx.fill(); ctx.restore();
     }
@@ -218,7 +224,7 @@ const Pets = {
     const x = 16, y = H - 108;
     ctx.save();
     ctx.fillStyle = 'rgba(8,10,18,.72)'; UI.roundRect(ctx, x, y, 168, 30, 8); ctx.fill();
-    if (!Sprites.drawProp(ctx, p.def.sprite, x + 18, y + 15, 24, 24, { alpha: p.down ? 0.4 : 1 })) { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(x + 18, y + 15, 7, 0, TAU); ctx.fill(); }
+    if (!Sprites.drawProp(ctx, Sprites.pickDir(p.def.sprite, 's'), x + 18, y + 15, 24, 24, { alpha: p.down ? 0.4 : 1 })) { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(x + 18, y + 15, 7, 0, TAU); ctx.fill(); }
     ctx.fillStyle = p.down ? '#8a93ad' : '#e8ecf7'; ctx.font = '12px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = 'left';
     ctx.fillText(p.name, x + 36, y + 14);
     ctx.fillStyle = '#8a93ad'; ctx.font = '10px "Segoe UI", system-ui, sans-serif';
