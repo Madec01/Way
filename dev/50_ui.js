@@ -189,7 +189,7 @@ const UI = (() => {
     G.state = 'hub'; const p = Meta.profile; const s = screens.hub;
     const chars = Content.characters(); const cur = Content.character(p.character);
     const biomes = Content.biomes(); if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id; const biome = biomes.find(b => b.id === p.biome);
-    const tabs = ['passifs', 'armes', 'sujets', 'fragments'];
+    const tabs = ['passifs', 'armes', 'animaux', 'sujets', 'fragments'];
     const meta = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).length;
     s.innerHTML = `
       <div class="hub2">
@@ -203,6 +203,7 @@ const UI = (() => {
           <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
           <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
           <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
+          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) ? esc(Content.pet(p.pet).name) : 'aucun'}${p.pet ? '' : ' — onglet Compagnons de la boutique'}</div>
           <div class="muted tiny">Tenue : aucune. « Vous êtes venu comme ça ? » Elle viendra avec les greffes : 3 pour des vêtements, 6 pour l'armure, 9 pour le casque.</div>
           <h3>Changer de personnage</h3>
           <div class="cards vertical" id="hub-chars"></div>
@@ -220,7 +221,7 @@ const UI = (() => {
         </section>
         <section class="hubcol shopcol">
           <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux runs : bonus permanents</div></div></div>
-          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${({ passifs: 'Améliorations', armes: 'Armes', sujets: 'Personnages', fragments: 'Fragments' })[t] || t}</button>`).join('')}</nav>
+          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${({ passifs: 'Améliorations', armes: 'Armes', animaux: 'Compagnons', sujets: 'Personnages', fragments: 'Fragments' })[t] || t}</button>`).join('')}</nav>
           <div id="hub-shop" class="shop"></div>
         </section>
       </div>`;
@@ -254,6 +255,21 @@ const UI = (() => {
         const owned = Meta.weaponUnlocked(w.id);
         const card = el('div', 'card weapon' + (owned ? '' : ' locked'), `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div><div class="muted tiny">${weaponStats(w)}</div>${owned ? '<div class="good small">Outillage disponible</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`);
         const b = card.querySelector('.buy'); if (b) b.onclick = () => { if (Meta.buyWeapon(w.id)) showHub(); };
+        box.appendChild(card);
+      }
+    } else if (hubTab === 'animaux') {
+      box.appendChild(el('div', 'muted small', 'Un animal vous suit toute la run et joue son tour en mesure. Un seul à la fois : celui qu\'une élite lâche remplace le vôtre.'));
+      const none = el('div', 'card' + (p.pet ? '' : ' selected'), `<div class="cardtitle"><span>Partir seul</span><span class="lvlstate">${p.pet ? 'Cliquer pour choisir' : '✓ Actif'}</span></div><div class="muted small">Aucun compagnon au départ.</div>`);
+      none.onclick = () => { p.pet = null; Meta.save(); AudioEngine.uiClick({}); showHub(); };
+      box.appendChild(none);
+      for (const a of Content.pets()) {
+        const owned = Meta.petUnlocked(a.id); const sel = p.pet === a.id;
+        const card = el('div', 'card pet' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
+          `<div class="cardtitle"><span>${esc(a.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div>
+           <div class="muted small">${esc(a.desc)}</div><div class="muted tiny">${esc(a.tag || '')}${a.damage ? ' · ' + a.damage + ' dégâts' : ''}${a.hp ? ' · ' + a.hp + ' PV' : ''}</div>
+           ${owned ? '' : `<button class="btn small buy" ${p.coins < a.price ? 'disabled' : ''}>Débloquer — ◈ ${a.price}</button>`}`);
+        const img = Sprites.propCanvas ? Sprites.propCanvas(a.sprite, 34) : null; if (img) { img.className = 'peticon'; card.appendChild(img); }
+        card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyPet(a.id)) showHub(); return; } if (owned) { p.pet = a.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
         box.appendChild(card);
       }
     } else if (hubTab === 'sujets') {

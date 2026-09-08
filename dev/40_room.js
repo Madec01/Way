@@ -49,8 +49,8 @@ const Room = {
     /* défi de salle (salles 2, 3, 6, 7) */
     const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
     if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
-    if (G.pet) G.pet.snap();   // le compagnon franchit la porte avec le joueur
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.pulse = 0; Camera.snap(pl.x, pl.y);
+    if (G.pet) G.pet.snap();   // le compagnon franchit la porte avec le joueur — après que celui-ci a pris sa place
     /* fin des effets « cette salle seulement » : arme d'essai rendue, reliques retirées */
     if (pl.trialWeapon) { pl.weapon = pl.trialWeapon.prev; pl.trialWeapon = null; }
     if (pl.buffs.some(b => b.roomOnly)) pl.buffs = pl.buffs.filter(b => !b.roomOnly);
@@ -263,6 +263,8 @@ const Run = {
     if (weapon && skill) { Run.equip(startW, skill); }
     G.run.skillChoices = RNG.shuffle(Content.skillsAvailable().slice()).slice(0, 2);
     applyDifficulty();
+    /* compagnon choisi au hub : il entre avec le joueur (celui trouvé sur une élite le remplacera) */
+    const petId = Meta.profile.pet; if (petId && Meta.petUnlocked(petId)) Pets.give(petId, true);   // sans bandeau : celui de la salle 1 passe d'abord
     if (!Room.load(1)) return;
     if (!(weapon && skill)) { G.paused = true; UI.showPrep(); } else Room.begin();
   },

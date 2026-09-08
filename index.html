@@ -337,6 +337,9 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 #atelier .atune label{gap:.25em}
 #atelier .apal2{margin-top:.15em}
 #atelier .atpl{color:#6ee7ff}
+.card.pet{position:relative}
+.card.pet .peticon{position:absolute;right:.6em;top:.5em;image-rendering:pixelated;opacity:.9}
+.card.pet .cardtitle{padding-right:2.8em}
 
 </style>
 </head>
@@ -2366,22 +2369,31 @@ const CONTENT = {
   pets: [
     { id: 'pet_faucon', name: 'Faucon', sprite: 'falcon-moon', color: '#9fd8ff', tag: 'pique toutes les 2 mesures',
       desc: 'Il pique sur l\'ennemi le plus proche toutes les deux mesures, et rien ne l\'arrête en vol.',
-      behavior: 'strike', fly: true, damage: 26, every: 8, range: 360, speed: 300, diveSpeed: 660, knockback: 1.4, size: 32 },
+      behavior: 'strike', fly: true, damage: 26, every: 8, range: 360, speed: 300, diveSpeed: 660, knockback: 1.4, size: 32, price: 260 },
     { id: 'pet_chien', name: 'Chien de garde', sprite: 'sniffing-dog', color: '#d8b46a', tag: 'mord et attire les coups',
       desc: 'Il court au contact et mord à chaque temps fort. Les ennemis proches s\'en prennent à lui plutôt qu\'à vous.',
-      behavior: 'bite', damage: 14, every: 4, range: 280, speed: 320, knockback: 2, taunt: 230, hp: 90, revive: 6, size: 34 },
+      behavior: 'bite', damage: 14, every: 4, range: 280, speed: 320, knockback: 2, taunt: 230, hp: 90, revive: 6, size: 34, price: 240 },
     { id: 'pet_serpent', name: 'Serpent cracheur', sprite: 'snake', color: '#9ade6a', tag: 'crache sur chaque temps',
       desc: 'Il reste dans vos jambes et crache une gerbe de venin sur chaque temps, sur l\'ennemi le plus proche.',
-      behavior: 'spit', damage: 9, every: 2, range: 340, speed: 250, projSpeed: 480, projSize: 5, size: 30 },
+      behavior: 'spit', damage: 9, every: 2, range: 340, speed: 250, projSpeed: 480, projSize: 5, size: 30, price: 220 },
     { id: 'pet_scarabee', name: 'Scarabée fouineur', sprite: 'scarab-beetle', color: '#c9a3ff', tag: 'ramasse à votre place',
       desc: 'Tout ce qui traîne à portée vient à vous : crédits, cœurs, fragments. Il ne se bat pas.',
-      behavior: 'collect', damage: 0, every: 4, radius: 260, speed: 280, size: 28 },
+      behavior: 'collect', damage: 0, every: 4, radius: 260, speed: 280, size: 28, price: 120, unlocked: true },
     { id: 'pet_tortue', name: 'Tortue bouclier', sprite: 'turtle', color: '#6ee7ff', tag: 'brise 2 tirs par temps',
       desc: 'Elle tourne autour de vous et brise les projectiles ennemis qu\'elle croise — deux par temps.',
-      behavior: 'guard', damage: 0, every: 1, block: 2, dist: 56, spin: 1.7, size: 30 },
+      behavior: 'guard', damage: 0, every: 1, block: 2, dist: 56, spin: 1.7, size: 30, price: 280 },
     { id: 'pet_crapaud', name: 'Crapaud guérisseur', sprite: 'frog', color: '#7fff9a', tag: 'soigne sur le temps fort',
       desc: 'Il souffle un peu de vie à chaque temps fort. Lent, mais il ne s\'arrête jamais.',
-      behavior: 'mend', damage: 0, every: 4, heal: 4, speed: 230, size: 30 },
+      behavior: 'mend', damage: 0, every: 4, heal: 4, speed: 230, size: 30, price: 300 },
+    { id: 'pet_tatou', name: 'Tatou blindé', sprite: 'armadillo', color: '#b0a08a', tag: 'traverse la salle sur le temps fort',
+      desc: 'Il se met en boule et traverse la salle en ligne droite à chaque temps fort, bousculant tout sur son passage.',
+      behavior: 'charge', damage: 18, every: 4, range: 420, speed: 240, rollSpeed: 560, rollTime: 0.8, knockback: 3, size: 32, price: 260 },
+    { id: 'pet_chouette', name: 'Chouette guetteuse', sprite: 'owl', color: '#d8c9a0', tag: 'désigne une cible à chaque mesure',
+      desc: 'Elle désigne un ennemi à chaque mesure : il encaisse 30 % de dégâts en plus tant qu\'il est marqué.',
+      behavior: 'mark', fly: true, damage: 0, every: 4, range: 420, markTime: 4, markMul: 1.3, speed: 280, size: 30, price: 320 },
+    { id: 'pet_abeille', name: 'Abeille', sprite: 'bee', color: '#ffd166', tag: 'pique sur chaque temps',
+      desc: 'Elle tourne autour de l\'ennemi le plus proche et pique sans relâche. Peu de dégâts, mais jamais de pause.',
+      behavior: 'sting', fly: true, damage: 5, every: 1, range: 320, speed: 440, orbit: 26, spin: 5, size: 24, price: 200 },
   ],
 
   // =====================================================================
@@ -3414,6 +3426,14 @@ const Sprites = (() => {
   }
   function loadCustoms() { try { customs = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '{}'); } catch (e) { customs = {}; } for (const k in customs) addCustom(k, customs[k]); }
   function propNames() { return Object.keys(PROP_DEFS).concat(Object.keys(customs).filter(k => !PROP_DEFS[k])).sort(); }
+  /* vignette d'un accessoire pour le DOM (cartes du hub) ; null si l'image n'est pas encore chargée */
+  function propCanvas(name, size) {
+    const c = props[name]; if (!c) return null;
+    const out = document.createElement('canvas'); const s = size || 32;
+    const k = Math.min(s / c.width, s / c.height); out.width = Math.round(c.width * k); out.height = Math.round(c.height * k);
+    const g = out.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, out.width, out.height);
+    return out;
+  }
   function loadProps() {
     if (typeof fetch !== 'function') return;
     fetch(ASSET_BASE + 'sprites/pixel/index.json').then(r => r.ok ? r.json() : null).then(list => {
@@ -3632,7 +3652,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, propNames, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, propNames, propCanvas, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */
@@ -4134,6 +4154,7 @@ const Combat = {
       if (crit) { d *= pl.stats.critMult; info.crit = true; }
     }
     if (!info.dot && e.status && e.status.freeze) { const fb = Progression.hasPassive(pl.hooks, 'frost_bonus'); if (fb) d *= fb.mul || 1.3; }
+    if (e.markUntil > Time.now) d *= e.markMul || 1.3;   // désigné par un compagnon guetteur
     if (e.isBoss) {
       if (e.shieldUntil > Time.now) { d *= 0.15; Particles.spawn(info.x || e.x, info.y || e.y, { count: 3, color: '#8ff', size: 2 }); }
       if (e.weakActive) d *= e.weakMul;
@@ -4567,7 +4588,7 @@ class Player {
    quelques secondes — perdre définitivement son animal au milieu d'une run serait une punition sans rattrapage.
    ========================================================================= */
 
-const PET_BEHAVIORS = ['strike', 'bite', 'spit', 'collect', 'guard', 'mend'];
+const PET_BEHAVIORS = ['strike', 'bite', 'spit', 'collect', 'guard', 'mend', 'charge', 'mark', 'sting'];
 
 class Pet {
   constructor(def) {
@@ -4575,9 +4596,10 @@ class Pet {
     const pl = G.player; this.x = pl ? pl.x - 34 : W / 2; this.y = pl ? pl.y : H / 2;
     this.r = 11; this.t = 0; this.act = 0; this.facing = 1; this.moving = false;
     this.state = 'follow'; this.target = null; this.lastBeat = -1; this.blocks = 0;
+    this.rollA = 0; this.rollT = 0; this.rolled = new Set();
     this.maxHp = def.hp || 0; this.hp = this.maxHp; this.downT = 0;
   }
-  get airborne() { return !!this.def.fly; }
+  get airborne() { return !!this.def.fly || this.state === 'roll'; }
   get down() { return this.downT > 0; }
   get taunts() { return !!this.def.taunt && !this.down; }
   dmg() { return Math.round(this.def.damage * (G.player ? G.player.stats.damage : 1)); }
@@ -4672,6 +4694,58 @@ class Pet {
         }
         break;
       }
+      /* --- tatou : se roule en boule et traverse la salle en ligne droite, blessant tout sur son passage --- */
+      case 'charge': {
+        if (this.state === 'roll') {
+          const sp = this.def.rollSpeed || 560;
+          this.x += Math.cos(this.rollA) * sp * dt; this.y += Math.sin(this.rollA) * sp * dt; this.moving = true; this.act = 1;
+          for (const e of G.enemies) {
+            if (e.dead || this.rolled.has(e) || dist(this.x, this.y, e.x, e.y) > e.r + this.r) continue;
+            this.rolled.add(e); Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true });
+            Particles.spawn(e.x, e.y, { count: 6, color: this.color, speedMax: 150, life: 0.3, size: 2 });
+          }
+          this.rollT -= dt;
+          if (this.rollT <= 0 || this.x < ROOM_X || this.y < ROOM_Y || this.x > ROOM_X + ROOM_W || this.y > ROOM_Y + ROOM_H) { this.state = 'follow'; this.act = 0; }
+        } else {
+          this.follow(dt);
+          if (tick) {
+            const e = nearestEnemy(this.x, this.y, this.def.range || 420);
+            if (e) { this.rollA = angleTo(this.x, this.y, e.x, e.y); this.facing = Math.cos(this.rollA) > 0 ? 1 : -1; this.rolled = new Set(); this.rollT = this.def.rollTime || 0.8; this.state = 'roll'; AudioEngine.trapSaw && AudioEngine.trapSaw({ intensity: 0.3 }); }
+          }
+        }
+        break;
+      }
+      /* --- chouette : désigne une cible, qui encaisse davantage tant qu'elle est marquée --- */
+      case 'mark': {
+        this.follow(dt);
+        if (this.target && (this.target.dead || this.target.markUntil <= Time.now)) this.target = null;
+        if (tick) {
+          const e = nearestEnemy(this.x, this.y, this.def.range || 420, x => x !== this.target);
+          const t = e || nearestEnemy(this.x, this.y, this.def.range || 420);
+          if (t) {
+            t.markUntil = Time.now + (this.def.markTime || 4); t.markMul = this.def.markMul || 1.3;
+            this.target = t; this.act = 1;
+            Particles.spawn(t.x, t.y - 24, { count: 6, color: this.color, glow: true, speedMax: 60, life: 0.6, size: 2 });
+          }
+        }
+        break;
+      }
+      /* --- abeille : tourne autour de l'ennemi le plus proche et pique sans relâche --- */
+      case 'sting': {
+        const e = nearestEnemy(this.x, this.y, this.def.range || 300);
+        if (!e) { this.follow(dt, 1.2); break; }
+        const R = this.def.orbit || 26; const a = this.t * (this.def.spin || 5);
+        const tx = e.x + Math.cos(a) * (e.r + R), ty = e.y + Math.sin(a) * (e.r + R);
+        const sp = this.def.speed || 420; const d = dist(this.x, this.y, tx, ty);
+        if (d > 2) { const ang = angleTo(this.x, this.y, tx, ty); const step = Math.min(sp * dt, d); this.x += Math.cos(ang) * step; this.y += Math.sin(ang) * step; }
+        this.facing = Math.cos(a) > 0 ? 1 : -1; this.moving = true;
+        /* la piqûre porte jusqu'au rayon d'orbite : sinon l'abeille tourne juste au-delà de sa propre portée */
+        if (tick && dist(this.x, this.y, e.x, e.y) < e.r + R + 10) {
+          Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true });
+          Particles.spawn(this.x, this.y, { count: 3, color: this.color, speedMax: 80, life: 0.25, size: 2 }); this.act = 1;
+        }
+        break;
+      }
       /* --- crapaud : soigne sur le temps fort --- */
       case 'mend': {
         this.follow(dt);
@@ -4706,10 +4780,10 @@ class Pet {
 
 const Pets = {
   /* donne un compagnon (remplace celui en cours) */
-  give(id) {
+  give(id, silent) {
     const def = Content.pet(id); if (!def) return null;
     G.pet = new Pet(def);
-    UI.banner(def.name, def.color || '#9fd8ff', def.desc); AudioEngine.levelUp({ intensity: 0.5 });
+    if (!silent) { UI.banner(def.name, def.color || '#9fd8ff', def.desc); AudioEngine.levelUp({ intensity: 0.5 }); }
     return G.pet;
   },
   clear() { G.pet = null; },
@@ -6807,8 +6881,8 @@ const Room = {
     /* défi de salle (salles 2, 3, 6, 7) */
     const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
     if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
-    if (G.pet) G.pet.snap();   // le compagnon franchit la porte avec le joueur
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.pulse = 0; Camera.snap(pl.x, pl.y);
+    if (G.pet) G.pet.snap();   // le compagnon franchit la porte avec le joueur — après que celui-ci a pris sa place
     /* fin des effets « cette salle seulement » : arme d'essai rendue, reliques retirées */
     if (pl.trialWeapon) { pl.weapon = pl.trialWeapon.prev; pl.trialWeapon = null; }
     if (pl.buffs.some(b => b.roomOnly)) pl.buffs = pl.buffs.filter(b => !b.roomOnly);
@@ -7021,6 +7095,8 @@ const Run = {
     if (weapon && skill) { Run.equip(startW, skill); }
     G.run.skillChoices = RNG.shuffle(Content.skillsAvailable().slice()).slice(0, 2);
     applyDifficulty();
+    /* compagnon choisi au hub : il entre avec le joueur (celui trouvé sur une élite le remplacera) */
+    const petId = Meta.profile.pet; if (petId && Meta.petUnlocked(petId)) Pets.give(petId, true);   // sans bandeau : celui de la salle 1 passe d'abord
     if (!Room.load(1)) return;
     if (!(weapon && skill)) { G.paused = true; UI.showPrep(); } else Room.begin();
   },
@@ -7312,7 +7388,7 @@ const UI = (() => {
     G.state = 'hub'; const p = Meta.profile; const s = screens.hub;
     const chars = Content.characters(); const cur = Content.character(p.character);
     const biomes = Content.biomes(); if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id; const biome = biomes.find(b => b.id === p.biome);
-    const tabs = ['passifs', 'armes', 'sujets', 'fragments'];
+    const tabs = ['passifs', 'armes', 'animaux', 'sujets', 'fragments'];
     const meta = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).length;
     s.innerHTML = `
       <div class="hub2">
@@ -7326,6 +7402,7 @@ const UI = (() => {
           <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
           <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
           <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
+          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) ? esc(Content.pet(p.pet).name) : 'aucun'}${p.pet ? '' : ' — onglet Compagnons de la boutique'}</div>
           <div class="muted tiny">Tenue : aucune. « Vous êtes venu comme ça ? » Elle viendra avec les greffes : 3 pour des vêtements, 6 pour l'armure, 9 pour le casque.</div>
           <h3>Changer de personnage</h3>
           <div class="cards vertical" id="hub-chars"></div>
@@ -7343,7 +7420,7 @@ const UI = (() => {
         </section>
         <section class="hubcol shopcol">
           <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux runs : bonus permanents</div></div></div>
-          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${({ passifs: 'Améliorations', armes: 'Armes', sujets: 'Personnages', fragments: 'Fragments' })[t] || t}</button>`).join('')}</nav>
+          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${({ passifs: 'Améliorations', armes: 'Armes', animaux: 'Compagnons', sujets: 'Personnages', fragments: 'Fragments' })[t] || t}</button>`).join('')}</nav>
           <div id="hub-shop" class="shop"></div>
         </section>
       </div>`;
@@ -7377,6 +7454,21 @@ const UI = (() => {
         const owned = Meta.weaponUnlocked(w.id);
         const card = el('div', 'card weapon' + (owned ? '' : ' locked'), `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div><div class="muted tiny">${weaponStats(w)}</div>${owned ? '<div class="good small">Outillage disponible</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`);
         const b = card.querySelector('.buy'); if (b) b.onclick = () => { if (Meta.buyWeapon(w.id)) showHub(); };
+        box.appendChild(card);
+      }
+    } else if (hubTab === 'animaux') {
+      box.appendChild(el('div', 'muted small', 'Un animal vous suit toute la run et joue son tour en mesure. Un seul à la fois : celui qu\'une élite lâche remplace le vôtre.'));
+      const none = el('div', 'card' + (p.pet ? '' : ' selected'), `<div class="cardtitle"><span>Partir seul</span><span class="lvlstate">${p.pet ? 'Cliquer pour choisir' : '✓ Actif'}</span></div><div class="muted small">Aucun compagnon au départ.</div>`);
+      none.onclick = () => { p.pet = null; Meta.save(); AudioEngine.uiClick({}); showHub(); };
+      box.appendChild(none);
+      for (const a of Content.pets()) {
+        const owned = Meta.petUnlocked(a.id); const sel = p.pet === a.id;
+        const card = el('div', 'card pet' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
+          `<div class="cardtitle"><span>${esc(a.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div>
+           <div class="muted small">${esc(a.desc)}</div><div class="muted tiny">${esc(a.tag || '')}${a.damage ? ' · ' + a.damage + ' dégâts' : ''}${a.hp ? ' · ' + a.hp + ' PV' : ''}</div>
+           ${owned ? '' : `<button class="btn small buy" ${p.coins < a.price ? 'disabled' : ''}>Débloquer — ◈ ${a.price}</button>`}`);
+        const img = Sprites.propCanvas ? Sprites.propCanvas(a.sprite, 34) : null; if (img) { img.className = 'peticon'; card.appendChild(img); }
+        card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyPet(a.id)) showHub(); return; } if (owned) { p.pet = a.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
         box.appendChild(card);
       }
     } else if (hubTab === 'sujets') {
@@ -7769,7 +7861,7 @@ const Attract = (() => {
 
 const SAVE_KEY = 'sujet_neuf_save_v1';
 const Meta = (() => {
-  const fresh = () => ({ v: 1, coins: 0, metaTiers: {}, weapons: [], characters: [], skills: [], lore: [], cleared: {}, runs: 0, wins: 0, deaths: 0, bestLevel: 0, character: null, volume: { master: 0.8, sfx: 0.9, music: 0.6 } });
+  const fresh = () => ({ v: 1, coins: 0, metaTiers: {}, weapons: [], characters: [], skills: [], pets: [], pet: null, lore: [], cleared: {}, runs: 0, wins: 0, deaths: 0, bestLevel: 0, character: null, volume: { master: 0.8, sfx: 0.9, music: 0.6 } });
   let normal = fresh(); let test = null; let profile = normal;
   function load() {
     try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const d = JSON.parse(raw); if (d && d.v === 1) normal = Object.assign(fresh(), d); } } catch (e) { console.warn('[Meta] sauvegarde illisible', e); }
@@ -7778,6 +7870,8 @@ const Meta = (() => {
   function ensureDefaults(p) {
     for (const w of Content.weapons()) if (w.unlocked && !p.weapons.includes(w.id)) p.weapons.push(w.id);
     for (const c of Content.characters()) if (c.unlocked && !p.characters.includes(c.id)) p.characters.push(c.id);
+    p.pets = p.pets || []; for (const a of Content.pets()) if (a.unlocked && !p.pets.includes(a.id)) p.pets.push(a.id);
+    if (p.pet && !p.pets.includes(p.pet)) p.pet = null;
     if (!p.character || !p.characters.includes(p.character)) p.character = p.characters[0];
   }
   function save() { if (profile !== normal) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(normal)); } catch (e) { /* stockage indisponible */ } }
@@ -7786,6 +7880,7 @@ const Meta = (() => {
     G.mode = mode;
     if (mode === 'test') {
       test = fresh(); test.coins = 99999; test.weapons = Content.weapons().map(w => w.id); test.characters = Content.characters().map(c => c.id); test.character = test.characters[0];
+      test.pets = Content.pets().map(a => a.id);
       for (const m of Content.metaPassives()) test.metaTiers[m.id] = m.tiers.length; test.lore = LORE.fragments.map(f => f.id); test.volume = Object.assign({}, normal.volume); profile = test;
     } else if (mode === 'sandbox') { const sb = fresh(); ensureDefaults(sb); sb.volume = Object.assign({}, normal.volume); profile = sb; G.mode = 'normal'; }
     else profile = normal;
@@ -7798,6 +7893,7 @@ const Meta = (() => {
     profile.coins -= price; profile.metaTiers[id] = t + 1; save(); AudioEngine.uiConfirm({}); return true;
   }
   function buyWeapon(id) { const w = Content.weapon(id); if (!w || profile.weapons.includes(id) || profile.coins < w.price) return false; profile.coins -= w.price; profile.weapons.push(id); save(); AudioEngine.uiConfirm({}); return true; }
+  function buyPet(id) { const a = Content.pet(id); if (!a || profile.pets.includes(id) || profile.coins < a.price) return false; profile.coins -= a.price; profile.pets.push(id); save(); AudioEngine.uiConfirm({}); return true; }
   function buyCharacter(id) { const c = Content.character(id); if (!c || profile.characters.includes(id) || profile.coins < c.price) return false; profile.coins -= c.price; profile.characters.push(id); save(); AudioEngine.uiConfirm({}); return true; }
   /* sources de stats actives (tous les paliers achetés) */
   function activeSources() {
@@ -7818,10 +7914,10 @@ const Meta = (() => {
     if (!LORE.fragments.find(f => f.id === id) || profile.lore.includes(id)) return;
     profile.lore.push(id); save(); const f = LORE.fragments.find(x => x.id === id); UI.toast('Fragment débloqué : ' + f.title, 6);
   }
-  return { load, save, reset, setMode, tierOf, setTier, buy, buyWeapon, buyCharacter, activeSources, special, resurrectAvailable, selectiveMemory, chestPreview, fourthChoice, rerolls, addCoins, recordRun, unlockLore,
+  return { load, save, reset, setMode, tierOf, setTier, buy, buyWeapon, buyCharacter, buyPet, activeSources, special, resurrectAvailable, selectiveMemory, chestPreview, fourthChoice, rerolls, addCoins, recordRun, unlockLore,
     get profile() { return profile; }, get coins() { return profile.coins; },
     biomeUnlocked: b => G.mode === 'test' || !b.unlockAfter || !!((profile.cleared || {})[b.unlockAfter]),
-    weaponUnlocked: id => profile.weapons.includes(id), characterUnlocked: id => profile.characters.includes(id), skillUnlocked: () => true, loreUnlocked: id => profile.lore.includes(id) };
+    weaponUnlocked: id => profile.weapons.includes(id), characterUnlocked: id => profile.characters.includes(id), petUnlocked: id => (profile.pets || []).includes(id), skillUnlocked: () => true, loreUnlocked: id => profile.lore.includes(id) };
 })();
 
 </script>

@@ -325,3 +325,6 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 #atelier .atune label{gap:.25em}
 #atelier .apal2{margin-top:.15em}
 #atelier .atpl{color:#6ee7ff}
+.card.pet{position:relative}
+.card.pet .peticon{position:absolute;right:.6em;top:.5em;image-rendering:pixelated;opacity:.9}
+.card.pet .cardtitle{padding-right:2.8em}

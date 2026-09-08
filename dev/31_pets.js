@@ -8,7 +8,7 @@
    quelques secondes — perdre définitivement son animal au milieu d'une run serait une punition sans rattrapage.
    ========================================================================= */
 
-const PET_BEHAVIORS = ['strike', 'bite', 'spit', 'collect', 'guard', 'mend'];
+const PET_BEHAVIORS = ['strike', 'bite', 'spit', 'collect', 'guard', 'mend', 'charge', 'mark', 'sting'];
 
 class Pet {
   constructor(def) {
@@ -16,9 +16,10 @@ class Pet {
     const pl = G.player; this.x = pl ? pl.x - 34 : W / 2; this.y = pl ? pl.y : H / 2;
     this.r = 11; this.t = 0; this.act = 0; this.facing = 1; this.moving = false;
     this.state = 'follow'; this.target = null; this.lastBeat = -1; this.blocks = 0;
+    this.rollA = 0; this.rollT = 0; this.rolled = new Set();
     this.maxHp = def.hp || 0; this.hp = this.maxHp; this.downT = 0;
   }
-  get airborne() { return !!this.def.fly; }
+  get airborne() { return !!this.def.fly || this.state === 'roll'; }
   get down() { return this.downT > 0; }
   get taunts() { return !!this.def.taunt && !this.down; }
   dmg() { return Math.round(this.def.damage * (G.player ? G.player.stats.damage : 1)); }
@@ -113,6 +114,58 @@ class Pet {
         }
         break;
       }
+      /* --- tatou : se roule en boule et traverse la salle en ligne droite, blessant tout sur son passage --- */
+      case 'charge': {
+        if (this.state === 'roll') {
+          const sp = this.def.rollSpeed || 560;
+          this.x += Math.cos(this.rollA) * sp * dt; this.y += Math.sin(this.rollA) * sp * dt; this.moving = true; this.act = 1;
+          for (const e of G.enemies) {
+            if (e.dead || this.rolled.has(e) || dist(this.x, this.y, e.x, e.y) > e.r + this.r) continue;
+            this.rolled.add(e); Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true });
+            Particles.spawn(e.x, e.y, { count: 6, color: this.color, speedMax: 150, life: 0.3, size: 2 });
+          }
+          this.rollT -= dt;
+          if (this.rollT <= 0 || this.x < ROOM_X || this.y < ROOM_Y || this.x > ROOM_X + ROOM_W || this.y > ROOM_Y + ROOM_H) { this.state = 'follow'; this.act = 0; }
+        } else {
+          this.follow(dt);
+          if (tick) {
+            const e = nearestEnemy(this.x, this.y, this.def.range || 420);
+            if (e) { this.rollA = angleTo(this.x, this.y, e.x, e.y); this.facing = Math.cos(this.rollA) > 0 ? 1 : -1; this.rolled = new Set(); this.rollT = this.def.rollTime || 0.8; this.state = 'roll'; AudioEngine.trapSaw && AudioEngine.trapSaw({ intensity: 0.3 }); }
+          }
+        }
+        break;
+      }
+      /* --- chouette : désigne une cible, qui encaisse davantage tant qu'elle est marquée --- */
+      case 'mark': {
+        this.follow(dt);
+        if (this.target && (this.target.dead || this.target.markUntil <= Time.now)) this.target = null;
+        if (tick) {
+          const e = nearestEnemy(this.x, this.y, this.def.range || 420, x => x !== this.target);
+          const t = e || nearestEnemy(this.x, this.y, this.def.range || 420);
+          if (t) {
+            t.markUntil = Time.now + (this.def.markTime || 4); t.markMul = this.def.markMul || 1.3;
+            this.target = t; this.act = 1;
+            Particles.spawn(t.x, t.y - 24, { count: 6, color: this.color, glow: true, speedMax: 60, life: 0.6, size: 2 });
+          }
+        }
+        break;
+      }
+      /* --- abeille : tourne autour de l'ennemi le plus proche et pique sans relâche --- */
+      case 'sting': {
+        const e = nearestEnemy(this.x, this.y, this.def.range || 300);
+        if (!e) { this.follow(dt, 1.2); break; }
+        const R = this.def.orbit || 26; const a = this.t * (this.def.spin || 5);
+        const tx = e.x + Math.cos(a) * (e.r + R), ty = e.y + Math.sin(a) * (e.r + R);
+        const sp = this.def.speed || 420; const d = dist(this.x, this.y, tx, ty);
+        if (d > 2) { const ang = angleTo(this.x, this.y, tx, ty); const step = Math.min(sp * dt, d); this.x += Math.cos(ang) * step; this.y += Math.sin(ang) * step; }
+        this.facing = Math.cos(a) > 0 ? 1 : -1; this.moving = true;
+        /* la piqûre porte jusqu'au rayon d'orbite : sinon l'abeille tourne juste au-delà de sa propre portée */
+        if (tick && dist(this.x, this.y, e.x, e.y) < e.r + R + 10) {
+          Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true });
+          Particles.spawn(this.x, this.y, { count: 3, color: this.color, speedMax: 80, life: 0.25, size: 2 }); this.act = 1;
+        }
+        break;
+      }
       /* --- crapaud : soigne sur le temps fort --- */
       case 'mend': {
         this.follow(dt);
@@ -147,10 +200,10 @@ class Pet {
 
 const Pets = {
   /* donne un compagnon (remplace celui en cours) */
-  give(id) {
+  give(id, silent) {
     const def = Content.pet(id); if (!def) return null;
     G.pet = new Pet(def);
-    UI.banner(def.name, def.color || '#9fd8ff', def.desc); AudioEngine.levelUp({ intensity: 0.5 });
+    if (!silent) { UI.banner(def.name, def.color || '#9fd8ff', def.desc); AudioEngine.levelUp({ intensity: 0.5 }); }
     return G.pet;
   },
   clear() { G.pet = null; },

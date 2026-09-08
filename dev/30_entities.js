@@ -268,6 +268,7 @@ const Combat = {
       if (crit) { d *= pl.stats.critMult; info.crit = true; }
     }
     if (!info.dot && e.status && e.status.freeze) { const fb = Progression.hasPassive(pl.hooks, 'frost_bonus'); if (fb) d *= fb.mul || 1.3; }
+    if (e.markUntil > Time.now) d *= e.markMul || 1.3;   // désigné par un compagnon guetteur
     if (e.isBoss) {
       if (e.shieldUntil > Time.now) { d *= 0.15; Particles.spawn(info.x || e.x, info.y || e.y, { count: 3, color: '#8ff', size: 2 }); }
       if (e.weakActive) d *= e.weakMul;

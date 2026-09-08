@@ -886,12 +886,20 @@ Un animal ramassé en cours de run suit le joueur jusqu'à la fin du niveau. Il 
 | **Scarabée fouineur** | `collect` | Aimante tout ce qui traîne à 260 px. Ne se bat pas. |
 | **Tortue bouclier** | `guard` | Tourne autour du joueur et brise deux projectiles ennemis par temps. |
 | **Crapaud guérisseur** | `mend` | Rend 4 PV sur chaque temps fort. |
+| **Tatou blindé** | `charge` | Se met en boule et traverse la salle en ligne droite sur le temps fort, bousculant tout sur son passage. |
+| **Chouette guetteuse** | `mark` | Désigne un ennemi à chaque mesure : il encaisse 30 % de dégâts en plus tant qu'il est marqué. |
+| **Abeille** | `sting` | Tourne autour de l'ennemi le plus proche et pique à chaque temps. Peu de dégâts, jamais de pause. |
 
 **Un compagnon ne meurt jamais.** Seul celui qui attire les coups a des PV : à zéro il est *sonné* six secondes, puis revient au complet. Perdre définitivement son animal au milieu d'une run serait une punition sans rattrapage, et le joueur ne peut pas le soigner.
 
 Les dégâts sont multipliés par `stats.damage` du joueur : le compagnon monte avec lui. Il franchit les portes (`Room.load` le replace à côté du joueur) et disparaît à la fin de la run. Un seul à la fois : en ramasser un autre remplace le premier.
 
-**Où on les trouve** : les élites en lâchent un dans 15 % des cas (leur table de butin passe de bourse / relique / allié à bourse / relique / **compagnon** / allié). Le panneau debug a « Adopter » et « Renvoyer » pour les essayer.
+**Où on les trouve** — deux routes, et elles se répondent :
+
+- **Au hub**, onglet *Compagnons* de la boutique : on débloque un animal avec ses crédits (120 à 320), puis on le choisit comme compagnon de départ. Il entre en salle 1 avec le joueur. Le **Scarabée fouineur** est offert dès le premier profil, pour que la mécanique se découvre sans rien payer ; « Partir seul » reste une option.
+- **En run**, les élites en lâchent un dans 15 % des cas (leur table de butin passe de bourse / relique / allié à bourse / relique / **compagnon** / allié). Comme il n'y en a qu'un à la fois, le ramasser **remplace** celui du hub : c'est un choix, pas un cumul — je troque mon chien pour ce faucon, ou je le laisse.
+
+Le panneau debug a « Adopter » et « Renvoyer » pour les essayer.
 
 Les vingt SVG de `assets/sprites/pets/` (extraits de game-icons, CC BY 3.0) sont tous déclarés dans `PROP_DEFS` : au-delà des six compagnons, ils servent d'images pour le décor animé (un rotatif « chauve-souris », un sauteur « grenouille »…).
 
