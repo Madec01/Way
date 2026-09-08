@@ -27,6 +27,9 @@ const LORE = {
 };
 
 const Content = (() => {
+  /* index par id, construit à la demande. `invalidate` est indispensable dès qu'on ajoute du contenu à chaud
+     (atelier « Amis ») : sans lui, un personnage créé en cours de partie reste introuvable et l'appel retombe
+     silencieusement sur le premier de la liste. */
   const idx = {}; const byId = (k) => { if (!idx[k]) { idx[k] = {}; for (const o of (CONTENT[k] || [])) idx[k][o.id] = o; } return idx[k]; };
   const get = (k, id) => byId(k)[id] || null;
   function validate() {
@@ -51,6 +54,7 @@ const Content = (() => {
     biomes: () => CONTENT.biomes.slice().sort((a, b) => a.order - b.order), biome: id => get('biomes', id) || CONTENT.biomes[0],
     enemies: () => CONTENT.enemies, enemy: id => get('enemies', id),
     bosses: () => CONTENT.bosses, boss: id => get('bosses', id),
+    invalidate: () => { for (const k in idx) delete idx[k]; },
     traps: () => CONTENT.traps, trap: id => get('traps', id),
     pets: () => CONTENT.pets || [], pet: id => get('pets', id),
     rooms: () => CONTENT.rooms, roomsOf: biome => CONTENT.rooms.filter(r => r.biome === biome).sort((a, b) => a.index - b.index),

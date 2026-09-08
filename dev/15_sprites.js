@@ -186,6 +186,8 @@ const Sprites = (() => {
       img.onerror = () => res(false); img.src = url;
     });
   }
+  /* images des amis embarquées dans content5.js : enregistrées comme accessoires au démarrage */
+  function loadFriends() { if (typeof FRIEND_IMAGES !== 'object' || !FRIEND_IMAGES) return; for (const k in FRIEND_IMAGES) addCustom(k, FRIEND_IMAGES[k]); }
   function loadCustoms() { try { customs = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '{}'); } catch (e) { customs = {}; } for (const k in customs) addCustom(k, customs[k]); }
   function propNames() { return Object.keys(PROP_DEFS).concat(Object.keys(customs).filter(k => !PROP_DEFS[k])).sort(); }
   /* vignette d'un accessoire pour le DOM (cartes du hub) ; null si l'image n'est pas encore chargée */
@@ -369,15 +371,19 @@ const Sprites = (() => {
      Dessin en « pixels » de 3 px sur une grille 16×28, même ancrage que les sprites (pieds). */
   const BODY_PALETTES = { player: { skin: '#e8b58f', skin2: '#c98d6b', hair: '#5a3a22', eye: '#1a1a2a', cloth: '#7a5a3a', pants: '#3a5a8a', boot: '#3a2a1a' }, player2: { skin: '#f0c4a0', skin2: '#d09a78', hair: '#e2c15a', eye: '#1a1a2a', cloth: '#3a6a4a', pants: '#5a3a5a', boot: '#3a2a1a' } };
   function drawBody(ctx, key, x, y, opts = {}) {
-    const tier = opts.tier == null ? 3 : opts.tier;
+    /* `face` : image de l'auteur collée à la place de la tête. Un personnage qui en porte une garde toujours le corps
+       dessiné en pixels (jamais la planche de sprites), sinon le visage disparaîtrait dès la tenue complète. */
+    const face = opts.face ? props[opts.face] : null;
+    const tier = opts.tier == null ? 3 : (face ? Math.min(2, opts.tier) : opts.tier);
     if (tier >= 3) return draw(ctx, key, x, y, opts);
     const d = SPRITE_DEFS[key] || SPRITE_DEFS.player; const pal = BODY_PALETTES[key] || BODY_PALETTES.player;
     const u = SCALE * (opts.scale || 1); const left = -8 * u, top = -14 * u - 8;   // même ancrage que draw() pour les sprites 16×28 à pied
     const moving = opts.walk != null && opts.walk > 0; const step = moving ? (Math.floor(opts.walk * 10) % 2 ? 1 : -1) : 0; const bob = moving && step > 0 ? 1 : 0;
     ctx.save(); ctx.translate(x, y - (d.foot ? 0 : 0)); if (opts.flip) ctx.scale(-1, 1); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     const px = (gx, gy, w, h, col) => { ctx.fillStyle = opts.flash ? '#fff' : col; ctx.fillRect(left + gx * u, top + (gy + bob) * u, w * u, h * u); };
-    /* tête + cheveux + yeux */
-    px(5, 2, 6, 6, pal.skin); px(4, 1, 8, 2, pal.hair); px(4, 3, 1, 2, pal.hair); px(11, 3, 1, 2, pal.hair); px(9, 4, 1, 1, pal.eye); px(7, 5, 3, 1, pal.skin2);
+    /* tête + cheveux + yeux, ou le visage de l'auteur à la place */
+    if (face) { ctx.save(); ctx.imageSmoothingEnabled = false; if (opts.flip) ctx.scale(-1, 1); ctx.drawImage(face, left + (opts.flip ? -12 : 4) * u, top + (0 + bob) * u, 8 * u, 8 * u); ctx.restore(); if (opts.flash) { ctx.globalAlpha = 0.6; px(4, 0, 8, 8, '#fff'); ctx.globalAlpha = 1; } }
+    else { px(5, 2, 6, 6, pal.skin); px(4, 1, 8, 2, pal.hair); px(4, 3, 1, 2, pal.hair); px(11, 3, 1, 2, pal.hair); px(9, 4, 1, 1, pal.eye); px(7, 5, 3, 1, pal.skin2); }
     px(7, 8, 2, 1, pal.skin);  // cou
     if (tier === 2 && ready) {
       /* armure du sprite (sans la tête) : on découpe la partie basse du sprite */
@@ -401,9 +407,9 @@ const Sprites = (() => {
   }
   /* palier de tenue selon le nombre de greffes possédées */
   function bodyTier(upgrades) { const n = (upgrades || []).reduce((s, u) => s + (u.stacks || 1), 0); return n >= 9 ? 3 : n >= 6 ? 2 : n >= 3 ? 1 : 0; }
-  function portraitBody(key, tier, scale = 5) {
+  function portraitBody(key, tier, scale = 5, face) {
     const c = document.createElement('canvas'); c.width = 16 * scale; c.height = 30 * scale; c.className = 'portrait-canvas'; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
-    const drawIt = () => { g.clearRect(0, 0, c.width, c.height); drawBody(g, key, c.width / 2, c.height - 8 - 14 * (scale / SCALE) * 0 - (c.height / 2 - 14 * scale / SCALE * SCALE / 2) * 0 + 0, { tier, scale: scale / SCALE, walk: 0 }); if (c.isConnected) setTimeout(drawIt, 250); else setTimeout(() => { if (c.isConnected) drawIt(); }, 500); };
+    const drawIt = () => { g.clearRect(0, 0, c.width, c.height); drawBody(g, key, c.width / 2, c.height - 8, { tier, scale: scale / SCALE, walk: 0, face }); if (c.isConnected) setTimeout(drawIt, 250); else setTimeout(() => { if (c.isConnected) drawIt(); }, 500); };
     drawIt(); return c;
   }
   /* portrait DOM (canvas) d'un sprite, pour le hub */
@@ -414,7 +420,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, propNames, propCanvas, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

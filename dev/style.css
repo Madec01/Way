@@ -328,3 +328,15 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 .card.pet{position:relative}
 .card.pet .peticon{position:absolute;right:.6em;top:.5em;image-rendering:pixelated;opacity:.9}
 .card.pet .cardtitle{padding-right:2.8em}
+#atelier .amis{display:flex;gap:1em;align-items:flex-start}
+#atelier .amiscol{flex:1;min-width:0}
+#atelier .amiscol h4{margin:.2em 0 .4em;color:#ffd166;font-size:12px;letter-spacing:.06em}
+#atelier .amicard{border:1px solid var(--line);border-radius:8px;padding:.4em;margin-bottom:.4em;background:#0d1018}
+#atelier .amitop{display:flex;gap:.4em;align-items:center;margin-bottom:.3em}
+#atelier .amiimg{width:34px;height:34px;flex:0 0 34px;display:flex;align-items:center;justify-content:center;background:#141a2a;border-radius:5px;color:#66708c}
+#atelier .amiimg canvas{image-rendering:pixelated}
+#atelier .aminom{flex:1;min-width:4em;font:inherit;background:#0b0d14;color:var(--text);border:1px solid var(--line);border-radius:5px;padding:2px 5px}
+#atelier .amidesc{width:100%;font:inherit;background:#0b0d14;color:#9fb0d8;border:1px solid var(--line);border-radius:5px;padding:2px 5px}
+#atelier .amirow{display:flex;gap:.4em;flex-wrap:wrap;align-items:center;margin:.15em 0}
+#atelier .amirow input[type=file]{width:8.5em;font-size:10px}
+#atelier .amifoot{margin-top:.4em}

@@ -232,7 +232,7 @@ const UI = (() => {
       card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
       cc.appendChild(card);
     });
-    const pb = s.querySelector('#hub-portrait'); const pc = Sprites.portraitBody(cur.sprite || 'player', 0, 5); if (pc) pb.appendChild(pc);
+    const pb = s.querySelector('#hub-portrait'); const pc = Sprites.portraitBody(cur.sprite || 'player', cur.face ? 1 : 0, 5, cur.face); if (pc) pb.appendChild(pc);
     s.querySelectorAll('[data-biome]').forEach(c => c.onclick = () => { const b = Content.biome(c.dataset.biome); if (!Meta.biomeUnlocked(b)) { toast('Palier scellé.'); return; } p.biome = b.id; Meta.save(); AudioEngine.uiClick({}); showHub(); });
     s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; AudioEngine.uiClick({}); showHub(); });
     s.querySelector('#hub-menu').onclick = () => { showMenu(); };

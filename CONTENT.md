@@ -874,45 +874,43 @@ L'export sort maintenant, dans l'ordre d'une déclaration de salle : `terrain`, 
 
 ---
 
-## 31. Compagnons
+## 31. Compagnons et copains — l'atelier « Amis »
 
-Un animal ramassé en cours de run suit le joueur jusqu'à la fin du niveau. Il n'a qu'un tour dans son sac, mais il le joue **en mesure** : c'est ce qui le distingue d'une tourelle — on l'entend arriver.
+Le jeu ne livre **aucun** compagnon ni personnage d'ami : ce sont ceux avec qui on joue qu'on met dedans, à partir de leurs photos. Le quatrième établi de l'atelier (F2 → **Amis**) sert à ça, et son export est le fichier `dev/content5.js`.
 
-| Compagnon | Comportement | Ce qu'il fait |
-|---|---|---|
-| **Faucon** | `strike` | Pique sur l'ennemi le plus proche toutes les deux mesures. Volant : rien ne l'arrête. |
-| **Chien de garde** | `bite` | Court au contact, mord à chaque temps fort, et **attire les coups** : les ennemis à moins de 230 px s'en prennent à lui. |
-| **Serpent cracheur** | `spit` | Reste dans les jambes et crache une gerbe sur chaque temps, à 340 px. |
-| **Scarabée fouineur** | `collect` | Aimante tout ce qui traîne à 260 px. Ne se bat pas. |
-| **Tortue bouclier** | `guard` | Tourne autour du joueur et brise deux projectiles ennemis par temps. |
-| **Crapaud guérisseur** | `mend` | Rend 4 PV sur chaque temps fort. |
-| **Tatou blindé** | `charge` | Se met en boule et traverse la salle en ligne droite sur le temps fort, bousculant tout sur son passage. |
-| **Chouette guetteuse** | `mark` | Désigne un ennemi à chaque mesure : il encaisse 30 % de dégâts en plus tant qu'il est marqué. |
-| **Abeille** | `sting` | Tourne autour de l'ennemi le plus proche et pique à chaque temps. Peu de dégâts, jamais de pause. |
+### Ce qu'on crée
 
-**Un compagnon ne meurt jamais.** Seul celui qui attire les coups a des PV : à zéro il est *sonné* six secondes, puis revient au complet. Perdre définitivement son animal au milieu d'une run serait une punition sans rattrapage, et le joueur ne peut pas le soigner.
+**Un animal de compagnie** : une photo, un nom, un rôle, et il vous suit toute la run en jouant son tour **en mesure**. Neuf rôles, qui sont les comportements du moteur :
 
-Les dégâts sont multipliés par `stats.damage` du joueur : le compagnon monte avec lui. Il franchit les portes (`Room.load` le replace à côté du joueur) et disparaît à la fin de la run. Un seul à la fois : en ramasser un autre remplace le premier.
+| Rôle | Ce qu'il fait |
+|---|---|
+| pique en vol | fond sur l'ennemi le plus proche, et rien ne l'arrête en vol |
+| mord et attire les coups | court au contact ; les ennemis proches s'en prennent à lui plutôt qu'à vous |
+| crache à distance | reste dans vos jambes et tire une gerbe sur l'ennemi le plus proche |
+| ramasse à votre place | aimante crédits, cœurs et fragments ; ne se bat pas |
+| brise les tirs ennemis | tourne autour de vous et casse les projectiles qu'il croise |
+| soigne | rend quelques PV, régulièrement |
+| charge en ligne droite | se met en boule et traverse la salle, bousculant tout |
+| désigne une cible | l'ennemi marqué encaisse 30 % de plus — le seul qui ne tape pas lui-même |
+| harcèle sans relâche | tourne autour de sa cible et pique à chaque temps |
 
-**Où on les trouve** — deux routes, et elles se répondent :
+Réglables : dégâts, cadence (du temps à la mesure), taille, teinte, prix au hub, et la phrase qui le décrit.
 
-- **Au hub**, onglet *Compagnons* de la boutique : on débloque un animal avec ses crédits (120 à 320), puis on le choisit comme compagnon de départ. Il entre en salle 1 avec le joueur. Le **Scarabée fouineur** est offert dès le premier profil, pour que la mécanique se découvre sans rien payer ; « Partir seul » reste une option.
-- **En run**, les élites en lâchent un dans 15 % des cas (leur table de butin passe de bourse / relique / allié à bourse / relique / **compagnon** / allié). Comme il n'y en a qu'un à la fois, le ramasser **remplace** celui du hub : c'est un choix, pas un cumul — je troque mon chien pour ce faucon, ou je le laisse.
+**Un copain** : son visage devient un **personnage jouable**. La photo est collée à la place de la tête sur le corps dessiné en pixels — un personnage qui porte un visage garde toujours ce corps-là, jamais la planche de sprites, sinon le visage disparaîtrait dès la tenue complète. Réglables : PV, vitesse, chance, arme de départ, et un caractère choisi parmi sept (apprend vite, cogne fort, va vite, encaisse, vise juste, a de la chance, aucun).
 
-Le panneau debug a « Adopter » et « Renvoyer » pour les essayer.
+### Comment ça marche
 
-Les vingt SVG de `assets/sprites/pets/` (extraits de game-icons, CC BY 3.0) sont tous déclarés dans `PROP_DEFS` : au-delà des six compagnons, ils servent d'images pour le décor animé (un rotatif « chauve-souris », un sauteur « grenouille »…).
+Une photo déposée est **recadrée au carré et réduite à 64 px**, sans lissage : elle devient un sprite du jeu. Sans cette réduction, dix visages de téléphone pèseraient plusieurs mégaoctets une fois embarqués.
 
-### Ajouter un compagnon
+Tout est versé dans le contenu **tout de suite** — l'animal est adoptable par « Essayer », le copain prend les commandes — et gardé dans le navigateur pendant qu'on travaille. `Content.invalidate()` est appelé à chaque changement : l'index par id est mis en cache, et sans ça un personnage créé en cours de partie reste introuvable et l'appel retombe silencieusement sur le premier de la liste.
 
-Une entrée dans `CONTENT.pets` suffit si le comportement existe déjà :
+### Le partager
 
-```js
-{ id: 'pet_corbeau', name: 'Corbeau', sprite: 'raven', color: '#6a7490', tag: 'crache sur chaque temps',
-  desc: '…', behavior: 'spit', damage: 11, every: 2, range: 380, speed: 260 }
-```
+« Exporter » donne le contenu complet de **`dev/content5.js`** : les images en clair (data URI), puis les `CONTENT.pets.push(...)` et `CONTENT.characters.push(...)`. On colle le texte dans le fichier, on relance `node dev/build.js`, et les amis existent chez tout le monde — **rien à déposer dans `assets/`**, le dépôt se suffit à lui-même. Les images sont enregistrées au démarrage par `Sprites.loadFriends()`.
 
-Pour un comportement neuf : un `case` dans `Pet.update` et son nom dans `PET_BEHAVIORS` (le validateur de contenu refuse le reste).
+Les compagnons créés apparaissent dans l'onglet *Compagnons* de la boutique du hub (débloquer avec ses crédits, puis choisir celui qui part avec vous), et les élites peuvent en lâcher un en cours de run — celui-ci remplace le vôtre, il n'y en a jamais qu'un.
+
+Neuf gabarits restent lisibles dans `content.js` sous `petsExemples` : ils ne sont **pas** chargés, ce sont des exemples de réglages à recopier.
 
 ---
 

@@ -462,7 +462,10 @@ const CONTENT = {
   // =====================================================================
   // COMPAGNONS — un animal ramassé en run, qui joue son unique tour EN MESURE
   // =====================================================================
-  pets: [
+  /* Aucun compagnon livré : ils se créent dans l'atelier « Amis » (F2) à partir d'une photo, et s'exportent
+     dans dev/content5.js. Les comportements disponibles sont listés dans PET_BEHAVIORS (31_pets.js). */
+  pets: [],
+  petsExemples: [
     { id: 'pet_faucon', name: 'Faucon', sprite: 'falcon-moon', color: '#9fd8ff', tag: 'pique toutes les 2 mesures',
       desc: 'Il pique sur l\'ennemi le plus proche toutes les deux mesures, et rien ne l\'arrête en vol.',
       behavior: 'strike', fly: true, damage: 26, every: 8, range: 360, speed: 300, diveSpeed: 660, knockback: 1.4, size: 32, price: 260 },
@@ -491,6 +494,7 @@ const CONTENT = {
       desc: 'Elle tourne autour de l\'ennemi le plus proche et pique sans relâche. Peu de dégâts, mais jamais de pause.',
       behavior: 'sting', fly: true, damage: 5, every: 1, range: 320, speed: 440, orbit: 26, spin: 5, size: 24, price: 200 },
   ],
+  friendsNote: 'petsExemples n\'est pas chargé : ce sont des gabarits, pas du contenu.',
 
   // =====================================================================
   // PIÈGES — biome 1 (8 kinds)

@@ -58,7 +58,7 @@ const Meta = (() => {
     if (!LORE.fragments.find(f => f.id === id) || profile.lore.includes(id)) return;
     profile.lore.push(id); save(); const f = LORE.fragments.find(x => x.id === id); UI.toast('Fragment débloqué : ' + f.title, 6);
   }
-  return { load, save, reset, setMode, tierOf, setTier, buy, buyWeapon, buyCharacter, buyPet, activeSources, special, resurrectAvailable, selectiveMemory, chestPreview, fourthChoice, rerolls, addCoins, recordRun, unlockLore,
+  return { load, save, reset, setMode, ensure: () => ensureDefaults(profile), tierOf, setTier, buy, buyWeapon, buyCharacter, buyPet, activeSources, special, resurrectAvailable, selectiveMemory, chestPreview, fourthChoice, rerolls, addCoins, recordRun, unlockLore,
     get profile() { return profile; }, get coins() { return profile.coins; },
     biomeUnlocked: b => G.mode === 'test' || !b.unlockAfter || !!((profile.cleared || {})[b.unlockAfter]),
     weaponUnlocked: id => profile.weapons.includes(id), characterUnlocked: id => profile.characters.includes(id), petUnlocked: id => (profile.pets || []).includes(id), skillUnlocked: () => true, loreUnlocked: id => profile.lore.includes(id) };

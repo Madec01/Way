@@ -65,7 +65,31 @@ const Atelier = (() => {
     const out = []; for (let b = 0; b < Lb(); b += step) for (const o of offs) { const v = Math.round((b + o) * 1000) / 1000; if (v < Lb()) out.push(v); }
     return out.sort((a, b) => a - b);
   }
-  const TABS = [['anim', 'Animations'], ['trap', 'Pièges'], ['level', 'Niveau']];
+  const TABS = [['anim', 'Animations'], ['trap', 'Pièges'], ['level', 'Niveau'], ['amis', 'Amis']];
+  /* Rôles d'un compagnon, avec ce qu'il faut régler pour chacun. Les valeurs servent de départ à la création :
+     un animal fraîchement ajouté doit être jouable tout de suite, sans réglage. */
+  const ROLES = [
+    ['strike', 'pique en vol', { damage: 24, every: 8, range: 360, speed: 300, diveSpeed: 660, fly: true }],
+    ['bite', 'mord et attire les coups', { damage: 14, every: 4, range: 280, speed: 320, taunt: 230, hp: 90, revive: 6 }],
+    ['spit', 'crache à distance', { damage: 9, every: 2, range: 340, speed: 250, projSpeed: 480 }],
+    ['collect', 'ramasse à votre place', { damage: 0, every: 4, radius: 260, speed: 280 }],
+    ['guard', 'brise les tirs ennemis', { damage: 0, every: 1, block: 2, dist: 56, spin: 1.7 }],
+    ['mend', 'soigne', { damage: 0, every: 4, heal: 4, speed: 230 }],
+    ['charge', 'charge en ligne droite', { damage: 18, every: 4, range: 420, speed: 240, rollSpeed: 560, rollTime: 0.8 }],
+    ['mark', 'désigne une cible', { damage: 0, every: 4, range: 420, markTime: 4, markMul: 1.3, speed: 280, fly: true }],
+    ['sting', 'harcèle sans relâche', { damage: 5, every: 1, range: 320, speed: 440, orbit: 26, spin: 5, fly: true }],
+  ];
+  const CADENCES = [[1, 'chaque temps'], [2, 'un temps sur deux'], [4, 'chaque mesure'], [8, 'toutes les deux mesures'], [16, 'toutes les quatre mesures']];
+  /* Traits proposés pour un personnage : de quoi donner un caractère sans écrire de mods à la main. */
+  const TRAITS = [
+    ['aucun', 'Aucun', []],
+    ['xp', 'Apprend vite (+15 % XP, +2 chance)', [{ stat: 'xpGain', mul: 1.15 }, { stat: 'luck', add: 2 }]],
+    ['dmg', 'Cogne fort (+15 % dégâts)', [{ stat: 'damage', mul: 1.15 }]],
+    ['fast', 'Va vite (+15 % vitesse)', [{ stat: 'speed', mul: 1.15 }]],
+    ['tank', 'Encaisse (+30 PV, +2 armure)', [{ stat: 'maxHp', add: 30 }, { stat: 'armor', add: 2 }]],
+    ['crit', 'Vise juste (+10 % crit, +30 % dégâts critiques)', [{ stat: 'critChance', add: 0.1 }, { stat: 'critMult', add: 0.3 }]],
+    ['lucky', 'A de la chance (+4 chance)', [{ stat: 'luck', add: 4 }]],
+  ];
   const BRUSH = { '.': 'sol', '#': 'mur plein', 'n': 'muret', ':': 'claustra', '=': 'pont', '~': 'eau', ',': 'boue' };
   const st = { biome: 'biome_1', track: 'a', bars: 2, snap: 2, items: [], terrain: null, sel: -1, tab: 'trap',
     pose: true, loop: true, metro: false, safe: true, grid: true, brush: null, win: 2, winIdx: 0, tpl: {} };
@@ -73,6 +97,8 @@ const Atelier = (() => {
      prochain élément posé naît avec. Sans ça il fallait poser puis régler, pour chaque objet. */
   function tplOf(brush) { return st.tpl[brush] || (st.tpl[brush] = { params: {} }); }
   let box = null, live = false, lastIdx = -1, headEl = null, canvas = null, headX0 = 0, headW = 0;
+  const AKEY = 'way_amis_v1';
+  let amis = { pets: [], chars: [] };   // animaux et copains créés ici, gardés dans le navigateur puis exportés
 
   /* Deux longueurs distinctes, et c'est tout le sujet des partitions longues :
      `bars` est la longueur de la PARTITION (jusqu'à un morceau entier, plusieurs minutes) ;
@@ -174,12 +200,46 @@ const Atelier = (() => {
     if (Array.isArray(o.items)) st.items = o.items; if (Array.isArray(o.terrain)) st.terrain = o.terrain; else if (o.terrain === null) st.terrain = null;
   }
 
+  /* ---------- les amis : animaux de compagnie et visages ----------
+     Tout est gardé dans le navigateur pendant qu'on travaille, et versé dans le jeu tout de suite (CONTENT).
+     « Exporter » écrit dev/content5.js, images comprises : c'est ce fichier qui fait vivre les amis chez tout
+     le monde une fois le jeu partagé. */
+  function amisLoad() {
+    try { const o = JSON.parse(localStorage.getItem(AKEY) || 'null'); if (o) amis = { pets: o.pets || [], chars: o.chars || [] }; } catch (e) { /* */ }
+    amisRegister();
+  }
+  function amisSave() { try { localStorage.setItem(AKEY, JSON.stringify(amis)); } catch (e) { UI.toast('Trop d\'images pour le navigateur : exportez dans content5.js'); } amisRegister(); }
+  /* verse les amis dans le contenu du jeu (en remplaçant la fournée précédente) */
+  function amisRegister() {
+    for (const a of amis.pets.concat(amis.chars)) if (a.img && a.sprite) Sprites.addCustom(a.sprite, a.img);
+    CONTENT.pets = CONTENT.pets.filter(p => !p.atelier).concat(amis.pets.map(petDef));
+    CONTENT.characters = CONTENT.characters.filter(c => !c.atelier).concat(amis.chars.map(charDef));
+    Content.invalidate(); Meta.ensure();
+  }
+  const roleOf = b => ROLES.find(r => r[0] === b) || ROLES[0];
+  function petDef(p) {
+    const base = Object.assign({}, roleOf(p.behavior)[2]);
+    return Object.assign(base, { id: p.id, name: p.name || 'Animal', sprite: p.sprite, color: p.color || '#9fd8ff',
+      tag: roleOf(p.behavior)[1], desc: p.desc || '', behavior: p.behavior, damage: +p.damage || 0, every: +p.every || 4,
+      size: +p.size || 32, price: +p.price || 0, unlocked: true, atelier: true });
+  }
+  function charDef(c) {
+    const tr = TRAITS.find(t => t[0] === c.trait) || TRAITS[0];
+    return { id: c.id, name: c.name || 'Copain', sprite: 'player', face: c.sprite, atelier: true,
+      desc: c.desc || '', stats: { maxHp: +c.maxHp || 100, speed: +c.speed || 260, damage: +c.damage || 1, luck: +c.luck || 2 },
+      trait: { id: 'trait_' + c.id, name: c.traitName || tr[1], desc: c.traitDesc || tr[1], mods: tr[2], hooks: {} },
+      startWeapon: c.weapon || 'weapon_blade', unlocked: true, price: 0 };
+  }
+  const uid = p => p + '_' + Math.random().toString(36).slice(2, 8);
+  function addPet() { amis.pets.push({ id: uid('pet_ami'), sprite: uid('img'), name: '', desc: '', behavior: 'bite', damage: 14, every: 4, size: 32, price: 0, color: '#9fd8ff' }); amisSave(); refresh(); }
+  function addChar() { amis.chars.push({ id: uid('char_ami'), sprite: uid('face'), name: '', desc: '', trait: 'aucun', maxHp: 100, speed: 260, damage: 1, luck: 2, weapon: 'weapon_blade' }); amisSave(); refresh(); }
+
   /* ---------- ouverture / fermeture ---------- */
   function toggle() { live ? close() : open(); }
   function open() {
     if (live) return;
     if (G.state === 'run' && !G.attract && !confirm('Ouvrir l\'atelier abandonne la run en cours. Continuer ?')) return;
-    live = true; load();
+    live = true; load(); amisLoad();
     Attract.stop(); UI.hideAll();
     const ch = Content.characters()[0], w = Content.weapons()[0], sk = Content.skills()[0];
     Run.start({ character: ch.id, biome: st.biome, weapon: w.id, skill: sk.id, seed: 7 });
@@ -252,7 +312,7 @@ const Atelier = (() => {
     $('#a-export').onclick = showIo; $('#a-hide').onclick = () => { $('#a-io').hidden = true; };
     $('#a-copy').onclick = () => { const t = $('#a-txt'); t.select(); try { navigator.clipboard.writeText(t.value); UI.toast('Copié'); } catch (e) { document.execCommand('copy'); } };
     $('#a-import').onclick = () => importText($('#a-txt').value);
-    $('#a-clear').onclick = () => { if (st.tab === 'level') { st.terrain = null; st.items = st.items.filter(i => i.kind !== 'mur'); } else st.items = st.items.filter(i => famOf(i) !== st.tab); st.sel = -1; apply(); refresh(); };
+    $('#a-clear').onclick = () => { if (st.tab === 'amis') { UI.toast('Rien à vider ici : supprimez les fiches une par une avec ×'); return; } if (st.tab === 'level') { st.terrain = null; st.items = st.items.filter(i => i.kind !== 'mur'); } else st.items = st.items.filter(i => famOf(i) !== st.tab); st.sel = -1; apply(); refresh(); };
     $('#a-close').onclick = close;
     $('#a-fold').onclick = () => { const f = box.classList.toggle('fold'); $('#a-fold').textContent = f ? 'Déplier' : 'Réduire'; if (!f) measure(); };
     box.querySelectorAll('.tab').forEach(b => { b.onclick = () => { st.tab = b.dataset.t; st.brush = null; st.sel = -1; refresh(); }; });
@@ -284,6 +344,7 @@ const Atelier = (() => {
     $('#a-mode').className = 'btn small' + (st.pose ? ' primary' : '');
     $('#a-pos').textContent = winLabel();
     box.querySelectorAll('.tab').forEach(b => { b.className = 'btn small tab' + (b.dataset.t === st.tab ? ' primary' : ''); });
+    if (st.tab === 'amis') { $('#a-pal').innerHTML = ''; renderAmis($('#a-lanes')); return; }
     /* palette de l'établi courant */
     const pal = $('#a-pal'); const rows = [];
     if (st.tab === 'trap') rows.push('<span class="amuted">Poser :</span>' + trapsOf().map(id => { const d = Content.trap(id); return `<button class="btn small pal${st.brush === id ? ' primary' : ''}" data-b="${id}">${d ? d.name : id}</button>`; }).join(''));
@@ -320,6 +381,91 @@ const Atelier = (() => {
     lanes.querySelectorAll('[data-del]').forEach(b => { b.onclick = () => { st.items.splice(+b.dataset.del, 1); st.sel = -1; apply(); refresh(); }; });
     measure();
     tune(lanes);
+  }
+  /* ---------- établi « Amis » ---------- */
+  function renderAmis(lanes) {
+    const opt = (list, v) => list.map(r => `<option value="${r[0]}"${r[0] === v ? ' selected' : ''}>${r[1]}</option>`).join('');
+    let h = '<div class="amis">';
+    h += '<div class="amiscol"><h4>Animaux de compagnie</h4>';
+    amis.pets.forEach((p, i) => {
+      h += `<div class="amicard" data-p="${i}">
+        <div class="amitop"><span class="amiimg" data-img="p${i}"></span>
+          <input type="text" class="aminom" data-f="name" value="${(p.name || '').replace(/"/g, '&quot;')}" placeholder="Nom de l'animal">
+          <button class="btn tiny" data-try="${i}">Essayer</button><button class="btn tiny" data-dup="${i}">Copier</button><button class="btn tiny ghost" data-del="${i}">×</button></div>
+        <div class="amirow"><label>photo <input type="file" accept="image/*" data-file="${i}"></label>
+          <label>rôle <select data-f="behavior">${opt(ROLES, p.behavior)}</select></label>
+          <label>cadence <select data-f="every">${opt(CADENCES.map(c => [c[0], c[1]]), +p.every)}</select></label></div>
+        <div class="amirow"><label>dégâts <input type="number" min="0" max="99" step="1" data-f="damage" value="${p.damage}"></label>
+          <label>taille <input type="number" min="16" max="64" step="2" data-f="size" value="${p.size}"></label>
+          <label>prix <input type="number" min="0" max="999" step="10" data-f="price" value="${p.price}"></label>
+          <label>teinte <input type="color" data-f="color" value="${p.color || '#9fd8ff'}"></label></div>
+        <div class="amirow"><input type="text" class="amidesc" data-f="desc" value="${(p.desc || '').replace(/"/g, '&quot;')}" placeholder="Ce qu'il fait, en une phrase"></div></div>`;
+    });
+    h += '<button class="btn small" id="am-addpet">+ Ajouter un animal</button></div>';
+    h += '<div class="amiscol"><h4>Copains</h4>';
+    amis.chars.forEach((c, i) => {
+      h += `<div class="amicard" data-c="${i}">
+        <div class="amitop"><span class="amiimg" data-img="c${i}"></span>
+          <input type="text" class="aminom" data-f="name" value="${(c.name || '').replace(/"/g, '&quot;')}" placeholder="Son nom">
+          <button class="btn tiny" data-tryc="${i}">Essayer</button><button class="btn tiny ghost" data-delc="${i}">×</button></div>
+        <div class="amirow"><label>visage <input type="file" accept="image/*" data-filec="${i}"></label>
+          <label>caractère <select data-f="trait">${opt(TRAITS.map(t => [t[0], t[1]]), c.trait)}</select></label></div>
+        <div class="amirow"><label>PV <input type="number" min="40" max="300" step="5" data-f="maxHp" value="${c.maxHp}"></label>
+          <label>vitesse <input type="number" min="150" max="400" step="10" data-f="speed" value="${c.speed}"></label>
+          <label>chance <input type="number" min="0" max="20" step="1" data-f="luck" value="${c.luck}"></label>
+          <label>arme <select data-f="weapon">${Content.weapons().map(w => `<option value="${w.id}"${w.id === c.weapon ? ' selected' : ''}>${w.name}</option>`).join('')}</select></label></div>
+        <div class="amirow"><input type="text" class="amidesc" data-f="desc" value="${(c.desc || '').replace(/"/g, '&quot;')}" placeholder="Qui c'est, en une phrase"></div></div>`;
+    });
+    h += '<button class="btn small" id="am-addchar">+ Ajouter un copain</button></div>';
+    h += '</div><div class="amifoot amuted">Les images sont embarquées dans l\'export : rien à déposer dans assets/. « Exporter » donne le contenu de <b>dev/content5.js</b> — le coller tel quel, puis <b>node dev/build.js</b>.</div>';
+    lanes.innerHTML = h;
+    /* vignettes */
+    lanes.querySelectorAll('[data-img]').forEach(sp => {
+      const k = sp.dataset.img; const a = k[0] === 'p' ? amis.pets[+k.slice(1)] : amis.chars[+k.slice(1)];
+      const c = a && a.sprite ? Sprites.propCanvas(a.sprite, 34) : null;
+      if (c) sp.appendChild(c); else sp.textContent = '—';
+    });
+    const bindList = (sel, list, after) => lanes.querySelectorAll(sel).forEach(el2 => {
+      const card = el2.closest('.amicard'); const i = +(card.dataset.p != null ? card.dataset.p : card.dataset.c);
+      el2.onchange = () => { list[i][el2.dataset.f] = el2.type === 'number' ? +el2.value : el2.value; if (after) after(list[i], el2.dataset.f); amisSave(); refresh(); };
+    });
+    /* changer de rôle repose les valeurs de départ de ce rôle ; changer un chiffre ne touche à rien d'autre */
+    bindList('.amicard[data-p] [data-f]', amis.pets, (p, f) => { if (f !== 'behavior') return; const d = roleOf(p.behavior)[2]; if (d.damage != null) p.damage = d.damage; });
+    bindList('.amicard[data-c] [data-f]', amis.chars);
+    /* photos */
+    lanes.querySelectorAll('[data-file]').forEach(f => { f.onchange = () => readImg(f, amis.pets[+f.dataset.file]); });
+    lanes.querySelectorAll('[data-filec]').forEach(f => { f.onchange = () => readImg(f, amis.chars[+f.dataset.filec]); });
+    lanes.querySelectorAll('[data-del]').forEach(bt => { bt.onclick = () => { amis.pets.splice(+bt.dataset.del, 1); amisSave(); refresh(); }; });
+    lanes.querySelectorAll('[data-delc]').forEach(bt => { bt.onclick = () => { amis.chars.splice(+bt.dataset.delc, 1); amisSave(); refresh(); }; });
+    lanes.querySelectorAll('[data-dup]').forEach(bt => { bt.onclick = () => { const c = JSON.parse(JSON.stringify(amis.pets[+bt.dataset.dup])); c.id = uid('pet_ami'); amis.pets.push(c); amisSave(); refresh(); }; });
+    lanes.querySelectorAll('[data-try]').forEach(bt => { bt.onclick = () => { const p = amis.pets[+bt.dataset.try]; amisSave(); Pets.give(p.id); }; });
+    lanes.querySelectorAll('[data-tryc]').forEach(bt => { bt.onclick = () => {
+      const c = amis.chars[+bt.dataset.tryc]; amisSave();
+      const def = Content.character(c.id); if (!def || !G.player) return;
+      Meta.profile.character = c.id; Meta.save(); G.player.char = def; G.player.recompute();
+      UI.toast((def.name || 'Copain') + ' est aux commandes'); } });
+    const ap = lanes.querySelector('#am-addpet'); if (ap) ap.onclick = addPet;
+    const ac = lanes.querySelector('#am-addchar'); if (ac) ac.onclick = addChar;
+  }
+  /* Une photo devient un sprite : recadrée au carré et réduite à 64 px, sans lissage. Sans réduction, dix visages
+     de téléphone pèseraient plusieurs mégaoctets une fois embarqués dans content5.js. */
+  function readImg(input, entry) {
+    const f = input.files && input.files[0]; if (!f || !entry) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const S = 64; const c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
+        const side = Math.min(img.width, img.height);
+        g.imageSmoothingEnabled = false;
+        g.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+        entry.img = c.toDataURL('image/png');
+        Sprites.addCustom(entry.sprite, entry.img).then(() => { amisSave(); refresh(); });
+      };
+      img.onerror = () => UI.toast('Image illisible');
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(f);
   }
   /* réglages de l'élément choisi : ce qui a du sens pour sa mécanique, rien de plus */
   function tune(lanes) {
@@ -544,9 +690,20 @@ const Atelier = (() => {
   const val = v => Array.isArray(v) ? '[' + v.map(val).join(', ') + ']' : typeof v === 'string' ? `'${v}'` : typeof v === 'boolean' ? String(v) : q(v);
   const inner = p => Object.keys(p || {}).map(k => `${k}: ${val(p[k])}, `).join('');
   const par = p => Object.keys(p || {}).length ? `, params: { ${inner(p).replace(/, $/, '')} }` : '';
-  function showIo() { $('#a-io').hidden = false; $('#a-txt').value = snippet(); }
+  /* export de l'établi Amis : le contenu complet de dev/content5.js, images comprises */
+  function amisSnippet() {
+    const imgs = amis.pets.concat(amis.chars).filter(a => a.img);
+    let out = '/* AMIS_DEBUT */\n';
+    out += 'const FRIEND_IMAGES = {\n' + imgs.map(a => `  '${a.sprite}': '${a.img}',`).join('\n') + '\n};\n\n';
+    out += 'CONTENT.pets.push(\n' + amis.pets.map(p => '  ' + JSON.stringify(petDef(p)) + ',').join('\n') + '\n);\n\n';
+    out += 'CONTENT.characters.push(\n' + amis.chars.map(c => '  ' + JSON.stringify(charDef(c)) + ',').join('\n') + '\n);\n';
+    out += '/* AMIS_FIN */\n';
+    return out.replace(/"atelier":true,?/g, '');
+  }
+  function showIo() { $('#a-io').hidden = false; $('#a-txt').value = st.tab === 'amis' ? amisSnippet() : snippet(); }
   /* relit le bloc « atelier:{…} » qu'écrit l'export : un aller-retour complet sans réécrire à la main */
   function importText(txt) {
+    if (txt.indexOf('AMIS_DEBUT') >= 0) { UI.toast('Ce texte est le contenu de dev/content5.js : le coller dans le fichier, pas ici'); return; }
     const i = txt.indexOf('atelier:'); if (i < 0) { UI.toast('Texte non reconnu (il faut le bloc « atelier: » de l\'export)'); return; }
     let j = txt.lastIndexOf('*/'); if (j < i) j = txt.length;
     try {
