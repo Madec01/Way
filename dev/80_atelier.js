@@ -212,6 +212,7 @@ const Atelier = (() => {
   /* verse les amis dans le contenu du jeu (en remplaçant la fournée précédente) */
   function amisRegister() {
     for (const a of amis.pets.concat(amis.chars)) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) Sprites.addCustom(a[k], a[f]);
+    for (const c of amis.chars) if (c.sheets) for (const k in c.sheets) Sprites.addSheet(c.id + '_' + k, c.sheets[k], c.fw || 0);
     CONTENT.pets = CONTENT.pets.filter(p => !p.atelier).concat(amis.pets.map(petDef));
     CONTENT.characters = CONTENT.characters.filter(c => !c.atelier).concat(amis.chars.map(charDef));
     Content.invalidate(); Meta.ensure();
@@ -227,8 +228,9 @@ const Atelier = (() => {
   function charDef(c) {
     const tr = TRAITS.find(t => t[0] === c.trait) || TRAITS[0];
     const corps = c.imgBody ? { s: c.spriteBody, e: c.imgBodyE ? c.spriteBodyE : null, n: c.imgBodyN ? c.spriteBodyN : null } : null;
-    return { id: c.id, name: c.name || 'Copain', sprite: 'player', face: c.imgBody ? null : c.sprite,
-      body: corps, size: +c.size || 64, atelier: true,
+    const anim = {}; for (const [k] of CLIPS_UI) if (c.sheets && c.sheets[k]) anim[k] = c.id + '_' + k;
+    return { id: c.id, name: c.name || 'Copain', sprite: 'player', face: (c.imgBody || anim.idle) ? null : c.sprite,
+      body: corps, anim: Object.keys(anim).length ? anim : null, size: +c.size || 64, atelier: true,
       desc: c.desc || '', stats: { maxHp: +c.maxHp || 100, speed: +c.speed || 260, damage: +c.damage || 1, luck: +c.luck || 2 },
       trait: { id: 'trait_' + c.id, name: c.traitName || tr[1], desc: c.traitDesc || tr[1], mods: tr[2], hooks: {} },
       startWeapon: c.weapon || 'weapon_blade', unlocked: true, price: 0 };
@@ -237,6 +239,9 @@ const Atelier = (() => {
   /* toutes les images qu'un ami peut porter : champ de données ↔ nom d'accessoire */
   const IMG_SLOTS = [['img', 'sprite'], ['imgE', 'spriteE'], ['imgN', 'spriteN'], ['imgBody', 'spriteBody'], ['imgBodyE', 'spriteBodyE'], ['imgBodyN', 'spriteBodyN']];
   const VUES = [['', 'sud (face)'], ['E', 'est (profil)'], ['N', 'nord (dos)']];
+  /* Planches d'animation : une grille de cases carrées, lues dans l'ordre de lecture. Elles priment sur l'image
+     fixe — c'est le dessin le plus fini dont on dispose. */
+  const CLIPS_UI = [['idle', 'repos'], ['walk', 'marche'], ['fire', 'tir'], ['pick', 'ramasse'], ['death', 'mort']];
   /* 64 px par défaut : le double d'une image de 32, donc des pixels carrés, et une bête un peu plus grande
      qu'une tuile (48) — c'est la taille qui « fait animal » à côté d'un joueur de 48 × 75. */
   function addPet() { const n = uid('img'); amis.pets.push({ id: uid('pet_ami'), sprite: n, spriteE: n + '_e', spriteN: n + '_n', name: '', desc: '', behavior: 'bite', damage: 14, every: 4, size: 64, price: 0, color: '#9fd8ff' }); amisSave(); refresh(); }
@@ -427,6 +432,10 @@ const Atelier = (() => {
           <label>vitesse <input type="number" min="150" max="400" step="10" data-f="speed" value="${c.speed}"></label>
           <label>chance <input type="number" min="0" max="20" step="1" data-f="luck" value="${c.luck}"></label>
           <label>arme <select data-f="weapon">${Content.weapons().map(w => `<option value="${w.id}"${w.id === c.weapon ? ' selected' : ''}>${w.name}</option>`).join('')}</select></label></div>
+        <div class="amirow"><span class="amuted">planches d'animation :</span>
+          ${CLIPS_UI.map(cl => `<label class="amivue${c.sheets && c.sheets[cl[0]] ? ' ok' : ''}">${cl[1]} <input type="file" accept="image/*" data-sheet="${i}" data-clip="${cl[0]}"></label>`).join('')}
+          <label>case <input type="number" min="8" max="256" step="1" data-f="fw" value="${c.fw || 0}"> px <i class="amuted">(0 = deviné)</i></label>
+          ${c.sheets && c.sheets.idle ? '<span class="amuted">les planches priment sur l\'image fixe</span>' : ''}</div>
         <div class="amirow"><input type="text" class="amidesc" data-f="desc" value="${(c.desc || '').replace(/"/g, '&quot;')}" placeholder="Qui c'est, en une phrase"></div></div>`;
     });
     h += '<button class="btn small" id="am-addchar">+ Ajouter un copain</button></div>';
@@ -444,11 +453,12 @@ const Atelier = (() => {
     });
     /* changer de rôle repose les valeurs de départ de ce rôle ; changer un chiffre ne touche à rien d'autre */
     bindList('.amicard[data-p] [data-f]', amis.pets, (p, f) => { if (f !== 'behavior') return; const d = roleOf(p.behavior)[2]; if (d.damage != null) p.damage = d.damage; });
-    bindList('.amicard[data-c] [data-f]', amis.chars);
+    bindList('.amicard[data-c] [data-f]', amis.chars, (c, f) => { if (f === 'size') c.sizeSet = true; });
     /* photos */
     lanes.querySelectorAll('[data-file]').forEach(f => { f.onchange = () => readImg(f, amis.pets[+f.dataset.file], 'img' + f.dataset.v, 'sprite' + f.dataset.v); });
     lanes.querySelectorAll('[data-filec]').forEach(f => { f.onchange = () => readImg(f, amis.chars[+f.dataset.filec], 'img', 'sprite'); });
     lanes.querySelectorAll('[data-fileb]').forEach(f => { f.onchange = () => readImg(f, amis.chars[+f.dataset.fileb], 'imgBody' + f.dataset.v, 'spriteBody' + f.dataset.v); });
+    lanes.querySelectorAll('[data-sheet]').forEach(f => { f.onchange = () => readSheet(f, amis.chars[+f.dataset.sheet], f.dataset.clip); });
     lanes.querySelectorAll('[data-del]').forEach(bt => { bt.onclick = () => { amis.pets.splice(+bt.dataset.del, 1); amisSave(); refresh(); }; });
     lanes.querySelectorAll('[data-delc]').forEach(bt => { bt.onclick = () => { amis.chars.splice(+bt.dataset.delc, 1); amisSave(); refresh(); }; });
     lanes.querySelectorAll('[data-nobody]').forEach(bt => { bt.onclick = () => { const c = amis.chars[+bt.dataset.nobody]; delete c.imgBody; delete c.imgBodyE; delete c.imgBodyN; amisSave(); refresh(); }; });
@@ -464,6 +474,27 @@ const Atelier = (() => {
   }
   /* Une photo devient un sprite : recadrée au carré et réduite à 64 px, sans lissage. Sans réduction, dix visages
      de téléphone pèseraient plusieurs mégaoctets une fois embarqués dans content5.js. */
+  /* Une planche d'animation entre TELLE QUELLE : ni recadrage ni redimensionnement, sinon la grille de cases ne
+     tombe plus juste. La taille de case est devinée à partir des colonnes et lignes occupées, et reste modifiable. */
+  function readSheet(input, entry, clip) {
+    const f = input.files && input.files[0]; if (!f || !entry) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      entry.sheets = entry.sheets || {}; entry.sheets[clip] = rd.result;
+      Sprites.addSheet(entry.id + '_' + clip, rd.result, entry.fw || 0).then(inf => {
+        if (inf) {
+          if (!entry.fw) entry.fw = inf.fw;
+          /* taille d'affichage calée sur un multiple entier de la case : ×2 garde des pixels carrés et donne une
+             silhouette de la hauteur du joueur standard (48 × 75) une fois la marge sous les pieds retirée. */
+          if (!entry.sizeSet) { entry.size = inf.fw * 2; entry.sizeSet = true; }
+          UI.toast(clip + ' : ' + inf.cols + '×' + inf.rows + ' cases de ' + inf.fw + ' px (' + inf.n + ' images), affiché en ' + entry.size + ' px');
+        }
+        else UI.toast('Planche illisible');
+        amisSave(); refresh();
+      });
+    };
+    rd.readAsDataURL(f);
+  }
   /* Une image déposée entre dans le jeu telle quelle si elle est déjà à une taille de sprite. On ne l'AGRANDIT
      jamais : un pixel art de 32×32 agrandi, a fortiori en lissant, perd exactement ce qui en fait du pixel art.
      Seules les photos d'appareil sont réduites — et là le lissage sert, puisqu'il s'agit de photos. */
@@ -716,10 +747,12 @@ const Atelier = (() => {
   const par = p => Object.keys(p || {}).length ? `, params: { ${inner(p).replace(/, $/, '')} }` : '';
   /* export de l'établi Amis : le contenu complet de dev/content5.js, images comprises */
   function amisSnippet() {
-    const src = amis.pets.concat(amis.chars); const imgs = [];
+    const src = amis.pets.concat(amis.chars); const imgs = []; const shs = [];
     for (const a of src) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) imgs.push([a[k], a[f]]);
+    for (const c of amis.chars) if (c.sheets) for (const k in c.sheets) shs.push([c.id + '_' + k, c.sheets[k], c.fw || 0]);
     let out = '/* AMIS_DEBUT */\n';
     out += 'const FRIEND_IMAGES = {\n' + imgs.map(([k, v]) => `  '${k}': '${v}',`).join('\n') + '\n};\n\n';
+    out += 'const FRIEND_SHEETS = {\n' + shs.map(([k, v, w]) => `  '${k}': { fw: ${w}, url: '${v}' },`).join('\n') + '\n};\n\n';
     out += 'CONTENT.pets.push(\n' + amis.pets.map(p => '  ' + JSON.stringify(petDef(p)) + ',').join('\n') + '\n);\n\n';
     out += 'CONTENT.characters.push(\n' + amis.chars.map(c => '  ' + JSON.stringify(charDef(c)) + ',').join('\n') + '\n);\n';
     out += '/* AMIS_FIN */\n';

@@ -920,6 +920,21 @@ La vue affichée vient du **déplacement réel** (pour un compagnon, la différe
 
 En attendant de vraies planches, un sprite figé n'est pas figé pour autant : `Sprites.gait(walk)` donne un **rebond** (2,4 px d'amplitude), un **balancement** (0,1 rad) et une **respiration** (4 % de largeur, en sens inverse de la hauteur — le corps s'écrase en touchant le sol). À l'arrêt, tout cela retombe à zéro, seul un souffle très lent subsiste. Ce n'est pas une animation, c'est ce qui empêche une image unique de paraître collée au sol.
 
+### Planches d'animation
+
+Une planche est une **grille de cases carrées lues dans l'ordre de lecture**. Elle entre dans le jeu **sans aucune retouche** — ni recadrage ni redimensionnement, sinon la grille ne tombe plus juste. La taille de case est devinée en comptant les colonnes et les lignes réellement occupées (une planche a des gouttières transparentes), et reste modifiable.
+
+Cinq clips, dans cet ordre de priorité à l'écran : **mort** (joue une fois et se fige sur la dernière image), **ramasse**, **tir**, **marche**, **repos**. Cadences : repos 6 im/s, marche 12, tir 14, ramassage 12, mort 8. Le ramassage n'est pas déclenché par les pièces — l'animation ne ferait que sursauter.
+
+Deux repères sont calculés au chargement de la planche :
+
+- **Les pieds.** Une planche a presque toujours du vide sous le personnage ; la fraction de case occupée jusqu'au bas du dessin est mesurée, et le sprite est posé de sorte que ce bas tombe sur la ligne de sol du corps standard. Sans ça le personnage flotte d'autant de pixels que la marge.
+- **La taille d'affichage** est proposée à **deux fois la case** : pixels carrés, et une silhouette de la hauteur d'un personnage du jeu (mesuré : 38 × 88 px pour Martin, contre 30 × 72 pour le corps standard).
+
+Une planche prime sur le sprite fixe, qui prime sur le visage collé : c'est toujours le dessin le plus fini qui gagne. La démarche procédurale (`gait`) s'efface pendant la marche animée — la planche fait déjà le travail.
+
+**Martin** (`char_martin`, dans `content5.js`) est le premier personnage dessiné à la main : cinq planches de 3 × 3 cases de 48 px, vue de profil, premier stade en caleçon. Ses caractéristiques sont volontairement neutres pour l'instant.
+
 ### Visage collé ou sprite entier
 
 Un copain accepte les deux :

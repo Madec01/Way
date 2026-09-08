@@ -187,7 +187,10 @@ const Sprites = (() => {
     });
   }
   /* images des amis embarquées dans content5.js : enregistrées comme accessoires au démarrage */
-  function loadFriends() { if (typeof FRIEND_IMAGES !== 'object' || !FRIEND_IMAGES) return; for (const k in FRIEND_IMAGES) addCustom(k, FRIEND_IMAGES[k]); }
+  function loadFriends() {
+    if (typeof FRIEND_IMAGES === 'object' && FRIEND_IMAGES) for (const k in FRIEND_IMAGES) addCustom(k, FRIEND_IMAGES[k]);
+    if (typeof FRIEND_SHEETS === 'object' && FRIEND_SHEETS) for (const k in FRIEND_SHEETS) addSheet(k, FRIEND_SHEETS[k].url, FRIEND_SHEETS[k].fw);
+  }
   function loadCustoms() { try { customs = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '{}'); } catch (e) { customs = {}; } for (const k in customs) addCustom(k, customs[k]); }
   function propNames() { return Object.keys(PROP_DEFS).concat(Object.keys(customs).filter(k => !PROP_DEFS[k])).sort(); }
   /* vignette d'un accessoire pour le DOM (cartes du hub) ; null si l'image n'est pas encore chargée */
@@ -370,6 +373,59 @@ const Sprites = (() => {
      tier 0 : nu · 1 : vêtements · 2 : armure du sprite sans le casque (tête dessinée) · 3 : sprite complet.
      Dessin en « pixels » de 3 px sur une grille 16×28, même ancrage que les sprites (pieds). */
   const BODY_PALETTES = { player: { skin: '#e8b58f', skin2: '#c98d6b', hair: '#5a3a22', eye: '#1a1a2a', cloth: '#7a5a3a', pants: '#3a5a8a', boot: '#3a2a1a' }, player2: { skin: '#f0c4a0', skin2: '#d09a78', hair: '#e2c15a', eye: '#1a1a2a', cloth: '#3a6a4a', pants: '#5a3a5a', boot: '#3a2a1a' } };
+  /* ---- planches d'animation de l'auteur ----
+     Une planche est une grille de cases carrées lues dans l'ordre de lecture. Elle est stockée SANS retouche :
+     ni recadrage ni redimensionnement, sinon la grille ne tombe plus juste. La taille de case est devinée à
+     partir des colonnes et des lignes réellement occupées — une planche a des gouttières transparentes. */
+  const sheets = {};
+  function addSheet(name, url, fw) {
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0);
+        const size = fw || guessFrame(g, img.width, img.height);
+        sheets[name] = { c, fw: size, fh: size, cols: Math.max(1, Math.round(img.width / size)), rows: Math.max(1, Math.round(img.height / size)) };
+        sheets[name].n = sheets[name].cols * sheets[name].rows;
+        sheets[name].foot = footOf(g, img.width, img.height, size);   // où sont les pieds dans la case, pour les poser au sol
+        res(sheets[name]);
+      };
+      img.onerror = () => res(null); img.src = url;
+    });
+  }
+  function guessFrame(g, w, h) {
+    try {
+      const d = g.getImageData(0, 0, w, h).data;
+      const runs = (n, m, at) => { let c = 0, on = false; for (let i = 0; i < n; i++) { let v = false; for (let j = 0; j < m && !v; j++) if (d[at(i, j) * 4 + 3] > 10) v = true; if (v && !on) c++; on = v; } return c; };
+      const cols = runs(w, h, (x, y) => y * w + x), rows = runs(h, w, (y, x) => y * w + x);
+      if (cols > 0 && rows > 0 && w % cols === 0 && h % rows === 0 && w / cols === h / rows) return w / cols;
+    } catch (e) { /* image d'une autre origine : on retombe sur la valeur par défaut */ }
+    return Math.min(w, h) >= 48 && w % 48 === 0 ? 48 : Math.min(w, h);
+  }
+  /* Fraction de la case occupée jusqu'au bas du dessin. Une planche a presque toujours du vide sous les pieds :
+     sans ce repère, le personnage flotte au-dessus du sol d'autant de pixels que la marge. */
+  function footOf(g, w, h, size) {
+    try {
+      const d = g.getImageData(0, 0, w, h).data; let bot = 0;
+      for (let y = 0; y < h; y++) { const inCell = y % size; if (inCell <= bot) continue; for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 10) { bot = inCell; break; } }
+      return bot ? (bot + 1) / size : 1;
+    } catch (e) { return 1; }
+  }
+  const sheetInfo = name => sheets[name] || null;
+  /* dessine la case `idx` d'une planche, ajustée dans un carré de `size`, sans lissage */
+  function drawSheet(ctx, name, idx, x, y, size, opts = {}) {
+    const s = sheets[name]; if (!s) return false;
+    const i = ((idx | 0) % s.n + s.n) % s.n; const cx = (i % s.cols) * s.fw, cy = Math.floor(i / s.cols) * s.fh;
+    const k = size / s.fw; const dw = s.fw * k, dh = s.fh * k;
+    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y);
+    if (opts.flip) ctx.scale(-1, 1); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+    ctx.drawImage(s.c, cx, cy, s.fw, s.fh, -dw / 2, -dh / 2, dw, dh);
+    if (opts.flash) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(-dw / 2, -dh / 2, dw, dh); }
+    ctx.restore(); return true;
+  }
+  /* Cadences des clips. `once` : joue une fois et garde la dernière image (mort), ou revient au repos (tir, ramassage). */
+  const CLIPS = { idle: { fps: 6 }, walk: { fps: 12 }, fire: { fps: 14, once: true }, pick: { fps: 12, once: true }, death: { fps: 8, once: true, hold: true } };
+
   /* Un sprite peut être une image unique ou un jeu de vues { s, e, n } — sud (face), est (profil), nord (dos).
      L'ouest est l'est retourné : trois images suffisent aux quatre directions. Une vue manquante retombe sur le sud. */
   function pickDir(spec, dir) {
@@ -395,6 +451,18 @@ const Sprites = (() => {
        corps standard (y + 25 px à l'échelle 3) et dessiné SANS lissage, à la taille demandée : une image de 32 px
        affichée en 64 garde des pixels carrés. Une image de 16 px et une de 32 px se valent ici, c'est le multiple
        d'affichage qui compte, pas la finesse de la source. */
+    /* planche d'animation : elle prime sur tout le reste — c'est le dessin le plus fini dont on dispose */
+    const clip = opts.anim && opts.clip && opts.anim[opts.clip] ? opts.anim[opts.clip] : null;
+    if (clip && sheets[clip]) {
+      const sc = opts.scale || 1; const size = (opts.size || 64) * sc; const inf = sheets[clip];
+      const cf = CLIPS[opts.clip] || CLIPS.idle;
+      let f = Math.floor((opts.clipT || 0) * cf.fps);
+      if (cf.once) f = Math.min(f, inf.n - 1); else f %= inf.n;
+      const g2 = gait(opts.clip === 'walk' ? 0 : (opts.walk || 0));   // la planche de marche anime déjà : pas de démarche par-dessus
+      const foot = inf.foot != null ? inf.foot : 1;   // les pieds du dessin tombent sur la ligne de sol du corps standard
+      drawSheet(ctx, clip, f, x, y + 25 * sc - (foot - 0.5) * size - (opts.clip === 'walk' ? 0 : g2.bob), size, { flip: opts.flip, alpha: opts.alpha, flash: opts.flash });
+      return true;
+    }
     const bodyName = pickDir(opts.body, opts.dir || 's');
     const body = bodyName ? props[bodyName] : null;
     if (body) {
@@ -458,7 +526,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, pickDir, dirFrom, gait, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, pickDir, dirFrom, gait, addSheet, drawSheet, sheetInfo, CLIPS, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

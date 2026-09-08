@@ -172,6 +172,12 @@ const Projectiles = {
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
   },
 };
+/* durée d'un clip : nombre d'images de la planche divisé par sa cadence */
+function clipLen(sheetName, clip) {
+  const inf = Sprites.sheetInfo && Sprites.sheetInfo(sheetName); const cf = (Sprites.CLIPS && Sprites.CLIPS[clip]) || { fps: 10 };
+  return inf ? inf.n / cf.fps : 0.4;
+}
+
 function nearestEnemy(x, y, maxD = Infinity, filter) {
   let best = null, bd = maxD;
   for (const e of G.enemies) { if (e.dead || (filter && !filter(e))) continue; const d = dist(x, y, e.x, e.y); if (d < bd) { bd = d; best = e; } }
@@ -387,6 +393,7 @@ const Combat = {
   },
   collect(p) {
     const pl = G.player;
+    if (pl.char && pl.char.anim && pl.char.anim.pick && p.kind !== 'coin') pl.pickT = clipLen(pl.char.anim.pick, 'pick');   // pas sur chaque pièce : l'animation ne ferait que sursauter
     /* série de ramassages : la hauteur monte d'un cran à chaque orbe pris dans la demi-seconde (cascade), au lieu d'empiler 30 fois le même son */
     const streak = Time.now - (Pickups.lastT || -9) < 0.5 ? Math.min((Pickups.streak || 0) + 1, 12) : 0; Pickups.lastT = Time.now; Pickups.streak = streak;   // cascade : un degré de la gamme par orbe
     if (p.kind === 'xp') { Run.addXp(p.value); AudioEngine.pickupXp({ x: (p.x - W / 2) / (W / 2), step: streak }); }
@@ -564,6 +571,7 @@ class Player {
     this.flags = {}; this.weapon = null; this.skill = null; this.trail = null; this.orbitShield = null; this.secondChanceUsed = false;
     this.stats = Object.assign({}, BASE_STATS); this.hooks = Progression.collectHooks([]);
     this.buffs = []; this.stormT = 0; this.auraCd = new Map(); this.drones = [];
+    this.clip = 'idle'; this.clipT = 0; this.fireT = 0; this.pickT = 0;   // planche d'animation en cours (personnages dessinés par l'auteur)
     this.bot = null;  // contrôleur autoplay
   }
   addBuff(id, duration, mods, roomOnly = false) { this.buffs = this.buffs.filter(b => b.id !== id); this.buffs.push({ id, until: Time.now + duration, mods, roomOnly }); this.recompute(); }
@@ -596,8 +604,21 @@ class Player {
     if (G.run && G.run.attract) { this.hp = this.stats.maxHp; return; }
     this.dead = true; this.hp = 0; AudioEngine.playerDie({}); Run.onPlayerDeath();
   }
+  /* Choisit le clip à jouer et avance son horloge. L'ordre est une priorité : mourir passe avant tout, puis
+     ramasser, puis tirer, puis marcher. Un clip « une fois » garde la main jusqu'au bout de sa durée. */
+  animStep(dt, moving, firing) {
+    const a = this.char && this.char.anim; if (!a) return;
+    this.fireT = Math.max(0, this.fireT - dt); this.pickT = Math.max(0, this.pickT - dt);
+    if (firing && a.fire && this.fireT <= 0) this.fireT = clipLen(a.fire, 'fire');
+    let want = 'idle';
+    if (this.dead && a.death) want = 'death';
+    else if (this.pickT > 0 && a.pick) want = 'pick';
+    else if (this.fireT > 0 && a.fire) want = 'fire';
+    else if (moving && a.walk) want = 'walk';
+    if (want !== this.clip) { this.clip = want; this.clipT = 0; } else this.clipT += dt;
+  }
   update(dt) {
-    if (this.dead) return;
+    if (this.dead) { this.animStep(dt, false, false); return; }
     /* --- intentions : humain ou bot --- */
     let mv, aim, firing, wantSkill;
     if (this.bot) { const c = this.bot(this); mv = c.move; aim = c.aim; firing = c.fire; wantSkill = c.skill; }
@@ -625,6 +646,7 @@ class Player {
       if (Time.now < Time.slowUntil && this.slowImmune > Time.now) sp /= Time.slow;  // ralenti du temps : le joueur garde sa vitesse
       this.vx = mv.x * sp; this.vy = mv.y * sp; this.x += this.vx * dt; this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);
+      this.animStep(dt, !!(mv.x || mv.y), firing);
     }
     /* poussée : s'ajoute au déplacement puis s'amortit, comme chez les ennemis. Un piège peut ainsi déplacer le
        joueur sans lui retirer de vie — c'est la monnaie de tous les pièges « qui gênent au lieu de blesser ». */
@@ -672,8 +694,8 @@ class Player {
     if (hasFx('freeze') || hasFx('frost_bonus')) { if (VFX_RNG.chance(0.3)) Particles.spawn(this.x + VFX_RNG.range(-12, 12), this.y - VFX_RNG.range(0, 24), { count: 1, color: '#c8f6ff', size: 2, speedMax: 12, life: 0.7, glow: true }); }
     if (hasFx('poison')) { if (VFX_RNG.chance(0.2)) Particles.spawn(this.x + VFX_RNG.range(-8, 8), this.y - 20, { count: 1, color: '#b7ff7a', size: 2, speedMin: 15, speedMax: 30, angle: -Math.PI / 2, spread: 0.3, life: 0.8 }); }
     const tier = G.debug.forceTier != null ? G.debug.forceTier : Sprites.bodyTier(G.run && G.run.upgrades);
-    const dv = this.char && (this.char.body || this.char.face) ? Sprites.dirFrom(this.moveDir.x || Math.cos(this.aim), this.moveDir.y || Math.sin(this.aim)) : null;
-    Sprites.drawBody(ctx, this.char && this.char.sprite || 'player', this.x, this.y, { face: this.char && this.char.face, body: this.char && this.char.body, size: this.char && this.char.size, dir: dv && dv.dir, tier, flip: dv ? dv.flip : this.facing < 0, walk: this.walkT, flash: this.hurtFlash > 0, scale: G.room && G.room.tempo && G.room.tempo.started ? 1 + 0.07 * Math.max(0, 1 - Beat.phase() * 3) : 1, fallback: () => {
+    const dv = this.char && (this.char.body || this.char.face || this.char.anim) ? Sprites.dirFrom(this.moveDir.x || Math.cos(this.aim), this.moveDir.y || Math.sin(this.aim)) : null;
+    Sprites.drawBody(ctx, this.char && this.char.sprite || 'player', this.x, this.y, { face: this.char && this.char.face, body: this.char && this.char.body, size: this.char && this.char.size, anim: this.char && this.char.anim, clip: this.clip, clipT: this.clipT, dir: dv && dv.dir, tier, flip: dv ? dv.flip : this.facing < 0, walk: this.walkT, flash: this.hurtFlash > 0, scale: G.room && G.room.tempo && G.room.tempo.started ? 1 + 0.07 * Math.max(0, 1 - Beat.phase() * 3) : 1, fallback: () => {
       ctx.fillStyle = this.hurtFlash > 0 ? '#ff9db0' : '#e8ecf7'; ctx.shadowColor = '#6ee7ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
       ctx.fillStyle = '#0b0d14'; ctx.beginPath(); ctx.arc(this.x + Math.cos(this.aim) * 6, this.y + Math.sin(this.aim) * 6, 4, 0, TAU); ctx.fill(); } });
     /* arme en main, orientée vers la visée */
