@@ -111,7 +111,7 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_liane', count: 2, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_racine', count: 1, x: 12, y: 10, elite: true } ] },
     ],
     traps: [
-      { trap: 'trap_tourniquet', x: 11, y: 6, phase: 0, params: { arms: 3, lengthTiles: 5, angularSpeed: 1.4 } },
+      { trap: 'trap_tourniquet', x: 11, y: 6, params: { arms: 3, lengthTiles: 5, beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
       { trap: 'trap_dalles', x: 1, y: 1, w: 3, h: 3, phase: 0 }, { trap: 'trap_dalles', x: 20, y: 9, w: 3, h: 3, phase: 1 },
       { trap: 'trap_tourelle', x: 7, y: 0, phase: 0 }, { trap: 'trap_tourelle', x: 16, y: 0, phase: 1.2 },
       { trap: 'trap_nappe', x: 6, y: 6, phase: 2 },

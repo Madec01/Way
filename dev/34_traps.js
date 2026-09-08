@@ -50,6 +50,12 @@ class Trap {
      rt est alors le temps musical (Beat.t) et le piège se déclenche sur le temps « on » de chaque cycle, quel que soit le BPM de la piste. */
   syncBeat() {
     const b = this.beats, L = Beat.beatLen(); const tele = b.telegraph != null ? b.telegraph : 1, on = b.on || 0;
+    /* Trajets continus : la période, elle, était bien convertie, mais ni la vitesse de rotation ni celle du rail.
+       Le bras croisait donc le joueur à un instant musicalement arbitraire, et le décalage dérivait à l'infini.
+       `turn` = temps pour un tour, `trip` = temps pour un aller. `speedMul` est écarté : un piège plus rapide en
+       difficulté 3 sortirait du tempo. */
+    if (b.turn) this.p.angularSpeed = TAU / (b.turn * L) / (this.speedMul || 1);
+    if (b.trip) { const len = this.railLength(); if (len) this.p.speed = len / (b.trip * L) / (this.speedMul || 1); }
     if (this.kind === 'wall_fireball' || this.kind === 'turret_fixed') { const every = b.every || b.period || 2; this.p.every = every * L * G.difficulty.fireRateMul; this.telegraph = tele * L; this.phase = ((((on - tele) % every) + every) % every) * L; }
     else { const period = b.period || 4, act = b.active || 1; this.period = period * L; this.active = act * L; this.telegraph = tele * L; this.phase = ((((on + act) % period) + period) % period) * L; }
   }
@@ -152,6 +158,13 @@ class Trap {
   d_gas_zone(x, y, rt) { const c = this.cycle(rt + 0.4); return c.stage !== 'idle' && dist(x, y, this.cx, this.cy) < (this.p.radius || 90) + 20 ? 0.8 : 0; }
 
   /* --- saw_rail : scie qui suit des points de passage --- */
+  /* longueur totale du rail en px : sert à convertir « un aller en N temps » en px/s */
+  railLength() {
+    const pts = (this.p.points || [{ x: 0, y: 0 }, { x: this.tw - 1, y: 0 }]).map(q => ({ x: ROOM_X + (this.tx + q.x + 0.5) * TILE, y: ROOM_Y + (this.ty + q.y + 0.5) * TILE }));
+    const n = this.p.loop ? pts.length : pts.length - 1; let total = 0;
+    for (let i = 0; i < n; i++) total += dist(pts[i].x, pts[i].y, pts[(i + 1) % pts.length].x, pts[(i + 1) % pts.length].y);
+    return total;
+  }
   sawPos(rt) {
     const pts = (this.p.points || [{ x: 0, y: 0 }, { x: this.tw - 1, y: 0 }]).map(q => ({ x: ROOM_X + (this.tx + q.x + 0.5) * TILE, y: ROOM_Y + (this.ty + q.y + 0.5) * TILE }));
     const loop = this.p.loop; const segs = []; let total = 0;
@@ -162,7 +175,8 @@ class Trap {
     for (const s of segs) { if (d <= s.l) { const k = d / s.l; return { x: lerp(s.a.x, s.b.x, k), y: lerp(s.a.y, s.b.y, k), pts }; } d -= s.l; }
     return Object.assign({}, pts[pts.length - 1], { pts });
   }
-  u_saw_rail(dt, rt, pl) { const s = this.sawPos(rt); if (this.lt(rt) < this.telegraph) { this.warn(0, 'trapSaw'); return; } if (!pl.dead && dist(s.x, s.y, pl.x, pl.y) < (this.p.radius || 22) + pl.r - 3) this.hit(pl); if (Math.floor(rt * 2) !== this.sawT) { this.sawT = Math.floor(rt * 2); AudioEngine.trapSaw({ x: (s.x - W / 2) / (W / 2), intensity: 0.25 }); } }
+  u_saw_rail(dt, rt, pl) { const s = this.sawPos(rt); if (this.lt(rt) < this.telegraph) { this.warn(0, 'trapSaw'); return; } if (!pl.dead && dist(s.x, s.y, pl.x, pl.y) < (this.p.radius || 22) + pl.r - 3) this.hit(pl); const st = this.beats ? Math.floor(Beat.t / Beat.beatLen()) : Math.floor(rt * 2);   // en musique il grince sur le temps ; sinon, l'ancienne cadence
+    if (st !== this.sawT) { this.sawT = st; AudioEngine.trapSaw({ x: (s.x - W / 2) / (W / 2), intensity: 0.25 }); } }
   r_saw_rail(ctx, rt) {
     const s = this.sawPos(rt); const R = this.p.radius || 22; ctx.save();
     if (s.pts) { ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 4; ctx.beginPath(); s.pts.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); if (this.p.loop) ctx.closePath(); ctx.stroke(); }
@@ -180,7 +194,7 @@ class Trap {
     if (idx > this.fireCount - 1 && inCycle >= this.telegraph) {
       this.fireCount = idx + 1; const n = p.count || 3, sp = (p.speed || 260) * this.speedMul, spread = p.spread || 0.5; const burst = p.burst || 1;
       for (let i = 0; i < n; i++) { const a = this.aimA + (n > 1 ? lerp(-spread / 2, spread / 2, i / (n - 1)) : 0); Projectiles.spawn({ x: this.cx + Math.cos(a) * 14, y: this.cy + Math.sin(a) * 14, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: p.size || 6, damage: this.damage, owner: 'enemy', life: 5, color: this.color, bounce: p.bounce || 0, trap: true }); }
-      AudioEngine.shootPistol({ x: (this.cx - W / 2) / (W / 2), intensity: 0.35 });
+      AudioEngine.trapShot({ x: (this.cx - W / 2) / (W / 2), intensity: 0.5 });
     }
   }
   r_turret_fixed(ctx, rt) {

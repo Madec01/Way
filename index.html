@@ -936,7 +936,7 @@ const BALANCE = {
     shootBlade: 1.7, shootBow: 1.3, shootBoomerang: 1.7, shootChain: 2.2, shootPistol: 0.5, shootHammer: 0.7, hitEnemy: 0.85, dash: 2, skillTurret: 2,
     pickupXp: 2.4, pickupCoin: 2.4, pickupFragment: 2, uiHover: 3, uiClick: 2.4, uiConfirm: 1.3,
     /* pièges : très en retrait sous la musique, ils ponctuent sans couvrir */
-    trapWarn: 1.1, trapSpike: 1.4, trapLaser: 0.5, trapFire: 0.5, trapGas: 0.45, trapSaw: 0.4,
+    trapWarn: 0.6, trapSpike: 0.7, trapLaser: 0.4, trapFire: 0.45, trapGas: 0.4, trapSaw: 0.25, trapShot: 0.4,
     chestOpen: 1.5, bossRoar: 0.8, playerDie: 0.8, tempoNote: 0.8,   // mix : effets répétitifs (tirs, coups, ramassages, interface) ≈ −6 dB sous la musique, impacts rares au niveau
   };
   /* Espacement minimal entre deux déclenchements du même son (s) : au-delà de la polyphonie utile, les rafales (ramassage
@@ -952,7 +952,7 @@ const BALANCE = {
     for (let oct = -4; oct <= 5; oct++) for (const s of d) { const c = key.root * Math.pow(2, oct + s / 12); const dist = Math.abs(Math.log2(c / f)); if (dist < bd) { bd = dist; best = c; } }
     return best;
   }
-  const GAPS = { pickupXp: 0.05, pickupCoin: 0.05, pickupFragment: 0.08, hitEnemy: 0.03, uiHover: 0.09, uiClick: 0.06, tempoNote: 0.08, trapWarn: 0.1, trapSpike: 0.1 };
+  const GAPS = { pickupXp: 0.05, pickupCoin: 0.05, pickupFragment: 0.08, hitEnemy: 0.03, uiHover: 0.09, uiClick: 0.06, tempoNote: 0.08, trapWarn: 0.23, trapSpike: 0.2, trapShot: 0.2, trapSaw: 0.23 };   // 0,23 s = un temps à 129 BPM : jamais deux annonces sur le même temps
   const lastAt = {};
   function def(name, prio, fn) {
     NAMES.push(name);
@@ -1513,6 +1513,19 @@ const BALANCE = {
   /* ==================================================================
      INTERFACE
      ================================================================== */
+
+  // trapShot : tir d'une tourelle → claquement sec bandpassé 1,8 kHz + petit corps 220 Hz. Volontairement NON accordé :
+  // une percussion sans hauteur ne peut pas frotter contre la piste. Remplace shootPistol, qui était le son de
+  // l'arme du joueur — on ne distinguait pas ce qu'on tirait de ce qui nous tirait dessus.
+  def('trapShot', 4, (o, t) => {
+    const v = voice(o, 0.22, 4); if (!v) return;
+    const n = v.noise('white', t, t + 0.09);
+    const bp = v.filter('bandpass', 1800, 4); const g = v.gain(0);
+    v.chain(n, bp, g, v.out); perc(g.gain, t, 0.5 * o.g, 0.002, 0.055);
+    const b = v.osc('triangle', 220, t, t + 0.08); const g2 = v.gain(0);
+    sweep(b.frequency, t, 220, 130, 0.06);
+    v.chain(b, g2, v.out); perc(g2.gain, t, 0.22 * o.g, 0.002, 0.06);
+  });
 
   // uiHover : survol → bruit blanc bandpass 3 kHz Q6 25 ms + tick FM 1500 Hz bandpassé, très discret.
   def('uiHover', 1, (o, t) => {
@@ -2402,7 +2415,7 @@ const CONTENT = {
           { enemy: 'enemy_sentinelle', count: 1, x: 12, y: 11 } ] }
       ],
       traps: [
-        { trap: 'trap_tourniquet', x: 11, y: 6, phase: 0 },
+        { trap: 'trap_tourniquet', x: 11, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
         { trap: 'trap_dalles', x: 1, y: 1, w: 3, h: 3, phase: 0 },
         { trap: 'trap_dalles', x: 20, y: 9, w: 3, h: 3, phase: 1.0 },
         { trap: 'trap_tourelle', x: 11, y: 0, phase: 0 }
@@ -2593,7 +2606,7 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_liane', count: 2, x: 21, y: 6 }, { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 }, { enemy: 'enemy_racine', count: 1, x: 12, y: 10, elite: true } ] },
     ],
     traps: [
-      { trap: 'trap_tourniquet', x: 11, y: 6, phase: 0, params: { arms: 3, lengthTiles: 5, angularSpeed: 1.4 } },
+      { trap: 'trap_tourniquet', x: 11, y: 6, params: { arms: 3, lengthTiles: 5, beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
       { trap: 'trap_dalles', x: 1, y: 1, w: 3, h: 3, phase: 0 }, { trap: 'trap_dalles', x: 20, y: 9, w: 3, h: 3, phase: 1 },
       { trap: 'trap_tourelle', x: 7, y: 0, phase: 0 }, { trap: 'trap_tourelle', x: 16, y: 0, phase: 1.2 },
       { trap: 'trap_nappe', x: 6, y: 6, phase: 2 },
@@ -2788,7 +2801,7 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_crotale', count: 2, x: 21, y: 6 }, { enemy: 'enemy_coyote', count: 2, x: -1, y: -1 }, { enemy: 'enemy_bison', count: 1, x: 19, y: 11 } ] },
     ],
     traps: [
-      { trap: 'trap_moulin', x: 5, y: 6, phase: 0 },
+      { trap: 'trap_moulin', x: 5, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
       { trap: 'trap_ours', x: 1, y: 1, w: 3, h: 3, phase: 0 }, { trap: 'trap_ours', x: 20, y: 9, w: 3, h: 3, phase: 1 },
       { trap: 'trap_embuscade', x: 7, y: 0, phase: 0 }, { trap: 'trap_embuscade', x: 19, y: 12, phase: 1.2 },
       { trap: 'trap_poudre', x: 6, y: 6, phase: 2 },
@@ -2987,7 +3000,7 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_djinn', count: 2, x: 21, y: 6 }, { enemy: 'enemy_derviche', count: 2, x: -1, y: -1 }, { enemy: 'enemy_colosse', count: 1, x: 12, y: 11 } ] },
     ],
     traps: [
-      { trap: 'trap_sabres', x: 11, y: 6, phase: 0 },
+      { trap: 'trap_sabres', x: 11, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
       { trap: 'trap_pieux', x: 1, y: 1, w: 3, h: 3, phase: 0 }, { trap: 'trap_pieux', x: 20, y: 9, w: 3, h: 3, phase: 1 },
       { trap: 'trap_meurtriere', x: 7, y: 0, phase: 0 }, { trap: 'trap_meurtriere', x: 16, y: 12, phase: 1.2 },
       { trap: 'trap_encens', x: 6, y: 6, phase: 2 },
@@ -4282,6 +4295,7 @@ class Player {
     this.aim = 0; this.moveDir = { x: 0, y: 0 }; this.facing = 1;
     this.hp = 100; this.shield = 0; this.shieldUntil = 0; this.invulnUntil = 0; this.hurtFlash = 0; this.dead = false;
     this.attackCd = 0; this.charge = 0; this.skillCd = 0; this.skillCharges = 1; this.skillMaxCharges = 1;
+    this.kvx = 0; this.kvy = 0;   // vélocité de poussée (souffles, ondes, balanciers) : les ennemis l'avaient, pas le joueur
     this.dashing = false; this.dashT = 0; this.dashDur = 0; this.dashVx = 0; this.dashVy = 0; this.dashInvuln = true;
     this.magnetUntil = 0; this.killSpeedUntil = 0; this.killSpeedMul = 1; this.overdriveUntil = 0; this.overdrive = null;
     this.flags = {}; this.weapon = null; this.skill = null; this.trail = null; this.orbitShield = null; this.secondChanceUsed = false;
@@ -4349,6 +4363,9 @@ class Player {
       this.vx = mv.x * sp; this.vy = mv.y * sp; this.x += this.vx * dt; this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);
     }
+    /* poussée : s'ajoute au déplacement puis s'amortit, comme chez les ennemis. Un piège peut ainsi déplacer le
+       joueur sans lui retirer de vie — c'est la monnaie de tous les pièges « qui gênent au lieu de blesser ». */
+    if (this.kvx || this.kvy) { this.x += this.kvx * dt; this.y += this.kvy * dt; const k = Math.min(1, 10 * dt); this.kvx -= this.kvx * k; this.kvy -= this.kvy * k; if (Math.abs(this.kvx) < 1) this.kvx = 0; if (Math.abs(this.kvy) < 1) this.kvy = 0; }
     this.hitWall = false; resolveRoomCollision(this);
     /* --- régén, boucliers, timers --- */
     if (this.stats.regen > 0) this.heal(this.stats.regen * dt, true);
@@ -4999,6 +5016,12 @@ class Trap {
      rt est alors le temps musical (Beat.t) et le piège se déclenche sur le temps « on » de chaque cycle, quel que soit le BPM de la piste. */
   syncBeat() {
     const b = this.beats, L = Beat.beatLen(); const tele = b.telegraph != null ? b.telegraph : 1, on = b.on || 0;
+    /* Trajets continus : la période, elle, était bien convertie, mais ni la vitesse de rotation ni celle du rail.
+       Le bras croisait donc le joueur à un instant musicalement arbitraire, et le décalage dérivait à l'infini.
+       `turn` = temps pour un tour, `trip` = temps pour un aller. `speedMul` est écarté : un piège plus rapide en
+       difficulté 3 sortirait du tempo. */
+    if (b.turn) this.p.angularSpeed = TAU / (b.turn * L) / (this.speedMul || 1);
+    if (b.trip) { const len = this.railLength(); if (len) this.p.speed = len / (b.trip * L) / (this.speedMul || 1); }
     if (this.kind === 'wall_fireball' || this.kind === 'turret_fixed') { const every = b.every || b.period || 2; this.p.every = every * L * G.difficulty.fireRateMul; this.telegraph = tele * L; this.phase = ((((on - tele) % every) + every) % every) * L; }
     else { const period = b.period || 4, act = b.active || 1; this.period = period * L; this.active = act * L; this.telegraph = tele * L; this.phase = ((((on + act) % period) + period) % period) * L; }
   }
@@ -5101,6 +5124,13 @@ class Trap {
   d_gas_zone(x, y, rt) { const c = this.cycle(rt + 0.4); return c.stage !== 'idle' && dist(x, y, this.cx, this.cy) < (this.p.radius || 90) + 20 ? 0.8 : 0; }
 
   /* --- saw_rail : scie qui suit des points de passage --- */
+  /* longueur totale du rail en px : sert à convertir « un aller en N temps » en px/s */
+  railLength() {
+    const pts = (this.p.points || [{ x: 0, y: 0 }, { x: this.tw - 1, y: 0 }]).map(q => ({ x: ROOM_X + (this.tx + q.x + 0.5) * TILE, y: ROOM_Y + (this.ty + q.y + 0.5) * TILE }));
+    const n = this.p.loop ? pts.length : pts.length - 1; let total = 0;
+    for (let i = 0; i < n; i++) total += dist(pts[i].x, pts[i].y, pts[(i + 1) % pts.length].x, pts[(i + 1) % pts.length].y);
+    return total;
+  }
   sawPos(rt) {
     const pts = (this.p.points || [{ x: 0, y: 0 }, { x: this.tw - 1, y: 0 }]).map(q => ({ x: ROOM_X + (this.tx + q.x + 0.5) * TILE, y: ROOM_Y + (this.ty + q.y + 0.5) * TILE }));
     const loop = this.p.loop; const segs = []; let total = 0;
@@ -5111,7 +5141,8 @@ class Trap {
     for (const s of segs) { if (d <= s.l) { const k = d / s.l; return { x: lerp(s.a.x, s.b.x, k), y: lerp(s.a.y, s.b.y, k), pts }; } d -= s.l; }
     return Object.assign({}, pts[pts.length - 1], { pts });
   }
-  u_saw_rail(dt, rt, pl) { const s = this.sawPos(rt); if (this.lt(rt) < this.telegraph) { this.warn(0, 'trapSaw'); return; } if (!pl.dead && dist(s.x, s.y, pl.x, pl.y) < (this.p.radius || 22) + pl.r - 3) this.hit(pl); if (Math.floor(rt * 2) !== this.sawT) { this.sawT = Math.floor(rt * 2); AudioEngine.trapSaw({ x: (s.x - W / 2) / (W / 2), intensity: 0.25 }); } }
+  u_saw_rail(dt, rt, pl) { const s = this.sawPos(rt); if (this.lt(rt) < this.telegraph) { this.warn(0, 'trapSaw'); return; } if (!pl.dead && dist(s.x, s.y, pl.x, pl.y) < (this.p.radius || 22) + pl.r - 3) this.hit(pl); const st = this.beats ? Math.floor(Beat.t / Beat.beatLen()) : Math.floor(rt * 2);   // en musique il grince sur le temps ; sinon, l'ancienne cadence
+    if (st !== this.sawT) { this.sawT = st; AudioEngine.trapSaw({ x: (s.x - W / 2) / (W / 2), intensity: 0.25 }); } }
   r_saw_rail(ctx, rt) {
     const s = this.sawPos(rt); const R = this.p.radius || 22; ctx.save();
     if (s.pts) { ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 4; ctx.beginPath(); s.pts.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)); if (this.p.loop) ctx.closePath(); ctx.stroke(); }
@@ -5129,7 +5160,7 @@ class Trap {
     if (idx > this.fireCount - 1 && inCycle >= this.telegraph) {
       this.fireCount = idx + 1; const n = p.count || 3, sp = (p.speed || 260) * this.speedMul, spread = p.spread || 0.5; const burst = p.burst || 1;
       for (let i = 0; i < n; i++) { const a = this.aimA + (n > 1 ? lerp(-spread / 2, spread / 2, i / (n - 1)) : 0); Projectiles.spawn({ x: this.cx + Math.cos(a) * 14, y: this.cy + Math.sin(a) * 14, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: p.size || 6, damage: this.damage, owner: 'enemy', life: 5, color: this.color, bounce: p.bounce || 0, trap: true }); }
-      AudioEngine.shootPistol({ x: (this.cx - W / 2) / (W / 2), intensity: 0.35 });
+      AudioEngine.trapShot({ x: (this.cx - W / 2) / (W / 2), intensity: 0.5 });
     }
   }
   r_turret_fixed(ctx, rt) {
@@ -5922,7 +5953,11 @@ const Tempo = {
   /* Lance l'annonce de la famille suivante, mais jamais moins de 6 mesures après la précédente : même si les vagues
      s'enchaînent vite, les pièges arrivent à un rythme tenable. Deux mesures d'avertissement avant la mise en place. */
   tryAnnounce(room) {
-    const tp = room.tempo; if (!tp.wantGroup || tp.pendingGroup != null) return;
+    const tp = room.tempo; if (tp.pendingGroup != null || tp.boss || !tp.groups) return;   // la salle de boss n'a pas de familles de pièges
+    /* Filet : les vagues n'arment qu'une famille chacune, à partir de la deuxième (la salle démarre sans piège,
+       c'est voulu). Avec 4 familles pour 3 vagues, les deux dernières ne s'armaient JAMAIS — dans les quatre
+       biomes. Passé 10 mesures sans nouveauté, la suivante s'annonce toute seule. */
+    if (!tp.wantGroup) { if (!tp.started || Math.floor(Beat.index() / 4) - tp.armBar < 10) return; }
     const n = tp.groupIdx + 1; if (n >= tp.groups.length) { tp.wantGroup = false; return; }
     if (Math.floor(Beat.index() / 4) - tp.armBar < 6) return;
     const first = room.traps.find(t => t.id === tp.groups[n]);
@@ -5957,6 +5992,53 @@ const Tempo = {
     return mul;
   },
   /* sol : flash sur chaque temps + ondes qui partent du centre */
+  /* PARTITION AU SOL — les tuiles qui vont être frappées s'éclairent AVANT que ça arrive : faiblement un temps à
+     l'avance, franchement un demi-temps avant. C'est la couche de lisibilité qui autorise tout le reste : sans elle,
+     chaque piège doit crier son propre avertissement et la salle devient un sapin de Noël.
+     Recalculée seulement quand on change de demi-temps (8 fois par seconde au plus), jamais par image : sinon ce
+     serait 312 tuiles × N pièges × 60 images. */
+  score: { key: -1, look: null, near: null },
+  scoreAt(room) {
+    const sc = Tempo.score, L = Beat.beatLen(); const key = Math.floor(Beat.t / (L / 2));
+    if (sc.key === key && sc.look) return sc;
+    sc.key = key;
+    const n = ROOM_COLS * ROOM_ROWS;
+    if (!sc.look) { sc.look = new Float32Array(n); sc.near = new Float32Array(n); }
+    sc.look.fill(0); sc.near.fill(0);
+    const beats = room.traps.filter(t => t.beats && !t.disabled);
+    if (!beats.length) return sc;
+    for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
+      const x = ROOM_X + (tx + 0.5) * TILE, y = ROOM_Y + (ty + 0.5) * TILE; const i = ty * ROOM_COLS + tx;
+      let a = 0, b = 0;
+      for (const t of beats) { a = Math.max(a, t.dangerAt(x, y, Beat.t + L)); b = Math.max(b, t.dangerAt(x, y, Beat.t + L * 0.5)); }
+      sc.look[i] = a; sc.near[i] = b;
+    }
+    return sc;
+  },
+  renderScore(ctx, room) {
+    if (!room.traps.some(t => t.beats && !t.disabled)) return;
+    const sc = Tempo.scoreAt(room); ctx.save();
+    for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
+      const i = ty * ROOM_COLS + tx; const far = sc.look[i], near = sc.near[i];
+      if (far < 0.2 && near < 0.2) continue;
+      const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE;
+      /* Le damier du dancefloor remplit déjà des tuiles entières : un remplissage de plus s'y noierait. La partition
+         parle donc en coins (annoncé) et en cadre (imminent) — deux formes que rien d'autre ne dessine. */
+      if (far >= 0.2) {
+        ctx.globalAlpha = 0.25 + 0.35 * far; ctx.fillStyle = '#ffd166'; const c = 7, e = 3;
+        for (const [ox, oy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+          const px = x + (ox ? TILE - c - e : e), py = y + (oy ? TILE - c - e : e);
+          ctx.fillRect(px, py, c, 2); ctx.fillRect(px + (ox ? c - 2 : 0), py, 2, c);
+        }
+      }
+      if (near >= 0.2) {
+        ctx.globalAlpha = 0.5 + 0.4 * near; ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2;
+        ctx.strokeRect(x + 4.5, y + 4.5, TILE - 9, TILE - 9);
+        ctx.globalAlpha = 0.07 + 0.1 * near; ctx.fillStyle = '#ffd166'; ctx.fillRect(x + 5, y + 5, TILE - 10, TILE - 10);
+      }
+    }
+    ctx.restore();
+  },
   renderFloor(ctx, room) {
     const tp = room.tempo; const ph = Beat.phase(); const idx = Beat.index(); ctx.save();
     ctx.beginPath(); ctx.rect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H); ctx.clip();
@@ -6196,7 +6278,7 @@ const Room = {
     /* salle du tempo */
     if (r.tempo) Tempo.update(r, dt);
     /* pièges (salle du tempo : temps musical) */
-    for (const t of r.traps) t.update(dt, Room.trapTime(r));
+    for (const t of r.traps) t.update(dt, Room.trapTime(r, t));
     /* salles modulaires (phase 2) : Modular.update(r, dt) déplacera les obstacles et recalculera px/py */
     if (r.modular.length) Modular.update(r, dt);
     /* zones de dégâts (traînées de feu, gaz du joueur…) */
@@ -6247,7 +6329,10 @@ const Room = {
     }
   },
   /* horloge des pièges : temps musical dans la salle du tempo, temps de salle ailleurs */
-  trapTime(r) { return r.tempo && r.tempo.syncTraps ? Beat.t : r.time; },
+  /* Horloge d'un piège : musicale s'il déclare une cadence en temps (`params.beats`), horloge de salle sinon.
+     C'était décidé par salle : un piège rythmique posé hors de la salle du tempo tournait à la bonne vitesse mais
+     sur une phase sans rapport avec la musique — donc seule la salle 7 jouait en mesure. */
+  trapTime(r, t) { return (t ? t.beats : r.tempo && r.tempo.syncTraps) ? Beat.t : r.time; },
   clear() {
     const r = G.room; if (r.state === 'clear') return; r.state = 'clear'; r.stateT = 0;
     if (r.tempo) { Tempo.onClear(r); return; }   // porte sur la mesure suivante
@@ -6257,7 +6342,7 @@ const Room = {
   /* score de la salle courante */
   score() { const r = G.room; return Progression.roomScore({ hits: r.hits, time: r.time, refTime: r.refTime, bestCombo: r.bestCombo, comboTarget: r.comboTarget, died: r.died, fragments: r.fragments, fragmentsTotal: r.fragmentsDef.length }); },
   /* danger pour le bot */
-  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, Room.trapTime(r))); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
+  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, Room.trapTime(r, t))); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
 
   render(ctx) {
     const r = G.room; if (!r) return;
@@ -6267,6 +6352,7 @@ const Room = {
     /* obstacles */
     if (r.challenge) Challenge.renderFloor(ctx, r);
     if (r.tempo) Tempo.renderFloor(ctx, r);
+    Tempo.renderScore(ctx, r);   // partition au sol : les tuiles qui vont être frappées s'annoncent, dans toutes les salles
     for (const o of r.obstacles) if (!o.dyn && !o.terrain) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */
@@ -6277,7 +6363,7 @@ const Room = {
     ctx.restore();
     /* zones */
     for (const h of r.hazards) { ctx.save(); ctx.globalAlpha = 0.45 * clamp((h.until - Time.now) / 1, 0.3, 1); ctx.fillStyle = h.color; ctx.shadowColor = h.color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, TAU); ctx.fill(); ctx.restore(); }
-    for (const t of r.traps) t.render(ctx, Room.trapTime(r));
+    for (const t of r.traps) t.render(ctx, Room.trapTime(r, t));
     /* coffre */
     if (r.chest) Sprites.drawChest(ctx, r.chest);
     /* tourelles & leurres */

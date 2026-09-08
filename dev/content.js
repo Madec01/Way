@@ -560,7 +560,7 @@ const CONTENT = {
           { enemy: 'enemy_sentinelle', count: 1, x: 12, y: 11 } ] }
       ],
       traps: [
-        { trap: 'trap_tourniquet', x: 11, y: 6, phase: 0 },
+        { trap: 'trap_tourniquet', x: 11, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
         { trap: 'trap_dalles', x: 1, y: 1, w: 3, h: 3, phase: 0 },
         { trap: 'trap_dalles', x: 20, y: 9, w: 3, h: 3, phase: 1.0 },
         { trap: 'trap_tourelle', x: 11, y: 0, phase: 0 }

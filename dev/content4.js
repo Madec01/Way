@@ -131,7 +131,7 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_djinn', count: 2, x: 21, y: 6 }, { enemy: 'enemy_derviche', count: 2, x: -1, y: -1 }, { enemy: 'enemy_colosse', count: 1, x: 12, y: 11 } ] },
     ],
     traps: [
-      { trap: 'trap_sabres', x: 11, y: 6, phase: 0 },
+      { trap: 'trap_sabres', x: 11, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
       { trap: 'trap_pieux', x: 1, y: 1, w: 3, h: 3, phase: 0 }, { trap: 'trap_pieux', x: 20, y: 9, w: 3, h: 3, phase: 1 },
       { trap: 'trap_meurtriere', x: 7, y: 0, phase: 0 }, { trap: 'trap_meurtriere', x: 16, y: 12, phase: 1.2 },
       { trap: 'trap_encens', x: 6, y: 6, phase: 2 },

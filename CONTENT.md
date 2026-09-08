@@ -736,3 +736,21 @@ Le moulin est passé de (11,6) à (5,6) : ses pales de 5 tuiles ne tenaient pas 
 `node dev/check-terrain.js` relit les quatre `content*.js` hors ligne : nombre de lignes, largeur, caractères inconnus, tuile d'entrée praticable et **porte atteignable depuis l'entrée** (parcours en largeur). Une salle coupée en deux est une run perdue : ça doit casser le build, pas se découvrir en jouant. Le même contrôle tourne aussi au chargement (`Terrain.connected`) et écrit un avertissement dans la console.
 
 Le décor n'est semé que sur du sol nu (`Terrain.plain`) : pas de tapis au fond du bassin ni de plante sur un pont. Les obstacles issus du terrain portent `terrain: true` et échappent à `Room.dress`.
+
+---
+
+## 27. Étape 0 du chantier rythmique — cinq réparations
+
+Aucun contenu neuf : ces cinq points rendent musical ce qui était déjà écrit.
+
+**1. L'horloge est choisie par piège.** `Room.trapTime(r, t)` renvoie l'horloge musicale dès qu'un piège déclare `params.beats`. C'était décidé **par salle** : seule la salle 7 jouait en mesure, et un piège rythmique posé ailleurs tournait à la bonne vitesse sur une phase sans rapport avec la musique. Les pièges des salles de boss n'en déclarent aucun, ils gardent l'horloge de salle — les phrases des boss ne sont pas perturbées.
+
+**2. Les quatre familles de la salle du tempo s'arment enfin.** `Tempo.onWave` n'est appelé qu'à partir de la deuxième vague, pour que la salle démarre sans piège. Avec **4 familles déclarées pour 3 vagues**, les deux dernières ne s'armaient jamais — dans les quatre biomes. La salle du tempo jouait donc depuis toujours avec la moitié de son orchestre. `tryAnnounce` a maintenant un filet de sécurité : passé 10 mesures sans nouveauté, la famille suivante s'annonce d'elle-même. Vérifié : 4/4 armées.
+
+**3. Les trajets continus sont calés sur le temps.** `beats.turn` (temps par tour) et `beats.trip` (temps par aller) convertissent la vitesse de rotation et celle du rail en durées musicales. `syncBeat` convertissait la période mais **jamais `angularSpeed`** : le tourniquet, le moulin et la roue à sabres tournaient en rad/s, croisaient le joueur à un instant arbitraire, et dérivaient. Les quatre pièges tournants du jeu sont passés à **un tour par mesure** — leurs bras croisent les quatre directions cardinales sur les quatre temps. Ils sont en salle 3, hors salle du tempo : c'est ce que le point 1 rend possible.
+
+**4. Le joueur a une vélocité de poussée** (`pl.kvx / pl.kvy`), que seuls les ennemis avaient. Amortissement de 10/s : **la distance parcourue vaut l'impulsion divisée par 10** (1440 px/s = 3 tuiles). C'est le prérequis de tous les pièges qui déplacent sans blesser.
+
+**5. Le mix des pièges descend sous la musique.** `trapSpike` 1,4 → 0,7 (c'était le son le plus fort du jeu, presque 3× le pistolet du joueur), `trapWarn` 1,1 → 0,6, `trapSaw` 0,4 → 0,25, `trapLaser` 0,5 → 0,4, `trapGas` 0,45 → 0,4. L'espacement des annonces passe à 0,23 s — un temps à 129 BPM, donc jamais deux annonces sur le même temps. Le grincement du rail se cale sur le temps au lieu de 2 Hz : contre une pulsation à 2,153 Hz, il produisait un battement lent de 0,15 Hz, exactement la sensation « ça frotte ». Et **la tourelle a son propre son** (`trapShot`, percussion sèche non accordée) : elle jouait `shootPistol`, le son de l'arme du joueur.
+
+**Bonus : la partition au sol.** `Tempo.renderScore` marque les tuiles qui vont être frappées — coins dorés un temps à l'avance, cadre plein un demi-temps avant. Elle s'applique à **toute** salle contenant des pièges rythmiques, pas seulement la salle 7. C'est la couche de lisibilité qui permettra de composer sans que la salle devienne un sapin de Noël.

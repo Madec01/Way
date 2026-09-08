@@ -132,7 +132,7 @@ CONTENT.rooms.push(
       { at: 'clear', spawns: [ { enemy: 'enemy_crotale', count: 2, x: 21, y: 6 }, { enemy: 'enemy_coyote', count: 2, x: -1, y: -1 }, { enemy: 'enemy_bison', count: 1, x: 19, y: 11 } ] },
     ],
     traps: [
-      { trap: 'trap_moulin', x: 5, y: 6, phase: 0 },
+      { trap: 'trap_moulin', x: 5, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
       { trap: 'trap_ours', x: 1, y: 1, w: 3, h: 3, phase: 0 }, { trap: 'trap_ours', x: 20, y: 9, w: 3, h: 3, phase: 1 },
       { trap: 'trap_embuscade', x: 7, y: 0, phase: 0 }, { trap: 'trap_embuscade', x: 19, y: 12, phase: 1.2 },
       { trap: 'trap_poudre', x: 6, y: 6, phase: 2 },

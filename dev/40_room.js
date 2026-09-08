@@ -132,7 +132,7 @@ const Room = {
     /* salle du tempo */
     if (r.tempo) Tempo.update(r, dt);
     /* pièges (salle du tempo : temps musical) */
-    for (const t of r.traps) t.update(dt, Room.trapTime(r));
+    for (const t of r.traps) t.update(dt, Room.trapTime(r, t));
     /* salles modulaires (phase 2) : Modular.update(r, dt) déplacera les obstacles et recalculera px/py */
     if (r.modular.length) Modular.update(r, dt);
     /* zones de dégâts (traînées de feu, gaz du joueur…) */
@@ -183,7 +183,10 @@ const Room = {
     }
   },
   /* horloge des pièges : temps musical dans la salle du tempo, temps de salle ailleurs */
-  trapTime(r) { return r.tempo && r.tempo.syncTraps ? Beat.t : r.time; },
+  /* Horloge d'un piège : musicale s'il déclare une cadence en temps (`params.beats`), horloge de salle sinon.
+     C'était décidé par salle : un piège rythmique posé hors de la salle du tempo tournait à la bonne vitesse mais
+     sur une phase sans rapport avec la musique — donc seule la salle 7 jouait en mesure. */
+  trapTime(r, t) { return (t ? t.beats : r.tempo && r.tempo.syncTraps) ? Beat.t : r.time; },
   clear() {
     const r = G.room; if (r.state === 'clear') return; r.state = 'clear'; r.stateT = 0;
     if (r.tempo) { Tempo.onClear(r); return; }   // porte sur la mesure suivante
@@ -193,7 +196,7 @@ const Room = {
   /* score de la salle courante */
   score() { const r = G.room; return Progression.roomScore({ hits: r.hits, time: r.time, refTime: r.refTime, bestCombo: r.bestCombo, comboTarget: r.comboTarget, died: r.died, fragments: r.fragments, fragmentsTotal: r.fragmentsDef.length }); },
   /* danger pour le bot */
-  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, Room.trapTime(r))); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
+  dangerAt(x, y) { let d = 0; const r = G.room; for (const t of r.traps) d = Math.max(d, t.dangerAt(x, y, Room.trapTime(r, t))); if (r.modular.length) d = Math.max(d, Modular.dangerAt(x, y, r)); if (r.challenge) d = Math.max(d, Challenge.dangerAt(x, y, r)); return d; },
 
   render(ctx) {
     const r = G.room; if (!r) return;
@@ -203,6 +206,7 @@ const Room = {
     /* obstacles */
     if (r.challenge) Challenge.renderFloor(ctx, r);
     if (r.tempo) Tempo.renderFloor(ctx, r);
+    Tempo.renderScore(ctx, r);   // partition au sol : les tuiles qui vont être frappées s'annoncent, dans toutes les salles
     for (const o of r.obstacles) if (!o.dyn && !o.terrain) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */
@@ -213,7 +217,7 @@ const Room = {
     ctx.restore();
     /* zones */
     for (const h of r.hazards) { ctx.save(); ctx.globalAlpha = 0.45 * clamp((h.until - Time.now) / 1, 0.3, 1); ctx.fillStyle = h.color; ctx.shadowColor = h.color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, TAU); ctx.fill(); ctx.restore(); }
-    for (const t of r.traps) t.render(ctx, Room.trapTime(r));
+    for (const t of r.traps) t.render(ctx, Room.trapTime(r, t));
     /* coffre */
     if (r.chest) Sprites.drawChest(ctx, r.chest);
     /* tourelles & leurres */

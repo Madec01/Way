@@ -108,7 +108,11 @@ const Tempo = {
   /* Lance l'annonce de la famille suivante, mais jamais moins de 6 mesures après la précédente : même si les vagues
      s'enchaînent vite, les pièges arrivent à un rythme tenable. Deux mesures d'avertissement avant la mise en place. */
   tryAnnounce(room) {
-    const tp = room.tempo; if (!tp.wantGroup || tp.pendingGroup != null) return;
+    const tp = room.tempo; if (tp.pendingGroup != null || tp.boss || !tp.groups) return;   // la salle de boss n'a pas de familles de pièges
+    /* Filet : les vagues n'arment qu'une famille chacune, à partir de la deuxième (la salle démarre sans piège,
+       c'est voulu). Avec 4 familles pour 3 vagues, les deux dernières ne s'armaient JAMAIS — dans les quatre
+       biomes. Passé 10 mesures sans nouveauté, la suivante s'annonce toute seule. */
+    if (!tp.wantGroup) { if (!tp.started || Math.floor(Beat.index() / 4) - tp.armBar < 10) return; }
     const n = tp.groupIdx + 1; if (n >= tp.groups.length) { tp.wantGroup = false; return; }
     if (Math.floor(Beat.index() / 4) - tp.armBar < 6) return;
     const first = room.traps.find(t => t.id === tp.groups[n]);
@@ -143,6 +147,53 @@ const Tempo = {
     return mul;
   },
   /* sol : flash sur chaque temps + ondes qui partent du centre */
+  /* PARTITION AU SOL — les tuiles qui vont être frappées s'éclairent AVANT que ça arrive : faiblement un temps à
+     l'avance, franchement un demi-temps avant. C'est la couche de lisibilité qui autorise tout le reste : sans elle,
+     chaque piège doit crier son propre avertissement et la salle devient un sapin de Noël.
+     Recalculée seulement quand on change de demi-temps (8 fois par seconde au plus), jamais par image : sinon ce
+     serait 312 tuiles × N pièges × 60 images. */
+  score: { key: -1, look: null, near: null },
+  scoreAt(room) {
+    const sc = Tempo.score, L = Beat.beatLen(); const key = Math.floor(Beat.t / (L / 2));
+    if (sc.key === key && sc.look) return sc;
+    sc.key = key;
+    const n = ROOM_COLS * ROOM_ROWS;
+    if (!sc.look) { sc.look = new Float32Array(n); sc.near = new Float32Array(n); }
+    sc.look.fill(0); sc.near.fill(0);
+    const beats = room.traps.filter(t => t.beats && !t.disabled);
+    if (!beats.length) return sc;
+    for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
+      const x = ROOM_X + (tx + 0.5) * TILE, y = ROOM_Y + (ty + 0.5) * TILE; const i = ty * ROOM_COLS + tx;
+      let a = 0, b = 0;
+      for (const t of beats) { a = Math.max(a, t.dangerAt(x, y, Beat.t + L)); b = Math.max(b, t.dangerAt(x, y, Beat.t + L * 0.5)); }
+      sc.look[i] = a; sc.near[i] = b;
+    }
+    return sc;
+  },
+  renderScore(ctx, room) {
+    if (!room.traps.some(t => t.beats && !t.disabled)) return;
+    const sc = Tempo.scoreAt(room); ctx.save();
+    for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
+      const i = ty * ROOM_COLS + tx; const far = sc.look[i], near = sc.near[i];
+      if (far < 0.2 && near < 0.2) continue;
+      const x = ROOM_X + tx * TILE, y = ROOM_Y + ty * TILE;
+      /* Le damier du dancefloor remplit déjà des tuiles entières : un remplissage de plus s'y noierait. La partition
+         parle donc en coins (annoncé) et en cadre (imminent) — deux formes que rien d'autre ne dessine. */
+      if (far >= 0.2) {
+        ctx.globalAlpha = 0.25 + 0.35 * far; ctx.fillStyle = '#ffd166'; const c = 7, e = 3;
+        for (const [ox, oy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+          const px = x + (ox ? TILE - c - e : e), py = y + (oy ? TILE - c - e : e);
+          ctx.fillRect(px, py, c, 2); ctx.fillRect(px + (ox ? c - 2 : 0), py, 2, c);
+        }
+      }
+      if (near >= 0.2) {
+        ctx.globalAlpha = 0.5 + 0.4 * near; ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2;
+        ctx.strokeRect(x + 4.5, y + 4.5, TILE - 9, TILE - 9);
+        ctx.globalAlpha = 0.07 + 0.1 * near; ctx.fillStyle = '#ffd166'; ctx.fillRect(x + 5, y + 5, TILE - 10, TILE - 10);
+      }
+    }
+    ctx.restore();
+  },
   renderFloor(ctx, room) {
     const tp = room.tempo; const ph = Beat.phase(); const idx = Beat.index(); ctx.save();
     ctx.beginPath(); ctx.rect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H); ctx.clip();

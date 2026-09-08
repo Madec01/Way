@@ -387,7 +387,7 @@
     shootBlade: 1.7, shootBow: 1.3, shootBoomerang: 1.7, shootChain: 2.2, shootPistol: 0.5, shootHammer: 0.7, hitEnemy: 0.85, dash: 2, skillTurret: 2,
     pickupXp: 2.4, pickupCoin: 2.4, pickupFragment: 2, uiHover: 3, uiClick: 2.4, uiConfirm: 1.3,
     /* pièges : très en retrait sous la musique, ils ponctuent sans couvrir */
-    trapWarn: 1.1, trapSpike: 1.4, trapLaser: 0.5, trapFire: 0.5, trapGas: 0.45, trapSaw: 0.4,
+    trapWarn: 0.6, trapSpike: 0.7, trapLaser: 0.4, trapFire: 0.45, trapGas: 0.4, trapSaw: 0.25, trapShot: 0.4,
     chestOpen: 1.5, bossRoar: 0.8, playerDie: 0.8, tempoNote: 0.8,   // mix : effets répétitifs (tirs, coups, ramassages, interface) ≈ −6 dB sous la musique, impacts rares au niveau
   };
   /* Espacement minimal entre deux déclenchements du même son (s) : au-delà de la polyphonie utile, les rafales (ramassage
@@ -403,7 +403,7 @@
     for (let oct = -4; oct <= 5; oct++) for (const s of d) { const c = key.root * Math.pow(2, oct + s / 12); const dist = Math.abs(Math.log2(c / f)); if (dist < bd) { bd = dist; best = c; } }
     return best;
   }
-  const GAPS = { pickupXp: 0.05, pickupCoin: 0.05, pickupFragment: 0.08, hitEnemy: 0.03, uiHover: 0.09, uiClick: 0.06, tempoNote: 0.08, trapWarn: 0.1, trapSpike: 0.1 };
+  const GAPS = { pickupXp: 0.05, pickupCoin: 0.05, pickupFragment: 0.08, hitEnemy: 0.03, uiHover: 0.09, uiClick: 0.06, tempoNote: 0.08, trapWarn: 0.23, trapSpike: 0.2, trapShot: 0.2, trapSaw: 0.23 };   // 0,23 s = un temps à 129 BPM : jamais deux annonces sur le même temps
   const lastAt = {};
   function def(name, prio, fn) {
     NAMES.push(name);
@@ -964,6 +964,19 @@
   /* ==================================================================
      INTERFACE
      ================================================================== */
+
+  // trapShot : tir d'une tourelle → claquement sec bandpassé 1,8 kHz + petit corps 220 Hz. Volontairement NON accordé :
+  // une percussion sans hauteur ne peut pas frotter contre la piste. Remplace shootPistol, qui était le son de
+  // l'arme du joueur — on ne distinguait pas ce qu'on tirait de ce qui nous tirait dessus.
+  def('trapShot', 4, (o, t) => {
+    const v = voice(o, 0.22, 4); if (!v) return;
+    const n = v.noise('white', t, t + 0.09);
+    const bp = v.filter('bandpass', 1800, 4); const g = v.gain(0);
+    v.chain(n, bp, g, v.out); perc(g.gain, t, 0.5 * o.g, 0.002, 0.055);
+    const b = v.osc('triangle', 220, t, t + 0.08); const g2 = v.gain(0);
+    sweep(b.frequency, t, 220, 130, 0.06);
+    v.chain(b, g2, v.out); perc(g2.gain, t, 0.22 * o.g, 0.002, 0.06);
+  });
 
   // uiHover : survol → bruit blanc bandpass 3 kHz Q6 25 ms + tick FM 1500 Hz bandpassé, très discret.
   def('uiHover', 1, (o, t) => {

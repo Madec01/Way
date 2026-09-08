@@ -555,6 +555,7 @@ class Player {
     this.aim = 0; this.moveDir = { x: 0, y: 0 }; this.facing = 1;
     this.hp = 100; this.shield = 0; this.shieldUntil = 0; this.invulnUntil = 0; this.hurtFlash = 0; this.dead = false;
     this.attackCd = 0; this.charge = 0; this.skillCd = 0; this.skillCharges = 1; this.skillMaxCharges = 1;
+    this.kvx = 0; this.kvy = 0;   // vélocité de poussée (souffles, ondes, balanciers) : les ennemis l'avaient, pas le joueur
     this.dashing = false; this.dashT = 0; this.dashDur = 0; this.dashVx = 0; this.dashVy = 0; this.dashInvuln = true;
     this.magnetUntil = 0; this.killSpeedUntil = 0; this.killSpeedMul = 1; this.overdriveUntil = 0; this.overdrive = null;
     this.flags = {}; this.weapon = null; this.skill = null; this.trail = null; this.orbitShield = null; this.secondChanceUsed = false;
@@ -622,6 +623,9 @@ class Player {
       this.vx = mv.x * sp; this.vy = mv.y * sp; this.x += this.vx * dt; this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);
     }
+    /* poussée : s'ajoute au déplacement puis s'amortit, comme chez les ennemis. Un piège peut ainsi déplacer le
+       joueur sans lui retirer de vie — c'est la monnaie de tous les pièges « qui gênent au lieu de blesser ». */
+    if (this.kvx || this.kvy) { this.x += this.kvx * dt; this.y += this.kvy * dt; const k = Math.min(1, 10 * dt); this.kvx -= this.kvx * k; this.kvy -= this.kvy * k; if (Math.abs(this.kvx) < 1) this.kvx = 0; if (Math.abs(this.kvy) < 1) this.kvy = 0; }
     this.hitWall = false; resolveRoomCollision(this);
     /* --- régén, boucliers, timers --- */
     if (this.stats.regen > 0) this.heal(this.stats.regen * dt, true);
