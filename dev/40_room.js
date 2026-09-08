@@ -35,6 +35,7 @@ const Room = {
       floorSeed: (def.index * 7919) ^ 0x5bd1, label: `${STR.room} ${def.index}/9 — ${ROOM_TYPES[def.type] ? ROOM_TYPES[def.type].label : def.type}`,
     };
     Terrain.compile(r, def);   // le plan ASCII devient une grille + des rectangles poussés dans r.obstacles
+    Anim.compile(r, def);      // décor animé en rythme (sans collision ni dégât)
     for (const t of (def.traps || [])) { const td = Content.trap(t.trap); if (!td) { console.warn('piège inconnu', t.trap); continue; } r.traps.push(new Trap(td, t)); }
     return r;
   },
@@ -203,6 +204,7 @@ const Room = {
     Sprites.drawFloor(ctx, r);
     if (r.grid) Terrain.render(ctx, r);   // miroitement de l'eau : la seule partie animée, le reste est peint dans le cache du sol
     for (const d of r.deco) Sprites.drawDeco(ctx, d);
+    Anim.render(ctx, r);   // décor animé au sol : sous les obstacles et les entités
     /* obstacles */
     if (r.challenge) Challenge.renderFloor(ctx, r);
     if (r.tempo) Tempo.renderFloor(ctx, r);
@@ -226,6 +228,7 @@ const Room = {
   },
   renderFx(ctx) {
     const r = G.room; if (!r) return;
+    Anim.renderOver(ctx, r);   // lumières : par-dessus la salle, en mode additif
     for (const s of r.slashes) { const k = s.t / s.life; ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = 14; ctx.lineWidth = s.slam ? 6 : 4; ctx.beginPath(); if (s.slam) ctx.arc(s.cx, s.cy, s.range * (0.5 + 0.5 * k), 0, TAU); else ctx.arc(s.x, s.y, s.range * (0.7 + 0.3 * k), s.a - s.arc / 2, s.a + s.arc / 2); ctx.stroke(); ctx.restore(); }
     for (const b of r.beams) { const k = b.t / b.life; ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = b.color; ctx.shadowColor = b.color; ctx.shadowBlur = 16; ctx.lineWidth = b.width; ctx.beginPath(); ctx.moveTo(b.ax, b.ay); if (b.jag) { const n = 6; for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(lerp(b.ax, b.bx, t) + VFX_RNG.range(-8, 8), lerp(b.ay, b.by, t) + VFX_RNG.range(-8, 8)); } } ctx.lineTo(b.bx, b.by); ctx.stroke(); ctx.restore(); }
     for (const b of r.blasts) {

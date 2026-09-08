@@ -834,3 +834,40 @@ Un rayon fixe depuis son socle jusqu'au bord de la salle, taillé au rectangle d
 ### Réglages par élément
 
 La ligne choisie ouvre ce qui a du sens pour sa mécanique : largeur, hauteur, annonce, durée, **couleur** (`params.color`, qui surcharge celle du contenu), **orientation** en degrés, sens horizontal/vertical, tour et aller en temps, nombre de bras, de projectiles, ouverture, rotation par coup, rafale. Les repères de pose sont passés à une ligne sur quatre très effacée, avec une case pour les couper, et le **mode test** les retire tous — grille, cadres et partition au sol (`room.noScore`) — pour voir la salle telle qu'elle sera jouée.
+
+---
+
+## 30. Décor animé en rythme, et l'atelier en trois établis
+
+### `dev/33_anim.js` — du décor qui joue
+
+Des éléments **sans collision et sans dégât**, pilotés par la même partition que les pièges. Ils ne portent pas la difficulté, ils portent la lecture : quand une dalle change de couleur sur le temps, l'oreille et l'œil disent la même chose.
+
+| Type | Ce qu'il fait | Réglages propres |
+|---|---|---|
+| **Dalles colorées** | la zone prend la teinte sur le coup, puis s'efface | motif : toutes / damier / vague |
+| **Dalles qui montent** | léger relief qui monte (ou s'enfonce) sur le coup | amplitude, sens, motif |
+| **Rotatif** | un quart de tour (ou l'angle voulu) à chaque coup | pas, image, taille |
+| **Sauteur** | l'accessoire décolle et retombe | amplitude, image, taille |
+| **Lumière** | halo coloré additif qui bat | rayon, intensité, 2ᵉ couleur |
+| **Onde** | anneau qui s'ouvre sur le coup | rayon |
+
+Tous acceptent une **2ᵉ couleur**, alternée d'un coup au suivant. `beatPulse(beats, rt)` est l'enveloppe commune : temps écoulé depuis le dernier coup, temps jusqu'au prochain, indice du coup, et `k` qui va de 0 au coup à 1 au bout de `active`. Les éléments au sol sont dessinés juste après le décor (donc sous les obstacles et les entités), les lumières par-dessus la salle en mode additif.
+
+Une salle les déclare dans `anims: [ { kind, x, y, w, h, params, beats } ]`.
+
+### Images de l'auteur
+
+Le choix « image » d'un rotatif ou d'un sauteur liste tous les accessoires connus du jeu. Le bouton **+ image** accepte un fichier local : il devient un accessoire utilisable tout de suite et reste dans le navigateur (`way.props.custom`). Pour l'avoir dans le jeu pour de bon, le fichier doit ensuite rejoindre `assets/sprites/pixel/`.
+
+### Trois établis
+
+L'atelier se divise pour ne pas encombrer la page :
+
+- **Animations** — le décor qui joue. Chaque ligne a sa partition.
+- **Pièges** — ce qui blesse. Même grille, mêmes réglages.
+- **Niveau** — l'éditeur de salle : blocs, les sept terrains (sol, mur plein, muret, claustra, pont, eau, boue) au pinceau, et les ennemis rangés par vague. « Relancer les vagues » les fait rentrer à nouveau.
+
+Chaque établi ne montre que ses lignes. Le **mode test** replie le panneau, retire grille, cadres et partition au sol : la salle telle qu'elle sera jouée. La porte reste fermée en permanence — on ne sort pas de l'atelier en marchant dessus.
+
+L'export sort maintenant, dans l'ordre d'une déclaration de salle : `terrain`, `obstacles`, `anims`, `waves`, `traps`, plus le bloc `atelier:` que l'import relit.

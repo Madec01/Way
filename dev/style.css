@@ -320,3 +320,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 #atelier .atune{border-top:1px dashed var(--line);padding-top:.35em;margin-top:.35em}
 #atelier .aio textarea{width:100%;height:9em;background:#000;color:#cfe;border:1px solid var(--line);border-radius:6px;font:inherit;padding:.4em}
 #atelier .btn.tiny{padding:0 .35em;font-size:11px;line-height:16px}
+#atelier .atabs{display:flex;gap:.2em}
+#atelier .afile input[type=file]{width:11em;font-size:10px}
+#atelier .atune label{gap:.25em}
+#atelier .apal2{margin-top:.15em}

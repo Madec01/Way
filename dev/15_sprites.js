@@ -160,6 +160,26 @@ const Sprites = (() => {
     props[name] = list[i]; floorCache.clear();
   }
   function clearVariants() { try { localStorage.removeItem('way.props'); } catch (e) { /* */ } applyPicks(); floorCache.clear(); }
+  /* Atelier : le sol est mis en cache par salle et le terrain y est peint — repeindre exige de vider ce cache. */
+  function clearFloor() { floorCache.clear(); }
+  /* Atelier : une image déposée par l'auteur devient un accessoire utilisable tout de suite (et gardée dans le
+     navigateur). Pour l'avoir dans le jeu, le fichier doit ensuite rejoindre assets/sprites/pixel/. */
+  const CUSTOM_KEY = 'way.props.custom'; let customs = {};
+  function addCustom(name, url) {
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0);
+        props[name] = c; customs[name] = url; floorCache.clear();
+        try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customs)); } catch (e) { /* trop gros pour le navigateur : l'accessoire reste utilisable jusqu'au rechargement */ }
+        res(true);
+      };
+      img.onerror = () => res(false); img.src = url;
+    });
+  }
+  function loadCustoms() { try { customs = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '{}'); } catch (e) { customs = {}; } for (const k in customs) addCustom(k, customs[k]); }
+  function propNames() { return Object.keys(PROP_DEFS).concat(Object.keys(customs).filter(k => !PROP_DEFS[k])).sort(); }
   function loadProps() {
     if (typeof fetch !== 'function') return;
     fetch(ASSET_BASE + 'sprites/pixel/index.json').then(r => r.ok ? r.json() : null).then(list => {
@@ -378,7 +398,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, propNames, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */
