@@ -898,9 +898,22 @@ Réglables : dégâts, cadence (du temps à la mesure), taille, teinte, prix au 
 
 **Un copain** : son visage devient un **personnage jouable**. La photo est collée à la place de la tête sur le corps dessiné en pixels — un personnage qui porte un visage garde toujours ce corps-là, jamais la planche de sprites, sinon le visage disparaîtrait dès la tenue complète. Réglables : PV, vitesse, chance, arme de départ, et un caractère choisi parmi sept (apprend vite, cogne fort, va vite, encaisse, vise juste, a de la chance, aucun).
 
-### Comment ça marche
+### Quelle taille pour une image
 
-Une photo déposée est **recadrée au carré et réduite à 64 px**, sans lissage : elle devient un sprite du jeu. Sans cette réduction, dix visages de téléphone pèseraient plusieurs mégaoctets une fois embarqués.
+**32×32 n'est pas petit** : c'est le double de la résolution native du jeu, dont les sprites font 16 px rendus ×3 (`SCALE = 3`, `TILE = 48`). Ce qui compte n'est pas la finesse de la source mais le **multiple d'affichage** — une image de 32 px montrée en 64 garde des pixels carrés, montrée en 48 elle serait rééchantillonnée en ×1,5 et perdrait sa netteté.
+
+Repères à l'écran : une tuile fait 48 px, le joueur 48 × 75. Un animal naît donc à **64 px** (×2 d'une image de 32, et un peu plus gros qu'une tuile : c'est la taille qui « fait animal » à côté du joueur), réglable de 16 à 128 par pas de 8.
+
+Une image déposée est **reprise telle quelle** si elle tient déjà dans 128 px : jamais agrandie, jamais lissée. Un pixel art agrandi — a fortiori en lissant — perd exactement ce qui en fait du pixel art. Seules les photos d'appareil sont réduites (à 128 px, recadrées au carré), et là le lissage sert puisqu'il s'agit de photos. Le dessin, lui, se fait toujours en pixels francs.
+
+Vérifié par un damier de 1 pixel importé en 32×32 : dessiné en 64, il ne compte que ses trois couleurs d'origine — aucune teinte intermédiaire, donc aucun lissage et une mise à l'échelle entière.
+
+### Visage collé ou sprite entier
+
+Un copain accepte les deux :
+
+- **Visage** : la photo est collée à la place de la tête sur le corps dessiné en pixels du jeu. Le personnage garde ce corps-là quoi qu'il arrive (jamais la planche de sprites), sinon le visage disparaîtrait dès la tenue complète.
+- **Sprite entier** : l'image remplace le corps, posée sur la ligne de sol du corps standard, à la taille demandée. C'est la voie pour un personnage entièrement dessiné à la main. Un bouton retire le sprite entier pour revenir au visage collé.
 
 Tout est versé dans le contenu **tout de suite** — l'animal est adoptable par « Essayer », le copain prend les commandes — et gardé dans le navigateur pendant qu'on travaille. `Content.invalidate()` est appelé à chaque changement : l'index par id est mis en cache, et sans ça un personnage créé en cours de partie reste introuvable et l'appel retombe silencieusement sur le premier de la liste.
 

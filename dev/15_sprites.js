@@ -371,6 +371,21 @@ const Sprites = (() => {
      Dessin en « pixels » de 3 px sur une grille 16×28, même ancrage que les sprites (pieds). */
   const BODY_PALETTES = { player: { skin: '#e8b58f', skin2: '#c98d6b', hair: '#5a3a22', eye: '#1a1a2a', cloth: '#7a5a3a', pants: '#3a5a8a', boot: '#3a2a1a' }, player2: { skin: '#f0c4a0', skin2: '#d09a78', hair: '#e2c15a', eye: '#1a1a2a', cloth: '#3a6a4a', pants: '#5a3a5a', boot: '#3a2a1a' } };
   function drawBody(ctx, key, x, y, opts = {}) {
+    /* `body` : sprite entier fourni par l'auteur, il remplace le corps dessiné. Il est posé sur la ligne de sol du
+       corps standard (y + 25 px à l'échelle 3) et dessiné SANS lissage, à la taille demandée : une image de 32 px
+       affichée en 64 garde des pixels carrés. Une image de 16 px et une de 32 px se valent ici, c'est le multiple
+       d'affichage qui compte, pas la finesse de la source. */
+    const body = opts.body ? props[opts.body] : null;
+    if (body) {
+      const s = opts.size || 64; const sc = opts.scale || 1; const w = s * sc;
+      const k = Math.min(w / body.width, w / body.height); const dw = body.width * k, dh = body.height * k;
+      const bob = opts.walk > 0 ? Math.abs(Math.sin(opts.walk * 10)) * 2 : 0;
+      ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y + 25 * sc - dh / 2 - bob);
+      if (opts.flip) ctx.scale(-1, 1); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+      ctx.drawImage(body, -dw / 2, -dh / 2, dw, dh);
+      if (opts.flash) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(-dw / 2, -dh / 2, dw, dh); }
+      ctx.restore(); return true;
+    }
     /* `face` : image de l'auteur collée à la place de la tête. Un personnage qui en porte une garde toujours le corps
        dessiné en pixels (jamais la planche de sprites), sinon le visage disparaîtrait dès la tenue complète. */
     const face = opts.face ? props[opts.face] : null;
@@ -382,7 +397,7 @@ const Sprites = (() => {
     ctx.save(); ctx.translate(x, y - (d.foot ? 0 : 0)); if (opts.flip) ctx.scale(-1, 1); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     const px = (gx, gy, w, h, col) => { ctx.fillStyle = opts.flash ? '#fff' : col; ctx.fillRect(left + gx * u, top + (gy + bob) * u, w * u, h * u); };
     /* tête + cheveux + yeux, ou le visage de l'auteur à la place */
-    if (face) { ctx.save(); ctx.imageSmoothingEnabled = false; if (opts.flip) ctx.scale(-1, 1); ctx.drawImage(face, left + (opts.flip ? -12 : 4) * u, top + (0 + bob) * u, 8 * u, 8 * u); ctx.restore(); if (opts.flash) { ctx.globalAlpha = 0.6; px(4, 0, 8, 8, '#fff'); ctx.globalAlpha = 1; } }
+    if (face) { ctx.save(); ctx.imageSmoothingEnabled = true; if (opts.flip) ctx.scale(-1, 1); ctx.drawImage(face, left + (opts.flip ? -12 : 4) * u, top + (0 + bob) * u, 8 * u, 8 * u); ctx.restore(); if (opts.flash) { ctx.globalAlpha = 0.6; px(4, 0, 8, 8, '#fff'); ctx.globalAlpha = 1; } }
     else { px(5, 2, 6, 6, pal.skin); px(4, 1, 8, 2, pal.hair); px(4, 3, 1, 2, pal.hair); px(11, 3, 1, 2, pal.hair); px(9, 4, 1, 1, pal.eye); px(7, 5, 3, 1, pal.skin2); }
     px(7, 8, 2, 1, pal.skin);  // cou
     if (tier === 2 && ready) {
@@ -407,9 +422,9 @@ const Sprites = (() => {
   }
   /* palier de tenue selon le nombre de greffes possédées */
   function bodyTier(upgrades) { const n = (upgrades || []).reduce((s, u) => s + (u.stacks || 1), 0); return n >= 9 ? 3 : n >= 6 ? 2 : n >= 3 ? 1 : 0; }
-  function portraitBody(key, tier, scale = 5, face) {
+  function portraitBody(key, tier, scale = 5, face, body, size) {
     const c = document.createElement('canvas'); c.width = 16 * scale; c.height = 30 * scale; c.className = 'portrait-canvas'; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
-    const drawIt = () => { g.clearRect(0, 0, c.width, c.height); drawBody(g, key, c.width / 2, c.height - 8, { tier, scale: scale / SCALE, walk: 0, face }); if (c.isConnected) setTimeout(drawIt, 250); else setTimeout(() => { if (c.isConnected) drawIt(); }, 500); };
+    const drawIt = () => { g.clearRect(0, 0, c.width, c.height); drawBody(g, key, c.width / 2, c.height - 8, { tier, scale: scale / SCALE, walk: 0, face, body, size }); if (c.isConnected) setTimeout(drawIt, 250); else setTimeout(() => { if (c.isConnected) drawIt(); }, 500); };
     drawIt(); return c;
   }
   /* portrait DOM (canvas) d'un sprite, pour le hub */

@@ -3647,6 +3647,21 @@ const Sprites = (() => {
      Dessin en « pixels » de 3 px sur une grille 16×28, même ancrage que les sprites (pieds). */
   const BODY_PALETTES = { player: { skin: '#e8b58f', skin2: '#c98d6b', hair: '#5a3a22', eye: '#1a1a2a', cloth: '#7a5a3a', pants: '#3a5a8a', boot: '#3a2a1a' }, player2: { skin: '#f0c4a0', skin2: '#d09a78', hair: '#e2c15a', eye: '#1a1a2a', cloth: '#3a6a4a', pants: '#5a3a5a', boot: '#3a2a1a' } };
   function drawBody(ctx, key, x, y, opts = {}) {
+    /* `body` : sprite entier fourni par l'auteur, il remplace le corps dessiné. Il est posé sur la ligne de sol du
+       corps standard (y + 25 px à l'échelle 3) et dessiné SANS lissage, à la taille demandée : une image de 32 px
+       affichée en 64 garde des pixels carrés. Une image de 16 px et une de 32 px se valent ici, c'est le multiple
+       d'affichage qui compte, pas la finesse de la source. */
+    const body = opts.body ? props[opts.body] : null;
+    if (body) {
+      const s = opts.size || 64; const sc = opts.scale || 1; const w = s * sc;
+      const k = Math.min(w / body.width, w / body.height); const dw = body.width * k, dh = body.height * k;
+      const bob = opts.walk > 0 ? Math.abs(Math.sin(opts.walk * 10)) * 2 : 0;
+      ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y + 25 * sc - dh / 2 - bob);
+      if (opts.flip) ctx.scale(-1, 1); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+      ctx.drawImage(body, -dw / 2, -dh / 2, dw, dh);
+      if (opts.flash) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(-dw / 2, -dh / 2, dw, dh); }
+      ctx.restore(); return true;
+    }
     /* `face` : image de l'auteur collée à la place de la tête. Un personnage qui en porte une garde toujours le corps
        dessiné en pixels (jamais la planche de sprites), sinon le visage disparaîtrait dès la tenue complète. */
     const face = opts.face ? props[opts.face] : null;
@@ -3658,7 +3673,7 @@ const Sprites = (() => {
     ctx.save(); ctx.translate(x, y - (d.foot ? 0 : 0)); if (opts.flip) ctx.scale(-1, 1); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     const px = (gx, gy, w, h, col) => { ctx.fillStyle = opts.flash ? '#fff' : col; ctx.fillRect(left + gx * u, top + (gy + bob) * u, w * u, h * u); };
     /* tête + cheveux + yeux, ou le visage de l'auteur à la place */
-    if (face) { ctx.save(); ctx.imageSmoothingEnabled = false; if (opts.flip) ctx.scale(-1, 1); ctx.drawImage(face, left + (opts.flip ? -12 : 4) * u, top + (0 + bob) * u, 8 * u, 8 * u); ctx.restore(); if (opts.flash) { ctx.globalAlpha = 0.6; px(4, 0, 8, 8, '#fff'); ctx.globalAlpha = 1; } }
+    if (face) { ctx.save(); ctx.imageSmoothingEnabled = true; if (opts.flip) ctx.scale(-1, 1); ctx.drawImage(face, left + (opts.flip ? -12 : 4) * u, top + (0 + bob) * u, 8 * u, 8 * u); ctx.restore(); if (opts.flash) { ctx.globalAlpha = 0.6; px(4, 0, 8, 8, '#fff'); ctx.globalAlpha = 1; } }
     else { px(5, 2, 6, 6, pal.skin); px(4, 1, 8, 2, pal.hair); px(4, 3, 1, 2, pal.hair); px(11, 3, 1, 2, pal.hair); px(9, 4, 1, 1, pal.eye); px(7, 5, 3, 1, pal.skin2); }
     px(7, 8, 2, 1, pal.skin);  // cou
     if (tier === 2 && ready) {
@@ -3683,9 +3698,9 @@ const Sprites = (() => {
   }
   /* palier de tenue selon le nombre de greffes possédées */
   function bodyTier(upgrades) { const n = (upgrades || []).reduce((s, u) => s + (u.stacks || 1), 0); return n >= 9 ? 3 : n >= 6 ? 2 : n >= 3 ? 1 : 0; }
-  function portraitBody(key, tier, scale = 5, face) {
+  function portraitBody(key, tier, scale = 5, face, body, size) {
     const c = document.createElement('canvas'); c.width = 16 * scale; c.height = 30 * scale; c.className = 'portrait-canvas'; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
-    const drawIt = () => { g.clearRect(0, 0, c.width, c.height); drawBody(g, key, c.width / 2, c.height - 8, { tier, scale: scale / SCALE, walk: 0, face }); if (c.isConnected) setTimeout(drawIt, 250); else setTimeout(() => { if (c.isConnected) drawIt(); }, 500); };
+    const drawIt = () => { g.clearRect(0, 0, c.width, c.height); drawBody(g, key, c.width / 2, c.height - 8, { tier, scale: scale / SCALE, walk: 0, face, body, size }); if (c.isConnected) setTimeout(drawIt, 250); else setTimeout(() => { if (c.isConnected) drawIt(); }, 500); };
     drawIt(); return c;
   }
   /* portrait DOM (canvas) d'un sprite, pour le hub */
@@ -4602,7 +4617,7 @@ class Player {
     if (hasFx('freeze') || hasFx('frost_bonus')) { if (VFX_RNG.chance(0.3)) Particles.spawn(this.x + VFX_RNG.range(-12, 12), this.y - VFX_RNG.range(0, 24), { count: 1, color: '#c8f6ff', size: 2, speedMax: 12, life: 0.7, glow: true }); }
     if (hasFx('poison')) { if (VFX_RNG.chance(0.2)) Particles.spawn(this.x + VFX_RNG.range(-8, 8), this.y - 20, { count: 1, color: '#b7ff7a', size: 2, speedMin: 15, speedMax: 30, angle: -Math.PI / 2, spread: 0.3, life: 0.8 }); }
     const tier = G.debug.forceTier != null ? G.debug.forceTier : Sprites.bodyTier(G.run && G.run.upgrades);
-    Sprites.drawBody(ctx, this.char && this.char.sprite || 'player', this.x, this.y, { face: this.char && this.char.face, tier, flip: this.facing < 0, walk: this.walkT, flash: this.hurtFlash > 0, scale: G.room && G.room.tempo && G.room.tempo.started ? 1 + 0.07 * Math.max(0, 1 - Beat.phase() * 3) : 1, fallback: () => {
+    Sprites.drawBody(ctx, this.char && this.char.sprite || 'player', this.x, this.y, { face: this.char && this.char.face, body: this.char && this.char.body, size: this.char && this.char.size, tier, flip: this.facing < 0, walk: this.walkT, flash: this.hurtFlash > 0, scale: G.room && G.room.tempo && G.room.tempo.started ? 1 + 0.07 * Math.max(0, 1 - Beat.phase() * 3) : 1, fallback: () => {
       ctx.fillStyle = this.hurtFlash > 0 ? '#ff9db0' : '#e8ecf7'; ctx.shadowColor = '#6ee7ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
       ctx.fillStyle = '#0b0d14'; ctx.beginPath(); ctx.arc(this.x + Math.cos(this.aim) * 6, this.y + Math.sin(this.aim) * 6, 4, 0, TAU); ctx.fill(); } });
     /* arme en main, orientée vers la visée */
@@ -4638,7 +4653,8 @@ class Pet {
   constructor(def) {
     this.def = def; this.id = def.id; this.name = def.name; this.color = def.color || '#9fd8ff';
     const pl = G.player; this.x = pl ? pl.x - 34 : W / 2; this.y = pl ? pl.y : H / 2;
-    this.r = 11; this.t = 0; this.act = 0; this.facing = 1; this.moving = false;
+    this.r = clamp((def.size || 48) * 0.28, 8, 26);   // l'emprise suit la taille : un gros animal se cogne comme un gros animal
+    this.t = 0; this.act = 0; this.facing = 1; this.moving = false;
     this.state = 'follow'; this.target = null; this.lastBeat = -1; this.blocks = 0;
     this.rollA = 0; this.rollT = 0; this.rolled = new Set();
     this.maxHp = def.hp || 0; this.hp = this.maxHp; this.downT = 0;
@@ -4804,7 +4820,7 @@ class Pet {
     }
   }
   render(ctx) {
-    const s = this.def.size || 34; const lift = this.airborne ? 15 : 0;
+    const s = this.def.size || 48; const lift = this.airborne ? 15 : 0;
     const bob = this.moving ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5 : Math.sin(this.t * 3) * 2;
     ctx.save(); ctx.globalAlpha = this.down ? 0.15 : 0.32; ctx.fillStyle = '#05070c';
     ctx.beginPath(); ctx.ellipse(this.x, this.y + s * 0.34, s * 0.28, s * 0.1, 0, 0, TAU); ctx.fill(); ctx.restore();
@@ -7475,7 +7491,7 @@ const UI = (() => {
       card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
       cc.appendChild(card);
     });
-    const pb = s.querySelector('#hub-portrait'); const pc = Sprites.portraitBody(cur.sprite || 'player', cur.face ? 1 : 0, 5, cur.face); if (pc) pb.appendChild(pc);
+    const pb = s.querySelector('#hub-portrait'); const pc = Sprites.portraitBody(cur.sprite || 'player', cur.face ? 1 : 0, 5, cur.face, cur.body, cur.size); if (pc) pb.appendChild(pc);
     s.querySelectorAll('[data-biome]').forEach(c => c.onclick = () => { const b = Content.biome(c.dataset.biome); if (!Meta.biomeUnlocked(b)) { toast('Palier scellé.'); return; } p.biome = b.id; Meta.save(); AudioEngine.uiClick({}); showHub(); });
     s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; AudioEngine.uiClick({}); showHub(); });
     s.querySelector('#hub-menu').onclick = () => { showMenu(); };
@@ -8386,7 +8402,7 @@ const Atelier = (() => {
   function amisSave() { try { localStorage.setItem(AKEY, JSON.stringify(amis)); } catch (e) { UI.toast('Trop d\'images pour le navigateur : exportez dans content5.js'); } amisRegister(); }
   /* verse les amis dans le contenu du jeu (en remplaçant la fournée précédente) */
   function amisRegister() {
-    for (const a of amis.pets.concat(amis.chars)) if (a.img && a.sprite) Sprites.addCustom(a.sprite, a.img);
+    for (const a of amis.pets.concat(amis.chars)) { if (a.img && a.sprite) Sprites.addCustom(a.sprite, a.img); if (a.imgBody && a.spriteBody) Sprites.addCustom(a.spriteBody, a.imgBody); }
     CONTENT.pets = CONTENT.pets.filter(p => !p.atelier).concat(amis.pets.map(petDef));
     CONTENT.characters = CONTENT.characters.filter(c => !c.atelier).concat(amis.chars.map(charDef));
     Content.invalidate(); Meta.ensure();
@@ -8396,18 +8412,21 @@ const Atelier = (() => {
     const base = Object.assign({}, roleOf(p.behavior)[2]);
     return Object.assign(base, { id: p.id, name: p.name || 'Animal', sprite: p.sprite, color: p.color || '#9fd8ff',
       tag: roleOf(p.behavior)[1], desc: p.desc || '', behavior: p.behavior, damage: +p.damage || 0, every: +p.every || 4,
-      size: +p.size || 32, price: +p.price || 0, unlocked: true, atelier: true });
+      size: +p.size || 64, price: +p.price || 0, unlocked: true, atelier: true });
   }
   function charDef(c) {
     const tr = TRAITS.find(t => t[0] === c.trait) || TRAITS[0];
-    return { id: c.id, name: c.name || 'Copain', sprite: 'player', face: c.sprite, atelier: true,
+    return { id: c.id, name: c.name || 'Copain', sprite: 'player', face: c.imgBody ? null : c.sprite,
+      body: c.imgBody ? c.spriteBody : null, size: +c.size || 64, atelier: true,
       desc: c.desc || '', stats: { maxHp: +c.maxHp || 100, speed: +c.speed || 260, damage: +c.damage || 1, luck: +c.luck || 2 },
       trait: { id: 'trait_' + c.id, name: c.traitName || tr[1], desc: c.traitDesc || tr[1], mods: tr[2], hooks: {} },
       startWeapon: c.weapon || 'weapon_blade', unlocked: true, price: 0 };
   }
   const uid = p => p + '_' + Math.random().toString(36).slice(2, 8);
-  function addPet() { amis.pets.push({ id: uid('pet_ami'), sprite: uid('img'), name: '', desc: '', behavior: 'bite', damage: 14, every: 4, size: 32, price: 0, color: '#9fd8ff' }); amisSave(); refresh(); }
-  function addChar() { amis.chars.push({ id: uid('char_ami'), sprite: uid('face'), name: '', desc: '', trait: 'aucun', maxHp: 100, speed: 260, damage: 1, luck: 2, weapon: 'weapon_blade' }); amisSave(); refresh(); }
+  /* 64 px par défaut : le double d'une image de 32, donc des pixels carrés, et une bête un peu plus grande
+     qu'une tuile (48) — c'est la taille qui « fait animal » à côté d'un joueur de 48 × 75. */
+  function addPet() { amis.pets.push({ id: uid('pet_ami'), sprite: uid('img'), name: '', desc: '', behavior: 'bite', damage: 14, every: 4, size: 64, price: 0, color: '#9fd8ff' }); amisSave(); refresh(); }
+  function addChar() { amis.chars.push({ id: uid('char_ami'), sprite: uid('face'), spriteBody: uid('body'), name: '', desc: '', trait: 'aucun', maxHp: 100, speed: 260, damage: 1, luck: 2, size: 64, weapon: 'weapon_blade' }); amisSave(); refresh(); }
 
   /* ---------- ouverture / fermeture ---------- */
   function toggle() { live ? close() : open(); }
@@ -8571,7 +8590,7 @@ const Atelier = (() => {
           <label>rôle <select data-f="behavior">${opt(ROLES, p.behavior)}</select></label>
           <label>cadence <select data-f="every">${opt(CADENCES.map(c => [c[0], c[1]]), +p.every)}</select></label></div>
         <div class="amirow"><label>dégâts <input type="number" min="0" max="99" step="1" data-f="damage" value="${p.damage}"></label>
-          <label>taille <input type="number" min="16" max="64" step="2" data-f="size" value="${p.size}"></label>
+          <label>taille <input type="number" min="16" max="128" step="8" data-f="size" value="${p.size}"> px <i class="amuted">(image 32 px → 64 = ×2 net · tuile 48 · joueur 48×75)</i></label>
           <label>prix <input type="number" min="0" max="999" step="10" data-f="price" value="${p.price}"></label>
           <label>teinte <input type="color" data-f="color" value="${p.color || '#9fd8ff'}"></label></div>
         <div class="amirow"><input type="text" class="amidesc" data-f="desc" value="${(p.desc || '').replace(/"/g, '&quot;')}" placeholder="Ce qu'il fait, en une phrase"></div></div>`;
@@ -8584,6 +8603,10 @@ const Atelier = (() => {
           <input type="text" class="aminom" data-f="name" value="${(c.name || '').replace(/"/g, '&quot;')}" placeholder="Son nom">
           <button class="btn tiny" data-tryc="${i}">Essayer</button><button class="btn tiny ghost" data-delc="${i}">×</button></div>
         <div class="amirow"><label>visage <input type="file" accept="image/*" data-filec="${i}"></label>
+          <label>sprite entier <input type="file" accept="image/*" data-fileb="${i}"></label>
+          <label>taille <input type="number" min="32" max="128" step="8" data-f="size" value="${c.size || 64}"> px</label></div>
+        <div class="amirow"><span class="amuted">${c.imgBody ? 'sprite entier utilisé — il remplace le corps dessiné' : 'visage collé sur le corps dessiné du jeu'}</span>
+          ${c.imgBody ? `<button class="btn tiny ghost" data-nobody="${i}">retirer le sprite entier</button>` : ''}
           <label>caractère <select data-f="trait">${opt(TRAITS.map(t => [t[0], t[1]]), c.trait)}</select></label></div>
         <div class="amirow"><label>PV <input type="number" min="40" max="300" step="5" data-f="maxHp" value="${c.maxHp}"></label>
           <label>vitesse <input type="number" min="150" max="400" step="10" data-f="speed" value="${c.speed}"></label>
@@ -8597,7 +8620,7 @@ const Atelier = (() => {
     /* vignettes */
     lanes.querySelectorAll('[data-img]').forEach(sp => {
       const k = sp.dataset.img; const a = k[0] === 'p' ? amis.pets[+k.slice(1)] : amis.chars[+k.slice(1)];
-      const c = a && a.sprite ? Sprites.propCanvas(a.sprite, 34) : null;
+      const c = a ? Sprites.propCanvas(a.imgBody ? a.spriteBody : a.sprite, 34) : null;
       if (c) sp.appendChild(c); else sp.textContent = '—';
     });
     const bindList = (sel, list, after) => lanes.querySelectorAll(sel).forEach(el2 => {
@@ -8608,10 +8631,12 @@ const Atelier = (() => {
     bindList('.amicard[data-p] [data-f]', amis.pets, (p, f) => { if (f !== 'behavior') return; const d = roleOf(p.behavior)[2]; if (d.damage != null) p.damage = d.damage; });
     bindList('.amicard[data-c] [data-f]', amis.chars);
     /* photos */
-    lanes.querySelectorAll('[data-file]').forEach(f => { f.onchange = () => readImg(f, amis.pets[+f.dataset.file]); });
-    lanes.querySelectorAll('[data-filec]').forEach(f => { f.onchange = () => readImg(f, amis.chars[+f.dataset.filec]); });
+    lanes.querySelectorAll('[data-file]').forEach(f => { f.onchange = () => readImg(f, amis.pets[+f.dataset.file], 'img', 'sprite'); });
+    lanes.querySelectorAll('[data-filec]').forEach(f => { f.onchange = () => readImg(f, amis.chars[+f.dataset.filec], 'img', 'sprite'); });
+    lanes.querySelectorAll('[data-fileb]').forEach(f => { f.onchange = () => readImg(f, amis.chars[+f.dataset.fileb], 'imgBody', 'spriteBody'); });
     lanes.querySelectorAll('[data-del]').forEach(bt => { bt.onclick = () => { amis.pets.splice(+bt.dataset.del, 1); amisSave(); refresh(); }; });
     lanes.querySelectorAll('[data-delc]').forEach(bt => { bt.onclick = () => { amis.chars.splice(+bt.dataset.delc, 1); amisSave(); refresh(); }; });
+    lanes.querySelectorAll('[data-nobody]').forEach(bt => { bt.onclick = () => { delete amis.chars[+bt.dataset.nobody].imgBody; amisSave(); refresh(); }; });
     lanes.querySelectorAll('[data-dup]').forEach(bt => { bt.onclick = () => { const c = JSON.parse(JSON.stringify(amis.pets[+bt.dataset.dup])); c.id = uid('pet_ami'); amis.pets.push(c); amisSave(); refresh(); }; });
     lanes.querySelectorAll('[data-try]').forEach(bt => { bt.onclick = () => { const p = amis.pets[+bt.dataset.try]; amisSave(); Pets.give(p.id); }; });
     lanes.querySelectorAll('[data-tryc]').forEach(bt => { bt.onclick = () => {
@@ -8624,18 +8649,27 @@ const Atelier = (() => {
   }
   /* Une photo devient un sprite : recadrée au carré et réduite à 64 px, sans lissage. Sans réduction, dix visages
      de téléphone pèseraient plusieurs mégaoctets une fois embarqués dans content5.js. */
-  function readImg(input, entry) {
+  /* Une image déposée entre dans le jeu telle quelle si elle est déjà à une taille de sprite. On ne l'AGRANDIT
+     jamais : un pixel art de 32×32 agrandi, a fortiori en lissant, perd exactement ce qui en fait du pixel art.
+     Seules les photos d'appareil sont réduites — et là le lissage sert, puisqu'il s'agit de photos. */
+  const IMG_MAX = 128;
+  function readImg(input, entry, field, key) {
     const f = input.files && input.files[0]; if (!f || !entry) return;
     const rd = new FileReader();
     rd.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const S = 64; const c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
         const side = Math.min(img.width, img.height);
-        g.imageSmoothingEnabled = false;
+        const carre = img.width === img.height;
+        const S = Math.min(IMG_MAX, side);
+        const c = document.createElement('canvas'); c.width = S; c.height = S; const g = c.getContext('2d');
+        const reduit = side > S;
+        g.imageSmoothingEnabled = reduit; if (reduit) g.imageSmoothingQuality = 'high';
         g.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
-        entry.img = c.toDataURL('image/png');
-        Sprites.addCustom(entry.sprite, entry.img).then(() => { amisSave(); refresh(); });
+        entry[field] = c.toDataURL('image/png');
+        if (!carre) UI.toast('Image recadrée au carré (' + img.width + '×' + img.height + ' → ' + S + '×' + S + ')');
+        else if (!reduit) UI.toast('Image reprise telle quelle : ' + S + '×' + S + ' px');
+        Sprites.addCustom(entry[key], entry[field]).then(() => { amisSave(); refresh(); });
       };
       img.onerror = () => UI.toast('Image illisible');
       img.src = rd.result;
@@ -8867,9 +8901,10 @@ const Atelier = (() => {
   const par = p => Object.keys(p || {}).length ? `, params: { ${inner(p).replace(/, $/, '')} }` : '';
   /* export de l'établi Amis : le contenu complet de dev/content5.js, images comprises */
   function amisSnippet() {
-    const imgs = amis.pets.concat(amis.chars).filter(a => a.img);
+    const src = amis.pets.concat(amis.chars);
+    const imgs = src.filter(a => a.img).map(a => [a.sprite, a.img]).concat(src.filter(a => a.imgBody).map(a => [a.spriteBody, a.imgBody]));
     let out = '/* AMIS_DEBUT */\n';
-    out += 'const FRIEND_IMAGES = {\n' + imgs.map(a => `  '${a.sprite}': '${a.img}',`).join('\n') + '\n};\n\n';
+    out += 'const FRIEND_IMAGES = {\n' + imgs.map(([k, v]) => `  '${k}': '${v}',`).join('\n') + '\n};\n\n';
     out += 'CONTENT.pets.push(\n' + amis.pets.map(p => '  ' + JSON.stringify(petDef(p)) + ',').join('\n') + '\n);\n\n';
     out += 'CONTENT.characters.push(\n' + amis.chars.map(c => '  ' + JSON.stringify(charDef(c)) + ',').join('\n') + '\n);\n';
     out += '/* AMIS_FIN */\n';

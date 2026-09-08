@@ -14,7 +14,8 @@ class Pet {
   constructor(def) {
     this.def = def; this.id = def.id; this.name = def.name; this.color = def.color || '#9fd8ff';
     const pl = G.player; this.x = pl ? pl.x - 34 : W / 2; this.y = pl ? pl.y : H / 2;
-    this.r = 11; this.t = 0; this.act = 0; this.facing = 1; this.moving = false;
+    this.r = clamp((def.size || 48) * 0.28, 8, 26);   // l'emprise suit la taille : un gros animal se cogne comme un gros animal
+    this.t = 0; this.act = 0; this.facing = 1; this.moving = false;
     this.state = 'follow'; this.target = null; this.lastBeat = -1; this.blocks = 0;
     this.rollA = 0; this.rollT = 0; this.rolled = new Set();
     this.maxHp = def.hp || 0; this.hp = this.maxHp; this.downT = 0;
@@ -180,7 +181,7 @@ class Pet {
     }
   }
   render(ctx) {
-    const s = this.def.size || 34; const lift = this.airborne ? 15 : 0;
+    const s = this.def.size || 48; const lift = this.airborne ? 15 : 0;
     const bob = this.moving ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5 : Math.sin(this.t * 3) * 2;
     ctx.save(); ctx.globalAlpha = this.down ? 0.15 : 0.32; ctx.fillStyle = '#05070c';
     ctx.beginPath(); ctx.ellipse(this.x, this.y + s * 0.34, s * 0.28, s * 0.1, 0, 0, TAU); ctx.fill(); ctx.restore();
