@@ -7,6 +7,7 @@ function update(dt, rawDt) {
   if (!G.audioOk && Music.isPlaying()) { G.audioOk = true; document.body.classList.add('audio-on'); }   // le son tourne : l'invite du menu disparaît
   if (G.state === 'run') { Run.update(dt); if (G.player) Camera.follow(G.player.x, G.player.y, rawDt); }
   else if (G.attract) Attract.update(dt);
+  Atelier.update();
 }
 function render(ctx) {
   ctx.setTransform(ctx.getTransform());
@@ -23,7 +24,7 @@ function render(ctx) {
     if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);
     if (G.room.tempo) Tempo.renderOverlay(ctx, G.room);
     Floaters.render(ctx);
-    Debug.renderOverlay(ctx);
+    Debug.renderOverlay(ctx); Atelier.render(ctx);
     ctx.restore();
     if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); if (G.room.tempo) Tempo.renderHud(ctx, G.room); }
   } else UI.renderBackdrop(ctx);
@@ -47,7 +48,9 @@ async function boot() {
   UI.showTitle();
   Engine.start(update, render);
   Attract.start();
-  window.__autoplay = Debug.autoplay;
+  window.__autoplay = Debug.autoplay; window.__atelier = Atelier;
+  window.addEventListener('keydown', e => { if (e.code === 'F2') { e.preventDefault(); Atelier.toggle(); } });
+  if (/[?&]atelier=1/.test(location.search)) setTimeout(() => Atelier.open(), 600);
   window.__G = G;
 }
 window.addEventListener('DOMContentLoaded', boot);

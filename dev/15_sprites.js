@@ -467,10 +467,12 @@ const Music = (() => {
   function tapeStop() { if (st8.ramp || generative || !currentUrl) return; rampRate(st8.rate, 0.08, 0.14, false, () => rampRate(0.3, st8.rate, 0.2, false)); }
   /* mort : la bande ralentit et descend sur `seconds`, puis silence, puis `then` */
   function dying(seconds, then) { if (generative || !currentUrl) { if (then) then(); return; } resetState(); rampRate(1, 0.25, seconds, false, () => { AudioEngine.stopMusic && AudioEngine.stopMusic(0.3); currentUrl = null; current = null; st8.rate = 1; if (then) setTimeout(then, 350); }); }
+  /* Atelier rythme : place la lecture sur le n-ième temps de la piste (temps 0 = premier temps repéré par tempo.json). */
+  function seekBeat(n) { const info = Beat.trackInfo ? Beat.trackInfo(currentUrl) : null; if (!info || !AudioEngine.seekMusic) return false; return AudioEngine.seekMusic(info.offset + n * (60 / info.bpm)); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à chaque geste tant que la musique ne joue pas (l'AudioContext et l'<audio> ne peuvent démarrer qu'après un geste) : relance la piste courante */
   function restart() { const k = current; current = null; if (k) play(k.replace(/\d+(-\d)?$/, '')); if (!armed) { armed = true; preload(['biome', 'boss', 'biome_b']); } }
   /* vrai si une piste fichier joue réellement, ou si la musique générative tourne sur un contexte actif */
   function isPlaying() { const st = AudioEngine.musicState ? AudioEngine.musicState() : null; if (!st) return false; if (st.hasTrack && st.el && !st.el.paused && st.el.t > 0.05) return true; return !!(st.generative && st.ctxState === 'running'); }
-  return { play, stop, setEnabled, restart, isPlaying, preload, keyFor, setState, resetState, calm, uncalm, tapeStop, dying, get rate() { return st8.rate; }, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
+  return { play, stop, setEnabled, restart, isPlaying, preload, keyFor, seekBeat, setState, resetState, calm, uncalm, tapeStop, dying, get rate() { return st8.rate; }, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
 })();

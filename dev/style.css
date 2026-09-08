@@ -287,3 +287,36 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 #propsel .psvar.on{border-color:#ffb347;box-shadow:0 0 14px rgba(255,179,71,.45)}
 #propsel .psvar.on .pslab{color:#ffb347}
 #propsel .psout{flex:none;font:12px monospace;color:#9fd8ff;background:rgba(4,6,12,.8);border:1px solid var(--line);border-radius:6px;padding:.5em .7em;max-height:5em;overflow:auto;user-select:all}
+
+/* ---- atelier rythme (F2) ---- */
+#atelier{position:fixed;left:0;right:0;bottom:0;max-height:56vh;overflow:auto;background:rgba(8,10,18,.94);border-top:1px solid var(--line);padding:.5em .7em;font-size:12px;color:var(--text);z-index:22;font-family:ui-monospace,Menlo,Consolas,monospace}
+#atelier[hidden]{display:none}
+#atelier .arow{display:flex;gap:.45em;flex-wrap:wrap;align-items:center;margin:.25em 0}
+#atelier .ahead b{color:#ffd166;letter-spacing:.08em}
+#atelier label{display:flex;align-items:center;gap:.3em}
+#atelier select,#atelier input[type=number]{font:inherit;background:#0b0d14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:1px 3px}
+#atelier input[type=number]{width:4.5em}
+#atelier .asp{flex:1}
+#atelier .anw{display:flex;gap:.3em;align-items:center;white-space:nowrap}
+#atelier .amuted{color:#8a93ad}
+#atelier .amono{color:#6ee7ff;min-width:9em;text-align:center}
+#atelier .apal .pal{background:#141a2a}
+#atelier .agrid{position:relative;margin:.4em 0;border:1px solid var(--line);border-radius:8px;padding:.3em;background:#0a0c14}
+#atelier .alane{display:flex;align-items:center;gap:.35em;height:22px;margin:2px 0}
+#atelier .alane.sel{background:rgba(255,209,102,.10);border-radius:5px}
+#atelier .alane .an{width:14em;flex:0 0 14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+#atelier .alane .an i{color:#8a93ad;font-style:normal}
+#atelier .alane .ax{width:2em;flex:0 0 2em;text-align:center}
+#atelier .acells{flex:1;display:flex;gap:1px}
+#atelier .ac{flex:1;min-width:6px;height:18px;border-radius:3px;background:#141a2a;cursor:pointer;font-size:9px;line-height:18px;text-align:center;color:#66708c;user-select:none}
+#atelier .ac.beat{background:#1b2338}
+#atelier .ac.bar{background:#233052;color:#9fb0d8}
+#atelier .ac.hit{background:#ffd166;box-shadow:0 0 8px rgba(255,209,102,.6)}
+#atelier .ac:hover{outline:1px solid #6ee7ff}
+#atelier .aruler .ac{cursor:pointer;height:16px;line-height:16px}
+#atelier .amur{flex:1;color:#66708c;line-height:18px;padding-left:.4em}
+#atelier .ahead-line{position:absolute;top:.3em;bottom:.3em;width:2px;background:#6ee7ff;box-shadow:0 0 8px #6ee7ff;pointer-events:none}
+#atelier.fold .apal,#atelier.fold .agrid,#atelier.fold .aio{display:none}
+#atelier .atune{border-top:1px dashed var(--line);padding-top:.35em;margin-top:.35em}
+#atelier .aio textarea{width:100%;height:9em;background:#000;color:#cfe;border:1px solid var(--line);border-radius:6px;font:inherit;padding:.4em}
+#atelier .btn.tiny{padding:0 .35em;font-size:11px;line-height:16px}

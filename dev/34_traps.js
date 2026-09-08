@@ -36,10 +36,40 @@ class Trap {
   lt(rt) { return Math.max(0, rt - this.phase); }
   /* cycle : renvoie {stage:'idle'|'warn'|'on', k} */
   cycle(rt) {
+    if (this.hitsSec) return this.cycleHits(rt);
     const t = this.lt(rt) % this.period; const on0 = this.period - this.active;
     if (t >= on0) return { stage: 'on', k: (t - on0) / this.active, idx: Math.floor(this.lt(rt) / this.period) };
     if (t >= on0 - this.telegraph) return { stage: 'warn', k: (t - (on0 - this.telegraph)) / this.telegraph, idx: Math.floor(this.lt(rt) / this.period) };
     return { stage: 'idle', k: t / Math.max(0.01, on0 - this.telegraph), idx: Math.floor(this.lt(rt) / this.period) };
+  }
+  /* Partition libre (`beats.hits`) : la boucle dure `bars` mesures et chaque coup a sa place, au lieu d'une période
+     unique. Le coup i de la boucle L porte l'indice L*n+i : il croît avec le temps, donc les avertisseurs sonores et
+     les alternances (aller-retour du balayage, groupes de dalles) qui s'appuient sur cet indice marchent sans changement. */
+  cycleHits(rt) {
+    const P = this.hitLoop, n = this.hitsSec.length;
+    if (!P || !n) return { stage: 'idle', k: 0, idx: 0 };
+    const loop = Math.floor(rt / P), t = rt - loop * P; let warn = null;
+    const E = 1e-9;   // un coup posé pile sur le début de la boucle ne doit pas tomber dans l'arrondi
+    for (let o = -1; o <= 1; o++) for (let i = 0; i < n; i++) {
+      const h = this.hitsSec[i] + o * P, idx = (loop + o) * n + i;
+      if (t >= h - E && t < h + this.active - E) return { stage: 'on', k: clamp((t - h) / this.active, 0, 1), idx };
+      if (!warn && t >= h - this.telegraph - E && t < h - E) warn = { stage: 'warn', k: (t - h + this.telegraph) / this.telegraph, idx };
+    }
+    return warn || { stage: 'idle', k: 0, idx: loop * n };
+  }
+  /* Bouches de feu et tourelles tirent sur leur propre horloge (`p.every`) et non sur cycle() : ce découpage leur donne
+     le même repère — indice du tir et temps écoulé depuis le début de son cycle — en cadence fixe comme en partition libre. */
+  fireCycle(rt, fallback) {
+    if (this.hitsSec) {
+      const P = this.hitLoop, n = this.hitsSec.length;
+      if (!P || !n) return { idx: -1, inCycle: -1 };
+      const loop = Math.floor(rt / P), t = rt - loop * P; let best = -Infinity, bi = 0, bl = loop;
+      for (let o = -1; o <= 0; o++) for (let i = 0; i < n; i++) { const s0 = this.hitsSec[i] - this.telegraph + o * P; if (s0 <= t + 1e-9 && s0 > best) { best = s0; bi = i; bl = loop + o; } }
+      if (best === -Infinity) return { idx: -1, inCycle: -1 };
+      return { idx: bl * n + bi, inCycle: t - best };
+    }
+    const every = (this.p.every || fallback) / G.difficulty.fireRateMul; const t = this.lt(rt); const idx = Math.floor(t / every);
+    return { idx, inCycle: t - idx * every, every };
   }
   warn(idx, snd = 'trapWarn') { if (this.warned !== idx) { this.warned = idx; AudioEngine[snd]({ x: (this.cx - W / 2) / (W / 2), intensity: 0.5 }); } }
   hit(pl) { if (this.hitCd > 0) return; if (Combat.hitPlayer(this.damage, { type: 'trap', x: this.cx, y: this.cy, trapName: this.name })) this.hitCd = 0.5; }
@@ -56,6 +86,11 @@ class Trap {
        difficulté 3 sortirait du tempo. */
     if (b.turn) this.p.angularSpeed = TAU / (b.turn * L) / (this.speedMul || 1);
     if (b.trip) { const len = this.railLength(); if (len) this.p.speed = len / (b.trip * L) / (this.speedMul || 1); }
+    if (b.hits) {   // partition libre : une boucle de `bars` mesures et la liste des temps frappés (fractions acceptées)
+      this.hitLoop = (b.bars || 1) * 4 * L; this.hitsSec = b.hits.map(h => (typeof h === 'number' ? h : h.b || 0) * L);
+      this.telegraph = tele * L; this.active = (b.active || 1) * L; this.period = this.hitLoop; this.phase = 0; return;
+    }
+    this.hitsSec = null;
     if (this.kind === 'wall_fireball' || this.kind === 'turret_fixed') { const every = b.every || b.period || 2; this.p.every = every * L * G.difficulty.fireRateMul; this.telegraph = tele * L; this.phase = ((((on - tele) % every) + every) % every) * L; }
     else { const period = b.period || 4, act = b.active || 1; this.period = period * L; this.active = act * L; this.telegraph = tele * L; this.phase = ((((on + act) % period) + period) % period) * L; }
   }
@@ -110,8 +145,7 @@ class Trap {
 
   /* --- wall_fireball : émetteur au mur, tire des boules de feu (straight / fan / spiral) --- */
   u_wall_fireball(dt, rt, pl) {
-    const p = this.p; const every = (p.every || 1.2) / G.difficulty.fireRateMul; const t = this.lt(rt); if (t < 0) return;
-    const idx = Math.floor(t / every); const inCycle = t - idx * every;
+    const p = this.p; const c = this.fireCycle(rt, 1.2); const idx = c.idx, inCycle = c.inCycle; if (idx < 0) return;
     if (inCycle < this.telegraph && this.warned !== idx) { this.warned = idx; AudioEngine.trapWarn({ x: (this.cx - W / 2) / (W / 2), intensity: 0.3 }); }
     if (idx > this.fireCount - 1 && inCycle >= this.telegraph) {
       this.fireCount = idx + 1; const dir = p.dir != null ? p.dir : angleTo(this.cx, this.cy, W / 2, H / 2); const n = p.count || 1; const sp = (p.speed || 200) * this.speedMul;
@@ -124,7 +158,7 @@ class Trap {
     }
   }
   r_wall_fireball(ctx, rt) {
-    const p = this.p; const every = (p.every || 1.2) / G.difficulty.fireRateMul; const t = this.lt(rt); const inCycle = t - Math.floor(t / every) * every; const warm = inCycle < this.telegraph ? inCycle / this.telegraph : 0;
+    const inCycle = this.fireCycle(rt, 1.2).inCycle; const warm = inCycle >= 0 && inCycle < this.telegraph ? inCycle / this.telegraph : 0;
     ctx.save(); ctx.fillStyle = '#3a3f55'; ctx.fillRect(this.x + 6, this.y + 6, this.w - 12, this.h - 12);
     ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 8 + warm * 18; ctx.beginPath(); ctx.arc(this.cx, this.cy, 8 + warm * 6, 0, TAU); ctx.fill(); ctx.restore();
   }
@@ -188,7 +222,7 @@ class Trap {
 
   /* --- turret_fixed : tourelle à pattern (visée joueur ou angle fixe) --- */
   u_turret_fixed(dt, rt, pl) {
-    const p = this.p; const every = (p.every || 1.5) / G.difficulty.fireRateMul; const t = this.lt(rt); if (t < 0) return; const idx = Math.floor(t / every); const inCycle = t - idx * every;
+    const p = this.p; const c = this.fireCycle(rt, 1.5); const idx = c.idx, inCycle = c.inCycle; const t = this.lt(rt); if (idx < 0) return;
     if (inCycle < this.telegraph && this.warned !== idx) { this.warned = idx; AudioEngine.trapWarn({ x: (this.cx - W / 2) / (W / 2), intensity: 0.3 }); }
     this.aimA = p.aim === 'player' ? angleTo(this.cx, this.cy, pl.x, pl.y) : (p.angle || 0) + (p.rotate ? t * p.rotate : 0);
     if (idx > this.fireCount - 1 && inCycle >= this.telegraph) {
@@ -198,7 +232,7 @@ class Trap {
     }
   }
   r_turret_fixed(ctx, rt) {
-    const p = this.p; const every = (p.every || 1.5) / G.difficulty.fireRateMul; const t = this.lt(rt); const inCycle = t - Math.floor(t / every) * every; const warm = inCycle < this.telegraph ? inCycle / this.telegraph : 0;
+    const inCycle = this.fireCycle(rt, 1.5).inCycle; const warm = inCycle >= 0 && inCycle < this.telegraph ? inCycle / this.telegraph : 0;
     ctx.save(); ctx.translate(this.cx, this.cy); ctx.fillStyle = '#3a3f55'; ctx.beginPath(); ctx.arc(0, 0, 16, 0, TAU); ctx.fill();
     ctx.rotate(this.aimA || 0); ctx.fillStyle = warm ? `rgb(255,${Math.round(200 - warm * 120)},80)` : '#8890aa'; ctx.fillRect(0, -5, 24, 10);
     ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = warm * 16; ctx.beginPath(); ctx.arc(0, 0, 6 + warm * 3, 0, TAU); ctx.fill(); ctx.restore();

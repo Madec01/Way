@@ -754,3 +754,47 @@ Aucun contenu neuf : ces cinq points rendent musical ce qui était déjà écrit
 **5. Le mix des pièges descend sous la musique.** `trapSpike` 1,4 → 0,7 (c'était le son le plus fort du jeu, presque 3× le pistolet du joueur), `trapWarn` 1,1 → 0,6, `trapSaw` 0,4 → 0,25, `trapLaser` 0,5 → 0,4, `trapGas` 0,45 → 0,4. L'espacement des annonces passe à 0,23 s — un temps à 129 BPM, donc jamais deux annonces sur le même temps. Le grincement du rail se cale sur le temps au lieu de 2 Hz : contre une pulsation à 2,153 Hz, il produisait un battement lent de 0,15 Hz, exactement la sensation « ça frotte ». Et **la tourelle a son propre son** (`trapShot`, percussion sèche non accordée) : elle jouait `shootPistol`, le son de l'arme du joueur.
 
 **Bonus : la partition au sol.** `Tempo.renderScore` marque les tuiles qui vont être frappées — coins dorés un temps à l'avance, cadre plein un demi-temps avant. Elle s'applique à **toute** salle contenant des pièges rythmiques, pas seulement la salle 7. C'est la couche de lisibilité qui permettra de composer sans que la salle devienne un sapin de Noël.
+
+---
+
+## 28. Atelier rythme — fabriquer une salle à l'oreille
+
+`dev/80_atelier.js`, ouvert par **F2** (ou le bouton « Atelier rythme » du panneau debug, ou l'adresse `?atelier=1`). Il donne une salle vierge, la piste du biome découpée en temps cliquables, et une partition par élément posé. Rien n'est simulé à part : ce sont les vrais pièges du jeu, sur la vraie piste, dans une vraie salle — ce qu'on entend dans l'atelier est ce qu'on aura en partie.
+
+### La partition libre
+
+Un piège pouvait déjà déclarer une cadence musicale, mais **une seule période** : `beats: { period: 4, active: 1, telegraph: 1, on: 0 }` veut dire « une fois toutes les 4 temps, sur le temps 0 ». Impossible d'écrire un motif. Le format s'ouvre :
+
+```js
+params: { beats: { bars: 2, hits: [0, 1.5, 2, 3.5], telegraph: 1, active: 1 } }
+```
+
+- `bars` : longueur de la boucle en mesures (4 temps chacune) ;
+- `hits` : les temps frappés dans cette boucle, fractions acceptées (`1.5` = la croche après le deuxième temps) ;
+- `telegraph` / `active` : annonce et durée d'un coup, en temps.
+
+`Trap.cycleHits` remplace `Trap.cycle` dès que `hits` est là. Le coup *i* de la boucle *L* porte l'indice `L × n + i`, qui croît avec le temps : les avertisseurs sonores et les alternances qui s'appuient sur cet indice (aller-retour du balayage, groupes de dalles) marchent sans changement. Les bouches de feu et les tourelles ne passent pas par `cycle` mais par leur propre horloge `p.every` : `Trap.fireCycle` leur donne le même repère dans les deux formats. **L'ancien format continue de fonctionner tel quel** — les quarante déclarations existantes n'ont pas bougé.
+
+### Le panneau
+
+| Réglage | Effet |
+|---|---|
+| **Mode : pose / test** | En pose, le clic dans la salle pose ou choisit un élément (il ne tire pas). En test, on joue normalement. |
+| **Biome / Piste** | La piste jouée : biome salles 1-4, biome salles 6-8, ou boss. Change le BPM, donc la durée d'un temps. |
+| **Boucle** | 1, 2, 4 ou 8 mesures. C'est la longueur de la partition. |
+| **Grille** | Subdivision des cases : noires, croches, doubles ou triolets. |
+| **boucler** | La lecture revient au début de la boucle quand elle en sort. |
+| **métronome** | Un clic sur chaque temps, plus fort sur le premier de la mesure. |
+| **◀ mesures 5–8 ▶** | Déplace la fenêtre de travail dans le morceau. |
+
+La **règle** en haut de la grille porte un repère par subdivision, numéroté `mesure·temps` : **un clic dessus place la lecture sur ce temps**, sans chercher dans une forme d'onde. Chaque élément posé a sa ligne : un clic sur une case ajoute ou retire un coup à cet endroit. Le trait cyan est la tête de lecture.
+
+Sous la ligne choisie viennent ses réglages : largeur, hauteur, annonce et durée en temps, et « Dupliquer ». **Suppr** enlève l'élément choisi. « Mur » pose un obstacle de décor (sans partition).
+
+### Sortir le morceau
+
+« Exporter » écrit le bloc à coller dans un `content*.js` : `obstacles:` s'il y a des murs, puis `traps:` avec un `params.beats` complet par élément. Le texte se termine par un commentaire `/* atelier:{…} */` que « Importer ce texte » sait relire : l'aller-retour est complet, on peut ranger une partition dans un fichier et la reprendre. Le travail en cours est de toute façon gardé dans le navigateur (`localStorage`, clé `way_atelier_v1`).
+
+### Garde-fous
+
+`atelier.js` (scratchpad, Playwright) vérifie l'ouverture, la salle vierge, la pose au clic, la grille, l'export, l'import, la tête de lecture, les murs et la fermeture — et surtout que le piège est **actif exactement sur les temps cochés** et **annoncé un temps avant**, en comparant les états de `cycleHits` à la liste attendue. Attention en écrivant ce genre de test : échantillonner pile sur les bornes d'une fenêtre donne des résultats faux à 10⁻¹⁴ près, il faut viser le milieu des cases.

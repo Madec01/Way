@@ -1281,6 +1281,8 @@
   };
   /* position de lecture de la piste courante (salle du tempo) : { t, paused } ou null */
   api.musicTime = () => music.cur && music.cur.el ? { t: music.cur.el.currentTime, paused: music.cur.el.paused } : null;
+  /* déplace la lecture de la piste courante (atelier rythme) ; faux si la piste n'est pas lue par un <audio> */
+  api.seekMusic = (t) => { const el = music.cur && music.cur.el; if (!el) return false; try { el.currentTime = Math.max(0, t); return true; } catch (e) { return false; } };
   /* spectre de la musique en n bandes (0..1), espacement logarithmique ; null sans contexte */
   api.spectrum = (n) => {
     if (!analyser) return null; n = n || 24;

@@ -126,8 +126,10 @@ const Input = (() => {
     canvas = c;
     let first = false;
     const firstInt = () => { if (!first) { first = true; onFirstInteraction && onFirstInteraction(); } };
+    const typing = e => { const t = e.target; return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT'); };
     window.addEventListener('keydown', e => {
       firstInt();
+      if (typing(e)) return;   // champ de saisie (atelier rythme) : le clavier lui appartient
       if (e.code === 'F1' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       if (!keys.has(e.code)) pressed.add(e.code);
       keys.add(e.code);

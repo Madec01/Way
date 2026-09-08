@@ -24,7 +24,7 @@ const Debug = (() => {
       <div class="drow"><label>Arme <select id="d-weapon">${Content.weapons().map(w => `<option value="${w.id}">${w.name}</option>`).join('')}</select></label><label>Comp. <select id="d-skill">${Content.skills().map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select></label><button class="btn small" id="d-equip">Équiper</button></div>
       <div class="drow"><label>Greffe <select id="d-upg">${Content.upgrades().map(u => `<option value="${u.id}">[${RARITY[u.rarity].label[0]}] ${u.name}</option>`).join('')}</select></label><button class="btn small" id="d-give">Donner</button></div>
       <div class="drow"><label>Vitesse <span id="d-ts-v">1×</span><input type="range" min="0.25" max="4" step="0.25" value="1" id="d-ts"></label></div>
-      <div class="drow"><button class="btn small" id="d-audio">Test audio</button><button class="btn small" id="d-props">Accessoires</button><button class="btn small" id="d-auto">Autoplay ×1</button><button class="btn small" id="d-auto5">Autoplay ×5</button></div>
+      <div class="drow"><button class="btn small" id="d-audio">Test audio</button><button class="btn small" id="d-props">Accessoires</button><button class="btn small" id="d-atelier">Atelier rythme</button><button class="btn small" id="d-auto">Autoplay ×1</button><button class="btn small" id="d-auto5">Autoplay ×5</button></div>
       <pre id="d-out" class="dout"></pre>
       <div id="d-audiopanel" hidden></div>`;
     const bind = (id, fn) => { const e = $(id); e.oninput = e.onchange = () => fn(e); };
@@ -49,6 +49,7 @@ const Debug = (() => {
     bind('#d-tier', e => { G.debug.forceTier = e.value === '' ? null : +e.value; });
     $('#d-audio').onclick = toggleAudioPanel;
     $('#d-props').onclick = toggleProps;
+    $('#d-atelier').onclick = () => { hide(); Atelier.open(); };
     $('#d-auto').onclick = () => runAuto(1); $('#d-auto5').onclick = () => runAuto(5);
   }
   /* ---------- Comparateur d'accessoires ----------

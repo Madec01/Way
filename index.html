@@ -300,6 +300,39 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 #propsel .psvar.on .pslab{color:#ffb347}
 #propsel .psout{flex:none;font:12px monospace;color:#9fd8ff;background:rgba(4,6,12,.8);border:1px solid var(--line);border-radius:6px;padding:.5em .7em;max-height:5em;overflow:auto;user-select:all}
 
+/* ---- atelier rythme (F2) ---- */
+#atelier{position:fixed;left:0;right:0;bottom:0;max-height:56vh;overflow:auto;background:rgba(8,10,18,.94);border-top:1px solid var(--line);padding:.5em .7em;font-size:12px;color:var(--text);z-index:22;font-family:ui-monospace,Menlo,Consolas,monospace}
+#atelier[hidden]{display:none}
+#atelier .arow{display:flex;gap:.45em;flex-wrap:wrap;align-items:center;margin:.25em 0}
+#atelier .ahead b{color:#ffd166;letter-spacing:.08em}
+#atelier label{display:flex;align-items:center;gap:.3em}
+#atelier select,#atelier input[type=number]{font:inherit;background:#0b0d14;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:1px 3px}
+#atelier input[type=number]{width:4.5em}
+#atelier .asp{flex:1}
+#atelier .anw{display:flex;gap:.3em;align-items:center;white-space:nowrap}
+#atelier .amuted{color:#8a93ad}
+#atelier .amono{color:#6ee7ff;min-width:9em;text-align:center}
+#atelier .apal .pal{background:#141a2a}
+#atelier .agrid{position:relative;margin:.4em 0;border:1px solid var(--line);border-radius:8px;padding:.3em;background:#0a0c14}
+#atelier .alane{display:flex;align-items:center;gap:.35em;height:22px;margin:2px 0}
+#atelier .alane.sel{background:rgba(255,209,102,.10);border-radius:5px}
+#atelier .alane .an{width:14em;flex:0 0 14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+#atelier .alane .an i{color:#8a93ad;font-style:normal}
+#atelier .alane .ax{width:2em;flex:0 0 2em;text-align:center}
+#atelier .acells{flex:1;display:flex;gap:1px}
+#atelier .ac{flex:1;min-width:6px;height:18px;border-radius:3px;background:#141a2a;cursor:pointer;font-size:9px;line-height:18px;text-align:center;color:#66708c;user-select:none}
+#atelier .ac.beat{background:#1b2338}
+#atelier .ac.bar{background:#233052;color:#9fb0d8}
+#atelier .ac.hit{background:#ffd166;box-shadow:0 0 8px rgba(255,209,102,.6)}
+#atelier .ac:hover{outline:1px solid #6ee7ff}
+#atelier .aruler .ac{cursor:pointer;height:16px;line-height:16px}
+#atelier .amur{flex:1;color:#66708c;line-height:18px;padding-left:.4em}
+#atelier .ahead-line{position:absolute;top:.3em;bottom:.3em;width:2px;background:#6ee7ff;box-shadow:0 0 8px #6ee7ff;pointer-events:none}
+#atelier.fold .apal,#atelier.fold .agrid,#atelier.fold .aio{display:none}
+#atelier .atune{border-top:1px dashed var(--line);padding-top:.35em;margin-top:.35em}
+#atelier .aio textarea{width:100%;height:9em;background:#000;color:#cfe;border:1px solid var(--line);border-radius:6px;font:inherit;padding:.4em}
+#atelier .btn.tiny{padding:0 .35em;font-size:11px;line-height:16px}
+
 </style>
 </head>
 <body>
@@ -307,6 +340,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 <div id="ui"></div>
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
+<div id="atelier" hidden></div>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -437,8 +471,10 @@ const Input = (() => {
     canvas = c;
     let first = false;
     const firstInt = () => { if (!first) { first = true; onFirstInteraction && onFirstInteraction(); } };
+    const typing = e => { const t = e.target; return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT'); };
     window.addEventListener('keydown', e => {
       firstInt();
+      if (typing(e)) return;   // champ de saisie (atelier rythme) : le clavier lui appartient
       if (e.code === 'F1' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       if (!keys.has(e.code)) pressed.add(e.code);
       keys.add(e.code);
@@ -1830,6 +1866,8 @@ const BALANCE = {
   };
   /* position de lecture de la piste courante (salle du tempo) : { t, paused } ou null */
   api.musicTime = () => music.cur && music.cur.el ? { t: music.cur.el.currentTime, paused: music.cur.el.paused } : null;
+  /* déplace la lecture de la piste courante (atelier rythme) ; faux si la piste n'est pas lue par un <audio> */
+  api.seekMusic = (t) => { const el = music.cur && music.cur.el; if (!el) return false; try { el.currentTime = Math.max(0, t); return true; } catch (e) { return false; } };
   /* spectre de la musique en n bandes (0..1), espacement logarithmique ; null sans contexte */
   api.spectrum = (n) => {
     if (!analyser) return null; n = n || 24;
@@ -3597,12 +3635,14 @@ const Music = (() => {
   function tapeStop() { if (st8.ramp || generative || !currentUrl) return; rampRate(st8.rate, 0.08, 0.14, false, () => rampRate(0.3, st8.rate, 0.2, false)); }
   /* mort : la bande ralentit et descend sur `seconds`, puis silence, puis `then` */
   function dying(seconds, then) { if (generative || !currentUrl) { if (then) then(); return; } resetState(); rampRate(1, 0.25, seconds, false, () => { AudioEngine.stopMusic && AudioEngine.stopMusic(0.3); currentUrl = null; current = null; st8.rate = 1; if (then) setTimeout(then, 350); }); }
+  /* Atelier rythme : place la lecture sur le n-ième temps de la piste (temps 0 = premier temps repéré par tempo.json). */
+  function seekBeat(n) { const info = Beat.trackInfo ? Beat.trackInfo(currentUrl) : null; if (!info || !AudioEngine.seekMusic) return false; return AudioEngine.seekMusic(info.offset + n * (60 / info.bpm)); }
   function setEnabled(v) { enabled = v; if (!v) stop(); }
   /* appelé à chaque geste tant que la musique ne joue pas (l'AudioContext et l'<audio> ne peuvent démarrer qu'après un geste) : relance la piste courante */
   function restart() { const k = current; current = null; if (k) play(k.replace(/\d+(-\d)?$/, '')); if (!armed) { armed = true; preload(['biome', 'boss', 'biome_b']); } }
   /* vrai si une piste fichier joue réellement, ou si la musique générative tourne sur un contexte actif */
   function isPlaying() { const st = AudioEngine.musicState ? AudioEngine.musicState() : null; if (!st) return false; if (st.hasTrack && st.el && !st.el.paused && st.el.t > 0.05) return true; return !!(st.generative && st.ctxState === 'running'); }
-  return { play, stop, setEnabled, restart, isPlaying, preload, keyFor, setState, resetState, calm, uncalm, tapeStop, dying, get rate() { return st8.rate; }, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
+  return { play, stop, setEnabled, restart, isPlaying, preload, keyFor, seekBeat, setState, resetState, calm, uncalm, tapeStop, dying, get rate() { return st8.rate; }, get current() { return current; }, get currentUrl() { return currentUrl; }, get generative() { return generative; } };
 })();
 
 </script>
@@ -4346,7 +4386,7 @@ class Player {
       firing = t.fire || (t.autoFire && !!tgt); wantSkill = Input.wasPressed('skill'); if (t.interact) { Input.press('KeyE'); t.interact = false; }
     } else {
       const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y); mv = Input.axis(); aim = angleTo(this.x, this.y, wm.x, wm.y);
-      firing = Input.mouse.down || Input.isDown('fire'); wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
+      firing = (Input.mouse.down && !Atelier.posing()) || Input.isDown('fire');   // atelier en mode pose : le clic sert à poser, pas à tirer wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
     }
     this.moveDir = mv; this.aim = aim; if (Math.abs(Math.cos(aim)) > 0.2) this.facing = Math.cos(aim) > 0 ? 1 : -1;
     /* --- déplacement --- */
@@ -5002,10 +5042,40 @@ class Trap {
   lt(rt) { return Math.max(0, rt - this.phase); }
   /* cycle : renvoie {stage:'idle'|'warn'|'on', k} */
   cycle(rt) {
+    if (this.hitsSec) return this.cycleHits(rt);
     const t = this.lt(rt) % this.period; const on0 = this.period - this.active;
     if (t >= on0) return { stage: 'on', k: (t - on0) / this.active, idx: Math.floor(this.lt(rt) / this.period) };
     if (t >= on0 - this.telegraph) return { stage: 'warn', k: (t - (on0 - this.telegraph)) / this.telegraph, idx: Math.floor(this.lt(rt) / this.period) };
     return { stage: 'idle', k: t / Math.max(0.01, on0 - this.telegraph), idx: Math.floor(this.lt(rt) / this.period) };
+  }
+  /* Partition libre (`beats.hits`) : la boucle dure `bars` mesures et chaque coup a sa place, au lieu d'une période
+     unique. Le coup i de la boucle L porte l'indice L*n+i : il croît avec le temps, donc les avertisseurs sonores et
+     les alternances (aller-retour du balayage, groupes de dalles) qui s'appuient sur cet indice marchent sans changement. */
+  cycleHits(rt) {
+    const P = this.hitLoop, n = this.hitsSec.length;
+    if (!P || !n) return { stage: 'idle', k: 0, idx: 0 };
+    const loop = Math.floor(rt / P), t = rt - loop * P; let warn = null;
+    const E = 1e-9;   // un coup posé pile sur le début de la boucle ne doit pas tomber dans l'arrondi
+    for (let o = -1; o <= 1; o++) for (let i = 0; i < n; i++) {
+      const h = this.hitsSec[i] + o * P, idx = (loop + o) * n + i;
+      if (t >= h - E && t < h + this.active - E) return { stage: 'on', k: clamp((t - h) / this.active, 0, 1), idx };
+      if (!warn && t >= h - this.telegraph - E && t < h - E) warn = { stage: 'warn', k: (t - h + this.telegraph) / this.telegraph, idx };
+    }
+    return warn || { stage: 'idle', k: 0, idx: loop * n };
+  }
+  /* Bouches de feu et tourelles tirent sur leur propre horloge (`p.every`) et non sur cycle() : ce découpage leur donne
+     le même repère — indice du tir et temps écoulé depuis le début de son cycle — en cadence fixe comme en partition libre. */
+  fireCycle(rt, fallback) {
+    if (this.hitsSec) {
+      const P = this.hitLoop, n = this.hitsSec.length;
+      if (!P || !n) return { idx: -1, inCycle: -1 };
+      const loop = Math.floor(rt / P), t = rt - loop * P; let best = -Infinity, bi = 0, bl = loop;
+      for (let o = -1; o <= 0; o++) for (let i = 0; i < n; i++) { const s0 = this.hitsSec[i] - this.telegraph + o * P; if (s0 <= t + 1e-9 && s0 > best) { best = s0; bi = i; bl = loop + o; } }
+      if (best === -Infinity) return { idx: -1, inCycle: -1 };
+      return { idx: bl * n + bi, inCycle: t - best };
+    }
+    const every = (this.p.every || fallback) / G.difficulty.fireRateMul; const t = this.lt(rt); const idx = Math.floor(t / every);
+    return { idx, inCycle: t - idx * every, every };
   }
   warn(idx, snd = 'trapWarn') { if (this.warned !== idx) { this.warned = idx; AudioEngine[snd]({ x: (this.cx - W / 2) / (W / 2), intensity: 0.5 }); } }
   hit(pl) { if (this.hitCd > 0) return; if (Combat.hitPlayer(this.damage, { type: 'trap', x: this.cx, y: this.cy, trapName: this.name })) this.hitCd = 0.5; }
@@ -5022,6 +5092,11 @@ class Trap {
        difficulté 3 sortirait du tempo. */
     if (b.turn) this.p.angularSpeed = TAU / (b.turn * L) / (this.speedMul || 1);
     if (b.trip) { const len = this.railLength(); if (len) this.p.speed = len / (b.trip * L) / (this.speedMul || 1); }
+    if (b.hits) {   // partition libre : une boucle de `bars` mesures et la liste des temps frappés (fractions acceptées)
+      this.hitLoop = (b.bars || 1) * 4 * L; this.hitsSec = b.hits.map(h => (typeof h === 'number' ? h : h.b || 0) * L);
+      this.telegraph = tele * L; this.active = (b.active || 1) * L; this.period = this.hitLoop; this.phase = 0; return;
+    }
+    this.hitsSec = null;
     if (this.kind === 'wall_fireball' || this.kind === 'turret_fixed') { const every = b.every || b.period || 2; this.p.every = every * L * G.difficulty.fireRateMul; this.telegraph = tele * L; this.phase = ((((on - tele) % every) + every) % every) * L; }
     else { const period = b.period || 4, act = b.active || 1; this.period = period * L; this.active = act * L; this.telegraph = tele * L; this.phase = ((((on + act) % period) + period) % period) * L; }
   }
@@ -5076,8 +5151,7 @@ class Trap {
 
   /* --- wall_fireball : émetteur au mur, tire des boules de feu (straight / fan / spiral) --- */
   u_wall_fireball(dt, rt, pl) {
-    const p = this.p; const every = (p.every || 1.2) / G.difficulty.fireRateMul; const t = this.lt(rt); if (t < 0) return;
-    const idx = Math.floor(t / every); const inCycle = t - idx * every;
+    const p = this.p; const c = this.fireCycle(rt, 1.2); const idx = c.idx, inCycle = c.inCycle; if (idx < 0) return;
     if (inCycle < this.telegraph && this.warned !== idx) { this.warned = idx; AudioEngine.trapWarn({ x: (this.cx - W / 2) / (W / 2), intensity: 0.3 }); }
     if (idx > this.fireCount - 1 && inCycle >= this.telegraph) {
       this.fireCount = idx + 1; const dir = p.dir != null ? p.dir : angleTo(this.cx, this.cy, W / 2, H / 2); const n = p.count || 1; const sp = (p.speed || 200) * this.speedMul;
@@ -5090,7 +5164,7 @@ class Trap {
     }
   }
   r_wall_fireball(ctx, rt) {
-    const p = this.p; const every = (p.every || 1.2) / G.difficulty.fireRateMul; const t = this.lt(rt); const inCycle = t - Math.floor(t / every) * every; const warm = inCycle < this.telegraph ? inCycle / this.telegraph : 0;
+    const inCycle = this.fireCycle(rt, 1.2).inCycle; const warm = inCycle >= 0 && inCycle < this.telegraph ? inCycle / this.telegraph : 0;
     ctx.save(); ctx.fillStyle = '#3a3f55'; ctx.fillRect(this.x + 6, this.y + 6, this.w - 12, this.h - 12);
     ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 8 + warm * 18; ctx.beginPath(); ctx.arc(this.cx, this.cy, 8 + warm * 6, 0, TAU); ctx.fill(); ctx.restore();
   }
@@ -5154,7 +5228,7 @@ class Trap {
 
   /* --- turret_fixed : tourelle à pattern (visée joueur ou angle fixe) --- */
   u_turret_fixed(dt, rt, pl) {
-    const p = this.p; const every = (p.every || 1.5) / G.difficulty.fireRateMul; const t = this.lt(rt); if (t < 0) return; const idx = Math.floor(t / every); const inCycle = t - idx * every;
+    const p = this.p; const c = this.fireCycle(rt, 1.5); const idx = c.idx, inCycle = c.inCycle; const t = this.lt(rt); if (idx < 0) return;
     if (inCycle < this.telegraph && this.warned !== idx) { this.warned = idx; AudioEngine.trapWarn({ x: (this.cx - W / 2) / (W / 2), intensity: 0.3 }); }
     this.aimA = p.aim === 'player' ? angleTo(this.cx, this.cy, pl.x, pl.y) : (p.angle || 0) + (p.rotate ? t * p.rotate : 0);
     if (idx > this.fireCount - 1 && inCycle >= this.telegraph) {
@@ -5164,7 +5238,7 @@ class Trap {
     }
   }
   r_turret_fixed(ctx, rt) {
-    const p = this.p; const every = (p.every || 1.5) / G.difficulty.fireRateMul; const t = this.lt(rt); const inCycle = t - Math.floor(t / every) * every; const warm = inCycle < this.telegraph ? inCycle / this.telegraph : 0;
+    const inCycle = this.fireCycle(rt, 1.5).inCycle; const warm = inCycle >= 0 && inCycle < this.telegraph ? inCycle / this.telegraph : 0;
     ctx.save(); ctx.translate(this.cx, this.cy); ctx.fillStyle = '#3a3f55'; ctx.beginPath(); ctx.arc(0, 0, 16, 0, TAU); ctx.fill();
     ctx.rotate(this.aimA || 0); ctx.fillStyle = warm ? `rgb(255,${Math.round(200 - warm * 120)},80)` : '#8890aa'; ctx.fillRect(0, -5, 24, 10);
     ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = warm * 16; ctx.beginPath(); ctx.arc(0, 0, 6 + warm * 3, 0, TAU); ctx.fill(); ctx.restore();
@@ -7236,7 +7310,7 @@ const Debug = (() => {
       <div class="drow"><label>Arme <select id="d-weapon">${Content.weapons().map(w => `<option value="${w.id}">${w.name}</option>`).join('')}</select></label><label>Comp. <select id="d-skill">${Content.skills().map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select></label><button class="btn small" id="d-equip">Équiper</button></div>
       <div class="drow"><label>Greffe <select id="d-upg">${Content.upgrades().map(u => `<option value="${u.id}">[${RARITY[u.rarity].label[0]}] ${u.name}</option>`).join('')}</select></label><button class="btn small" id="d-give">Donner</button></div>
       <div class="drow"><label>Vitesse <span id="d-ts-v">1×</span><input type="range" min="0.25" max="4" step="0.25" value="1" id="d-ts"></label></div>
-      <div class="drow"><button class="btn small" id="d-audio">Test audio</button><button class="btn small" id="d-props">Accessoires</button><button class="btn small" id="d-auto">Autoplay ×1</button><button class="btn small" id="d-auto5">Autoplay ×5</button></div>
+      <div class="drow"><button class="btn small" id="d-audio">Test audio</button><button class="btn small" id="d-props">Accessoires</button><button class="btn small" id="d-atelier">Atelier rythme</button><button class="btn small" id="d-auto">Autoplay ×1</button><button class="btn small" id="d-auto5">Autoplay ×5</button></div>
       <pre id="d-out" class="dout"></pre>
       <div id="d-audiopanel" hidden></div>`;
     const bind = (id, fn) => { const e = $(id); e.oninput = e.onchange = () => fn(e); };
@@ -7261,6 +7335,7 @@ const Debug = (() => {
     bind('#d-tier', e => { G.debug.forceTier = e.value === '' ? null : +e.value; });
     $('#d-audio').onclick = toggleAudioPanel;
     $('#d-props').onclick = toggleProps;
+    $('#d-atelier').onclick = () => { hide(); Atelier.open(); };
     $('#d-auto').onclick = () => runAuto(1); $('#d-auto5').onclick = () => runAuto(5);
   }
   /* ---------- Comparateur d'accessoires ----------
@@ -7411,6 +7486,284 @@ const Debug = (() => {
 
 </script>
 <script>
+/* ==== 80_atelier.js ==== */
+/* =========================================================================
+   SALLE ZÉRO — 80_atelier.js — Atelier rythme
+   Une salle vierge, la piste du biome découpée en temps cliquables, et une partition par élément posé.
+   On pose les pièges à la souris, on coche les temps où ils frappent, on écoute en boucle, puis on exporte
+   le morceau de content*.js à coller dans une salle. F2 ouvre et ferme.
+
+   Repère de temps : les positions sont comptées en temps musicaux depuis le début d'une boucle de `bars`
+   mesures, et les pièges lisent exactement la même chose (params.beats.hits, voir Trap.cycleHits).
+   Ce qu'on entend dans l'atelier est donc ce qu'on aura en salle, quel que soit le BPM de la piste.
+   ========================================================================= */
+const Atelier = (() => {
+  const KEY = 'way_atelier_v1';
+  /* taille par défaut à la pose, en tuiles */
+  const SIZE = { laser_sweep: [6, 8], laser_rotate: [1, 1], laser_grid: [10, 8], wall_fireball: [1, 1], spike_tiles: [4, 3], gas_zone: [1, 1], saw_rail: [8, 1], turret_fixed: [1, 1] };
+  const SNAPS = [[1, 'noires'], [2, 'croches'], [4, 'doubles'], [3, 'triolets']];
+  const st = { biome: 'biome_1', track: 'a', bars: 2, snap: 2, items: [], sel: -1, pose: true, loop: true, metro: false, safe: true, brush: null, loopBar: 0 };
+  let box = null, live = false, lastIdx = -1, headEl = null, canvas = null, headX0 = 0, headW = 0;
+
+  const Lb = () => st.bars * 4;                       // temps par boucle
+  const nCells = () => Math.round(Lb() * st.snap);    // cases de la grille
+  const beatNow = () => Beat.t / Beat.beatLen();
+  const inLoop = () => beatNow() - st.loopBar * Lb();
+  const q = n => Math.round(n * 1000) / 1000;
+  const trapsOf = () => (Content.biome(st.biome) || {}).trapPool || [];
+  const $ = s => box.querySelector(s);
+
+  /* ---------- salle vierge ---------- */
+  function roomDef() {
+    const walls = st.items.filter(i => i.kind === 'mur');
+    return {
+      id: 'room_atelier', index: 1, type: 'TRAP', name: 'Atelier rythme', biome: st.biome, refTime: 60,
+      obstacles: walls.map(w => ({ x: w.x, y: w.y, w: w.w, h: w.h })), deco: [], waves: [], fragments: [], modular: [],
+      traps: st.items.filter(i => i.kind === 'trap').map(compile),
+    };
+  }
+  /* un élément de l'atelier → une déclaration de piège de content*.js */
+  function compile(it) {
+    return { trap: it.trap, x: it.x, y: it.y, w: it.w, h: it.h,
+      params: Object.assign({}, it.params, { beats: { bars: st.bars, hits: it.hits.slice().sort((a, b) => a - b), telegraph: it.tele, active: it.act } }) };
+  }
+  /* refabrique pièges et murs sans recharger la salle : la musique ne saute pas et le joueur ne bouge pas */
+  function apply() {
+    const r = G.room; if (!r) return; const def = roomDef();
+    r.def.traps = def.traps; r.def.obstacles = def.obstacles;
+    r.traps = []; for (const t of def.traps) { const td = Content.trap(t.trap); if (td) r.traps.push(new Trap(td, t)); }
+    r.obstacles = def.obstacles.map(o => ({ x: o.x, y: o.y, w: o.w, h: o.h, px: ROOM_X + o.x * TILE, py: ROOM_Y + o.y * TILE, pw: o.w * TILE, ph: o.h * TILE }));
+    r.deco = []; r.dressed = false; Room.dress(r); r.deco = [];   // les murs prennent l'accessoire du biome, mais pas de décor au sol : la salle reste lisible
+    save();
+  }
+
+  /* ---------- mémoire du navigateur ---------- */
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ biome: st.biome, track: st.track, bars: st.bars, snap: st.snap, items: st.items })); } catch (e) { /* */ } }
+  function load() {
+    try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!o) return; if (o.biome) st.biome = o.biome; if (o.track) st.track = o.track; if (o.bars) st.bars = o.bars; if (o.snap) st.snap = o.snap; if (Array.isArray(o.items)) st.items = o.items; } catch (e) { /* */ }
+  }
+
+  /* ---------- ouverture / fermeture ---------- */
+  function toggle() { live ? close() : open(); }
+  function open() {
+    if (live) return;
+    if (G.state === 'run' && !G.attract && !confirm('Ouvrir l\'atelier abandonne la run en cours. Continuer ?')) return;
+    live = true; load();
+    Attract.stop(); UI.hideAll();
+    const ch = Content.characters()[0], w = Content.weapons()[0], sk = Content.skills()[0];
+    Run.start({ character: ch.id, biome: st.biome, weapon: w.id, skill: sk.id, seed: 7 });
+    startRoom();
+    build();
+    UI.toast('Atelier rythme — F2 pour sortir');
+  }
+  /* charge la salle vierge à la place de la salle 1 du biome */
+  function startRoom() {
+    G.run.rooms = [roomDef()]; G.run.weaponDropRoom = 0; G.run.attract = false;
+    Room.load(1); Room.begin();
+    G.room.doorOpen = false; G.room.label = 'Atelier rythme — ' + (Content.biome(st.biome) || {}).name; G.debug.invuln = st.safe;
+    st.loopBar = Math.max(0, Math.floor(beatNow() / Lb()));
+    setTrack(st.track);
+  }
+  function close() {
+    if (!live) return; live = false; save();
+    if (box && box.parentNode) { box.hidden = true; box.innerHTML = ''; }
+    G.debug.invuln = false;
+    if (G.run) Run.abort();
+  }
+  /* piste jouée : a = biome (salles 1-4), b = biome (salles 6-8), boss */
+  function setTrack(k) {
+    st.track = k; if (!G.room) return;
+    G.room.index = k === 'b' ? 6 : 1; Music.stop(); Music.play(k === 'boss' ? 'boss' : 'biome');
+  }
+
+  /* ---------- panneau ---------- */
+  function build() {
+    box = document.getElementById('atelier'); box.hidden = false; canvas = document.getElementById('c');
+    box.innerHTML = `
+      <div class="arow ahead">
+        <b>ATELIER RYTHME</b>
+        <button class="btn small" id="a-mode"></button>
+        <label>Biome <select id="a-biome">${Content.biomes().map(b => `<option value="${b.id}">${b.name}</option>`).join('')}</select></label>
+        <label>Piste <select id="a-track"><option value="a">biome (1-4)</option><option value="b">biome (6-8)</option><option value="boss">boss</option></select></label>
+        <label>Boucle <select id="a-bars"><option value="1">1 mesure</option><option value="2">2 mesures</option><option value="4">4 mesures</option><option value="8">8 mesures</option></select></label>
+        <label>Grille <select id="a-snap">${SNAPS.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
+        <label class="chk"><input type="checkbox" id="a-loop"> boucler</label>
+        <label class="chk"><input type="checkbox" id="a-metro"> métronome</label>
+        <label class="chk"><input type="checkbox" id="a-safe"> invulnérable</label>
+        <span class="asp"></span>
+        <span class="anw"><button class="btn small" id="a-prev">◀</button><span id="a-win" class="amono"></span><button class="btn small" id="a-next">▶</button></span>
+        <button class="btn small" id="a-export">Exporter</button><button class="btn small ghost" id="a-clear">Vider</button><button class="btn small ghost" id="a-fold">Réduire</button><button class="btn small ghost" id="a-close">Fermer (F2)</button>
+      </div>
+      <div class="arow apal" id="a-pal"></div>
+      <div class="agrid"><div class="alanes" id="a-lanes"></div><div class="ahead-line" id="a-head"></div></div>
+      <div class="aio" id="a-io" hidden><textarea id="a-txt" spellcheck="false"></textarea>
+        <div class="arow"><button class="btn small" id="a-copy">Copier</button><button class="btn small" id="a-import">Importer ce texte</button><button class="btn small ghost" id="a-hide">Fermer</button></div></div>`;
+    headEl = $('#a-head');
+    $('#a-biome').value = st.biome; $('#a-track').value = st.track; $('#a-bars').value = st.bars; $('#a-snap').value = st.snap;
+    $('#a-loop').checked = st.loop; $('#a-metro').checked = st.metro; $('#a-safe').checked = st.safe;
+    $('#a-biome').onchange = e => { st.biome = e.target.value; st.brush = null; startRoom(); refresh(); };
+    $('#a-track').onchange = e => setTrack(e.target.value);
+    $('#a-bars').onchange = e => { st.bars = +e.target.value; st.loopBar = Math.floor(beatNow() / Lb()); apply(); refresh(); };
+    $('#a-snap').onchange = e => { st.snap = +e.target.value; refresh(); };
+    $('#a-loop').onchange = e => { st.loop = e.target.checked; };
+    $('#a-metro').onchange = e => { st.metro = e.target.checked; };
+    $('#a-safe').onchange = e => { st.safe = e.target.checked; G.debug.invuln = st.safe; };
+    $('#a-mode').onclick = () => { st.pose = !st.pose; refresh(); };
+    $('#a-prev').onclick = () => jumpLoop(-1); $('#a-next').onclick = () => jumpLoop(1);
+    $('#a-export').onclick = showIo; $('#a-hide').onclick = () => { $('#a-io').hidden = true; };
+    $('#a-copy').onclick = () => { const t = $('#a-txt'); t.select(); try { navigator.clipboard.writeText(t.value); UI.toast('Copié'); } catch (e) { document.execCommand('copy'); } };
+    $('#a-import').onclick = () => { importText($('#a-txt').value); };
+    $('#a-clear').onclick = () => { st.items = []; st.sel = -1; apply(); refresh(); };
+    $('#a-close').onclick = close;
+    $('#a-fold').onclick = () => { const f = box.classList.toggle('fold'); $('#a-fold').textContent = f ? 'Déplier' : 'Réduire'; if (!f) measure(); };
+    canvas.addEventListener('mousedown', onCanvas);
+    refresh();
+  }
+  function jumpLoop(d) { const b = st.loopBar + d; if (b < 0) return; if (!Music.seekBeat(b * Lb())) return; st.loopBar = b; refresh(); }
+
+  /* ---------- palette et partition ---------- */
+  function refresh() {
+    if (!box || box.hidden) return;
+    $('#a-biome').value = st.biome; $('#a-track').value = st.track; $('#a-bars').value = st.bars; $('#a-snap').value = st.snap;
+    $('#a-mode').textContent = st.pose ? 'Mode : pose' : 'Mode : test';
+    $('#a-mode').className = 'btn small' + (st.pose ? ' primary' : '');
+    $('#a-win').textContent = 'mesures ' + (st.loopBar * st.bars + 1) + '–' + (st.loopBar * st.bars + st.bars);
+    /* palette */
+    const pal = $('#a-pal'); const list = trapsOf();
+    pal.innerHTML = '<span class="amuted">Poser :</span>' + list.map(id => { const d = Content.trap(id); return `<button class="btn small pal${st.brush === id ? ' primary' : ''}" data-b="${id}">${d ? d.name : id}</button>`; }).join('') +
+      `<button class="btn small pal${st.brush === 'mur' ? ' primary' : ''}" data-b="mur">Mur</button>` +
+      '<span class="amuted">clic dans la salle pour poser · clic sur un élément pour le choisir · Suppr pour l\'enlever</span>';
+    pal.querySelectorAll('[data-b]').forEach(b => { b.onclick = () => { st.brush = st.brush === b.dataset.b ? null : b.dataset.b; st.pose = true; refresh(); }; });
+    /* règle + lignes */
+    const n = nCells(), lanes = $('#a-lanes');
+    let html = '<div class="alane aruler"><span class="an"></span><div class="acells">';
+    for (let i = 0; i < n; i++) { const b = i / st.snap; const isBeat = Math.abs(b - Math.round(b)) < 1e-6; const bar = isBeat && Math.round(b) % 4 === 0;
+      html += `<div class="ac ${bar ? 'bar' : isBeat ? 'beat' : ''}" data-c="${i}">${isBeat ? (Math.floor(Math.round(b) / 4) + 1) + '·' + (Math.round(b) % 4 + 1) : ''}</div>`; }
+    html += '</div><span class="ax"></span></div>';
+    st.items.forEach((it, k) => {
+      const name = it.kind === 'mur' ? 'Mur' : ((Content.trap(it.trap) || {}).name || it.trap);
+      html += `<div class="alane${k === st.sel ? ' sel' : ''}" data-l="${k}"><span class="an" title="${name}">${name} <i>${it.x},${it.y}</i></span><div class="acells">`;
+      if (it.kind === 'mur') html += '<div class="amur">décor — pas de partition</div>';
+      else for (let i = 0; i < n; i++) { const b = i / st.snap; const hit = it.hits.some(h => Math.abs(h - b) < 1e-6); const isBeat = Math.abs(b - Math.round(b)) < 1e-6; const bar = isBeat && Math.round(b) % 4 === 0;
+        html += `<div class="ac ${bar ? 'bar' : isBeat ? 'beat' : ''}${hit ? ' hit' : ''}" data-l="${k}" data-c="${i}"></div>`; }
+      html += `</div><span class="ax"><button class="btn tiny" data-del="${k}">×</button></span></div>`;
+    });
+    lanes.innerHTML = html;
+    lanes.querySelectorAll('.aruler .ac').forEach(c => { c.onclick = () => { Music.seekBeat(st.loopBar * Lb() + (+c.dataset.c) / st.snap); }; });
+    lanes.querySelectorAll('.ac[data-l]').forEach(c => { c.onclick = () => toggleHit(+c.dataset.l, (+c.dataset.c) / st.snap); });
+    lanes.querySelectorAll('.alane[data-l] .an').forEach(e => { e.onclick = () => { st.sel = +e.parentNode.dataset.l; refresh(); }; });
+    lanes.querySelectorAll('[data-del]').forEach(b => { b.onclick = () => { st.items.splice(+b.dataset.del, 1); st.sel = -1; apply(); refresh(); }; });
+    measure();
+    /* réglages de l'élément choisi */
+    const it = st.items[st.sel];
+    if (it && it.kind !== 'mur') {
+      const d = document.createElement('div'); d.className = 'arow atune';
+      d.innerHTML = `<b>${(Content.trap(it.trap) || {}).name || it.trap}</b>
+        <label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
+        <label>hauteur <input type="number" min="1" max="13" step="1" id="t-h" value="${it.h}"></label>
+        <label>annonce <input type="number" min="0" max="8" step="0.25" id="t-tele" value="${it.tele}"> temps</label>
+        <label>durée <input type="number" min="0.25" max="16" step="0.25" id="t-act" value="${it.act}"> temps</label>
+        <button class="btn small" id="t-dup">Dupliquer</button>`;
+      lanes.appendChild(d);
+      const bind = (id, f) => { const e = d.querySelector(id); e.onchange = () => { f(+e.value); apply(); refresh(); }; };
+      bind('#t-w', v => { it.w = clamp(Math.round(v), 1, ROOM_COLS); }); bind('#t-h', v => { it.h = clamp(Math.round(v), 1, ROOM_ROWS); });
+      bind('#t-tele', v => { it.tele = clamp(v, 0, 8); }); bind('#t-act', v => { it.act = clamp(v, 0.25, 16); });
+      d.querySelector('#t-dup').onclick = () => { const c = JSON.parse(JSON.stringify(it)); c.x = clamp(c.x + 1, 0, ROOM_COLS - 1); c.y = clamp(c.y + 1, 0, ROOM_ROWS - 1); st.items.push(c); st.sel = st.items.length - 1; apply(); refresh(); };
+    }
+  }
+  /* position et largeur de la zone des cases : le curseur de lecture s'y aligne au pixel */
+  function measure() {
+    if (!box || box.hidden) { headW = 0; return; }
+    const g = box.querySelector('.agrid'), c = box.querySelector('.aruler .acells');
+    if (!g || !c) { headW = 0; return; }
+    const gr = g.getBoundingClientRect(), cr = c.getBoundingClientRect(); headX0 = cr.left - gr.left; headW = cr.width;
+  }
+  function toggleHit(k, b) {
+    const it = st.items[k]; if (!it || it.kind === 'mur') return;
+    const i = it.hits.findIndex(h => Math.abs(h - b) < 1e-6);
+    if (i >= 0) it.hits.splice(i, 1); else { it.hits.push(b); AudioEngine.tempoTick({ intensity: 0.6 }); }
+    st.sel = k; apply(); refresh();
+  }
+
+  /* ---------- pose à la souris ---------- */
+  function onCanvas(e) {
+    if (!live || e.button !== 0) return;
+    const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y);
+    const tx = Math.floor((wm.x - ROOM_X) / TILE), ty = Math.floor((wm.y - ROOM_Y) / TILE);
+    if (tx < 0 || ty < 0 || tx >= ROOM_COLS || ty >= ROOM_ROWS) return;
+    if (!st.pose) return;
+    const k = st.items.findIndex(it => tx >= it.x && tx < it.x + it.w && ty >= it.y && ty < it.y + it.h);
+    if (k >= 0 && (!st.brush || k !== st.sel)) { st.sel = k; refresh(); return; }   // clic sur un élément : on le choisit
+    if (!st.brush) return;
+    if (st.brush === 'mur') st.items.push({ kind: 'mur', x: tx, y: ty, w: 1, h: 1 });
+    else {
+      const d = Content.trap(st.brush); if (!d) return;
+      const s = SIZE[d.kind] || [1, 1];
+      st.items.push({ kind: 'trap', trap: st.brush, x: clamp(tx, 0, ROOM_COLS - s[0]), y: clamp(ty, 0, ROOM_ROWS - s[1]), w: s[0], h: s[1], hits: [0], tele: 1, act: 1, params: {} });
+    }
+    st.sel = st.items.length - 1; apply(); refresh();
+  }
+
+  /* ---------- import / export ---------- */
+  function snippet() {
+    const walls = st.items.filter(i => i.kind === 'mur'), traps = st.items.filter(i => i.kind === 'trap');
+    const info = Beat.info; let out = `/* Atelier rythme — boucle de ${st.bars} mesure(s), piste ${st.track} du ${st.biome}` + (info.internal ? ' (métronome interne)' : ` (${Math.round(info.bpm)} BPM)`) + ' */\n';
+    if (walls.length) out += 'obstacles: [\n' + walls.map(w => `  { x: ${w.x}, y: ${w.y}, w: ${w.w}, h: ${w.h} },`).join('\n') + '\n],\n';
+    out += 'traps: [\n' + traps.map(t => `  { trap: '${t.trap}', x: ${t.x}, y: ${t.y}, w: ${t.w}, h: ${t.h}, params: { beats: { bars: ${st.bars}, hits: [${t.hits.slice().sort((a, b) => a - b).map(q).join(', ')}], telegraph: ${q(t.tele)}, active: ${q(t.act)} } } },`).join('\n') + '\n],\n';
+    out += '/* atelier:' + JSON.stringify({ biome: st.biome, track: st.track, bars: st.bars, snap: st.snap, items: st.items }) + ' */';
+    return out;
+  }
+  function showIo() { $('#a-io').hidden = false; $('#a-txt').value = snippet(); }
+  /* relit le bloc « atelier:{…} » qu'écrit l'export : un aller-retour complet sans réécrire à la main */
+  function importText(txt) {
+    const i = txt.indexOf('atelier:'); if (i < 0) { UI.toast('Texte non reconnu (il faut le bloc « atelier: » de l\'export)'); return; }
+    let j = txt.lastIndexOf('*/'); if (j < i) j = txt.length;
+    try {
+      const o = JSON.parse(txt.slice(i + 8, j).trim());
+      st.biome = o.biome || st.biome; st.track = o.track || st.track; st.bars = o.bars || st.bars; st.snap = o.snap || st.snap; st.items = o.items || [];
+      st.sel = -1; startRoom(); build(); UI.toast('Partition chargée : ' + st.items.length + ' élément(s)');
+    } catch (e) { UI.toast('Lecture impossible : ' + e.message); }
+  }
+
+  /* ---------- boucle ---------- */
+  function update() {
+    if (!live) return;
+    if (!G.run || G.state !== 'run' || !G.room) { close(); return; }   // run quittée depuis la pause : on referme proprement
+    if (Input.keys.has('Delete') && st.sel >= 0) { st.items.splice(st.sel, 1); st.sel = -1; Input.keys.delete('Delete'); apply(); refresh(); }
+    const L = Lb(); let pos = inLoop();
+    if (pos >= L || pos < 0) {
+      if (!(st.loop && pos >= L && Music.seekBeat(st.loopBar * L))) { st.loopBar = Math.max(0, Math.floor(beatNow() / L)); if (box && !box.hidden) $('#a-win').textContent = 'mesures ' + (st.loopBar * st.bars + 1) + '–' + (st.loopBar * st.bars + st.bars); }
+      pos = clamp(inLoop(), 0, L);
+    }
+    if (Time.frame % 30 === 0) measure();   // fenêtre redimensionnée, panneau replié : la tête de lecture se recale
+    if (headEl && headW) headEl.style.left = (headX0 + headW * pos / L) + 'px';
+    const idx = Beat.index();
+    if (idx !== lastIdx) { lastIdx = idx; if (st.metro) AudioEngine.tempoTick({ intensity: Beat.beatInBar() === 0 ? 1 : 0.45 }); }
+  }
+  /* repères dans la salle : grille de pose, élément choisi, aperçu sous le curseur */
+  function render(ctx) {
+    if (!live || !st.pose) return;
+    ctx.save(); ctx.globalAlpha = 0.10; ctx.strokeStyle = '#6ee7ff'; ctx.lineWidth = 1;
+    for (let x = 0; x <= ROOM_COLS; x++) { ctx.beginPath(); ctx.moveTo(ROOM_X + x * TILE, ROOM_Y); ctx.lineTo(ROOM_X + x * TILE, ROOM_Y + ROOM_ROWS * TILE); ctx.stroke(); }
+    for (let y = 0; y <= ROOM_ROWS; y++) { ctx.beginPath(); ctx.moveTo(ROOM_X, ROOM_Y + y * TILE); ctx.lineTo(ROOM_X + ROOM_COLS * TILE, ROOM_Y + y * TILE); ctx.stroke(); }
+    ctx.restore();
+    const it = st.items[st.sel];
+    if (it) { ctx.save(); ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.strokeRect(ROOM_X + it.x * TILE + 1, ROOM_Y + it.y * TILE + 1, it.w * TILE - 2, it.h * TILE - 2); ctx.restore(); }
+    if (st.brush) {
+      const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y);
+      const tx = Math.floor((wm.x - ROOM_X) / TILE), ty = Math.floor((wm.y - ROOM_Y) / TILE);
+      if (tx >= 0 && ty >= 0 && tx < ROOM_COLS && ty < ROOM_ROWS) {
+        const d = st.brush === 'mur' ? null : Content.trap(st.brush); const s = d ? (SIZE[d.kind] || [1, 1]) : [1, 1];
+        ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = d ? (d.color || '#ff5e7a') : '#8890aa';
+        ctx.fillRect(ROOM_X + tx * TILE, ROOM_Y + ty * TILE, s[0] * TILE, s[1] * TILE); ctx.restore();
+      }
+    }
+  }
+  return { open, close, toggle, update, render, apply, refresh, snippet, get live() { return live; }, get st() { return st; }, posing: () => live && st.pose };
+})();
+
+</script>
+<script>
 /* ==== 90_main.js ==== */
 /* =========================================================================
    SALLE ZÉRO — 90_main.js — point d'entrée, boucle update/render.
@@ -7421,6 +7774,7 @@ function update(dt, rawDt) {
   if (!G.audioOk && Music.isPlaying()) { G.audioOk = true; document.body.classList.add('audio-on'); }   // le son tourne : l'invite du menu disparaît
   if (G.state === 'run') { Run.update(dt); if (G.player) Camera.follow(G.player.x, G.player.y, rawDt); }
   else if (G.attract) Attract.update(dt);
+  Atelier.update();
 }
 function render(ctx) {
   ctx.setTransform(ctx.getTransform());
@@ -7437,7 +7791,7 @@ function render(ctx) {
     if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);
     if (G.room.tempo) Tempo.renderOverlay(ctx, G.room);
     Floaters.render(ctx);
-    Debug.renderOverlay(ctx);
+    Debug.renderOverlay(ctx); Atelier.render(ctx);
     ctx.restore();
     if (G.attract) { UI.renderAttractVeil(ctx); } else { UI.renderHud(ctx); if (G.room.challenge) Challenge.renderHud(ctx, G.room); if (G.room.tempo) Tempo.renderHud(ctx, G.room); }
   } else UI.renderBackdrop(ctx);
@@ -7461,7 +7815,9 @@ async function boot() {
   UI.showTitle();
   Engine.start(update, render);
   Attract.start();
-  window.__autoplay = Debug.autoplay;
+  window.__autoplay = Debug.autoplay; window.__atelier = Atelier;
+  window.addEventListener('keydown', e => { if (e.code === 'F2') { e.preventDefault(); Atelier.toggle(); } });
+  if (/[?&]atelier=1/.test(location.search)) setTimeout(() => Atelier.open(), 600);
   window.__G = G;
 }
 window.addEventListener('DOMContentLoaded', boot);

@@ -1,0 +1,274 @@
+/* =========================================================================
+   SALLE ZÉRO — 80_atelier.js — Atelier rythme
+   Une salle vierge, la piste du biome découpée en temps cliquables, et une partition par élément posé.
+   On pose les pièges à la souris, on coche les temps où ils frappent, on écoute en boucle, puis on exporte
+   le morceau de content*.js à coller dans une salle. F2 ouvre et ferme.
+
+   Repère de temps : les positions sont comptées en temps musicaux depuis le début d'une boucle de `bars`
+   mesures, et les pièges lisent exactement la même chose (params.beats.hits, voir Trap.cycleHits).
+   Ce qu'on entend dans l'atelier est donc ce qu'on aura en salle, quel que soit le BPM de la piste.
+   ========================================================================= */
+const Atelier = (() => {
+  const KEY = 'way_atelier_v1';
+  /* taille par défaut à la pose, en tuiles */
+  const SIZE = { laser_sweep: [6, 8], laser_rotate: [1, 1], laser_grid: [10, 8], wall_fireball: [1, 1], spike_tiles: [4, 3], gas_zone: [1, 1], saw_rail: [8, 1], turret_fixed: [1, 1] };
+  const SNAPS = [[1, 'noires'], [2, 'croches'], [4, 'doubles'], [3, 'triolets']];
+  const st = { biome: 'biome_1', track: 'a', bars: 2, snap: 2, items: [], sel: -1, pose: true, loop: true, metro: false, safe: true, brush: null, loopBar: 0 };
+  let box = null, live = false, lastIdx = -1, headEl = null, canvas = null, headX0 = 0, headW = 0;
+
+  const Lb = () => st.bars * 4;                       // temps par boucle
+  const nCells = () => Math.round(Lb() * st.snap);    // cases de la grille
+  const beatNow = () => Beat.t / Beat.beatLen();
+  const inLoop = () => beatNow() - st.loopBar * Lb();
+  const q = n => Math.round(n * 1000) / 1000;
+  const trapsOf = () => (Content.biome(st.biome) || {}).trapPool || [];
+  const $ = s => box.querySelector(s);
+
+  /* ---------- salle vierge ---------- */
+  function roomDef() {
+    const walls = st.items.filter(i => i.kind === 'mur');
+    return {
+      id: 'room_atelier', index: 1, type: 'TRAP', name: 'Atelier rythme', biome: st.biome, refTime: 60,
+      obstacles: walls.map(w => ({ x: w.x, y: w.y, w: w.w, h: w.h })), deco: [], waves: [], fragments: [], modular: [],
+      traps: st.items.filter(i => i.kind === 'trap').map(compile),
+    };
+  }
+  /* un élément de l'atelier → une déclaration de piège de content*.js */
+  function compile(it) {
+    return { trap: it.trap, x: it.x, y: it.y, w: it.w, h: it.h,
+      params: Object.assign({}, it.params, { beats: { bars: st.bars, hits: it.hits.slice().sort((a, b) => a - b), telegraph: it.tele, active: it.act } }) };
+  }
+  /* refabrique pièges et murs sans recharger la salle : la musique ne saute pas et le joueur ne bouge pas */
+  function apply() {
+    const r = G.room; if (!r) return; const def = roomDef();
+    r.def.traps = def.traps; r.def.obstacles = def.obstacles;
+    r.traps = []; for (const t of def.traps) { const td = Content.trap(t.trap); if (td) r.traps.push(new Trap(td, t)); }
+    r.obstacles = def.obstacles.map(o => ({ x: o.x, y: o.y, w: o.w, h: o.h, px: ROOM_X + o.x * TILE, py: ROOM_Y + o.y * TILE, pw: o.w * TILE, ph: o.h * TILE }));
+    r.deco = []; r.dressed = false; Room.dress(r); r.deco = [];   // les murs prennent l'accessoire du biome, mais pas de décor au sol : la salle reste lisible
+    save();
+  }
+
+  /* ---------- mémoire du navigateur ---------- */
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ biome: st.biome, track: st.track, bars: st.bars, snap: st.snap, items: st.items })); } catch (e) { /* */ } }
+  function load() {
+    try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!o) return; if (o.biome) st.biome = o.biome; if (o.track) st.track = o.track; if (o.bars) st.bars = o.bars; if (o.snap) st.snap = o.snap; if (Array.isArray(o.items)) st.items = o.items; } catch (e) { /* */ }
+  }
+
+  /* ---------- ouverture / fermeture ---------- */
+  function toggle() { live ? close() : open(); }
+  function open() {
+    if (live) return;
+    if (G.state === 'run' && !G.attract && !confirm('Ouvrir l\'atelier abandonne la run en cours. Continuer ?')) return;
+    live = true; load();
+    Attract.stop(); UI.hideAll();
+    const ch = Content.characters()[0], w = Content.weapons()[0], sk = Content.skills()[0];
+    Run.start({ character: ch.id, biome: st.biome, weapon: w.id, skill: sk.id, seed: 7 });
+    startRoom();
+    build();
+    UI.toast('Atelier rythme — F2 pour sortir');
+  }
+  /* charge la salle vierge à la place de la salle 1 du biome */
+  function startRoom() {
+    G.run.rooms = [roomDef()]; G.run.weaponDropRoom = 0; G.run.attract = false;
+    Room.load(1); Room.begin();
+    G.room.doorOpen = false; G.room.label = 'Atelier rythme — ' + (Content.biome(st.biome) || {}).name; G.debug.invuln = st.safe;
+    st.loopBar = Math.max(0, Math.floor(beatNow() / Lb()));
+    setTrack(st.track);
+  }
+  function close() {
+    if (!live) return; live = false; save();
+    if (box && box.parentNode) { box.hidden = true; box.innerHTML = ''; }
+    G.debug.invuln = false;
+    if (G.run) Run.abort();
+  }
+  /* piste jouée : a = biome (salles 1-4), b = biome (salles 6-8), boss */
+  function setTrack(k) {
+    st.track = k; if (!G.room) return;
+    G.room.index = k === 'b' ? 6 : 1; Music.stop(); Music.play(k === 'boss' ? 'boss' : 'biome');
+  }
+
+  /* ---------- panneau ---------- */
+  function build() {
+    box = document.getElementById('atelier'); box.hidden = false; canvas = document.getElementById('c');
+    box.innerHTML = `
+      <div class="arow ahead">
+        <b>ATELIER RYTHME</b>
+        <button class="btn small" id="a-mode"></button>
+        <label>Biome <select id="a-biome">${Content.biomes().map(b => `<option value="${b.id}">${b.name}</option>`).join('')}</select></label>
+        <label>Piste <select id="a-track"><option value="a">biome (1-4)</option><option value="b">biome (6-8)</option><option value="boss">boss</option></select></label>
+        <label>Boucle <select id="a-bars"><option value="1">1 mesure</option><option value="2">2 mesures</option><option value="4">4 mesures</option><option value="8">8 mesures</option></select></label>
+        <label>Grille <select id="a-snap">${SNAPS.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
+        <label class="chk"><input type="checkbox" id="a-loop"> boucler</label>
+        <label class="chk"><input type="checkbox" id="a-metro"> métronome</label>
+        <label class="chk"><input type="checkbox" id="a-safe"> invulnérable</label>
+        <span class="asp"></span>
+        <span class="anw"><button class="btn small" id="a-prev">◀</button><span id="a-win" class="amono"></span><button class="btn small" id="a-next">▶</button></span>
+        <button class="btn small" id="a-export">Exporter</button><button class="btn small ghost" id="a-clear">Vider</button><button class="btn small ghost" id="a-fold">Réduire</button><button class="btn small ghost" id="a-close">Fermer (F2)</button>
+      </div>
+      <div class="arow apal" id="a-pal"></div>
+      <div class="agrid"><div class="alanes" id="a-lanes"></div><div class="ahead-line" id="a-head"></div></div>
+      <div class="aio" id="a-io" hidden><textarea id="a-txt" spellcheck="false"></textarea>
+        <div class="arow"><button class="btn small" id="a-copy">Copier</button><button class="btn small" id="a-import">Importer ce texte</button><button class="btn small ghost" id="a-hide">Fermer</button></div></div>`;
+    headEl = $('#a-head');
+    $('#a-biome').value = st.biome; $('#a-track').value = st.track; $('#a-bars').value = st.bars; $('#a-snap').value = st.snap;
+    $('#a-loop').checked = st.loop; $('#a-metro').checked = st.metro; $('#a-safe').checked = st.safe;
+    $('#a-biome').onchange = e => { st.biome = e.target.value; st.brush = null; startRoom(); refresh(); };
+    $('#a-track').onchange = e => setTrack(e.target.value);
+    $('#a-bars').onchange = e => { st.bars = +e.target.value; st.loopBar = Math.floor(beatNow() / Lb()); apply(); refresh(); };
+    $('#a-snap').onchange = e => { st.snap = +e.target.value; refresh(); };
+    $('#a-loop').onchange = e => { st.loop = e.target.checked; };
+    $('#a-metro').onchange = e => { st.metro = e.target.checked; };
+    $('#a-safe').onchange = e => { st.safe = e.target.checked; G.debug.invuln = st.safe; };
+    $('#a-mode').onclick = () => { st.pose = !st.pose; refresh(); };
+    $('#a-prev').onclick = () => jumpLoop(-1); $('#a-next').onclick = () => jumpLoop(1);
+    $('#a-export').onclick = showIo; $('#a-hide').onclick = () => { $('#a-io').hidden = true; };
+    $('#a-copy').onclick = () => { const t = $('#a-txt'); t.select(); try { navigator.clipboard.writeText(t.value); UI.toast('Copié'); } catch (e) { document.execCommand('copy'); } };
+    $('#a-import').onclick = () => { importText($('#a-txt').value); };
+    $('#a-clear').onclick = () => { st.items = []; st.sel = -1; apply(); refresh(); };
+    $('#a-close').onclick = close;
+    $('#a-fold').onclick = () => { const f = box.classList.toggle('fold'); $('#a-fold').textContent = f ? 'Déplier' : 'Réduire'; if (!f) measure(); };
+    canvas.addEventListener('mousedown', onCanvas);
+    refresh();
+  }
+  function jumpLoop(d) { const b = st.loopBar + d; if (b < 0) return; if (!Music.seekBeat(b * Lb())) return; st.loopBar = b; refresh(); }
+
+  /* ---------- palette et partition ---------- */
+  function refresh() {
+    if (!box || box.hidden) return;
+    $('#a-biome').value = st.biome; $('#a-track').value = st.track; $('#a-bars').value = st.bars; $('#a-snap').value = st.snap;
+    $('#a-mode').textContent = st.pose ? 'Mode : pose' : 'Mode : test';
+    $('#a-mode').className = 'btn small' + (st.pose ? ' primary' : '');
+    $('#a-win').textContent = 'mesures ' + (st.loopBar * st.bars + 1) + '–' + (st.loopBar * st.bars + st.bars);
+    /* palette */
+    const pal = $('#a-pal'); const list = trapsOf();
+    pal.innerHTML = '<span class="amuted">Poser :</span>' + list.map(id => { const d = Content.trap(id); return `<button class="btn small pal${st.brush === id ? ' primary' : ''}" data-b="${id}">${d ? d.name : id}</button>`; }).join('') +
+      `<button class="btn small pal${st.brush === 'mur' ? ' primary' : ''}" data-b="mur">Mur</button>` +
+      '<span class="amuted">clic dans la salle pour poser · clic sur un élément pour le choisir · Suppr pour l\'enlever</span>';
+    pal.querySelectorAll('[data-b]').forEach(b => { b.onclick = () => { st.brush = st.brush === b.dataset.b ? null : b.dataset.b; st.pose = true; refresh(); }; });
+    /* règle + lignes */
+    const n = nCells(), lanes = $('#a-lanes');
+    let html = '<div class="alane aruler"><span class="an"></span><div class="acells">';
+    for (let i = 0; i < n; i++) { const b = i / st.snap; const isBeat = Math.abs(b - Math.round(b)) < 1e-6; const bar = isBeat && Math.round(b) % 4 === 0;
+      html += `<div class="ac ${bar ? 'bar' : isBeat ? 'beat' : ''}" data-c="${i}">${isBeat ? (Math.floor(Math.round(b) / 4) + 1) + '·' + (Math.round(b) % 4 + 1) : ''}</div>`; }
+    html += '</div><span class="ax"></span></div>';
+    st.items.forEach((it, k) => {
+      const name = it.kind === 'mur' ? 'Mur' : ((Content.trap(it.trap) || {}).name || it.trap);
+      html += `<div class="alane${k === st.sel ? ' sel' : ''}" data-l="${k}"><span class="an" title="${name}">${name} <i>${it.x},${it.y}</i></span><div class="acells">`;
+      if (it.kind === 'mur') html += '<div class="amur">décor — pas de partition</div>';
+      else for (let i = 0; i < n; i++) { const b = i / st.snap; const hit = it.hits.some(h => Math.abs(h - b) < 1e-6); const isBeat = Math.abs(b - Math.round(b)) < 1e-6; const bar = isBeat && Math.round(b) % 4 === 0;
+        html += `<div class="ac ${bar ? 'bar' : isBeat ? 'beat' : ''}${hit ? ' hit' : ''}" data-l="${k}" data-c="${i}"></div>`; }
+      html += `</div><span class="ax"><button class="btn tiny" data-del="${k}">×</button></span></div>`;
+    });
+    lanes.innerHTML = html;
+    lanes.querySelectorAll('.aruler .ac').forEach(c => { c.onclick = () => { Music.seekBeat(st.loopBar * Lb() + (+c.dataset.c) / st.snap); }; });
+    lanes.querySelectorAll('.ac[data-l]').forEach(c => { c.onclick = () => toggleHit(+c.dataset.l, (+c.dataset.c) / st.snap); });
+    lanes.querySelectorAll('.alane[data-l] .an').forEach(e => { e.onclick = () => { st.sel = +e.parentNode.dataset.l; refresh(); }; });
+    lanes.querySelectorAll('[data-del]').forEach(b => { b.onclick = () => { st.items.splice(+b.dataset.del, 1); st.sel = -1; apply(); refresh(); }; });
+    measure();
+    /* réglages de l'élément choisi */
+    const it = st.items[st.sel];
+    if (it && it.kind !== 'mur') {
+      const d = document.createElement('div'); d.className = 'arow atune';
+      d.innerHTML = `<b>${(Content.trap(it.trap) || {}).name || it.trap}</b>
+        <label>largeur <input type="number" min="1" max="24" step="1" id="t-w" value="${it.w}"></label>
+        <label>hauteur <input type="number" min="1" max="13" step="1" id="t-h" value="${it.h}"></label>
+        <label>annonce <input type="number" min="0" max="8" step="0.25" id="t-tele" value="${it.tele}"> temps</label>
+        <label>durée <input type="number" min="0.25" max="16" step="0.25" id="t-act" value="${it.act}"> temps</label>
+        <button class="btn small" id="t-dup">Dupliquer</button>`;
+      lanes.appendChild(d);
+      const bind = (id, f) => { const e = d.querySelector(id); e.onchange = () => { f(+e.value); apply(); refresh(); }; };
+      bind('#t-w', v => { it.w = clamp(Math.round(v), 1, ROOM_COLS); }); bind('#t-h', v => { it.h = clamp(Math.round(v), 1, ROOM_ROWS); });
+      bind('#t-tele', v => { it.tele = clamp(v, 0, 8); }); bind('#t-act', v => { it.act = clamp(v, 0.25, 16); });
+      d.querySelector('#t-dup').onclick = () => { const c = JSON.parse(JSON.stringify(it)); c.x = clamp(c.x + 1, 0, ROOM_COLS - 1); c.y = clamp(c.y + 1, 0, ROOM_ROWS - 1); st.items.push(c); st.sel = st.items.length - 1; apply(); refresh(); };
+    }
+  }
+  /* position et largeur de la zone des cases : le curseur de lecture s'y aligne au pixel */
+  function measure() {
+    if (!box || box.hidden) { headW = 0; return; }
+    const g = box.querySelector('.agrid'), c = box.querySelector('.aruler .acells');
+    if (!g || !c) { headW = 0; return; }
+    const gr = g.getBoundingClientRect(), cr = c.getBoundingClientRect(); headX0 = cr.left - gr.left; headW = cr.width;
+  }
+  function toggleHit(k, b) {
+    const it = st.items[k]; if (!it || it.kind === 'mur') return;
+    const i = it.hits.findIndex(h => Math.abs(h - b) < 1e-6);
+    if (i >= 0) it.hits.splice(i, 1); else { it.hits.push(b); AudioEngine.tempoTick({ intensity: 0.6 }); }
+    st.sel = k; apply(); refresh();
+  }
+
+  /* ---------- pose à la souris ---------- */
+  function onCanvas(e) {
+    if (!live || e.button !== 0) return;
+    const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y);
+    const tx = Math.floor((wm.x - ROOM_X) / TILE), ty = Math.floor((wm.y - ROOM_Y) / TILE);
+    if (tx < 0 || ty < 0 || tx >= ROOM_COLS || ty >= ROOM_ROWS) return;
+    if (!st.pose) return;
+    const k = st.items.findIndex(it => tx >= it.x && tx < it.x + it.w && ty >= it.y && ty < it.y + it.h);
+    if (k >= 0 && (!st.brush || k !== st.sel)) { st.sel = k; refresh(); return; }   // clic sur un élément : on le choisit
+    if (!st.brush) return;
+    if (st.brush === 'mur') st.items.push({ kind: 'mur', x: tx, y: ty, w: 1, h: 1 });
+    else {
+      const d = Content.trap(st.brush); if (!d) return;
+      const s = SIZE[d.kind] || [1, 1];
+      st.items.push({ kind: 'trap', trap: st.brush, x: clamp(tx, 0, ROOM_COLS - s[0]), y: clamp(ty, 0, ROOM_ROWS - s[1]), w: s[0], h: s[1], hits: [0], tele: 1, act: 1, params: {} });
+    }
+    st.sel = st.items.length - 1; apply(); refresh();
+  }
+
+  /* ---------- import / export ---------- */
+  function snippet() {
+    const walls = st.items.filter(i => i.kind === 'mur'), traps = st.items.filter(i => i.kind === 'trap');
+    const info = Beat.info; let out = `/* Atelier rythme — boucle de ${st.bars} mesure(s), piste ${st.track} du ${st.biome}` + (info.internal ? ' (métronome interne)' : ` (${Math.round(info.bpm)} BPM)`) + ' */\n';
+    if (walls.length) out += 'obstacles: [\n' + walls.map(w => `  { x: ${w.x}, y: ${w.y}, w: ${w.w}, h: ${w.h} },`).join('\n') + '\n],\n';
+    out += 'traps: [\n' + traps.map(t => `  { trap: '${t.trap}', x: ${t.x}, y: ${t.y}, w: ${t.w}, h: ${t.h}, params: { beats: { bars: ${st.bars}, hits: [${t.hits.slice().sort((a, b) => a - b).map(q).join(', ')}], telegraph: ${q(t.tele)}, active: ${q(t.act)} } } },`).join('\n') + '\n],\n';
+    out += '/* atelier:' + JSON.stringify({ biome: st.biome, track: st.track, bars: st.bars, snap: st.snap, items: st.items }) + ' */';
+    return out;
+  }
+  function showIo() { $('#a-io').hidden = false; $('#a-txt').value = snippet(); }
+  /* relit le bloc « atelier:{…} » qu'écrit l'export : un aller-retour complet sans réécrire à la main */
+  function importText(txt) {
+    const i = txt.indexOf('atelier:'); if (i < 0) { UI.toast('Texte non reconnu (il faut le bloc « atelier: » de l\'export)'); return; }
+    let j = txt.lastIndexOf('*/'); if (j < i) j = txt.length;
+    try {
+      const o = JSON.parse(txt.slice(i + 8, j).trim());
+      st.biome = o.biome || st.biome; st.track = o.track || st.track; st.bars = o.bars || st.bars; st.snap = o.snap || st.snap; st.items = o.items || [];
+      st.sel = -1; startRoom(); build(); UI.toast('Partition chargée : ' + st.items.length + ' élément(s)');
+    } catch (e) { UI.toast('Lecture impossible : ' + e.message); }
+  }
+
+  /* ---------- boucle ---------- */
+  function update() {
+    if (!live) return;
+    if (!G.run || G.state !== 'run' || !G.room) { close(); return; }   // run quittée depuis la pause : on referme proprement
+    if (Input.keys.has('Delete') && st.sel >= 0) { st.items.splice(st.sel, 1); st.sel = -1; Input.keys.delete('Delete'); apply(); refresh(); }
+    const L = Lb(); let pos = inLoop();
+    if (pos >= L || pos < 0) {
+      if (!(st.loop && pos >= L && Music.seekBeat(st.loopBar * L))) { st.loopBar = Math.max(0, Math.floor(beatNow() / L)); if (box && !box.hidden) $('#a-win').textContent = 'mesures ' + (st.loopBar * st.bars + 1) + '–' + (st.loopBar * st.bars + st.bars); }
+      pos = clamp(inLoop(), 0, L);
+    }
+    if (Time.frame % 30 === 0) measure();   // fenêtre redimensionnée, panneau replié : la tête de lecture se recale
+    if (headEl && headW) headEl.style.left = (headX0 + headW * pos / L) + 'px';
+    const idx = Beat.index();
+    if (idx !== lastIdx) { lastIdx = idx; if (st.metro) AudioEngine.tempoTick({ intensity: Beat.beatInBar() === 0 ? 1 : 0.45 }); }
+  }
+  /* repères dans la salle : grille de pose, élément choisi, aperçu sous le curseur */
+  function render(ctx) {
+    if (!live || !st.pose) return;
+    ctx.save(); ctx.globalAlpha = 0.10; ctx.strokeStyle = '#6ee7ff'; ctx.lineWidth = 1;
+    for (let x = 0; x <= ROOM_COLS; x++) { ctx.beginPath(); ctx.moveTo(ROOM_X + x * TILE, ROOM_Y); ctx.lineTo(ROOM_X + x * TILE, ROOM_Y + ROOM_ROWS * TILE); ctx.stroke(); }
+    for (let y = 0; y <= ROOM_ROWS; y++) { ctx.beginPath(); ctx.moveTo(ROOM_X, ROOM_Y + y * TILE); ctx.lineTo(ROOM_X + ROOM_COLS * TILE, ROOM_Y + y * TILE); ctx.stroke(); }
+    ctx.restore();
+    const it = st.items[st.sel];
+    if (it) { ctx.save(); ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.strokeRect(ROOM_X + it.x * TILE + 1, ROOM_Y + it.y * TILE + 1, it.w * TILE - 2, it.h * TILE - 2); ctx.restore(); }
+    if (st.brush) {
+      const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y);
+      const tx = Math.floor((wm.x - ROOM_X) / TILE), ty = Math.floor((wm.y - ROOM_Y) / TILE);
+      if (tx >= 0 && ty >= 0 && tx < ROOM_COLS && ty < ROOM_ROWS) {
+        const d = st.brush === 'mur' ? null : Content.trap(st.brush); const s = d ? (SIZE[d.kind] || [1, 1]) : [1, 1];
+        ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = d ? (d.color || '#ff5e7a') : '#8890aa';
+        ctx.fillRect(ROOM_X + tx * TILE, ROOM_Y + ty * TILE, s[0] * TILE, s[1] * TILE); ctx.restore();
+      }
+    }
+  }
+  return { open, close, toggle, update, render, apply, refresh, snippet, get live() { return live; }, get st() { return st; }, posing: () => live && st.pose };
+})();
