@@ -944,6 +944,34 @@ Un copain accepte les deux :
 
 Tout est versé dans le contenu **tout de suite** — l'animal est adoptable par « Essayer », le copain prend les commandes — et gardé dans le navigateur pendant qu'on travaille. `Content.invalidate()` est appelé à chaque changement : l'index par id est mis en cache, et sans ça un personnage créé en cours de partie reste introuvable et l'appel retombe silencieusement sur le premier de la liste.
 
+### Trois façons de l'emmener
+
+Le choix se fait au hub et vaut pour la run entière. C'est un vrai triangle : sans contrepartie au troisième, personne ne le prendrait jamais.
+
+| Mode | Ce que ça donne |
+|---|---|
+| **Tout le temps** | Il suit du début à la fin, à sa force normale. |
+| **À l'appel** | Absent. La touche **C** l'appelle : il arrive à **×1,6 dégâts et cadence doublée** pendant 12 s, puis se repose 25 s. Un badge montre la jauge de présence ou de repos. |
+| **Personne** | Aucun animal, mais le joueur garde sa part : **+12 % de dégâts et +20 PV**, toute la run. |
+
+Le bonus de « personne » est posé comme un buff de run (`roomOnly: false`) : posé par salle, il aurait sauté à la première porte, et le défaut ne se serait vu qu'en salle 2.
+
+### Les équipes
+
+`CONTENT.pairs` déclare les attelages qui se connaissent : `{ char, pet, name, desc, petDamageMul, mods }`. Quand le personnage et l'animal choisis forment une paire, **les deux y gagnent** — l'animal frappe plus fort, le joueur reçoit les `mods`. C'est ce qui transforme « quel compagnon est le meilleur » en « quelle équipe est la meilleure ».
+
+**Martin + Uno — Vieille complicité** : Uno mord 30 % plus fort, Martin va 8 % plus vite. Ils se connaissent, c'est son chien.
+
+Le hub liste les équipes connues et coche celle qui est active ; la colonne Personnage rappelle l'attelage en cours.
+
+### Planches d'un compagnon
+
+Mêmes règles que pour un personnage, avec quatre clips : **repos**, **marche**, **attaque**, **blessé**. Un animal qui n'a que les deux premiers retombe dessus sans rien casser — c'est le cas courant, et il ne faut pas exiger la panoplie complète pour qu'un animal entre dans le jeu.
+
+Un compagnon animé n'a **pas d'accessoire à son nom** : son badge de jeu et sa carte de boutique passent par la première image de sa planche de repos (`Pets.icon`, `Sprites.sheetCanvas`), sinon il n'apparaît qu'en pastille de couleur.
+
+**Uno** (`pet_uno`) est le premier : le chien de Martin, deux planches de 3 × 3 cases de 32 px, rôle « mord et attire les coups ».
+
 ### Le partager
 
 « Exporter » donne le contenu complet de **`dev/content5.js`** : les images en clair (data URI), puis les `CONTENT.pets.push(...)` et `CONTENT.characters.push(...)`. On colle le texte dans le fichier, on relance `node dev/build.js`, et les amis existent chez tout le monde — **rien à déposer dans `assets/`**, le dépôt se suffit à lui-même. Les images sont enregistrées au démarrage par `Sprites.loadFriends()`.
