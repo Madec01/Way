@@ -231,15 +231,19 @@ class Pet {
     const bob = this.moving ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5 : Math.sin(this.t * 3) * 2;
     /* vue affichée : celle du déplacement réel, l'ouest étant l'est retourné */
     const dv = Sprites.dirFrom(this.dx, this.dy); const sprite = Sprites.pickDir(this.def.sprite, dv.dir);
+    const a = this.def.anim; const planche = a && a[this.clip] && Sprites.sheetInfo(a[this.clip]);
+    /* Ligne de sol. Pour une planche c'est celle du joueur (`y + 25`), la même pour tous : proportionnelle à la
+       taille, comme pour un accessoire, un petit animal se retrouvait à flotter plus haut qu'un grand — 11 px
+       d'écart entre un chat de 32 et un chien de 64, posés au même endroit. */
+    const sol = planche ? 25 : s * 0.34;
     ctx.save(); ctx.globalAlpha = this.down ? 0.15 : 0.32; ctx.fillStyle = '#05070c';
-    ctx.beginPath(); ctx.ellipse(this.x, this.y + s * 0.34, s * 0.28, s * 0.1, 0, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.beginPath(); ctx.ellipse(this.x, this.y + sol, s * 0.28, s * 0.1, 0, 0, TAU); ctx.fill(); ctx.restore();
     const pop = 1 + this.act * 0.22;
-    const a = this.def.anim;
-    if (a && a[this.clip] && Sprites.sheetInfo(a[this.clip])) {
+    if (planche) {
       const cf = Sprites.CLIPS[this.clip] || Sprites.CLIPS.idle;
-      const inf = Sprites.sheetInfo(a[this.clip]);
+      const inf = planche;
       let f = Math.floor(this.clipT * cf.fps); f = cf.once ? Math.min(f, inf.n - 1) : f % inf.n;
-      Sprites.drawSheet(ctx, a[this.clip], f, this.x, this.y + s * 0.34 - lift, s * pop, { foot: true, flip: dv.flip, alpha: this.down ? 0.5 : 1 });
+      Sprites.drawSheet(ctx, a[this.clip], f, this.x, this.y + sol - lift, s * pop, { foot: true, flip: dv.flip, alpha: this.down ? 0.5 : 1 });
       this.renderTags(ctx, s, lift); return;
     }
     const opts = { flip: dv.flip, rot: this.down ? 1.4 : 0, alpha: this.down ? 0.5 : 1 };

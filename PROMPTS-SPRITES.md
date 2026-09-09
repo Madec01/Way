@@ -157,7 +157,7 @@ juste en jeu.
 
 ## 5. Ce qui est déjà en jeu
 
-Martin, Gabriel et Jean ont leurs cinq planches, Uno ses quatre. Il ne reste plus que les trois chats.
+Martin, Gabriel et Jean ont leurs cinq planches ; Uno, Choupi, Tanuki et ORI leurs quatre. Tout le monde est en jeu.
 
 Deux choses apprises en les intégrant, qui valent pour la suite :
 

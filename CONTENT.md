@@ -1081,7 +1081,7 @@ Martin, Gabriel et Jean ont chacun leurs cinq planches — repos, marche, tir, r
 | **Gabriel** | capuche noire, chignon, lunettes | Choupi & Tanuki — *La maisonnée* |
 | **Jean** | cheveux longs, barbe, t-shirt blanc | ORI — *Œil pour œil* |
 
-Plus aucun personnage n'emprunte de sprite : le champ `placeholder` a disparu du contenu. Il ne manque plus que les dessins des **trois chats**, qui ne sont pour l'instant qu'une pastille de couleur en jeu.
+Plus aucun personnage n'emprunte de sprite : le champ `placeholder` a disparu du contenu, des personnages comme des animaux.
 
 Les prompts pour fabriquer ces planches sont dans **`PROMPTS-SPRITES.md`** : un prompt global de style, puis un prompt court par clip, pour les humains (case de 48) comme pour les animaux (case de 32).
 
@@ -1123,3 +1123,9 @@ L'arme était dessinée à une hauteur **fixe**, 23 px au-dessus de la position 
 `Sprites.handY` la place maintenant à **45 % du corps au-dessus des pieds**, et chaque façon de dessiner un corps y déclare sa propre ligne de sol et sa propre hauteur — une planche de l'auteur pose ses pieds à `y + 25` et mesure `taille × foot`, la planche du jeu s'arrête à `y + 20` et ne remplit que ~72 % de sa case. Mesuré après correction : 45 % pour Martin, 46 % pour Gabriel, 45 % pour Jean, 44 % pour Neuf — c'est-à-dire la main, pour les quatre.
 
 C'est la même leçon que les deux cases vides : tout nombre écrit en dur pour *un* corps devient faux dès qu'un deuxième arrive.
+
+### Les trois chats, et la ligne de sol des animaux
+
+Choupi et Tanuki (les chats de Gabriel) et ORI (le chat de Jean) ont chacun leurs quatre planches — repos, marche, attaque, blessé. Les deux premiers sont dessinés en cases de **48 px**, ORI et Uno en cases de **32 px**. Chacun est affiché à **×2 de sa case** (96 et 64) : c'est ce qui garde le même grain de pixel pour tous, et c'est la seule règle qui compte. Conséquence assumée par l'auteur : Choupi et Tanuki (68 px) sont plus grands qu'Uno (52 px). Les réduire à ×1 les mettait à 34 px avec un grain deux fois plus fin que le reste — l'auteur a préféré leur taille naturelle.
+
+En les posant côte à côte, un défaut est apparu : la ligne de sol d'un compagnon était **proportionnelle à sa taille** (`y + taille × 0,34`). Un chat de 32 posait ses pattes 11 px au-dessus de celles d'un chien de 64 placé au même endroit, et tous flottaient au-dessus de la ligne du joueur (`y + 25`). Un animal dessiné par une planche prend maintenant la ligne de sol du joueur, ombre comprise. Mesuré : les quatre posent les pattes à 3 px près.
