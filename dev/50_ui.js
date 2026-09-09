@@ -5,61 +5,158 @@
 
 const UI = (() => {
   const $ = sel => document.querySelector(sel);
-  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-  let root, screens = {}, banners = [], toasts = [], fade = { t: 0, dir: 0, cb: null };
+  const el = (tag, cls, html) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  };
+  let root,
+    screens = {},
+    banners = [],
+    toasts = [],
+    fade = { t: 0, dir: 0, cb: null };
   const state = { choice: null, prep: null };
-  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
   function init() {
     root = $('#ui');
-    for (const s of ['menu', 'hub', 'prep', 'choice', 'pause', 'end', 'credits', 'lore']) { const d = el('div', 'screen', ''); d.id = 'screen-' + s; d.hidden = true; root.appendChild(d); screens[s] = d; }
+    for (const s of ['menu', 'hub', 'prep', 'choice', 'pause', 'end', 'credits', 'lore']) {
+      const d = el('div', 'screen', '');
+      d.id = 'screen-' + s;
+      d.hidden = true;
+      root.appendChild(d);
+      screens[s] = d;
+    }
     /* son de survol : une seule fois par bouton/carte, jamais plus d'un toutes les 90 ms (sinon ça grésille) */
-    let lastHover = null, lastHoverT = 0;
-    root.addEventListener('mouseover', e => { const el = e.target.closest('button, .card'); if (!el || el === lastHover) return; lastHover = el; const now = performance.now(); if (now - lastHoverT < 90) return; lastHoverT = now; AudioEngine.uiHover({ intensity: 0.25, step: menuStep(el) }); });
-    root.addEventListener('mouseout', e => { const el = e.target.closest('button, .card'); if (el && el === lastHover && !el.contains(e.relatedTarget)) lastHover = null; });
-    for (const ev of ['pointerdown', 'pointermove', 'keydown', 'wheel']) window.addEventListener(ev, () => { if (G.state === 'menu') menuIdle(); }, { passive: true });
+    let lastHover = null,
+      lastHoverT = 0;
+    root.addEventListener('mouseover', e => {
+      const el = e.target.closest('button, .card');
+      if (!el || el === lastHover) return;
+      lastHover = el;
+      const now = performance.now();
+      if (now - lastHoverT < 90) return;
+      lastHoverT = now;
+      AudioEngine.uiHover({ intensity: 0.25, step: menuStep(el) });
+    });
+    root.addEventListener('mouseout', e => {
+      const el = e.target.closest('button, .card');
+      if (el && el === lastHover && !el.contains(e.relatedTarget)) lastHover = null;
+    });
+    for (const ev of ['pointerdown', 'pointermove', 'keydown', 'wheel'])
+      window.addEventListener(
+        ev,
+        () => {
+          if (G.state === 'menu') menuIdle();
+        },
+        { passive: true }
+      );
     window.addEventListener('keydown', e => {
-      if (e.code === 'F1' && G.mode === 'test') { e.preventDefault(); Debug.toggle(); }
+      if (e.code === 'F1' && G.mode === 'test') {
+        e.preventDefault();
+        Debug.toggle();
+      }
       if (G.state === 'run' && (e.code === 'Escape' || e.code === 'KeyP') && !G.overlay) togglePause();
       else if (G.state === 'run' && e.code === 'Escape' && G.overlay === 'pause') togglePause();
-      if (G.overlay === 'menu' && menuFx.phase === 'splash') { if (e.code !== 'F11' && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); enterMenu(); } return; }
-      if (G.overlay === 'menu') {
-        const btns = [...screens[G.overlay].querySelectorAll('.mbtn, .btn')].filter(b => !b.disabled && b.offsetParent !== null); if (!btns.length) return;
-        let i = btns.indexOf(document.activeElement);
-        if (e.code === 'ArrowDown' || e.code === 'ArrowUp' || (e.code === 'Tab' && G.overlay === 'menu')) { e.preventDefault(); i = (i + (e.code === 'ArrowUp' || (e.code === 'Tab' && e.shiftKey) ? -1 : 1) + btns.length) % btns.length; btns[i].focus(); AudioEngine.uiHover({ intensity: 0.35, step: menuStep(btns[i]) }); }
-        else if ((e.code === 'Enter' || e.code === 'Space') && i >= 0) { e.preventDefault(); btns[i].click(); }
+      if (G.overlay === 'menu' && menuFx.phase === 'splash') {
+        if (e.code !== 'F11' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          enterMenu();
+        }
+        return;
       }
-      if (G.overlay === 'choice' && state.choice) { const k = parseInt(e.key); if (k >= 1 && k <= state.choice.choices.length) state.choice.pick(state.choice.choices[k - 1]); if (e.code === 'KeyR') state.choice.reroll && state.choice.reroll(); }
+      if (G.overlay === 'menu') {
+        const btns = [...screens[G.overlay].querySelectorAll('.mbtn, .btn')].filter(b => !b.disabled && b.offsetParent !== null);
+        if (!btns.length) return;
+        let i = btns.indexOf(document.activeElement);
+        if (e.code === 'ArrowDown' || e.code === 'ArrowUp' || (e.code === 'Tab' && G.overlay === 'menu')) {
+          e.preventDefault();
+          i = (i + (e.code === 'ArrowUp' || (e.code === 'Tab' && e.shiftKey) ? -1 : 1) + btns.length) % btns.length;
+          btns[i].focus();
+          AudioEngine.uiHover({ intensity: 0.35, step: menuStep(btns[i]) });
+        } else if ((e.code === 'Enter' || e.code === 'Space') && i >= 0) {
+          e.preventDefault();
+          btns[i].click();
+        }
+      }
+      if (G.overlay === 'choice' && state.choice) {
+        const k = parseInt(e.key);
+        if (k >= 1 && k <= state.choice.choices.length) state.choice.pick(state.choice.choices[k - 1]);
+        if (e.code === 'KeyR') state.choice.reroll && state.choice.reroll();
+      }
     });
   }
-  function show(name) { for (const k in screens) screens[k].hidden = k !== name; G.overlay = name === null ? null : name; root.classList.toggle('active', name !== null); }
-  function hideAll() { show(null); }
+  function show(name) {
+    for (const k in screens) screens[k].hidden = k !== name;
+    G.overlay = name === null ? null : name;
+    root.classList.toggle('active', name !== null);
+  }
+  function hideAll() {
+    show(null);
+  }
 
   /* ---------- Menu ---------- */
   /* Le menu se joue en deux temps : un écran-titre (« splash ») qui respire avec la musique, puis au clic le menu
      principal centré, titre compris. Tout ce qui bouge est calé sur Beat : temps, temps forts, mesures. */
-  const menuFx = { phase: null, rings: [], flash: 0, glitch: 0, gxCss: null, vol: 0, bass: 0, idle: 0, arcade: false, anchor: 0.4, btns: null, reveal: 0, revealMax: 0, pending: null, pendT: 0 };
-  function menuActive() { return G.state === 'menu' && !!menuFx.phase; }
-  function menuIdle() { menuFx.idle = 0; menuFx.arcade = false; }
+  const menuFx = {
+    phase: null,
+    rings: [],
+    flash: 0,
+    glitch: 0,
+    gxCss: null,
+    vol: 0,
+    bass: 0,
+    idle: 0,
+    arcade: false,
+    anchor: 0.4,
+    btns: null,
+    reveal: 0,
+    revealMax: 0,
+    pending: null,
+    pendT: 0,
+  };
+  function menuActive() {
+    return G.state === 'menu' && !!menuFx.phase;
+  }
+  function menuIdle() {
+    menuFx.idle = 0;
+    menuFx.arcade = false;
+  }
   /* degré de la gamme associé à un bouton : chaque changement de sélection sonne une note différente de la piste */
-  function menuStep(el) { if (!el || !el.parentElement) return 0; const i = [...el.parentElement.children].indexOf(el); return i < 0 ? 0 : i % 5; }
+  function menuStep(el) {
+    if (!el || !el.parentElement) return 0;
+    const i = [...el.parentElement.children].indexOf(el);
+    return i < 0 ? 0 : i % 5;
+  }
   /* Une validation tombe sur la mesure : on attend le prochain temps fort, jamais plus d'un temps si la musique est absente. */
   function barSync(fn) {
     let wait = Music.isPlaying() ? Beat.timeToNextBar() : 0.12;
     if (wait > 1.05) wait = (1 - Beat.phase()) * Beat.beatLen();
-    menuFx.pending = fn; menuFx.pendT = Math.max(0.08, wait);
+    menuFx.pending = fn;
+    menuFx.pendT = Math.max(0.08, wait);
   }
   const MENU_TAGLINE = 'Neuf salles par palier. Une seule sortie.';
   function menuFoot(p) {
-    const hint = Input.touch.active ? 'Joystick à gauche · TIR / COMP. / E à droite' : 'ZQSD · souris · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause';
+    const hint = Input.touch.active
+      ? 'Joystick à gauche · TIR / COMP. / E à droite'
+      : 'ZQSD · souris · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause';
     return `<div class="menufoot"><div class="hint">${hint}</div><div class="save">Sauvegarde : ${p.runs} run(s) · ${p.wins} case(s) 9 cochée(s) · ◈ ${fmt(p.coins)}</div></div>`;
   }
 
   /* Écran-titre : le titre, la musique, rien d'autre. Un clic (ou une touche) fait basculer sur le menu au temps fort suivant. */
   function showTitle() {
-    G.state = 'menu'; G.paused = false;
-    menuFx.phase = 'splash'; menuFx.anchor = 0.42; menuFx.idle = 0; menuFx.arcade = false; menuFx.pending = null; menuFx.btns = null; menuFx.reveal = menuFx.revealMax = 0;
-    const s = screens.menu; const p = Meta.profile;
+    G.state = 'menu';
+    G.paused = false;
+    menuFx.phase = 'splash';
+    menuFx.anchor = 0.42;
+    menuFx.idle = 0;
+    menuFx.arcade = false;
+    menuFx.pending = null;
+    menuFx.btns = null;
+    menuFx.reveal = menuFx.revealMax = 0;
+    const s = screens.menu;
+    const p = Meta.profile;
     s.innerHTML = `
       <div class="menuscreen splash">
         <div class="stamp"><span>Way</span><span class="sep">·</span><span>Roguelite à salles</span><span class="sep">·</span><span>Phase 2</span></div>
@@ -73,20 +170,32 @@ const UI = (() => {
         ${menuFoot(p)}
       </div>`;
     s.querySelector('.menuscreen').onclick = enterMenu;
-    show('menu'); Music.play('menu');
+    show('menu');
+    Music.play('menu');
     if (!Attract.running) Attract.start();
   }
   /* Passage écran-titre → menu : flash et souffle sur le temps fort, le titre monte et rétrécit. */
   function enterMenu() {
     if (menuFx.phase !== 'splash' || menuFx.pending) return;
     AudioEngine.uiConfirm({ intensity: 0.85 });
-    barSync(() => { menuFx.flash = 1; menuFx.rings.push({ t: 0, gold: true, big: true }); AudioEngine.bossBreath({ intensity: 0.35 }); showMenu(); });
+    barSync(() => {
+      menuFx.flash = 1;
+      menuFx.rings.push({ t: 0, gold: true, big: true });
+      AudioEngine.bossBreath({ intensity: 0.35 });
+      showMenu();
+    });
   }
 
   function showMenu() {
-    G.state = 'menu'; G.paused = false;
-    menuFx.phase = 'main'; menuFx.anchor = 0.2; menuFx.idle = 0; menuFx.arcade = false; menuFx.pending = null;
-    const s = screens.menu; const p = Meta.profile;
+    G.state = 'menu';
+    G.paused = false;
+    menuFx.phase = 'main';
+    menuFx.anchor = 0.2;
+    menuFx.idle = 0;
+    menuFx.arcade = false;
+    menuFx.pending = null;
+    const s = screens.menu;
+    const p = Meta.profile;
     s.innerHTML = `
       <div class="menuscreen main">
         <div class="stamp"><span>Way</span><span class="sep">·</span><span>Roguelite à salles</span><span class="sep">·</span><span>Phase 2</span></div>
@@ -106,89 +215,199 @@ const UI = (() => {
         <div class="audiohint">▶ Cliquez ou appuyez sur une touche pour lancer le son</div>
         ${menuFoot(p)}
       </div>`;
-    const go = mode => { Attract.stop(); Meta.setMode(mode); Debug.hide(); Run.toHub(); if (mode === 'test') toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5); };
+    const go = mode => {
+      Attract.stop();
+      Meta.setMode(mode);
+      Debug.hide();
+      Run.toHub();
+      if (mode === 'test') toast('Mode Test : tout est débloqué. F1 : panneau debug.', 5);
+    };
     /* Validation calée sur la mesure : le bouton s'allume, l'action part au temps fort suivant. */
-    const onBar = (sel, fn) => { const b = s.querySelector(sel); b.onclick = () => { if (menuFx.pending) return; b.classList.add('armed'); AudioEngine.uiConfirm({ intensity: 0.75 }); barSync(() => { b.classList.remove('armed'); fn(); }); }; };
+    const onBar = (sel, fn) => {
+      const b = s.querySelector(sel);
+      b.onclick = () => {
+        if (menuFx.pending) return;
+        b.classList.add('armed');
+        AudioEngine.uiConfirm({ intensity: 0.75 });
+        barSync(() => {
+          b.classList.remove('armed');
+          fn();
+        });
+      };
+    };
     /* le plein écran exige un geste de l'utilisateur : il part tout de suite, seule la transition attend la mesure */
-    onBar('#btn-normal', () => go('normal')); s.querySelector('#btn-normal').addEventListener('pointerdown', () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); });
-    onBar('#btn-test', () => go('test')); s.querySelector('#btn-test').addEventListener('pointerdown', () => { if (Input.touch.active && !Fullscreen.active) Fullscreen.enter(); });
+    onBar('#btn-normal', () => go('normal'));
+    s.querySelector('#btn-normal').addEventListener('pointerdown', () => {
+      if (Input.touch.active && !Fullscreen.active) Fullscreen.enter();
+    });
+    onBar('#btn-test', () => go('test'));
+    s.querySelector('#btn-test').addEventListener('pointerdown', () => {
+      if (Input.touch.active && !Fullscreen.active) Fullscreen.enter();
+    });
     onBar('#btn-credits', showCredits);
-    s.querySelector('#btn-fs').onclick = () => { Fullscreen.toggle(); setTimeout(showMenu, 400); };
-    s.querySelector('#btn-reset').onclick = () => { if (confirm('Effacer la sauvegarde du mode Normal ?')) { Meta.reset(); showMenu(); } };
-    menuFx.btns = [...s.querySelectorAll('.mbtn')]; menuFx.reveal = 0; menuFx.revealMax = menuFx.btns.length;
-    show('menu'); Music.play('menu');
+    s.querySelector('#btn-fs').onclick = () => {
+      Fullscreen.toggle();
+      setTimeout(showMenu, 400);
+    };
+    s.querySelector('#btn-reset').onclick = () => {
+      if (confirm('Effacer la sauvegarde du mode Normal ?')) {
+        Meta.reset();
+        showMenu();
+      }
+    };
+    menuFx.btns = [...s.querySelectorAll('.mbtn')];
+    menuFx.reveal = 0;
+    menuFx.revealMax = menuFx.btns.length;
+    show('menu');
+    Music.play('menu');
     if (!Attract.running) Attract.start();
-    setTimeout(() => { const b = s.querySelector('#btn-normal'); if (b && !Input.touch.active) b.focus({ preventScroll: true }); }, 50);
+    setTimeout(() => {
+      const b = s.querySelector('#btn-normal');
+      if (b && !Input.touch.active) b.focus({ preventScroll: true });
+    }, 50);
   }
 
   /* Effets du menu pilotés par la musique : ondes de mesure, saccade du titre, grain, apparition des boutons. */
   function menuUpdate(dt) {
     menuFx.flash = Math.max(0, menuFx.flash - dt * 2.6);
-    for (let i = menuFx.rings.length - 1; i >= 0; i--) { menuFx.rings[i].t += dt; if (menuFx.rings[i].t > 2) menuFx.rings.splice(i, 1); }
+    for (let i = menuFx.rings.length - 1; i >= 0; i--) {
+      menuFx.rings[i].t += dt;
+      if (menuFx.rings[i].t > 2) menuFx.rings.splice(i, 1);
+    }
     const sp = AudioEngine.spectrum ? AudioEngine.spectrum(12) : null;
     if (sp) {
-      let lo = 0, all = 0; for (let i = 0; i < 3; i++) lo = Math.max(lo, sp[i]); for (let i = 0; i < sp.length; i++) all += sp[i]; all /= sp.length;
-      const a = Math.min(1, dt * 12); menuFx.bass += (lo - menuFx.bass) * a; menuFx.vol += (all - menuFx.vol) * Math.min(1, dt * 7);
-    } else { menuFx.bass *= Math.max(0, 1 - dt * 3); menuFx.vol *= Math.max(0, 1 - dt * 3); }
-    const crossed = Beat.crossedFrame(1), bib = Beat.beatInBar();
+      let lo = 0,
+        all = 0;
+      for (let i = 0; i < 3; i++) lo = Math.max(lo, sp[i]);
+      for (let i = 0; i < sp.length; i++) all += sp[i];
+      all /= sp.length;
+      const a = Math.min(1, dt * 12);
+      menuFx.bass += (lo - menuFx.bass) * a;
+      menuFx.vol += (all - menuFx.vol) * Math.min(1, dt * 7);
+    } else {
+      menuFx.bass *= Math.max(0, 1 - dt * 3);
+      menuFx.vol *= Math.max(0, 1 - dt * 3);
+    }
+    const crossed = Beat.crossedFrame(1),
+      bib = Beat.beatInBar();
     if (crossed && bib === 0) menuFx.rings.push({ t: 0, gold: ((Beat.index() >> 2) & 1) === 0 });
     if (crossed) {
       /* saccade discrète des lettres sur les contretemps, remise à zéro sur le temps fort */
       menuFx.glitch = bib === 0 ? 0 : Math.round((Math.random() * 2 - 1) * 4);
-      const gx = menuFx.glitch + 'px'; if (gx !== menuFx.gxCss) { menuFx.gxCss = gx; document.documentElement.style.setProperty('--gx', gx); }
+      const gx = menuFx.glitch + 'px';
+      if (gx !== menuFx.gxCss) {
+        menuFx.gxCss = gx;
+        document.documentElement.style.setProperty('--gx', gx);
+      }
     }
     if (menuFx.phase === 'main' && menuFx.btns && menuFx.reveal < menuFx.revealMax && crossed) {
-      const b = menuFx.btns[menuFx.reveal++]; if (b) { b.classList.add('on'); AudioEngine.uiHover({ intensity: 0.5, step: menuFx.reveal }); }
+      const b = menuFx.btns[menuFx.reveal++];
+      if (b) {
+        b.classList.add('on');
+        AudioEngine.uiHover({ intensity: 0.5, step: menuFx.reveal });
+      }
     }
-    if (menuFx.pending) { menuFx.pendT -= dt; if (menuFx.pendT <= 0) { const fn = menuFx.pending; menuFx.pending = null; fn(); } }
-    menuFx.idle += dt; if (menuFx.idle > 20 && menuFx.phase === 'splash') menuFx.arcade = true;
+    if (menuFx.pending) {
+      menuFx.pendT -= dt;
+      if (menuFx.pendT <= 0) {
+        const fn = menuFx.pending;
+        menuFx.pending = null;
+        fn();
+      }
+    }
+    menuFx.idle += dt;
+    if (menuFx.idle > 20 && menuFx.phase === 'splash') menuFx.arcade = true;
   }
   /* Calque canvas du menu : ondes de choc issues du titre, balayage de couleur sur les graves, grain au volume, flash. */
   function renderMenuFx(ctx) {
     if (!menuActive()) return;
-    const V = Engine.view, x0 = -V.ox, y0 = -V.oy, vw = V.w, vh = V.h;
-    const ax = W / 2, ay = H * menuFx.anchor;
+    const V = Engine.view,
+      x0 = -V.ox,
+      y0 = -V.oy,
+      vw = V.w,
+      vh = V.h;
+    const ax = W / 2,
+      ay = H * menuFx.anchor;
     ctx.save();
     ctx.lineWidth = 2;
     for (const r of menuFx.rings) {
-      const a = r.t / (r.big ? 1.2 : 1.9); if (a > 1) continue;
+      const a = r.t / (r.big ? 1.2 : 1.9);
+      if (a > 1) continue;
       ctx.globalAlpha = (r.big ? 0.5 : 0.26) * (1 - a) * (1 - a);
       ctx.strokeStyle = r.gold ? '#ffb347' : '#6ee7ff';
-      ctx.beginPath(); ctx.arc(ax, ay, 30 + a * (r.big ? 1200 : 760), 0, TAU); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(ax, ay, 30 + a * (r.big ? 1200 : 760), 0, TAU);
+      ctx.stroke();
     }
     /* une bande de couleur traverse l'écran à chaque mesure, sa largeur suit les graves */
-    const bl = Beat.beatLen(), barK = 1 - Beat.timeToNextBar() / (4 * bl);
-    const cx = x0 + barK * vw, bw = 80 + 300 * menuFx.bass;
+    const bl = Beat.beatLen(),
+      barK = 1 - Beat.timeToNextBar() / (4 * bl);
+    const cx = x0 + barK * vw,
+      bw = 80 + 300 * menuFx.bass;
     const gold = ((Beat.index() >> 2) & 1) === 0;
     const gr = ctx.createLinearGradient(cx - bw, 0, cx + bw, 0);
     const col = gold ? '255,179,71' : '110,231,255';
-    gr.addColorStop(0, `rgba(${col},0)`); gr.addColorStop(0.5, `rgba(${col},${(0.05 + 0.1 * menuFx.bass).toFixed(3)})`); gr.addColorStop(1, `rgba(${col},0)`);
-    ctx.globalAlpha = 1; ctx.fillStyle = gr; ctx.fillRect(x0, y0, vw, vh);
+    gr.addColorStop(0, `rgba(${col},0)`);
+    gr.addColorStop(0.5, `rgba(${col},${(0.05 + 0.1 * menuFx.bass).toFixed(3)})`);
+    gr.addColorStop(1, `rgba(${col},0)`);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = gr;
+    ctx.fillRect(x0, y0, vw, vh);
     /* grain de pellicule : densité pilotée par le volume de la piste */
     const pat = grainPattern(ctx);
-    if (pat) { ctx.save(); ctx.globalAlpha = 0.05 + 0.11 * menuFx.vol; ctx.translate(-(Time.now * 130 % 96), -(Time.now * 91 % 96)); ctx.fillStyle = pat; ctx.fillRect(x0 - 96, y0 - 96, vw + 192, vh + 192); ctx.restore(); }
-    if (menuFx.arcade) { ctx.globalAlpha = 0.55 + 0.35 * Math.pow(1 - Beat.phase(), 2); ctx.fillStyle = '#6ee7ff'; ctx.font = '19px "VT323", monospace'; ctx.textAlign = 'center'; ctx.fillText('DÉMONSTRATION', W / 2, H - 58); }
-    if (menuFx.flash > 0) { ctx.globalAlpha = Math.min(1, menuFx.flash) * 0.75; ctx.fillStyle = '#dff6ff'; ctx.fillRect(x0, y0, vw, vh); }
+    if (pat) {
+      ctx.save();
+      ctx.globalAlpha = 0.05 + 0.11 * menuFx.vol;
+      ctx.translate(-((Time.now * 130) % 96), -((Time.now * 91) % 96));
+      ctx.fillStyle = pat;
+      ctx.fillRect(x0 - 96, y0 - 96, vw + 192, vh + 192);
+      ctx.restore();
+    }
+    if (menuFx.arcade) {
+      ctx.globalAlpha = 0.55 + 0.35 * Math.pow(1 - Beat.phase(), 2);
+      ctx.fillStyle = '#6ee7ff';
+      ctx.font = '19px "VT323", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('DÉMONSTRATION', W / 2, H - 58);
+    }
+    if (menuFx.flash > 0) {
+      ctx.globalAlpha = Math.min(1, menuFx.flash) * 0.75;
+      ctx.fillStyle = '#dff6ff';
+      ctx.fillRect(x0, y0, vw, vh);
+    }
     ctx.restore();
   }
-  let grainTile = null, grainPat = null;
+  let grainTile = null,
+    grainPat = null;
   function grainPattern(ctx) {
     if (grainPat) return grainPat;
     if (typeof document === 'undefined' || !document.createElement) return null;
-    grainTile = document.createElement('canvas'); grainTile.width = grainTile.height = 96;
-    const g = grainTile.getContext('2d'); if (!g) return null;
+    grainTile = document.createElement('canvas');
+    grainTile.width = grainTile.height = 96;
+    const g = grainTile.getContext('2d');
+    if (!g) return null;
     const im = g.createImageData(96, 96);
-    for (let i = 0; i < im.data.length; i += 4) { const v = 90 + Math.floor(Math.random() * 165); im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 40; }
-    g.putImageData(im, 0, 0); grainPat = ctx.createPattern(grainTile, 'repeat');
+    for (let i = 0; i < im.data.length; i += 4) {
+      const v = 90 + Math.floor(Math.random() * 165);
+      im.data[i] = im.data[i + 1] = im.data[i + 2] = v;
+      im.data[i + 3] = 40;
+    }
+    g.putImageData(im, 0, 0);
+    grainPat = ctx.createPattern(grainTile, 'repeat');
     return grainPat;
   }
 
   /* ---------- Hub ---------- */
   let hubTab = 'passifs';
   function showHub() {
-    G.state = 'hub'; const p = Meta.profile; const s = screens.hub;
-    const chars = Content.characters(); const cur = Content.character(p.character);
-    const biomes = Content.biomes(); if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id; const biome = biomes.find(b => b.id === p.biome);
+    G.state = 'hub';
+    const p = Meta.profile;
+    const s = screens.hub;
+    const chars = Content.characters();
+    const cur = Content.character(p.character);
+    const biomes = Content.biomes();
+    if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id;
+    const biome = biomes.find(b => b.id === p.biome);
     const tabs = ['passifs', 'armes', 'animaux', 'sujets', 'fragments'];
     const meta = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).length;
     s.innerHTML = `
@@ -203,7 +422,10 @@ const UI = (() => {
           <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
           <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
           <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
-          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) && (p.petMode || 'always') !== 'none' ? esc(Content.pet(p.pet).duoName || Content.pet(p.pet).name) + ' · ' + esc(PET_MODES[p.petMode || 'always'].name.toLowerCase()) : 'aucun'}${(() => { const pr = p.pet ? Content.pairOf(p.character, p.pet) : null; return pr && (p.petMode || 'always') !== 'none' ? ' · <span class="good">' + esc(pr.name) + '</span>' : ''; })()}</div>
+          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) && (p.petMode || 'always') !== 'none' ? esc(Content.pet(p.pet).duoName || Content.pet(p.pet).name) + ' · ' + esc(PET_MODES[p.petMode || 'always'].name.toLowerCase()) : 'aucun'}${(() => {
+            const pr = p.pet ? Content.pairOf(p.character, p.pet) : null;
+            return pr && (p.petMode || 'always') !== 'none' ? ' · <span class="good">' + esc(pr.name) + '</span>' : '';
+          })()}</div>
           <div class="muted tiny">Tenue : aucune. « Vous êtes venu comme ça ? » Elle viendra avec les greffes : 3 pour des vêtements, 6 pour l'armure, 9 pour le casque.</div>
           <h3>Changer de personnage</h3>
           <div class="cards vertical" id="hub-chars"></div>
@@ -211,106 +433,266 @@ const UI = (() => {
         <section class="hubcol center">
           <div class="colhead"><span class="colnum">2</span><div><div class="coltitle">Mission</div><div class="colsub">Où tu vas : choisis un niveau, puis JOUER</div></div></div>
           <div class="muted tiny lvlhint">Clique sur un niveau pour le sélectionner, puis sur JOUER. Chaque niveau fait 9 salles : un boss en salle 5, sa revanche en salle 9.</div>
-          <div class="cards vertical" id="hub-biomes">${biomes.map(b => { const ok = Meta.biomeUnlocked(b); const sel = b.id === biome.id; const done = (p.cleared || {})[b.id] || 0; const prev = b.unlockAfter ? Content.biome(b.unlockAfter) : null; return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
+          <div class="cards vertical" id="hub-biomes">${biomes
+            .map(b => {
+              const ok = Meta.biomeUnlocked(b);
+              const sel = b.id === biome.id;
+              const done = (p.cleared || {})[b.id] || 0;
+              const prev = b.unlockAfter ? Content.biome(b.unlockAfter) : null;
+              return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
             <div class="lvlhead"><span class="lvlnum">Niveau ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
             <div class="lvlmeta"><span class="tag">Difficulté ${'★'.repeat(Math.min(5, b.order))}${'☆'.repeat(Math.max(0, 5 - b.order))}</span>${done ? `<span class="tag ok">Terminé ${done}×</span>` : ok ? '<span class="tag">Jamais terminé</span>' : ''}</div>
             <div class="muted small lvldesc">${esc(b.tagline || b.desc)}</div>
             ${ok ? `<div class="muted tiny">Au départ, un bonus et un malus sont tirés au sort parmi ces paires :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : terminer le niveau ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
-          </div>`; }).join('')}</div>
+          </div>`;
+            })
+            .join('')}</div>
           <button class="cta" id="hub-enter"><span class="l">JOUER — Niveau ${biome.order} · ${esc(biome.name)}</span><span class="d">Ensuite : choix de l'arme et de la compétence, puis salle 1</span></button>
         </section>
         <section class="hubcol shopcol">
           <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux runs : bonus permanents</div></div></div>
-          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${({ passifs: 'Améliorations', armes: 'Armes', animaux: 'Compagnons', sujets: 'Personnages', fragments: 'Fragments' })[t] || t}</button>`).join('')}</nav>
+          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${{ passifs: 'Améliorations', armes: 'Armes', animaux: 'Compagnons', sujets: 'Personnages', fragments: 'Fragments' }[t] || t}</button>`).join('')}</nav>
           <div id="hub-shop" class="shop"></div>
         </section>
       </div>`;
     const cc = s.querySelector('#hub-chars');
     chars.forEach((c, i) => {
-      const owned = Meta.characterUnlocked(c.id); const sel = c.id === p.character;
-      const card = el('div', 'card char mini' + (sel ? ' selected' : '') + (owned ? '' : ' locked'), `<div class="cardtitle"><span>${esc(c.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div><div class="muted tiny">${esc(c.trait.name)} · PV ${c.stats.maxHp} · vit. ${c.stats.speed}</div>${owned ? '' : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Débloquer — ◈ ${c.price}</button>`}`);
-      card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyCharacter(c.id)) showHub(); return; } if (owned) { p.character = c.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
+      const owned = Meta.characterUnlocked(c.id);
+      const sel = c.id === p.character;
+      const card = el(
+        'div',
+        'card char mini' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
+        `<div class="cardtitle"><span>${esc(c.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div><div class="muted tiny">${esc(c.trait.name)} · PV ${c.stats.maxHp} · vit. ${c.stats.speed}</div>${owned ? '' : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Débloquer — ◈ ${c.price}</button>`}`
+      );
+      card.onclick = e => {
+        if (e.target.classList.contains('buy')) {
+          if (Meta.buyCharacter(c.id)) showHub();
+          return;
+        }
+        if (owned) {
+          p.character = c.id;
+          Meta.save();
+          AudioEngine.uiClick({});
+          showHub();
+        }
+      };
       cc.appendChild(card);
     });
-    const pb = s.querySelector('#hub-portrait'); const pc = Sprites.portraitBody(cur.sprite || 'player', 5, cur.face, cur.body, cur.size); if (pc) pb.appendChild(pc);
-    s.querySelectorAll('[data-biome]').forEach(c => c.onclick = () => { const b = Content.biome(c.dataset.biome); if (!Meta.biomeUnlocked(b)) { toast('Palier scellé.'); return; } p.biome = b.id; Meta.save(); AudioEngine.uiClick({}); showHub(); });
-    s.querySelectorAll('.tab').forEach(t => t.onclick = () => { hubTab = t.dataset.tab; AudioEngine.uiClick({}); showHub(); });
-    s.querySelector('#hub-menu').onclick = () => { showMenu(); };
-    s.querySelector('#hub-enter').onclick = () => { hideAll(); Run.start({ character: p.character, biome: biome.id }); };
+    const pb = s.querySelector('#hub-portrait');
+    const pc = Sprites.portraitBody(cur.sprite || 'player', 5, cur.face, cur.body, cur.size);
+    if (pc) pb.appendChild(pc);
+    s.querySelectorAll('[data-biome]').forEach(
+      c =>
+        (c.onclick = () => {
+          const b = Content.biome(c.dataset.biome);
+          if (!Meta.biomeUnlocked(b)) {
+            toast('Palier scellé.');
+            return;
+          }
+          p.biome = b.id;
+          Meta.save();
+          AudioEngine.uiClick({});
+          showHub();
+        })
+    );
+    s.querySelectorAll('.tab').forEach(
+      t =>
+        (t.onclick = () => {
+          hubTab = t.dataset.tab;
+          AudioEngine.uiClick({});
+          showHub();
+        })
+    );
+    s.querySelector('#hub-menu').onclick = () => {
+      showMenu();
+    };
+    s.querySelector('#hub-enter').onclick = () => {
+      hideAll();
+      Run.start({ character: p.character, biome: biome.id });
+    };
     renderShop(s.querySelector('#hub-shop'));
     show('hub');
     if (!Attract.running) Attract.start();
   }
   function renderShop(box) {
-    const p = Meta.profile; box.innerHTML = '';
+    const p = Meta.profile;
+    box.innerHTML = '';
     if (hubTab === 'passifs') {
       for (const m of Content.metaPassives()) {
-        const t = Meta.tierOf(m.id); const next = m.tiers[t]; const maxed = !next;
-        const card = el('div', 'card meta' + (maxed ? ' maxed' : ''), `<div class="cardtitle">${esc(m.name)} <span class="tier">${'●'.repeat(t)}${'○'.repeat(m.tiers.length - t)}</span></div><div class="muted small">${esc(m.desc)}</div><div class="muted tiny">${m.tiers.map((tier, i) => `<span class="${i < t ? 'good' : ''}">${i + 1}: ${esc(describeTier(tier))}</span>`).join(' · ')}</div>${maxed ? '<div class="good small">Calibration maximale</div>' : `<button class="btn small buy" ${p.coins < next.price ? 'disabled' : ''}>Palier ${t + 1} — ◈ ${next.price}</button>`}`);
-        const b = card.querySelector('.buy'); if (b) b.onclick = () => { if (Meta.buy(m.id)) showHub(); };
+        const t = Meta.tierOf(m.id);
+        const next = m.tiers[t];
+        const maxed = !next;
+        const card = el(
+          'div',
+          'card meta' + (maxed ? ' maxed' : ''),
+          `<div class="cardtitle">${esc(m.name)} <span class="tier">${'●'.repeat(t)}${'○'.repeat(m.tiers.length - t)}</span></div><div class="muted small">${esc(m.desc)}</div><div class="muted tiny">${m.tiers.map((tier, i) => `<span class="${i < t ? 'good' : ''}">${i + 1}: ${esc(describeTier(tier))}</span>`).join(' · ')}</div>${maxed ? '<div class="good small">Calibration maximale</div>' : `<button class="btn small buy" ${p.coins < next.price ? 'disabled' : ''}>Palier ${t + 1} — ◈ ${next.price}</button>`}`
+        );
+        const b = card.querySelector('.buy');
+        if (b)
+          b.onclick = () => {
+            if (Meta.buy(m.id)) showHub();
+          };
         box.appendChild(card);
       }
     } else if (hubTab === 'armes') {
       for (const w of Content.weapons()) {
         const owned = Meta.weaponUnlocked(w.id);
-        const card = el('div', 'card weapon' + (owned ? '' : ' locked'), `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div><div class="muted tiny">${weaponStats(w)}</div>${owned ? '<div class="good small">Outillage disponible</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`);
-        const b = card.querySelector('.buy'); if (b) b.onclick = () => { if (Meta.buyWeapon(w.id)) showHub(); };
+        const card = el(
+          'div',
+          'card weapon' + (owned ? '' : ' locked'),
+          `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div><div class="muted tiny">${weaponStats(w)}</div>${owned ? '<div class="good small">Outillage disponible</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`
+        );
+        const b = card.querySelector('.buy');
+        if (b)
+          b.onclick = () => {
+            if (Meta.buyWeapon(w.id)) showHub();
+          };
         box.appendChild(card);
       }
     } else if (hubTab === 'animaux') {
-      box.appendChild(el('div', 'muted small', 'Un animal joue son tour en mesure. Un seul à la fois : celui qu\'une élite lâche remplace le vôtre.'));
+      box.appendChild(
+        el('div', 'muted small', "Un animal joue son tour en mesure. Un seul à la fois : celui qu'une élite lâche remplace le vôtre.")
+      );
       /* mode : trois branches, et « personne » rend au joueur ce qu'il aurait donné à l'animal */
       const mode = p.petMode || 'always';
-      const mb = el('div', 'card modes', '<div class="cardtitle"><span>Comment vous l\'emmenez</span></div>' +
-        Object.keys(PET_MODES).map(k => `<button class="btn small ${mode === k ? 'primary' : 'ghost'}" data-mode="${k}">${PET_MODES[k].name}</button>`).join('') +
-        `<div class="muted small">${esc(PET_MODES[mode].desc)}</div>`);
-      mb.querySelectorAll('[data-mode]').forEach(b => { b.onclick = () => { p.petMode = b.dataset.mode; Meta.save(); AudioEngine.uiClick({}); showHub(); }; });
+      const mb = el(
+        'div',
+        'card modes',
+        '<div class="cardtitle"><span>Comment vous l\'emmenez</span></div>' +
+          Object.keys(PET_MODES)
+            .map(k => `<button class="btn small ${mode === k ? 'primary' : 'ghost'}" data-mode="${k}">${PET_MODES[k].name}</button>`)
+            .join('') +
+          `<div class="muted small">${esc(PET_MODES[mode].desc)}</div>`
+      );
+      mb.querySelectorAll('[data-mode]').forEach(b => {
+        b.onclick = () => {
+          p.petMode = b.dataset.mode;
+          Meta.save();
+          AudioEngine.uiClick({});
+          showHub();
+        };
+      });
       box.appendChild(mb);
       /* équipes connues : ce que donne le bon attelage */
       const paires = Content.pairs();
-      if (paires.length) box.appendChild(el('div', 'card', '<div class="cardtitle"><span>Équipes</span></div>' + paires.map(pr => {
-        const ch = Content.character(pr.char), pe = Content.pet(pr.pet); const actif = p.character === pr.char && p.pet === pr.pet && mode !== 'none';
-        return `<div class="muted small${actif ? ' good' : ''}">${actif ? '✓ ' : ''}${esc((ch && ch.name) || pr.char)} + ${esc((pe && (pe.duoName || pe.name)) || pr.pet)} — <b>${esc(pr.name)}</b> : ${esc(pr.desc)}</div>`;
-      }).join('')));
-      const none = el('div', 'card' + (p.pet ? '' : ' selected'), `<div class="cardtitle"><span>Aucun animal</span><span class="lvlstate">${p.pet ? 'Cliquer pour choisir' : '✓ Actif'}</span></div><div class="muted small">La case reste vide.</div>`);
-      none.onclick = () => { p.pet = null; Meta.save(); AudioEngine.uiClick({}); showHub(); };
+      if (paires.length)
+        box.appendChild(
+          el(
+            'div',
+            'card',
+            '<div class="cardtitle"><span>Équipes</span></div>' +
+              paires
+                .map(pr => {
+                  const ch = Content.character(pr.char),
+                    pe = Content.pet(pr.pet);
+                  const actif = p.character === pr.char && p.pet === pr.pet && mode !== 'none';
+                  return `<div class="muted small${actif ? ' good' : ''}">${actif ? '✓ ' : ''}${esc((ch && ch.name) || pr.char)} + ${esc((pe && (pe.duoName || pe.name)) || pr.pet)} — <b>${esc(pr.name)}</b> : ${esc(pr.desc)}</div>`;
+                })
+                .join('')
+          )
+        );
+      const none = el(
+        'div',
+        'card' + (p.pet ? '' : ' selected'),
+        `<div class="cardtitle"><span>Aucun animal</span><span class="lvlstate">${p.pet ? 'Cliquer pour choisir' : '✓ Actif'}</span></div><div class="muted small">La case reste vide.</div>`
+      );
+      none.onclick = () => {
+        p.pet = null;
+        Meta.save();
+        AudioEngine.uiClick({});
+        showHub();
+      };
       box.appendChild(none);
       for (const a of Content.pets()) {
-        if (a.hidden) continue;   // moitié d'un attelage : elle vient avec l'autre, on ne la propose pas seule
-        const owned = Meta.petUnlocked(a.id); const sel = p.pet === a.id;
-        const card = el('div', 'card pet' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
+        if (a.hidden) continue; // moitié d'un attelage : elle vient avec l'autre, on ne la propose pas seule
+        const owned = Meta.petUnlocked(a.id);
+        const sel = p.pet === a.id;
+        const card = el(
+          'div',
+          'card pet' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
           `<div class="cardtitle"><span>${esc(a.duoName || a.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div>
            <div class="muted small">${esc(a.desc)}</div><div class="muted tiny">${esc(a.tag || '')}${a.damage ? ' · ' + a.damage + ' dégâts' : ''}${a.hp ? ' · ' + a.hp + ' PV' : ''}</div>
-           ${owned ? '' : `<button class="btn small buy" ${p.coins < a.price ? 'disabled' : ''}>Débloquer — ◈ ${a.price}</button>`}`);
+           ${owned ? '' : `<button class="btn small buy" ${p.coins < a.price ? 'disabled' : ''}>Débloquer — ◈ ${a.price}</button>`}`
+        );
         const img = a.anim && a.anim.idle ? Sprites.sheetCanvas(a.anim.idle, 34) : Sprites.propCanvas(a.sprite, 34);
-        if (img) { img.className = 'peticon'; card.appendChild(img); }
-        card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyPet(a.id)) showHub(); return; } if (owned) { p.pet = a.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
+        if (img) {
+          img.className = 'peticon';
+          card.appendChild(img);
+        }
+        card.onclick = e => {
+          if (e.target.classList.contains('buy')) {
+            if (Meta.buyPet(a.id)) showHub();
+            return;
+          }
+          if (owned) {
+            p.pet = a.id;
+            Meta.save();
+            AudioEngine.uiClick({});
+            showHub();
+          }
+        };
         box.appendChild(card);
       }
     } else if (hubTab === 'sujets') {
-      box.appendChild(el('div', 'muted small', 'Les compétences actives sont proposées deux par deux à l\'entrée du palier. Catalogue :'));
-      for (const sk of Content.skills()) box.appendChild(el('div', 'card', `<div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div>`));
+      box.appendChild(el('div', 'muted small', "Les compétences actives sont proposées deux par deux à l'entrée du palier. Catalogue :"));
+      for (const sk of Content.skills())
+        box.appendChild(el('div', 'card', `<div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div>`));
     } else if (hubTab === 'fragments') {
       for (const f of LORE.fragments) {
         const ok = Meta.loreUnlocked(f.id);
-        const card = el('div', 'card lore' + (ok ? '' : ' locked'), `<div class="cardtitle">${ok ? esc(f.title) : 'Document scellé'}</div><div class="muted small">${ok ? esc(f.text).replace(/\n/g, '<br>') : 'Condition : ' + esc(f.cond)}</div>`);
+        const card = el(
+          'div',
+          'card lore' + (ok ? '' : ' locked'),
+          `<div class="cardtitle">${ok ? esc(f.title) : 'Document scellé'}</div><div class="muted small">${ok ? esc(f.text).replace(/\n/g, '<br>') : 'Condition : ' + esc(f.cond)}</div>`
+        );
         box.appendChild(card);
       }
-      box.appendChild(el('div', 'muted tiny', `Runs : ${p.runs} · victoires : ${p.wins} · réimpressions : ${p.deaths} · meilleur niveau : ${p.bestLevel}`));
+      box.appendChild(
+        el('div', 'muted tiny', `Runs : ${p.runs} · victoires : ${p.wins} · réimpressions : ${p.deaths} · meilleur niveau : ${p.bestLevel}`)
+      );
     }
   }
-  function describeTier(t) { const parts = (t.mods || []).map(m => `${STAT_LABELS[m.stat] || m.stat} ${m.add != null ? (m.add > 0 ? '+' : '') + (Math.abs(m.add) < 1 ? Math.round(m.add * 100) + ' %' : m.add) : pct(m.mul - 1)}`); if (t.special) parts.push({ resurrect: 'résurrection', selective_memory: 'mémoire sélective', chest_preview: 'aperçu du coffre', fourth_choice: '4e choix', reroll: '+1 re-roll' }[t.special] || t.special); for (const h in (t.hooks || {})) for (const e of t.hooks[h]) if (!t.special) parts.push(e.effect); return parts.join(', ') || '—'; }
-  function weaponStats(w) { return `dégâts ${w.damage} · cadence ${w.fireRate}/s · portée ${w.range}${w.pierce ? ' · perforation ' + w.pierce : ''}${w.bounce ? ' · rebonds ' + w.bounce : ''}${w.projectiles > 1 ? ' · ×' + w.projectiles : ''}`; }
+  function describeTier(t) {
+    const parts = (t.mods || []).map(
+      m =>
+        `${STAT_LABELS[m.stat] || m.stat} ${m.add != null ? (m.add > 0 ? '+' : '') + (Math.abs(m.add) < 1 ? Math.round(m.add * 100) + ' %' : m.add) : pct(m.mul - 1)}`
+    );
+    if (t.special)
+      parts.push(
+        {
+          resurrect: 'résurrection',
+          selective_memory: 'mémoire sélective',
+          chest_preview: 'aperçu du coffre',
+          fourth_choice: '4e choix',
+          reroll: '+1 re-roll',
+        }[t.special] || t.special
+      );
+    for (const h in t.hooks || {}) for (const e of t.hooks[h]) if (!t.special) parts.push(e.effect);
+    return parts.join(', ') || '—';
+  }
+  function weaponStats(w) {
+    return `dégâts ${w.damage} · cadence ${w.fireRate}/s · portée ${w.range}${w.pierce ? ' · perforation ' + w.pierce : ''}${w.bounce ? ' · rebonds ' + w.bounce : ''}${w.projectiles > 1 ? ' · ×' + w.projectiles : ''}`;
+  }
 
   /* ---------- Préparation (salle 1) ---------- */
   function showPrep() {
-    const r = G.run; const s = screens.prep; const lp = r.levelPassive;
+    const r = G.run;
+    const s = screens.prep;
+    const lp = r.levelPassive;
     const weapons = Content.weapons().filter(w => Meta.weaponUnlocked(w.id));
-    let selW = r.char.startWeapon && Meta.weaponUnlocked(r.char.startWeapon) ? r.char.startWeapon : weapons[0].id; let selS = null;
-    let selR = state.testRoom || 1, selL = state.testLevel || 1;   // mode Test : salle et niveau de départ (mémorisés pour la session)
-    const metaList = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).map(m => `${esc(m.name)} ${Meta.tierOf(m.id)}`).join(', ') || 'aucune calibration';
+    let selW = r.char.startWeapon && Meta.weaponUnlocked(r.char.startWeapon) ? r.char.startWeapon : weapons[0].id;
+    let selS = null;
+    let selR = state.testRoom || 1,
+      selL = state.testLevel || 1; // mode Test : salle et niveau de départ (mémorisés pour la session)
+    const metaList =
+      Content.metaPassives()
+        .filter(m => Meta.tierOf(m.id) > 0)
+        .map(m => `${esc(m.name)} ${Meta.tierOf(m.id)}`)
+        .join(', ') || 'aucune calibration';
     const render = () => {
-      const wSel = weapons.find(w => w.id === selW); const sSel = r.skillChoices.find(sk => sk.id === selS); const touch = Input.touch.active;
+      const wSel = weapons.find(w => w.id === selW);
+      const sSel = r.skillChoices.find(sk => sk.id === selS);
+      const touch = Input.touch.active;
       s.innerHTML = `
         <div class="panel prep">
           <div class="eyebrow">Avant d'entrer — niveau ${r.biome.order} · ${esc(r.biome.name)}</div>
@@ -326,31 +708,86 @@ const UI = (() => {
             <div class="cards" id="prep-skills">${r.skillChoices.map(sk => `<div class="card pick skill ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="cardtitle">${esc(sk.name)} <span class="tag cd">recharge ${sk.cooldown} s</span></div><div class="muted small">${esc(sk.desc)}</div>${sk.id === selS ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
           </section>
           <div class="prepsummary">${wSel ? esc(wSel.name) : '…'} <span class="muted">+</span> ${sSel ? esc(sSel.name) : '<span class="bad">choisis une compétence ci-dessus</span>'}</div>
-          ${G.mode === 'test' ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Commencer à la salle <select id="prep-room">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => { const d = r.rooms.find(x => x.index === i); const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : ''; return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`; }).join('')}</select></label><label class="muted small">avec le personnage au niveau <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>` : ''}
+          ${
+            G.mode === 'test'
+              ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Commencer à la salle <select id="prep-room">${[
+                  1, 2, 3, 4, 5, 6, 7, 8, 9,
+                ]
+                  .map(i => {
+                    const d = r.rooms.find(x => x.index === i);
+                    const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : '';
+                    return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`;
+                  })
+                  .join(
+                    ''
+                  )}</select></label><label class="muted small">avec le personnage au niveau <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>`
+              : ''
+          }
           <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${selS ? `Entrer en salle 1 avec ${esc(wSel.name)} et ${esc(sSel.name)}` : 'Choisis une compétence pour entrer'}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
         </div>`;
-      const pr = s.querySelector('#prep-room'), plv = s.querySelector('#prep-level');
-      if (pr) pr.onchange = () => { selR = +pr.value; state.testRoom = selR; };
-      if (plv) plv.onchange = () => { selL = +plv.value; state.testLevel = selL; };
-      s.querySelectorAll('[data-w]').forEach(c => c.onclick = () => { selW = c.dataset.w; AudioEngine.uiClick({}); render(); });
-      s.querySelectorAll('[data-s]').forEach(c => c.onclick = () => { selS = c.dataset.s; AudioEngine.uiClick({}); render(); });
+      const pr = s.querySelector('#prep-room'),
+        plv = s.querySelector('#prep-level');
+      if (pr)
+        pr.onchange = () => {
+          selR = +pr.value;
+          state.testRoom = selR;
+        };
+      if (plv)
+        plv.onchange = () => {
+          selL = +plv.value;
+          state.testLevel = selL;
+        };
+      s.querySelectorAll('[data-w]').forEach(
+        c =>
+          (c.onclick = () => {
+            selW = c.dataset.w;
+            AudioEngine.uiClick({});
+            render();
+          })
+      );
+      s.querySelectorAll('[data-s]').forEach(
+        c =>
+          (c.onclick = () => {
+            selS = c.dataset.s;
+            AudioEngine.uiClick({});
+            render();
+          })
+      );
       s.querySelector('#prep-go').onclick = () => go();
-      s.querySelector('#prep-abort').onclick = () => { Run.toHub(); };
+      s.querySelector('#prep-abort').onclick = () => {
+        Run.toHub();
+      };
     };
     const go = () => {
-      if (!selS) return; Run.equip(selW, selS); hideAll(); G.paused = false;
-      if (G.mode === 'test' && selR > 1) Room.load(selR);   // mode Test : départ direct dans la salle choisie
-      if (G.mode === 'test' && selL > 1) { for (let i = 1; i < selL; i++) Run.addXp(G.run.xpNext - G.run.xp); }   // niveaux offerts : les choix de greffes s'enchaînent avant la salle
-      Room.begin(); AudioEngine.uiConfirm({});
+      if (!selS) return;
+      Run.equip(selW, selS);
+      hideAll();
+      G.paused = false;
+      if (G.mode === 'test' && selR > 1) Room.load(selR); // mode Test : départ direct dans la salle choisie
+      if (G.mode === 'test' && selL > 1) {
+        for (let i = 1; i < selL; i++) Run.addXp(G.run.xpNext - G.run.xp);
+      } // niveaux offerts : les choix de greffes s'enchaînent avant la salle
+      Room.begin();
+      AudioEngine.uiConfirm({});
     };
-    state.prep = { pick: (w, sk) => { selW = w; selS = sk; go(); }, weapons, skills: r.skillChoices };
-    render(); show('prep');
+    state.prep = {
+      pick: (w, sk) => {
+        selW = w;
+        selS = sk;
+        go();
+      },
+      weapons,
+      skills: r.skillChoices,
+    };
+    render();
+    show('prep');
     if (G.autoplay) Debug.autoPrep();
   }
 
   /* ---------- Choix (level-up / coffre) ---------- */
   function showChoice({ title, subtitle, choices, reroll, onPick, onReroll }) {
-    const s = screens.choice; const pl = G.player;
+    const s = screens.choice;
+    const pl = G.player;
     const render = () => {
       s.innerHTML = `
         <div class="panel choice">
@@ -358,26 +795,49 @@ const UI = (() => {
           <div class="cards" id="choice-cards">${choices.map((u, i) => cardHtml(u, i)).join('')}</div>
           <div class="row small">${reroll && pl.rerollsLeft > 0 ? `<button class="btn ghost" id="choice-reroll">Re-roll (${pl.rerollsLeft}) — R</button>` : ''}<span class="muted tiny">1-${choices.length} : choisir</span></div>
         </div>`;
-      s.querySelectorAll('[data-i]').forEach(c => c.onclick = () => pick(choices[+c.dataset.i]));
-      const rb = s.querySelector('#choice-reroll'); if (rb) rb.onclick = doReroll;
+      s.querySelectorAll('[data-i]').forEach(c => (c.onclick = () => pick(choices[+c.dataset.i])));
+      const rb = s.querySelector('#choice-reroll');
+      if (rb) rb.onclick = doReroll;
     };
-    const pick = u => { state.choice = null; onPick(u); };
-    const doReroll = () => { if (!onReroll || pl.rerollsLeft <= 0) return; pl.rerollsLeft--; choices = onReroll(); AudioEngine.uiClick({}); render(); state.choice.choices = choices; };
+    const pick = u => {
+      state.choice = null;
+      onPick(u);
+    };
+    const doReroll = () => {
+      if (!onReroll || pl.rerollsLeft <= 0) return;
+      pl.rerollsLeft--;
+      choices = onReroll();
+      AudioEngine.uiClick({});
+      render();
+      state.choice.choices = choices;
+    };
     state.choice = { choices, pick, reroll: reroll ? doReroll : null };
-    render(); show('choice');
+    render();
+    show('choice');
     if (G.autoplay) Debug.autoChoice();
   }
   function cardHtml(u, i) {
-    const r = RARITY[u.rarity]; const ex = G.run.upgrades.find(x => x.def.id === u.id);
+    const r = RARITY[u.rarity];
+    const ex = G.run.upgrades.find(x => x.def.id === u.id);
     return `<div class="card upg r-${u.rarity}" data-i="${i}" style="--rc:${r.color};--rg:${r.glow}"><div class="rarity">${r.label}</div><div class="cardtitle">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div><div class="muted tiny">${u.category}${u.weaponFamily ? ' · synergie ' + u.weaponFamily : ''}${ex ? ` · possédé ×${ex.stacks}` : ''}${u.maxStacks > 1 ? ` · max ${u.maxStacks}` : ''}</div><div class="key">${i + 1}</div></div>`;
   }
-  function hideChoice() { state.choice = null; hideAll(); }
+  function hideChoice() {
+    state.choice = null;
+    hideAll();
+  }
 
   /* ---------- Pause ---------- */
   function togglePause() {
-    if (G.overlay === 'pause') { hideAll(); G.paused = false; return; }
+    if (G.overlay === 'pause') {
+      hideAll();
+      G.paused = false;
+      return;
+    }
     if (G.overlay) return;
-    G.paused = true; const s = screens.pause; const v = Meta.profile.volume; const pl = G.player;
+    G.paused = true;
+    const s = screens.pause;
+    const v = Meta.profile.volume;
+    const pl = G.player;
     s.innerHTML = `<div class="panel center pause"><h2>${STR.paused}</h2>
       <div class="muted small">${esc(pl.weapon.name)} · ${esc(pl.skill.name)} · niveau ${G.run.level}</div>
       <div class="upglist">${G.run.upgrades.map(u => `<span class="pill" style="--rc:${RARITY[u.def.rarity].color}">${esc(u.def.name)}${u.stacks > 1 ? ' ×' + u.stacks : ''}</span>`).join('') || '<span class="muted tiny">aucune greffe</span>'}</div>
@@ -390,22 +850,51 @@ const UI = (() => {
       </div>
       <div class="row small"><button class="btn ghost" id="pause-fs">${Fullscreen.active ? 'Quitter le plein écran' : 'Plein écran'}</button></div>
       <div class="row"><button class="btn primary" id="pause-resume">${STR.resume}</button><button class="btn ghost" id="pause-quit">${STR.quit}</button></div></div>`;
-    s.querySelectorAll('input[type=range]').forEach(i => i.oninput = () => { v[i.dataset.v] = +i.value; AudioEngine.setVolume(v); Meta.save(); });
-    s.querySelector('#pause-zoom').onchange = e => { Camera.setZoom(+e.target.value); Meta.profile.zoom = +e.target.value; Meta.save(); };
-    s.querySelector('#pause-fs').onclick = () => { Fullscreen.toggle(); setTimeout(() => { if (G.overlay === 'pause') { togglePause(); togglePause(); } }, 300); };
-    const af = s.querySelector('#pause-autofire'); if (af) af.onchange = () => { Input.touch.autoFire = af.checked; Meta.profile.touchAutoFire = af.checked; Meta.save(); };
+    s.querySelectorAll('input[type=range]').forEach(
+      i =>
+        (i.oninput = () => {
+          v[i.dataset.v] = +i.value;
+          AudioEngine.setVolume(v);
+          Meta.save();
+        })
+    );
+    s.querySelector('#pause-zoom').onchange = e => {
+      Camera.setZoom(+e.target.value);
+      Meta.profile.zoom = +e.target.value;
+      Meta.save();
+    };
+    s.querySelector('#pause-fs').onclick = () => {
+      Fullscreen.toggle();
+      setTimeout(() => {
+        if (G.overlay === 'pause') {
+          togglePause();
+          togglePause();
+        }
+      }, 300);
+    };
+    const af = s.querySelector('#pause-autofire');
+    if (af)
+      af.onchange = () => {
+        Input.touch.autoFire = af.checked;
+        Meta.profile.touchAutoFire = af.checked;
+        Meta.save();
+      };
     s.querySelector('#pause-resume').onclick = togglePause;
-    s.querySelector('#pause-quit').onclick = () => { hideAll(); Run.abort(); };
+    s.querySelector('#pause-quit').onclick = () => {
+      hideAll();
+      Run.abort();
+    };
     show('pause');
   }
 
   /* ---------- Fin de run ---------- */
   function showEnd({ victory, kept, pending, validated, total, bonus }) {
-    const s = screens.end; const st = G.run.stats;
+    const s = screens.end;
+    const st = G.run.stats;
     s.innerHTML = `<div class="panel center end">
       <div class="eyebrow">${victory ? 'Case 9 cochée — protocole H-9 terminé' : 'Réimpression'}</div>
       <h2 class="${victory ? 'good' : 'bad'}">${victory ? STR.victory : STR.dead}</h2>
-      <p class="muted">${esc(victory ? 'Le formulaire s\'arrête à la case 9. La question n\'a pas de case. Poursuivez.' : Content.pick('death'))}</p>
+      <p class="muted">${esc(victory ? "Le formulaire s'arrête à la case 9. La question n'a pas de case. Poursuivez." : Content.pick('death'))}</p>
       <div class="grid2">
         <div>Crédits consignés (salle 4)</div><div>◈ ${fmt(validated)}</div>
         <div>${victory ? 'Crédits en attente validés' : `Crédits en attente conservés (${Math.round(clamp(0.1 * (st.deathRoom - G.run.lastCheckpoint), 0, 1) * 100)} % de ${fmt(pending)})`}</div><div>◈ ${fmt(kept)}</div>
@@ -417,7 +906,10 @@ const UI = (() => {
         <div>Salles</div><div class="small">${st.roomTimes.map(r => `S${r.room} ${r.time}s ${r.hits} coup(s) q${Math.round(r.score * 100)}`).join(' · ') || '—'}</div>
       </div>
       <div class="row"><button class="btn primary big" id="end-hub">${STR.toHub}</button></div></div>`;
-    s.querySelector('#end-hub').onclick = () => { hideAll(); Run.toHub(); };
+    s.querySelector('#end-hub').onclick = () => {
+      hideAll();
+      Run.toHub();
+    };
     show('end');
     if (G.autoplay) Debug.autoEnd();
   }
@@ -432,108 +924,422 @@ const UI = (() => {
       <p class="small"><b>Sons</b> : synthèse organique Web Audio (bruit filtré, FM, convolution), module AudioEngine.</p>
       <p class="muted tiny">Détails et liens dans CREDITS.md et ASSETS.md.</p>
       <div class="row"><button class="btn primary" id="credits-back">Retour</button></div></div>`;
-    s.querySelector('#credits-back').onclick = () => G.state === 'run' ? hideAll() : showMenu();
+    s.querySelector('#credits-back').onclick = () => (G.state === 'run' ? hideAll() : showMenu());
     show('credits');
   }
 
   /* ---------- Bannières, toasts, transitions ---------- */
-  function banner(text, color = '#fff', sub = '') { banners.push({ text, color, sub, t: 0, life: 2.2 }); if (banners.length > 3) banners.shift(); }
-  function toast(text, secs = 3.5) { toasts.push({ text, t: 0, life: secs }); if (toasts.length > 4) toasts.shift(); }
-  function transition(cb) { fade.dir = 1; fade.cb = cb; }
+  function banner(text, color = '#fff', sub = '') {
+    banners.push({ text, color, sub, t: 0, life: 2.2 });
+    if (banners.length > 3) banners.shift();
+  }
+  function toast(text, secs = 3.5) {
+    toasts.push({ text, t: 0, life: secs });
+    if (toasts.length > 4) toasts.shift();
+  }
+  function transition(cb) {
+    fade.dir = 1;
+    fade.cb = cb;
+  }
   function update(dt) {
-    for (let i = banners.length - 1; i >= 0; i--) { banners[i].t += dt; if (banners[i].t > banners[i].life) banners.splice(i, 1); }
-    for (let i = toasts.length - 1; i >= 0; i--) { toasts[i].t += dt; if (toasts[i].t > toasts[i].life) toasts.splice(i, 1); }
+    for (let i = banners.length - 1; i >= 0; i--) {
+      banners[i].t += dt;
+      if (banners[i].t > banners[i].life) banners.splice(i, 1);
+    }
+    for (let i = toasts.length - 1; i >= 0; i--) {
+      toasts[i].t += dt;
+      if (toasts[i].t > toasts[i].life) toasts.splice(i, 1);
+    }
     if (menuActive()) menuUpdate(dt);
-    if (fade.dir === 1) { fade.t += dt * 4; if (fade.t >= 1) { fade.t = 1; fade.dir = -1; if (fade.cb) { const cb = fade.cb; fade.cb = null; cb(); } } }
-    else if (fade.dir === -1) { fade.t -= dt * 3; if (fade.t <= 0) { fade.t = 0; fade.dir = 0; } }
+    if (fade.dir === 1) {
+      fade.t += dt * 4;
+      if (fade.t >= 1) {
+        fade.t = 1;
+        fade.dir = -1;
+        if (fade.cb) {
+          const cb = fade.cb;
+          fade.cb = null;
+          cb();
+        }
+      }
+    } else if (fade.dir === -1) {
+      fade.t -= dt * 3;
+      if (fade.t <= 0) {
+        fade.t = 0;
+        fade.dir = 0;
+      }
+    }
   }
 
   /* ---------- HUD ---------- */
   function renderHud(ctx) {
-    const pl = G.player, r = G.run, rm = G.room; if (!pl || !r || !rm || !pl.weapon || !pl.skill) return;
-    ctx.save(); ctx.textBaseline = 'middle';
+    const pl = G.player,
+      r = G.run,
+      rm = G.room;
+    if (!pl || !r || !rm || !pl.weapon || !pl.skill) return;
+    ctx.save();
+    ctx.textBaseline = 'middle';
     /* PV */
-    const bx = 24, by = 14, bw = 260, bh = 18;
-    ctx.fillStyle = 'rgba(8,10,18,.75)'; roundRect(ctx, bx - 6, by - 6, bw + 12, bh + 30, 8); ctx.fill();
-    ctx.fillStyle = '#2b1a24'; ctx.fillRect(bx, by, bw, bh);
-    const hpk = clamp(pl.hp / pl.stats.maxHp, 0, 1); ctx.fillStyle = hpk > 0.5 ? '#ff5e7a' : hpk > 0.25 ? '#ff8c42' : '#ff3b3b'; ctx.fillRect(bx, by, bw * hpk, bh);
-    if (pl.shield > 0) { ctx.fillStyle = 'rgba(140,255,255,.7)'; ctx.fillRect(bx, by + bh - 5, bw * clamp(pl.shield / pl.stats.maxHp, 0, 1), 5); }
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`${STR.hp} ${Math.ceil(pl.hp)} / ${pl.stats.maxHp}${pl.shield > 0 ? '  +' + Math.ceil(pl.shield) : ''}`, bx + 6, by + bh / 2);
+    const bx = 24,
+      by = 14,
+      bw = 260,
+      bh = 18;
+    ctx.fillStyle = 'rgba(8,10,18,.75)';
+    roundRect(ctx, bx - 6, by - 6, bw + 12, bh + 30, 8);
+    ctx.fill();
+    ctx.fillStyle = '#2b1a24';
+    ctx.fillRect(bx, by, bw, bh);
+    const hpk = clamp(pl.hp / pl.stats.maxHp, 0, 1);
+    ctx.fillStyle = hpk > 0.5 ? '#ff5e7a' : hpk > 0.25 ? '#ff8c42' : '#ff3b3b';
+    ctx.fillRect(bx, by, bw * hpk, bh);
+    if (pl.shield > 0) {
+      ctx.fillStyle = 'rgba(140,255,255,.7)';
+      ctx.fillRect(bx, by + bh - 5, bw * clamp(pl.shield / pl.stats.maxHp, 0, 1), 5);
+    }
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(
+      `${STR.hp} ${Math.ceil(pl.hp)} / ${pl.stats.maxHp}${pl.shield > 0 ? '  +' + Math.ceil(pl.shield) : ''}`,
+      bx + 6,
+      by + bh / 2
+    );
     /* XP */
-    ctx.fillStyle = '#12203a'; ctx.fillRect(bx, by + bh + 4, bw, 8); ctx.fillStyle = '#6ee7ff'; ctx.fillRect(bx, by + bh + 4, bw * clamp(r.xp / r.xpNext, 0, 1), 8);
-    ctx.fillStyle = '#9aa4c4'; ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillText(`${STR.level} ${r.level}`, bx + bw + 8, by + bh + 8);
+    ctx.fillStyle = '#12203a';
+    ctx.fillRect(bx, by + bh + 4, bw, 8);
+    ctx.fillStyle = '#6ee7ff';
+    ctx.fillRect(bx, by + bh + 4, bw * clamp(r.xp / r.xpNext, 0, 1), 8);
+    ctx.fillStyle = '#9aa4c4';
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(`${STR.level} ${r.level}`, bx + bw + 8, by + bh + 8);
     /* salle + temps + qualité */
-    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(8,10,18,.75)'; roundRect(ctx, W / 2 - 200, 8, 400, 36, 8); ctx.fill();
-    ctx.fillStyle = '#e8ecf7'; ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif'; ctx.fillText(rm.label, W / 2, 20);
-    const q = Run.qualityAvg(); const qs = Room.score();
-    const preview = Meta.chestPreview() && rm.index < 4 ? ' · coffre : ' + Progression.chestOptions(Run.qualityAvg(), r.scores.some(s => s.died) || rm.died).label : '';
-    ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillStyle = '#9aa4c4'; ctx.fillText(`${Math.floor(rm.time)} s · ${STR.quality} run ${Math.round(q * 100)} % · salle ${Math.round(qs * 100)} % · ${rm.hits} coup(s)${rm.combo > 1 ? ' · combo ' + rm.combo : ''}${preview}`, W / 2, 36);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(8,10,18,.75)';
+    roundRect(ctx, W / 2 - 200, 8, 400, 36, 8);
+    ctx.fill();
+    ctx.fillStyle = '#e8ecf7';
+    ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(rm.label, W / 2, 20);
+    const q = Run.qualityAvg();
+    const qs = Room.score();
+    const preview =
+      Meta.chestPreview() && rm.index < 4
+        ? ' · coffre : ' + Progression.chestOptions(Run.qualityAvg(), r.scores.some(s => s.died) || rm.died).label
+        : '';
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = '#9aa4c4';
+    ctx.fillText(
+      `${Math.floor(rm.time)} s · ${STR.quality} run ${Math.round(q * 100)} % · salle ${Math.round(qs * 100)} % · ${rm.hits} coup(s)${rm.combo > 1 ? ' · combo ' + rm.combo : ''}${preview}`,
+      W / 2,
+      36
+    );
     /* jauge qualité */
-    ctx.fillStyle = '#1a2036'; ctx.fillRect(W / 2 - 180, 42, 360, 3); ctx.fillStyle = q >= 0.999 ? '#ffb347' : q >= 0.8 ? '#b46bff' : q >= 0.5 ? '#4fb3ff' : '#cfd6e6'; ctx.fillRect(W / 2 - 180, 42, 360 * q, 3);
+    ctx.fillStyle = '#1a2036';
+    ctx.fillRect(W / 2 - 180, 42, 360, 3);
+    ctx.fillStyle = q >= 0.999 ? '#ffb347' : q >= 0.8 ? '#b46bff' : q >= 0.5 ? '#4fb3ff' : '#cfd6e6';
+    ctx.fillRect(W / 2 - 180, 42, 360 * q, 3);
     /* crédits */
-    ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(8,10,18,.75)'; roundRect(ctx, W - 250, 8, 226, 36, 8); ctx.fill();
-    ctx.fillStyle = '#ffd166'; ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif'; ctx.fillText(`◈ ${fmt(r.coinsValidated)} consignés`, W - 34, 20);
-    ctx.fillStyle = '#9aa4c4'; ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillText(`+ ${fmt(r.coinsPending)} ${STR.pending} (${Math.round(clamp(0.1 * (rm.index - r.lastCheckpoint), 0, 1) * 100)} % si perte)`, W - 34, 36);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(8,10,18,.75)';
+    roundRect(ctx, W - 250, 8, 226, 36, 8);
+    ctx.fill();
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(`◈ ${fmt(r.coinsValidated)} consignés`, W - 34, 20);
+    ctx.fillStyle = '#9aa4c4';
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(
+      `+ ${fmt(r.coinsPending)} ${STR.pending} (${Math.round(clamp(0.1 * (rm.index - r.lastCheckpoint), 0, 1) * 100)} % si perte)`,
+      W - 34,
+      36
+    );
     /* arme + compétence */
     const sy = H - 40;
-    ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(8,10,18,.75)'; roundRect(ctx, 18, sy - 22, 420, 44, 8); ctx.fill();
-    ctx.fillStyle = WEAPON_COLORS[pl.weapon.family] || '#fff'; ctx.beginPath(); ctx.arc(40, sy, 10, 0, TAU); ctx.fill();
-    ctx.fillStyle = pl.trialWeapon ? '#ffd166' : '#e8ecf7'; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(pl.weapon.name + (pl.trialWeapon ? ' (essai)' : ''), 58, sy - 7);
-    ctx.fillStyle = '#9aa4c4'; ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillText(`${Math.round(pl.weapon.damage * pl.stats.damage)} dmg · ${(pl.weapon.fireRate * pl.stats.fireRate).toFixed(1)}/s · crit ${Math.round(pl.stats.critChance * 100)} %`, 58, sy + 9);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(8,10,18,.75)';
+    roundRect(ctx, 18, sy - 22, 420, 44, 8);
+    ctx.fill();
+    ctx.fillStyle = WEAPON_COLORS[pl.weapon.family] || '#fff';
+    ctx.beginPath();
+    ctx.arc(40, sy, 10, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = pl.trialWeapon ? '#ffd166' : '#e8ecf7';
+    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(pl.weapon.name + (pl.trialWeapon ? ' (essai)' : ''), 58, sy - 7);
+    ctx.fillStyle = '#9aa4c4';
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(
+      `${Math.round(pl.weapon.damage * pl.stats.damage)} dmg · ${(pl.weapon.fireRate * pl.stats.fireRate).toFixed(1)}/s · crit ${Math.round(pl.stats.critChance * 100)} %`,
+      58,
+      sy + 9
+    );
     /* compétence : cercle de cooldown */
-    const cx = 270, cd = Skills.cooldownOf(pl); const ready = pl.skillCharges > 0; const k = ready ? 1 : 1 - clamp(pl.skillCd / Math.max(0.01, cd), 0, 1);
-    ctx.fillStyle = '#1a2036'; ctx.beginPath(); ctx.arc(cx, sy, 14, 0, TAU); ctx.fill();
-    ctx.fillStyle = ready ? '#7fff9a' : '#4fb3ff'; ctx.beginPath(); ctx.moveTo(cx, sy); ctx.arc(cx, sy, 14, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.fill();
-    ctx.fillStyle = '#e8ecf7'; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(pl.skill.name + (pl.skillMaxCharges > 1 ? ` ×${pl.skillCharges}` : ''), cx + 22, sy - 7);
-    ctx.fillStyle = '#9aa4c4'; ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillText(ready ? STR.ready + (Input.touch.active ? ' · bouton COMP.' : ' · clic droit / Espace / Maj') : `${pl.skillCd.toFixed(1)} s`, cx + 22, sy + 9);
+    const cx = 270,
+      cd = Skills.cooldownOf(pl);
+    const ready = pl.skillCharges > 0;
+    const k = ready ? 1 : 1 - clamp(pl.skillCd / Math.max(0.01, cd), 0, 1);
+    ctx.fillStyle = '#1a2036';
+    ctx.beginPath();
+    ctx.arc(cx, sy, 14, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = ready ? '#7fff9a' : '#4fb3ff';
+    ctx.beginPath();
+    ctx.moveTo(cx, sy);
+    ctx.arc(cx, sy, 14, -Math.PI / 2, -Math.PI / 2 + TAU * k);
+    ctx.fill();
+    ctx.fillStyle = '#e8ecf7';
+    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(pl.skill.name + (pl.skillMaxCharges > 1 ? ` ×${pl.skillCharges}` : ''), cx + 22, sy - 7);
+    ctx.fillStyle = '#9aa4c4';
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(
+      ready ? STR.ready + (Input.touch.active ? ' · bouton COMP.' : ' · clic droit / Espace / Maj') : `${pl.skillCd.toFixed(1)} s`,
+      cx + 22,
+      sy + 9
+    );
     /* greffes */
-    ctx.textAlign = 'right'; let gx = W - 24; ctx.font = '11px "Segoe UI", system-ui, sans-serif';
-    for (const u of r.upgrades.slice(-8).reverse()) { const t = u.def.name + (u.stacks > 1 ? ' ×' + u.stacks : ''); const w = ctx.measureText(t).width + 12; ctx.fillStyle = 'rgba(8,10,18,.7)'; roundRect(ctx, gx - w, sy - 10, w, 20, 6); ctx.fill(); ctx.strokeStyle = RARITY[u.def.rarity].color; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = RARITY[u.def.rarity].color; ctx.fillText(t, gx - 6, sy); gx -= w + 6; if (gx < 520) break; }
+    ctx.textAlign = 'right';
+    let gx = W - 24;
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+    for (const u of r.upgrades.slice(-8).reverse()) {
+      const t = u.def.name + (u.stacks > 1 ? ' ×' + u.stacks : '');
+      const w = ctx.measureText(t).width + 12;
+      ctx.fillStyle = 'rgba(8,10,18,.7)';
+      roundRect(ctx, gx - w, sy - 10, w, 20, 6);
+      ctx.fill();
+      ctx.strokeStyle = RARITY[u.def.rarity].color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = RARITY[u.def.rarity].color;
+      ctx.fillText(t, gx - 6, sy);
+      gx -= w + 6;
+      if (gx < 520) break;
+    }
     /* boss */
-    const boss = rm.boss; if (boss && !boss.dead) { const bw2 = 520, bx2 = W / 2 - bw2 / 2, by2 = H - 88; ctx.fillStyle = 'rgba(8,10,18,.8)'; roundRect(ctx, bx2 - 8, by2 - 22, bw2 + 16, 44, 8); ctx.fill(); ctx.textAlign = 'center'; ctx.fillStyle = '#ff3b5c'; ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif'; ctx.fillText(boss.name + ' — phase ' + (boss.phaseIdx + 1), W / 2, by2 - 10); ctx.fillStyle = '#2b1a24'; ctx.fillRect(bx2, by2 + 2, bw2, 12); ctx.fillStyle = '#ff3b5c'; ctx.fillRect(bx2, by2 + 2, bw2 * clamp(boss.hp / boss.maxHp, 0, 1), 12); if (boss.weakActive) { ctx.fillStyle = '#ffd166'; ctx.font = 'bold 11px "Segoe UI", system-ui, sans-serif'; ctx.fillText('PRISE EXPOSÉE ×' + boss.weakMul, W / 2, by2 + 8); } }
+    const boss = rm.boss;
+    if (boss && !boss.dead) {
+      const bw2 = 520,
+        bx2 = W / 2 - bw2 / 2,
+        by2 = H - 88;
+      ctx.fillStyle = 'rgba(8,10,18,.8)';
+      roundRect(ctx, bx2 - 8, by2 - 22, bw2 + 16, 44, 8);
+      ctx.fill();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ff3b5c';
+      ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+      ctx.fillText(boss.name + ' — phase ' + (boss.phaseIdx + 1), W / 2, by2 - 10);
+      ctx.fillStyle = '#2b1a24';
+      ctx.fillRect(bx2, by2 + 2, bw2, 12);
+      ctx.fillStyle = '#ff3b5c';
+      ctx.fillRect(bx2, by2 + 2, bw2 * clamp(boss.hp / boss.maxHp, 0, 1), 12);
+      if (boss.weakActive) {
+        ctx.fillStyle = '#ffd166';
+        ctx.font = 'bold 11px "Segoe UI", system-ui, sans-serif';
+        ctx.fillText('PRISE EXPOSÉE ×' + boss.weakMul, W / 2, by2 + 8);
+      }
+    }
     /* bannières */
     /* les bandeaux s'empilent : deux annonces simultanées (vague, piège) ne se chevauchent plus */
-    banners.forEach((b, bi) => { const k = b.t / b.life; const dy = bi * 62; const a = k < 0.15 ? k / 0.15 : k > 0.75 ? (1 - k) / 0.25 : 1; ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.font = 'bold 30px "Segoe UI", system-ui, sans-serif'; ctx.shadowColor = b.color; ctx.shadowBlur = 24; ctx.fillStyle = b.color; ctx.fillText(b.text, W / 2, dy + H * 0.3 - (1 - a) * 10); if (b.sub) { ctx.font = '14px "Segoe UI", system-ui, sans-serif'; ctx.fillStyle = '#e8ecf7'; ctx.fillText(b.sub, W / 2, dy + H * 0.3 + 28); } ctx.shadowBlur = 0; ctx.globalAlpha = 1; });
+    banners.forEach((b, bi) => {
+      const k = b.t / b.life;
+      const dy = bi * 62;
+      const a = k < 0.15 ? k / 0.15 : k > 0.75 ? (1 - k) / 0.25 : 1;
+      ctx.globalAlpha = a;
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 30px "Segoe UI", system-ui, sans-serif';
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = b.color;
+      ctx.fillText(b.text, W / 2, dy + H * 0.3 - (1 - a) * 10);
+      if (b.sub) {
+        ctx.font = '14px "Segoe UI", system-ui, sans-serif';
+        ctx.fillStyle = '#e8ecf7';
+        ctx.fillText(b.sub, W / 2, dy + H * 0.3 + 28);
+      }
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    });
     ctx.restore();
   }
   function renderToasts(ctx) {
-    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '13px "Segoe UI", system-ui, sans-serif';
-    toasts.forEach((t, i) => { const a = Math.min(1, t.t * 3, (t.life - t.t) * 2); ctx.globalAlpha = clamp(a, 0, 1); const w = ctx.measureText(t.text).width + 24; const y = H - 110 - i * 30; ctx.fillStyle = 'rgba(8,10,18,.85)'; roundRect(ctx, W / 2 - w / 2, y - 12, w, 24, 8); ctx.fill(); ctx.strokeStyle = '#6ee7ff88'; ctx.stroke(); ctx.fillStyle = '#e8ecf7'; ctx.fillText(t.text, W / 2, y); });
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '13px "Segoe UI", system-ui, sans-serif';
+    toasts.forEach((t, i) => {
+      const a = Math.min(1, t.t * 3, (t.life - t.t) * 2);
+      ctx.globalAlpha = clamp(a, 0, 1);
+      const w = ctx.measureText(t.text).width + 24;
+      const y = H - 110 - i * 30;
+      ctx.fillStyle = 'rgba(8,10,18,.85)';
+      roundRect(ctx, W / 2 - w / 2, y - 12, w, 24, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#6ee7ff88';
+      ctx.stroke();
+      ctx.fillStyle = '#e8ecf7';
+      ctx.fillText(t.text, W / 2, y);
+    });
     ctx.restore();
   }
   /* menu et hub battent avec la musique : --beat (retombe après chaque temps) et --down (temps fort de la mesure) pilotent le CSS */
-  let beatCss = { b: -1, d: -1 }; const beatPulses = [];
+  let beatCss = { b: -1, d: -1 };
+  const beatPulses = [];
   function beatPulse() {
-    const ph = Beat.phase(); const k = Math.pow(1 - ph, 2.2); const bib = Beat.beatInBar(); const d = bib === 0 ? k : 0;
-    const bq = Math.round(k * 40) / 40, dq = Math.round(d * 40) / 40;   // quantifié : pas de recalcul de style si rien ne change
-    if (bq !== beatCss.b || dq !== beatCss.d) { beatCss = { b: bq, d: dq }; const st = document.documentElement.style; st.setProperty('--beat', bq); st.setProperty('--down', dq); }
-    if (Beat.crossedFrame(1) && bib === 0) { beatPulses.push({ t0: Time.now }); if (beatPulses.length > 3) beatPulses.shift(); }
+    const ph = Beat.phase();
+    const k = Math.pow(1 - ph, 2.2);
+    const bib = Beat.beatInBar();
+    const d = bib === 0 ? k : 0;
+    const bq = Math.round(k * 40) / 40,
+      dq = Math.round(d * 40) / 40; // quantifié : pas de recalcul de style si rien ne change
+    if (bq !== beatCss.b || dq !== beatCss.d) {
+      beatCss = { b: bq, d: dq };
+      const st = document.documentElement.style;
+      st.setProperty('--beat', bq);
+      st.setProperty('--down', dq);
+    }
+    if (Beat.crossedFrame(1) && bib === 0) {
+      beatPulses.push({ t0: Time.now });
+      if (beatPulses.length > 3) beatPulses.shift();
+    }
     return k;
   }
   function renderAttractVeil(ctx) {
-    ctx.save(); const V = Engine.view; const x0 = -V.ox, y0 = -V.oy, vw = V.w, vh = V.h;
+    ctx.save();
+    const V = Engine.view;
+    const x0 = -V.ox,
+      y0 = -V.oy,
+      vw = V.w,
+      vh = V.h;
     const k = beatPulse();
     /* écran-titre : la scène d'attraction passe en ombres chinoises tant que l'attraction arcade ne s'est pas déclenchée */
-    if (menuFx.phase === 'splash' && !menuFx.arcade) { ctx.globalAlpha = 0.6; ctx.fillStyle = '#04050b'; ctx.fillRect(x0, y0, vw, vh); ctx.globalAlpha = 1; }
+    if (menuFx.phase === 'splash' && !menuFx.arcade) {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#04050b';
+      ctx.fillRect(x0, y0, vw, vh);
+      ctx.globalAlpha = 1;
+    }
     /* ondes depuis le centre sur chaque temps fort, léger flash sur chaque temps */
-    ctx.strokeStyle = '#6ee7ff'; ctx.lineWidth = 2; for (const p of beatPulses) { const a = (Time.now - p.t0) / 1.6; if (a > 1) continue; ctx.globalAlpha = 0.18 * (1 - a); ctx.beginPath(); ctx.arc(W / 2, H / 2, 40 + a * 900, 0, TAU); ctx.stroke(); }
-    ctx.globalAlpha = 0.045 * k; ctx.fillStyle = '#6ee7ff'; ctx.fillRect(x0, y0, vw, vh); ctx.globalAlpha = 1;
-    const g = ctx.createLinearGradient(x0, 0, x0 + vw, 0); g.addColorStop(0, 'rgba(4,5,9,.86)'); g.addColorStop(0.5, 'rgba(4,5,9,.5)'); g.addColorStop(1, 'rgba(4,5,9,.3)'); ctx.fillStyle = g; ctx.fillRect(x0, y0, vw, vh);
-    const v = ctx.createLinearGradient(0, y0, 0, y0 + vh); v.addColorStop(0, 'rgba(4,5,9,.7)'); v.addColorStop(0.25, 'rgba(4,5,9,0)'); v.addColorStop(0.8, 'rgba(4,5,9,0)'); v.addColorStop(1, 'rgba(4,5,9,.85)'); ctx.fillStyle = v; ctx.fillRect(x0, y0, vw, vh);
+    ctx.strokeStyle = '#6ee7ff';
+    ctx.lineWidth = 2;
+    for (const p of beatPulses) {
+      const a = (Time.now - p.t0) / 1.6;
+      if (a > 1) continue;
+      ctx.globalAlpha = 0.18 * (1 - a);
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2, 40 + a * 900, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 0.045 * k;
+    ctx.fillStyle = '#6ee7ff';
+    ctx.fillRect(x0, y0, vw, vh);
+    ctx.globalAlpha = 1;
+    const g = ctx.createLinearGradient(x0, 0, x0 + vw, 0);
+    g.addColorStop(0, 'rgba(4,5,9,.86)');
+    g.addColorStop(0.5, 'rgba(4,5,9,.5)');
+    g.addColorStop(1, 'rgba(4,5,9,.3)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x0, y0, vw, vh);
+    const v = ctx.createLinearGradient(0, y0, 0, y0 + vh);
+    v.addColorStop(0, 'rgba(4,5,9,.7)');
+    v.addColorStop(0.25, 'rgba(4,5,9,0)');
+    v.addColorStop(0.8, 'rgba(4,5,9,0)');
+    v.addColorStop(1, 'rgba(4,5,9,.85)');
+    ctx.fillStyle = v;
+    ctx.fillRect(x0, y0, vw, vh);
     /* menu : le texte est centré, on creuse une flaque sombre derrière lui pour rester lisible sur la scène */
-    if (menuActive()) { const rg = ctx.createRadialGradient(W / 2, H * 0.42, 60, W / 2, H * 0.42, 640); rg.addColorStop(0, 'rgba(4,5,9,.7)'); rg.addColorStop(1, 'rgba(4,5,9,0)'); ctx.fillStyle = rg; ctx.fillRect(x0, y0, vw, vh); }
+    if (menuActive()) {
+      const rg = ctx.createRadialGradient(W / 2, H * 0.42, 60, W / 2, H * 0.42, 640);
+      rg.addColorStop(0, 'rgba(4,5,9,.7)');
+      rg.addColorStop(1, 'rgba(4,5,9,0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(x0, y0, vw, vh);
+    }
     /* lignes de balayage */
-    ctx.globalAlpha = 0.06; ctx.fillStyle = '#6ee7ff'; for (let y = y0 + (Time.now * 40) % 6; y < y0 + vh; y += 6) ctx.fillRect(x0, y, vw, 1);
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = '#6ee7ff';
+    for (let y = y0 + ((Time.now * 40) % 6); y < y0 + vh; y += 6) ctx.fillRect(x0, y, vw, 1);
     ctx.restore();
   }
-  function renderFade(ctx) { if (fade.t > 0) { const V = Engine.view; ctx.fillStyle = `rgba(4,5,9,${fade.t})`; ctx.fillRect(-V.ox, -V.oy, V.w, V.h); } }
-  function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function renderFade(ctx) {
+    if (fade.t > 0) {
+      const V = Engine.view;
+      ctx.fillStyle = `rgba(4,5,9,${fade.t})`;
+      ctx.fillRect(-V.ox, -V.oy, V.w, V.h);
+    }
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
   /* fond animé pour menu/hub */
   function renderBackdrop(ctx) {
-    const V = Engine.view; ctx.fillStyle = '#07080d'; ctx.fillRect(-V.ox, -V.oy, V.w, V.h);
-    const kb = beatPulse(); ctx.save(); ctx.globalAlpha = 0.04 * kb; ctx.fillStyle = '#6ee7ff'; ctx.fillRect(-V.ox, -V.oy, V.w, V.h); ctx.restore();
-    ctx.save(); ctx.globalAlpha = 0.5; for (let i = 0; i < 14; i++) { const t = Time.now * 0.05 + i * 0.37; const x = ((i * 137.5) % W + Math.sin(t) * 40 + W) % W, y = ((i * 91.7) % H + Math.cos(t * 1.3) * 30 + H) % H; const g = ctx.createRadialGradient(x, y, 0, x, y, 160); g.addColorStop(0, i % 3 ? 'rgba(110,231,255,.10)' : 'rgba(255,154,60,.08)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 160, y - 160, 320, 320); } ctx.restore();
-    ctx.strokeStyle = 'rgba(110,231,255,.05)'; ctx.lineWidth = 1; for (let x = -V.ox + ((V.ox) % 48); x < W + V.ox; x += 48) { ctx.beginPath(); ctx.moveTo(x, -V.oy); ctx.lineTo(x, H + V.oy); ctx.stroke(); } for (let y = -V.oy + (V.oy % 48); y < H + V.oy; y += 48) { ctx.beginPath(); ctx.moveTo(-V.ox, y); ctx.lineTo(W + V.ox, y); ctx.stroke(); }
+    const V = Engine.view;
+    ctx.fillStyle = '#07080d';
+    ctx.fillRect(-V.ox, -V.oy, V.w, V.h);
+    const kb = beatPulse();
+    ctx.save();
+    ctx.globalAlpha = 0.04 * kb;
+    ctx.fillStyle = '#6ee7ff';
+    ctx.fillRect(-V.ox, -V.oy, V.w, V.h);
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    for (let i = 0; i < 14; i++) {
+      const t = Time.now * 0.05 + i * 0.37;
+      const x = (((i * 137.5) % W) + Math.sin(t) * 40 + W) % W,
+        y = (((i * 91.7) % H) + Math.cos(t * 1.3) * 30 + H) % H;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 160);
+      g.addColorStop(0, i % 3 ? 'rgba(110,231,255,.10)' : 'rgba(255,154,60,.08)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 160, y - 160, 320, 320);
+    }
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(110,231,255,.05)';
+    ctx.lineWidth = 1;
+    for (let x = -V.ox + (V.ox % 48); x < W + V.ox; x += 48) {
+      ctx.beginPath();
+      ctx.moveTo(x, -V.oy);
+      ctx.lineTo(x, H + V.oy);
+      ctx.stroke();
+    }
+    for (let y = -V.oy + (V.oy % 48); y < H + V.oy; y += 48) {
+      ctx.beginPath();
+      ctx.moveTo(-V.ox, y);
+      ctx.lineTo(W + V.ox, y);
+      ctx.stroke();
+    }
   }
-  return { init, show, hideAll, showTitle, showMenu, showHub, renderAttractVeil, renderMenuFx, showPrep, showChoice, hideChoice, togglePause, showEnd, showCredits, banner, toast, transition, update, renderHud, renderToasts, renderFade, renderBackdrop, state, esc, roundRect };
+  return {
+    init,
+    show,
+    hideAll,
+    showTitle,
+    showMenu,
+    showHub,
+    renderAttractVeil,
+    renderMenuFx,
+    showPrep,
+    showChoice,
+    hideChoice,
+    togglePause,
+    showEnd,
+    showCredits,
+    banner,
+    toast,
+    transition,
+    update,
+    renderHud,
+    renderToasts,
+    renderFade,
+    renderBackdrop,
+    state,
+    esc,
+    roundRect,
+  };
 })();

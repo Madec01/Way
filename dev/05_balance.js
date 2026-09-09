@@ -4,7 +4,7 @@
 const BALANCE = {
   /* XP nécessaire pour passer du niveau N au suivant : a + b·N + c·N² */
   xp: { a: 34, b: 25, c: 4.4 },
-  xpPerfectTrapRoom: 15,          // bonus XP d'une salle de pièges traversée sans dégât
+  xpPerfectTrapRoom: 15, // bonus XP d'une salle de pièges traversée sans dégât
   /* poids de base des raretés à chance 0 */
   rarity: { common: 72, rare: 22.6, epic: 5, colossal: 0.4 },
   /* +1 chance retire luckShift % au commun, réparti epicShare / (1-epicShare) entre épique et colossal ; plafonné à luckMax */

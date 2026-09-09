@@ -4,19 +4,22 @@
    ========================================================================= */
 'use strict';
 
-const W = 1280, H = 720;            // résolution logique
-const TILE = 48;                    // tuile en px (sprites 16 px rendus ×3)
-const ROOM_COLS = 24, ROOM_ROWS = 13;
-const ROOM_X = (W - ROOM_COLS * TILE) / 2;   // 64
-const ROOM_Y = (H - ROOM_ROWS * TILE) / 2;   // 48
-const ROOM_W = ROOM_COLS * TILE, ROOM_H = ROOM_ROWS * TILE;
+const W = 1280,
+  H = 720; // résolution logique
+const TILE = 48; // tuile en px (sprites 16 px rendus ×3)
+const ROOM_COLS = 24,
+  ROOM_ROWS = 13;
+const ROOM_X = (W - ROOM_COLS * TILE) / 2; // 64
+const ROOM_Y = (H - ROOM_ROWS * TILE) / 2; // 48
+const ROOM_W = ROOM_COLS * TILE,
+  ROOM_H = ROOM_ROWS * TILE;
 const FIXED_DT = 1 / 60;
 
 const RARITY = {
-  common:   { label: 'Commun',   color: '#cfd6e6', glow: 'rgba(207,214,230,.35)', weight: 60 },
-  rare:     { label: 'Rare',     color: '#4fb3ff', glow: 'rgba(79,179,255,.45)',  weight: 27 },
-  epic:     { label: 'Épique',   color: '#b46bff', glow: 'rgba(180,107,255,.5)',  weight: 10 },
-  colossal: { label: 'Colossal', color: '#ffb347', glow: 'rgba(255,179,71,.6)',   weight: 3 },
+  common: { label: 'Commun', color: '#cfd6e6', glow: 'rgba(207,214,230,.35)', weight: 60 },
+  rare: { label: 'Rare', color: '#4fb3ff', glow: 'rgba(79,179,255,.45)', weight: 27 },
+  epic: { label: 'Épique', color: '#b46bff', glow: 'rgba(180,107,255,.5)', weight: 10 },
+  colossal: { label: 'Colossal', color: '#ffb347', glow: 'rgba(255,179,71,.6)', weight: 3 },
 };
 const RARITY_ORDER = ['common', 'rare', 'epic', 'colossal'];
 
@@ -35,13 +38,17 @@ const ROOM_TYPES = {
 };
 
 /* ---------- Utilitaires ---------- */
-const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const lerp = (a, b, t) => a + (b - a) * t;
 const dist = (ax, ay, bx, by) => Math.hypot(bx - ax, by - ay);
 const angleTo = (ax, ay, bx, by) => Math.atan2(by - ay, bx - ax);
 const TAU = Math.PI * 2;
-const wrapAngle = a => { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; };
-const tileX = tx => ROOM_X + (tx + 0.5) * TILE;   // centre de la tuile en px
+const wrapAngle = a => {
+  while (a > Math.PI) a -= TAU;
+  while (a < -Math.PI) a += TAU;
+  return a;
+};
+const tileX = tx => ROOM_X + (tx + 0.5) * TILE; // centre de la tuile en px
 const tileY = ty => ROOM_Y + (ty + 0.5) * TILE;
 const deepClone = o => JSON.parse(JSON.stringify(o));
 const fmt = n => Math.round(n).toLocaleString('fr-FR');
@@ -49,63 +56,151 @@ const pct = n => `${n >= 0 ? '+' : ''}${Math.round(n * 100)} %`;
 
 /* Cercle vs AABB */
 function circleRect(cx, cy, r, rx, ry, rw, rh) {
-  const nx = clamp(cx, rx, rx + rw), ny = clamp(cy, ry, ry + rh);
-  const dx = cx - nx, dy = cy - ny;
+  const nx = clamp(cx, rx, rx + rw),
+    ny = clamp(cy, ry, ry + rh);
+  const dx = cx - nx,
+    dy = cy - ny;
   return dx * dx + dy * dy < r * r;
 }
 /* Segment (ax,ay)-(bx,by) vs cercle */
 function segCircle(ax, ay, bx, by, cx, cy, r) {
-  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
-  let t = l2 ? ((cx - ax) * dx + (cy - ay) * dy) / l2 : 0; t = clamp(t, 0, 1);
-  const px = ax + dx * t, py = ay + dy * t;
+  const dx = bx - ax,
+    dy = by - ay,
+    l2 = dx * dx + dy * dy;
+  let t = l2 ? ((cx - ax) * dx + (cy - ay) * dy) / l2 : 0;
+  t = clamp(t, 0, 1);
+  const px = ax + dx * t,
+    py = ay + dy * t;
   return (px - cx) ** 2 + (py - cy) ** 2 < r * r;
 }
 
 /* ---------- PRNG seedable (mulberry32) ---------- */
 function makeRng(seed) {
-  let s = (seed >>> 0) || 0x9e3779b9;
-  const rng = () => { s += 0x6D2B79F5; let t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  let s = seed >>> 0 || 0x9e3779b9;
+  const rng = () => {
+    s += 0x6d2b79f5;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
   rng.range = (a, b) => a + rng() * (b - a);
   rng.int = (a, b) => Math.floor(rng.range(a, b + 1));
   rng.pick = arr => arr[Math.floor(rng() * arr.length)];
   rng.chance = p => rng() < p;
-  rng.shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
-  rng.reseed = v => { s = (v >>> 0) || 1; };
+  rng.shuffle = arr => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+  rng.reseed = v => {
+    s = v >>> 0 || 1;
+  };
   return rng;
 }
-const RNG = makeRng(Date.now() & 0xffffffff);   // RNG de gameplay (reseedé par __autoplay)
-const VFX_RNG = makeRng(1234);                 // RNG cosmétique, jamais reseedé
+const RNG = makeRng(Date.now() & 0xffffffff); // RNG de gameplay (reseedé par __autoplay)
+const VFX_RNG = makeRng(1234); // RNG cosmétique, jamais reseedé
 
 /* ---------- Chaînes UI (français, centralisées) ---------- */
 const STR = {
-  room: 'Salle', level: 'Niveau', xp: 'XP', hp: 'PV', coins: 'Crédits', quality: 'Qualité',
-  chooseWeapon: 'Choisis ton arme', chooseSkill: 'Choisis une compétence', enter: 'Entrer',
-  levelUp: 'Montée de niveau', pick: 'Choisir', chest: 'Réserve de greffes', continue: 'Continuer',
-  paused: 'Pause', resume: 'Reprendre', quit: 'Abandonner la run', dead: 'Sujet perdu',
-  toHub: 'Retour au hub', victory: 'Protocole terminé', pending: 'en attente',
-  wave: 'Vague', boss: 'Mini-boss', ready: 'Prêt', interact: 'E : interagir',
+  room: 'Salle',
+  level: 'Niveau',
+  xp: 'XP',
+  hp: 'PV',
+  coins: 'Crédits',
+  quality: 'Qualité',
+  chooseWeapon: 'Choisis ton arme',
+  chooseSkill: 'Choisis une compétence',
+  enter: 'Entrer',
+  levelUp: 'Montée de niveau',
+  pick: 'Choisir',
+  chest: 'Réserve de greffes',
+  continue: 'Continuer',
+  paused: 'Pause',
+  resume: 'Reprendre',
+  quit: 'Abandonner la run',
+  dead: 'Sujet perdu',
+  toHub: 'Retour au hub',
+  victory: 'Protocole terminé',
+  pending: 'en attente',
+  wave: 'Vague',
+  boss: 'Mini-boss',
+  ready: 'Prêt',
+  interact: 'E : interagir',
 };
 
 /* ---------- Caméra (zoom + suivi du joueur ; le HUD n'est pas affecté) ---------- */
 const Camera = {
-  x: W / 2, y: H / 2, zoom: 1, pulse: 0,   // pulse : impulsion de zoom (salle du tempo), remise à 0 à chaque salle
-  snap(x, y) { this.x = x; this.y = y; this.clamp(); },
-  follow(x, y, dt) { const k = Math.min(1, 6 * dt); this.x = lerp(this.x, x, k); this.y = lerp(this.y, y, k); this.clamp(); },
-  clamp() { const v = Engine.view; const hw = v.w / (2 * this.zoom), hh = v.h / (2 * this.zoom); this.x = hw >= W / 2 ? W / 2 : clamp(this.x, hw, W - hw); this.y = hh >= H / 2 ? H / 2 : clamp(this.y, hh, H - hh); },
-  apply(ctx) { const z = this.zoom * (1 + (this.pulse || 0)); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-this.x, -this.y); },
-  toWorld(sx, sy) { return { x: this.x + (sx - W / 2) / this.zoom, y: this.y + (sy - H / 2) / this.zoom }; },
-  setZoom(z) { this.zoom = clamp(z || 1, 1, 2.5); this.clamp(); },
+  x: W / 2,
+  y: H / 2,
+  zoom: 1,
+  pulse: 0, // pulse : impulsion de zoom (salle du tempo), remise à 0 à chaque salle
+  snap(x, y) {
+    this.x = x;
+    this.y = y;
+    this.clamp();
+  },
+  follow(x, y, dt) {
+    const k = Math.min(1, 6 * dt);
+    this.x = lerp(this.x, x, k);
+    this.y = lerp(this.y, y, k);
+    this.clamp();
+  },
+  clamp() {
+    const v = Engine.view;
+    const hw = v.w / (2 * this.zoom),
+      hh = v.h / (2 * this.zoom);
+    this.x = hw >= W / 2 ? W / 2 : clamp(this.x, hw, W - hw);
+    this.y = hh >= H / 2 ? H / 2 : clamp(this.y, hh, H - hh);
+  },
+  apply(ctx) {
+    const z = this.zoom * (1 + (this.pulse || 0));
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(z, z);
+    ctx.translate(-this.x, -this.y);
+  },
+  toWorld(sx, sy) {
+    return { x: this.x + (sx - W / 2) / this.zoom, y: this.y + (sy - H / 2) / this.zoom };
+  },
+  setZoom(z) {
+    this.zoom = clamp(z || 1, 1, 2.5);
+    this.clamp();
+  },
 };
 /* ---------- Plein écran ---------- */
 const Fullscreen = {
-  get active() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
-  supported() { const d = document.documentElement; return !!(d.requestFullscreen || d.webkitRequestFullscreen); },
-  enter() {
-    const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : d.webkitRequestFullscreen ? d.webkitRequestFullscreen() : null;
-    if (p && p.then) p.then(() => { try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* */ } }).catch(() => {});
+  get active() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
   },
-  exit() { if (document.exitFullscreen) document.exitFullscreen().catch(() => {}); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); },
-  toggle() { this.active ? this.exit() : this.enter(); },
+  supported() {
+    const d = document.documentElement;
+    return !!(d.requestFullscreen || d.webkitRequestFullscreen);
+  },
+  enter() {
+    const d = document.documentElement;
+    const p = d.requestFullscreen
+      ? d.requestFullscreen({ navigationUI: 'hide' })
+      : d.webkitRequestFullscreen
+        ? d.webkitRequestFullscreen()
+        : null;
+    if (p && p.then)
+      p.then(() => {
+        try {
+          if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+        } catch (e) {
+          /* */
+        }
+      }).catch(() => {});
+  },
+  exit() {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  },
+  toggle() {
+    this.active ? this.exit() : this.enter();
+  },
 };
 
 /* ---------- Time ---------- */
@@ -113,100 +208,218 @@ const Time = { scale: 1, slow: 1, slowUntil: 0, now: 0, frame: 0 };
 
 /* ---------- Input ---------- */
 const Input = (() => {
-  const keys = new Set(), pressed = new Set();
+  const keys = new Set(),
+    pressed = new Set();
   const mouse = { x: W / 2, y: H / 2, down: false, right: false, moved: 0 };
   const touch = { active: false, move: { x: 0, y: 0 }, fire: false, skill: false, interact: false, autoFire: false };
-  let canvas = null, scale = 1, offX = 0, offY = 0;
+  let canvas = null,
+    scale = 1,
+    offX = 0,
+    offY = 0;
   const KEYMAP = {
-    up: ['KeyW', 'KeyZ', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'KeyQ', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
-    skill: ['Space', 'ShiftLeft', 'ShiftRight'], interact: ['KeyE', 'KeyF', 'Enter'], pause: ['Escape', 'KeyP'], debug: ['F1'],
-    fire: ['KeyJ', 'KeyK'], mouse2: ['Mouse2'], pet: ['KeyC'],
+    up: ['KeyW', 'KeyZ', 'ArrowUp'],
+    down: ['KeyS', 'ArrowDown'],
+    left: ['KeyA', 'KeyQ', 'ArrowLeft'],
+    right: ['KeyD', 'ArrowRight'],
+    skill: ['Space', 'ShiftLeft', 'ShiftRight'],
+    interact: ['KeyE', 'KeyF', 'Enter'],
+    pause: ['Escape', 'KeyP'],
+    debug: ['F1'],
+    fire: ['KeyJ', 'KeyK'],
+    mouse2: ['Mouse2'],
+    pet: ['KeyC'],
   };
   function attach(c, onFirstInteraction) {
     canvas = c;
     let first = false;
-    const firstInt = () => { if (!first) { first = true; onFirstInteraction && onFirstInteraction(); } };
-    const typing = e => { const t = e.target; return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT'); };
+    const firstInt = () => {
+      if (!first) {
+        first = true;
+        onFirstInteraction && onFirstInteraction();
+      }
+    };
+    const typing = e => {
+      const t = e.target;
+      return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT');
+    };
     window.addEventListener('keydown', e => {
       firstInt();
-      if (typing(e)) return;   // champ de saisie (atelier rythme) : le clavier lui appartient
+      if (typing(e)) return; // champ de saisie (atelier rythme) : le clavier lui appartient
       if (e.code === 'F1' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       if (!keys.has(e.code)) pressed.add(e.code);
       keys.add(e.code);
     });
     window.addEventListener('keyup', e => keys.delete(e.code));
-    window.addEventListener('blur', () => { keys.clear(); mouse.down = false; mouse.right = false; });
-    const toLogical = e => { const r = canvas.getBoundingClientRect(); mouse.x = clamp((e.clientX - r.left) / scale - offX, -offX, W + offX); mouse.y = clamp((e.clientY - r.top) / scale - offY, -offY, H + offY); mouse.moved = Time.now; };
-    canvas.addEventListener('mousemove', e => { if (!touch.active) toLogical(e); });
-    canvas.addEventListener('mousedown', e => { firstInt(); if (touch.active) return; toLogical(e); if (e.button === 0) mouse.down = true; if (e.button === 2) { mouse.right = true; pressed.add('Mouse2'); } });
-    window.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; if (e.button === 2) mouse.right = false; });
+    window.addEventListener('blur', () => {
+      keys.clear();
+      mouse.down = false;
+      mouse.right = false;
+    });
+    const toLogical = e => {
+      const r = canvas.getBoundingClientRect();
+      mouse.x = clamp((e.clientX - r.left) / scale - offX, -offX, W + offX);
+      mouse.y = clamp((e.clientY - r.top) / scale - offY, -offY, H + offY);
+      mouse.moved = Time.now;
+    };
+    canvas.addEventListener('mousemove', e => {
+      if (!touch.active) toLogical(e);
+    });
+    canvas.addEventListener('mousedown', e => {
+      firstInt();
+      if (touch.active) return;
+      toLogical(e);
+      if (e.button === 0) mouse.down = true;
+      if (e.button === 2) {
+        mouse.right = true;
+        pressed.add('Mouse2');
+      }
+    });
+    window.addEventListener('mouseup', e => {
+      if (e.button === 0) mouse.down = false;
+      if (e.button === 2) mouse.right = false;
+    });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
   }
-  function setScale(s, ox, oy) { scale = s; offX = ox; offY = oy; }
+  function setScale(s, ox, oy) {
+    scale = s;
+    offX = ox;
+    offY = oy;
+  }
   const isDown = action => KEYMAP[action].some(k => keys.has(k));
   const wasPressed = action => KEYMAP[action].some(k => pressed.has(k));
   function axis() {
     let x = (isDown('right') ? 1 : 0) - (isDown('left') ? 1 : 0);
     let y = (isDown('down') ? 1 : 0) - (isDown('up') ? 1 : 0);
-    if (x && y) { x *= Math.SQRT1_2; y *= Math.SQRT1_2; }
+    if (x && y) {
+      x *= Math.SQRT1_2;
+      y *= Math.SQRT1_2;
+    }
     return { x, y };
   }
   /* Gamepad : abstraction prévue, non branchée en phase 1. */
-  function endFrame() { pressed.clear(); }
-  function press(code) { pressed.add(code); }
+  function endFrame() {
+    pressed.clear();
+  }
+  function press(code) {
+    pressed.add(code);
+  }
   return { attach, setScale, isDown, wasPressed, axis, mouse, touch, press, endFrame, keys };
 })();
 
 /* ---------- Engine : canvas, boucle à pas fixe ---------- */
 const Engine = (() => {
-  let canvas, ctx, acc = 0, last = 0, running = false, rafId = 0;
-  let updateFn = () => {}, renderFn = () => {};
+  let canvas,
+    ctx,
+    acc = 0,
+    last = 0,
+    running = false,
+    rafId = 0;
+  let updateFn = () => {},
+    renderFn = () => {};
   const stats = { fps: 0, frames: 0, fpsT: 0, steps: 0 };
   let maxStepsPerFrame = 8;
-  let headless = false;   // rendu désactivé (autoplay)
+  let headless = false; // rendu désactivé (autoplay)
 
   function init(c) {
-    canvas = c; ctx = c.getContext('2d');
+    canvas = c;
+    ctx = c.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    resize(); window.addEventListener('resize', resize);
+    resize();
+    window.addEventListener('resize', resize);
   }
   /* Le canvas couvre toute la fenêtre. La salle (1280×720 logiques) reste entièrement visible et centrée ;
      la fenêtre plus large ou plus haute montre du décor autour (vue logique étendue : view.w × view.h, décalage view.ox/oy). */
   const view = { w: W, h: H, ox: 0, oy: 0, scale: 1 };
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const ww = window.innerWidth, wh = window.innerHeight;
+    const ww = window.innerWidth,
+      wh = window.innerHeight;
     const s = Math.min(ww / W, wh / H);
-    view.scale = s; view.w = ww / s; view.h = wh / s; view.ox = (view.w - W) / 2; view.oy = (view.h - H) / 2;
-    canvas.style.width = ww + 'px'; canvas.style.height = wh + 'px'; canvas.style.left = '0px'; canvas.style.top = '0px';
-    canvas.width = Math.floor(ww * dpr); canvas.height = Math.floor(wh * dpr);
+    view.scale = s;
+    view.w = ww / s;
+    view.h = wh / s;
+    view.ox = (view.w - W) / 2;
+    view.oy = (view.h - H) / 2;
+    canvas.style.width = ww + 'px';
+    canvas.style.height = wh + 'px';
+    canvas.style.left = '0px';
+    canvas.style.top = '0px';
+    canvas.width = Math.floor(ww * dpr);
+    canvas.height = Math.floor(wh * dpr);
     ctx.setTransform(dpr * s, 0, 0, dpr * s, view.ox * dpr * s, view.oy * dpr * s);
     ctx.imageSmoothingEnabled = false;
     Input.setScale(s, view.ox, view.oy);
     document.documentElement.style.setProperty('--ui-scale', s.toFixed(3));
-    for (const id of ['ui', 'touch']) { const el = document.getElementById(id); if (el) { el.style.width = ww + 'px'; el.style.height = wh + 'px'; el.style.left = '0px'; el.style.top = '0px'; } }
+    for (const id of ['ui', 'touch']) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.width = ww + 'px';
+        el.style.height = wh + 'px';
+        el.style.left = '0px';
+        el.style.top = '0px';
+      }
+    }
   }
   function loop(t) {
     rafId = requestAnimationFrame(loop);
     if (!last) last = t;
-    let frameDt = Math.min((t - last) / 1000, 0.25); last = t;
-    stats.frames++; stats.fpsT += frameDt; if (stats.fpsT >= 0.5) { stats.fps = Math.round(stats.frames / stats.fpsT); stats.frames = 0; stats.fpsT = 0; }
+    let frameDt = Math.min((t - last) / 1000, 0.25);
+    last = t;
+    stats.frames++;
+    stats.fpsT += frameDt;
+    if (stats.fpsT >= 0.5) {
+      stats.fps = Math.round(stats.frames / stats.fpsT);
+      stats.frames = 0;
+      stats.fpsT = 0;
+    }
     acc += frameDt * Time.scale;
     let steps = 0;
     while (acc >= FIXED_DT && steps < maxStepsPerFrame) {
       const slow = Time.now < Time.slowUntil ? Time.slow : 1;
       updateFn(FIXED_DT * slow, FIXED_DT);
-      Time.now += FIXED_DT; Time.frame++;
-      acc -= FIXED_DT; steps++;
+      Time.now += FIXED_DT;
+      Time.frame++;
+      acc -= FIXED_DT;
+      steps++;
     }
     if (steps === maxStepsPerFrame) acc = 0;
     stats.steps = steps;
     if (!headless) renderFn(ctx, acc / FIXED_DT);
-    if (steps > 0 || G.paused) Input.endFrame();   // ne pas perdre un appui entre deux pas (écrans 120/144 Hz)
+    if (steps > 0 || G.paused) Input.endFrame(); // ne pas perdre un appui entre deux pas (écrans 120/144 Hz)
   }
-  function start(u, r) { updateFn = u; renderFn = r; if (!running) { running = true; last = 0; rafId = requestAnimationFrame(loop); } }
-  function stop() { running = false; cancelAnimationFrame(rafId); }
-  function setHeadless(h) { headless = h; maxStepsPerFrame = h ? 400 : 8; }
-  function isHeadless() { return headless; }
-  return { init, start, stop, stats, view, get ctx() { return ctx; }, get canvas() { return canvas; }, setHeadless, isHeadless };
+  function start(u, r) {
+    updateFn = u;
+    renderFn = r;
+    if (!running) {
+      running = true;
+      last = 0;
+      rafId = requestAnimationFrame(loop);
+    }
+  }
+  function stop() {
+    running = false;
+    cancelAnimationFrame(rafId);
+  }
+  function setHeadless(h) {
+    headless = h;
+    maxStepsPerFrame = h ? 400 : 8;
+  }
+  function isHeadless() {
+    return headless;
+  }
+  return {
+    init,
+    start,
+    stop,
+    stats,
+    view,
+    get ctx() {
+      return ctx;
+    },
+    get canvas() {
+      return canvas;
+    },
+    setHeadless,
+    isHeadless,
+  };
 })();
