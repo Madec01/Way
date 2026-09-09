@@ -1,0 +1,6 @@
+# artefacts de tests lancés sans variable d'environnement
+undefined/
+# captures et journaux de tests
+dev/test/out/
+node_modules/
+.DS_Store

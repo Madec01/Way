@@ -4,6 +4,9 @@
 
 Tous les fichiers sont dans `salle-zero/assets/`. **Poids total : 12,53 Mo** (musique 11,79 Mo · sprites 0,40 Mo · polices 0,26 Mo · icônes 0,09 Mo), 149 fichiers.
 
+
+> **Septembre 2026 — retirés du dépôt.** `assets/icons/` (61 SVG) et les cinq packs `assets/sprites/kenney_*` n'étaient chargés par aucun fichier de `dev/` (748 Ko pour rien). Les tables ci-dessous les décrivent encore pour l'historique et les licences ; les fichiers eux-mêmes ne sont plus livrés. Ce qui est réellement chargé : `lab/`, `greenhouse/`, `western/`, `orient/`, `pets/`, `pixel/` et `music/`.
+
 ## Contexte réseau (important pour les prochaines récupérations)
 
 La politique de sortie du proxy bloque **itch.io, kenney.nl, incompetech.com, opengameart.org, pixabay.com, freemusicarchive.org, game-icons.net, fonts.google.com, cdnjs, jsdelivr, unpkg, archive.org** (CONNECT refusé 403). Seuls passent : `raw.githubusercontent.com`, `media.githubusercontent.com` (objets Git LFS), `fonts.googleapis.com`/`fonts.gstatic.com`, `registry.npmjs.org`, `pypi.org`. Tous les assets ci-dessous ont donc été récupérés depuis des **dépôts GitHub publics qui rehébergent les packs d'origine** (chemin exact noté dans chaque table) ou depuis npm. Les zips Kenney/0x72 d'origine n'ont pas pu être téléchargés ; les fichiers utiles ont été pris un à un, les licences d'origine incluses quand elles existaient dans le miroir.

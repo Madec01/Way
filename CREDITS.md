@@ -4,7 +4,7 @@ Tous les assets tiers sont libres de droit. Détails, liens et coordonnées d'ut
 
 ## Sprites et tuiles
 - **0x72 — Dungeon Tileset II** (v1.4 et v1.7) — CC0. https://0x72.itch.io/dungeontileset-ii
-- **Kenney** — Tiny Dungeon, Particle Pack, UI Pack, Pixel Shmup, Game Icons — CC0. https://kenney.nl
+- **Kenney** — Tiny Dungeon, Particle Pack, UI Pack, Pixel Shmup, Game Icons — CC0. https://kenney.nl — *packs retirés du dépôt en septembre 2026, plus rien de Kenney n'est chargé.*
 
 ## Icônes
 - **game-icons.net** (Lorc, Delapouite et contributeurs) — CC BY 3.0. https://game-icons.net — https://creativecommons.org/licenses/by/3.0/
