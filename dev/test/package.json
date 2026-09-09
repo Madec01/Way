@@ -1,0 +1,14 @@
+{
+  "name": "way-tests",
+  "private": true,
+  "description": "Banc d'essai de WAY — Playwright pilote le jeu dans Chromium. Installer : cd dev/test && npm install. Lancer : node run.js",
+  "scripts": {
+    "test": "node run.js",
+    "format": "prettier --write \"../*.js\" \"./*.js\"",
+    "format:check": "prettier --check \"../*.js\" \"./*.js\""
+  },
+  "devDependencies": {
+    "playwright": "1.63.0",
+    "prettier": "3.9.6"
+  }
+}

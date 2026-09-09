@@ -1,0 +1,10 @@
+# Les fichiers de contenu sont des tables : une entrée par ligne se lit mieux qu'une propriété par ligne.
+dev/content.js
+dev/content2.js
+dev/content3.js
+dev/content4.js
+# Généré par l'établi Amis (données en base64) — ne pas y toucher à la main.
+dev/content5.js
+# Sortie du build.
+index.html
+node_modules/
