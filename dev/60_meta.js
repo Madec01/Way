@@ -5,7 +5,7 @@
 
 const SAVE_KEY = 'sujet_neuf_save_v1';
 const Meta = (() => {
-  const fresh = () => ({ v: 1, coins: 0, metaTiers: {}, weapons: [], characters: [], skills: [], pets: [], pet: null, lore: [], cleared: {}, runs: 0, wins: 0, deaths: 0, bestLevel: 0, character: null, volume: { master: 0.8, sfx: 0.9, music: 0.6 } });
+  const fresh = () => ({ v: 1, coins: 0, metaTiers: {}, weapons: [], characters: [], skills: [], pets: [], pet: null, petMode: 'always', lore: [], cleared: {}, runs: 0, wins: 0, deaths: 0, bestLevel: 0, character: null, volume: { master: 0.8, sfx: 0.9, music: 0.6 } });
   let normal = fresh(); let test = null; let profile = normal;
   function load() {
     try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const d = JSON.parse(raw); if (d && d.v === 1) normal = Object.assign(fresh(), d); } } catch (e) { console.warn('[Meta] sauvegarde illisible', e); }

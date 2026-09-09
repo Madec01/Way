@@ -203,7 +203,7 @@ const UI = (() => {
           <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
           <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
           <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
-          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) ? esc(Content.pet(p.pet).name) : 'aucun'}${p.pet ? '' : ' — onglet Compagnons de la boutique'}</div>
+          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) && (p.petMode || 'always') !== 'none' ? esc(Content.pet(p.pet).name) + ' · ' + esc(PET_MODES[p.petMode || 'always'].name.toLowerCase()) : 'aucun'}${(() => { const pr = p.pet ? Content.pairOf(p.character, p.pet) : null; return pr && (p.petMode || 'always') !== 'none' ? ' · <span class="good">' + esc(pr.name) + '</span>' : ''; })()}</div>
           <div class="muted tiny">Tenue : aucune. « Vous êtes venu comme ça ? » Elle viendra avec les greffes : 3 pour des vêtements, 6 pour l'armure, 9 pour le casque.</div>
           <h3>Changer de personnage</h3>
           <div class="cards vertical" id="hub-chars"></div>
@@ -258,8 +258,21 @@ const UI = (() => {
         box.appendChild(card);
       }
     } else if (hubTab === 'animaux') {
-      box.appendChild(el('div', 'muted small', 'Un animal vous suit toute la run et joue son tour en mesure. Un seul à la fois : celui qu\'une élite lâche remplace le vôtre.'));
-      const none = el('div', 'card' + (p.pet ? '' : ' selected'), `<div class="cardtitle"><span>Partir seul</span><span class="lvlstate">${p.pet ? 'Cliquer pour choisir' : '✓ Actif'}</span></div><div class="muted small">Aucun compagnon au départ.</div>`);
+      box.appendChild(el('div', 'muted small', 'Un animal joue son tour en mesure. Un seul à la fois : celui qu\'une élite lâche remplace le vôtre.'));
+      /* mode : trois branches, et « personne » rend au joueur ce qu'il aurait donné à l'animal */
+      const mode = p.petMode || 'always';
+      const mb = el('div', 'card modes', '<div class="cardtitle"><span>Comment vous l\'emmenez</span></div>' +
+        Object.keys(PET_MODES).map(k => `<button class="btn small ${mode === k ? 'primary' : 'ghost'}" data-mode="${k}">${PET_MODES[k].name}</button>`).join('') +
+        `<div class="muted small">${esc(PET_MODES[mode].desc)}</div>`);
+      mb.querySelectorAll('[data-mode]').forEach(b => { b.onclick = () => { p.petMode = b.dataset.mode; Meta.save(); AudioEngine.uiClick({}); showHub(); }; });
+      box.appendChild(mb);
+      /* équipes connues : ce que donne le bon attelage */
+      const paires = Content.pairs();
+      if (paires.length) box.appendChild(el('div', 'card', '<div class="cardtitle"><span>Équipes</span></div>' + paires.map(pr => {
+        const ch = Content.character(pr.char), pe = Content.pet(pr.pet); const actif = p.character === pr.char && p.pet === pr.pet && mode !== 'none';
+        return `<div class="muted small${actif ? ' good' : ''}">${actif ? '✓ ' : ''}${esc((ch && ch.name) || pr.char)} + ${esc((pe && pe.name) || pr.pet)} — <b>${esc(pr.name)}</b> : ${esc(pr.desc)}</div>`;
+      }).join('')));
+      const none = el('div', 'card' + (p.pet ? '' : ' selected'), `<div class="cardtitle"><span>Aucun animal</span><span class="lvlstate">${p.pet ? 'Cliquer pour choisir' : '✓ Actif'}</span></div><div class="muted small">La case reste vide.</div>`);
       none.onclick = () => { p.pet = null; Meta.save(); AudioEngine.uiClick({}); showHub(); };
       box.appendChild(none);
       for (const a of Content.pets()) {
@@ -268,7 +281,8 @@ const UI = (() => {
           `<div class="cardtitle"><span>${esc(a.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div>
            <div class="muted small">${esc(a.desc)}</div><div class="muted tiny">${esc(a.tag || '')}${a.damage ? ' · ' + a.damage + ' dégâts' : ''}${a.hp ? ' · ' + a.hp + ' PV' : ''}</div>
            ${owned ? '' : `<button class="btn small buy" ${p.coins < a.price ? 'disabled' : ''}>Débloquer — ◈ ${a.price}</button>`}`);
-        const img = Sprites.propCanvas ? Sprites.propCanvas(a.sprite, 34) : null; if (img) { img.className = 'peticon'; card.appendChild(img); }
+        const img = a.anim && a.anim.idle ? Sprites.sheetCanvas(a.anim.idle, 34) : Sprites.propCanvas(a.sprite, 34);
+        if (img) { img.className = 'peticon'; card.appendChild(img); }
         card.onclick = e => { if (e.target.classList.contains('buy')) { if (Meta.buyPet(a.id)) showHub(); return; } if (owned) { p.pet = a.id; Meta.save(); AudioEngine.uiClick({}); showHub(); } };
         box.appendChild(card);
       }

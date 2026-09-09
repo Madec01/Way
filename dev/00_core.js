@@ -120,7 +120,7 @@ const Input = (() => {
   const KEYMAP = {
     up: ['KeyW', 'KeyZ', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'KeyQ', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
     skill: ['Space', 'ShiftLeft', 'ShiftRight'], interact: ['KeyE', 'KeyF', 'Enter'], pause: ['Escape', 'KeyP'], debug: ['F1'],
-    fire: ['KeyJ', 'KeyK'], mouse2: ['Mouse2'],
+    fire: ['KeyJ', 'KeyK'], mouse2: ['Mouse2'], pet: ['KeyC'],
   };
   function attach(c, onFirstInteraction) {
     canvas = c;

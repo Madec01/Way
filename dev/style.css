@@ -342,3 +342,4 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 #atelier .amifoot{margin-top:.4em}
 #atelier .amivue{border:1px solid var(--line);border-radius:5px;padding:1px 4px;color:#8a93ad}
 #atelier .amivue.ok{border-color:#7fff9a;color:#7fff9a}
+.card.modes .btn{margin:0 .25em .25em 0}

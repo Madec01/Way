@@ -412,19 +412,30 @@ const Sprites = (() => {
     } catch (e) { return 1; }
   }
   const sheetInfo = name => sheets[name] || null;
+  /* vignette DOM de la première image d'une planche (cartes du hub) */
+  function sheetCanvas(name, size) {
+    const s = sheets[name]; if (!s) return null;
+    const out = document.createElement('canvas'); out.width = out.height = size || 32;
+    const g = out.getContext('2d'); g.imageSmoothingEnabled = false;
+    g.drawImage(s.c, 0, 0, s.fw, s.fh, 0, 0, out.width, out.height);
+    return out;
+  }
   /* dessine la case `idx` d'une planche, ajustée dans un carré de `size`, sans lissage */
   function drawSheet(ctx, name, idx, x, y, size, opts = {}) {
     const s = sheets[name]; if (!s) return false;
     const i = ((idx | 0) % s.n + s.n) % s.n; const cx = (i % s.cols) * s.fw, cy = Math.floor(i / s.cols) * s.fh;
     const k = size / s.fw; const dw = s.fw * k, dh = s.fh * k;
-    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y);
+    /* `foot` : y est la ligne de sol, pas le centre de la case — le bas du dessin s'y pose, marge comprise */
+    const oy = opts.foot ? -dh / 2 - ((s.foot != null ? s.foot : 1) - 0.5) * dh : 0;
+    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(x, y + oy);
     if (opts.flip) ctx.scale(-1, 1); if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     ctx.drawImage(s.c, cx, cy, s.fw, s.fh, -dw / 2, -dh / 2, dw, dh);
     if (opts.flash) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(-dw / 2, -dh / 2, dw, dh); }
     ctx.restore(); return true;
   }
   /* Cadences des clips. `once` : joue une fois et garde la dernière image (mort), ou revient au repos (tir, ramassage). */
-  const CLIPS = { idle: { fps: 6 }, walk: { fps: 12 }, fire: { fps: 14, once: true }, pick: { fps: 12, once: true }, death: { fps: 8, once: true, hold: true } };
+  const CLIPS = { idle: { fps: 6 }, walk: { fps: 12 }, fire: { fps: 14, once: true }, pick: { fps: 12, once: true }, death: { fps: 8, once: true, hold: true },
+    attack: { fps: 14, once: true }, hurt: { fps: 10, once: true } };   // clips propres aux compagnons
 
   /* Un sprite peut être une image unique ou un jeu de vues { s, e, n } — sud (face), est (profil), nord (dos).
      L'ouest est l'est retourné : trois images suffisent aux quatre directions. Une vue manquante retombe sur le sud. */
@@ -526,7 +537,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, pickDir, dirFrom, gait, addSheet, drawSheet, sheetInfo, CLIPS, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, pickDir, dirFrom, gait, addSheet, drawSheet, sheetInfo, sheetCanvas, CLIPS, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

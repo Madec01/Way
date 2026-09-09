@@ -465,6 +465,9 @@ const CONTENT = {
   /* Aucun compagnon livré : ils se créent dans l'atelier « Amis » (F2) à partir d'une photo, et s'exportent
      dans dev/content5.js. Les comportements disponibles sont listés dans PET_BEHAVIORS (31_pets.js). */
   pets: [],
+  /* Paires connues : un personnage et l'animal qui est vraiment le sien. Les deux y gagnent — c'est ce qui
+     transforme « quel compagnon est le meilleur » en « quelle équipe est la meilleure ». */
+  pairs: [],
   petsExemples: [
     { id: 'pet_faucon', name: 'Faucon', sprite: 'falcon-moon', color: '#9fd8ff', tag: 'pique toutes les 2 mesures',
       desc: 'Il pique sur l\'ennemi le plus proche toutes les deux mesures, et rien ne l\'arrête en vol.',

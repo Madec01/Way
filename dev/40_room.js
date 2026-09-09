@@ -264,7 +264,9 @@ const Run = {
     G.run.skillChoices = RNG.shuffle(Content.skillsAvailable().slice()).slice(0, 2);
     applyDifficulty();
     /* compagnon choisi au hub : il entre avec le joueur (celui trouvé sur une élite le remplacera) */
-    const petId = Meta.profile.pet; if (petId && Meta.petUnlocked(petId)) Pets.give(petId, true);   // sans bandeau : celui de la salle 1 passe d'abord
+    const petId = Meta.profile.pet; const mode = Meta.profile.petMode || 'always';
+    if (petId && Meta.petUnlocked(petId) && mode !== 'none') Pets.give(petId, true, mode);   // sans bandeau : celui de la salle 1 passe d'abord
+    else if (mode === 'none' || !petId) G.player.addBuff('solo', 1e6, PET_MODES.none.mods, false);   // parti seul : il garde la part de l'animal, toute la run
     if (!Room.load(1)) return;
     if (!(weapon && skill)) { G.paused = true; UI.showPrep(); } else Room.begin();
   },

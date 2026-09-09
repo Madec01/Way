@@ -57,6 +57,8 @@ const Content = (() => {
     invalidate: () => { for (const k in idx) delete idx[k]; },
     traps: () => CONTENT.traps, trap: id => get('traps', id),
     pets: () => CONTENT.pets || [], pet: id => get('pets', id),
+    pairs: () => CONTENT.pairs || [],
+    pairOf: (charId, petId) => (CONTENT.pairs || []).find(p => p.char === charId && p.pet === petId) || null,
     rooms: () => CONTENT.rooms, roomsOf: biome => CONTENT.rooms.filter(r => r.biome === biome).sort((a, b) => a.index - b.index),
     pick: key => LORE[key] ? LORE[key][Math.floor(VFX_RNG() * LORE[key].length)] : '',
     lore: LORE,
