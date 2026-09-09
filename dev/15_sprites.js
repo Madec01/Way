@@ -472,6 +472,20 @@ const Sprites = (() => {
     const t = walk * 10;
     return { bob: Math.abs(Math.sin(t)) * 2.5, tilt: Math.sin(t) * 0.05, sx: 1 - Math.abs(Math.sin(t)) * 0.04, sy: 1 + Math.abs(Math.sin(t)) * 0.05 };
   }
+  /* Hauteur de main, en coordonnées écran : c'est là que se dessine l'arme.
+     Chaque façon de dessiner un corps a sa propre ligne de sol et sa propre hauteur — une planche de l'auteur
+     pose ses pieds à `y + 25` et fait 90 px, la planche du jeu s'arrête à `y + 20` et n'en fait que 60. Une
+     hauteur fixe convenait au seul corps du départ et plaçait l'arme à l'entrejambe des personnages de planche. */
+  const HAND = 0.45;   // fraction du corps au-dessus des pieds : la main d'une silhouette debout, arme tendue
+  function handY(key, y, opts = {}) {
+    const clip = opts.anim && opts.clip && opts.anim[opts.clip] ? opts.anim[opts.clip] : null;
+    if (clip && sheets[clip]) { const inf = sheets[clip]; return y + 25 - HAND * (opts.size || 64) * (inf.foot != null ? inf.foot : 1); }
+    if (pickDir(opts.body, opts.dir || 's')) return y + 25 - HAND * (opts.size || 64);
+    if (pickDir(opts.face, opts.dir || 's')) return y + 25 - HAND * 25 * SCALE;   // corps dessiné : 25 rangées de 3 px
+    const d = SPRITE_DEFS[key] || SPRITE_DEFS.player;
+    const dh = (d.idle ? d.idle[3] : 28) * SCALE;
+    return y + (d.foot ? dh / 2 - 14 - 8 : dh / 2) - HAND * dh * 0.72;   // la case déborde : le dessin n'en remplit que ~72 %
+  }
   function drawBody(ctx, key, x, y, opts = {}) {
     /* `body` : sprite entier fourni par l'auteur, il remplace le corps dessiné. Il est posé sur la ligne de sol du
        corps standard (y + 25 px à l'échelle 3) et dessiné SANS lissage, à la taille demandée : une image de 32 px
@@ -543,7 +557,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, pickDir, dirFrom, gait, addSheet, drawSheet, sheetInfo, sheetCanvas, CLIPS, draw, drawBody, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, pickDir, dirFrom, gait, addSheet, drawSheet, sheetInfo, sheetCanvas, CLIPS, draw, drawBody, handY, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

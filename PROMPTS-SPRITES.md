@@ -155,7 +155,16 @@ juste en jeu.
 
 ---
 
-## 5. Les trois chats
+## 5. Ce qui est déjà en jeu
+
+Martin, Gabriel et Jean ont leurs cinq planches, Uno ses quatre. Il ne reste plus que les trois chats.
+
+Deux choses apprises en les intégrant, qui valent pour la suite :
+
+- **PixelLab rend 7 images dans une grille 3 × 3**, quel que soit le nombre demandé : les deux dernières cases sont vides. Le jeu les ignore maintenant tout seul, tu n'as rien à faire — mais c'est pour ça que « 9 frames » dans le prompt ne donne pas 9 images.
+- **Les trois silhouettes tombent à 86-88 px de haut** sans qu'on ait eu à les retoucher, et les pieds au même pixel. C'est le prompt global qui tient ça (« character fills the full height of the canvas with 2 pixels of empty space below the feet ») : garde-le tel quel pour les chats, en changeant seulement la ligne `Animal:`.
+
+## 6. Les trois chats
 
 Leurs rôles sont écrits et leurs fiches posées dans le contenu ; je n'ai pas encore vérifié qu'ils tournent
 en jeu (le duo Choupi + Tanuki demande une mécanique à deux animaux, que je finis). Pour les prompts, la

@@ -1071,9 +1071,17 @@ Le bonus d'une équipe vaut pour **tout** l'attelage : Choupi et Tanuki reçoive
 - **Tanuki** (`charge`) — il traverse en ligne droite et fait mal au passage.
 - **ORI** (`mark`) — il ne frappe pas, il désigne : la cible marquée encaisse 30 % de plus, de votre part comme de celle des autres.
 
-### Les personnages en attente de dessins
+### Les trois personnages de l'auteur
 
-**Gabriel** a maintenant ses cinq planches (capuche noire, chignon, lunettes) : mêmes cases de 48 px que Martin, même taille d'affichage de 96, mêmes pieds sur la ligne de sol. Il ne reste que **Jean**, qui emprunte un `sprite` déjà présent en attendant. C'est volontaire — son équipe n'aurait aucun sens sans lui, et un personnage sans visage se teste pendant qu'on dessine ; il ne faut donc pas le retirer du contenu au motif qu'il n'a pas d'images.
+Martin, Gabriel et Jean ont chacun leurs cinq planches — repos, marche, tir, ramassage, mort —, toutes en cases de 48 px, toutes affichées à 96. Mesurés côte à côte : **38 × 88**, **40 × 86**, **42 × 88**, et le bas du dessin au même pixel pour les trois. C'est cette cohérence-là qui compte, bien plus que le nombre d'images : trois dessinateurs de silhouettes différentes auraient donné trois hauteurs, et le jeu aurait eu l'air bancal sans qu'on sache dire pourquoi.
+
+| | qui c'est | son équipe |
+|---|---|---|
+| **Martin** | chemise rose, cravate verte, lunettes, barbe | Uno — *Vieille complicité* |
+| **Gabriel** | capuche noire, chignon, lunettes | Choupi & Tanuki — *La maisonnée* |
+| **Jean** | cheveux longs, barbe, t-shirt blanc | ORI — *Œil pour œil* |
+
+Plus aucun personnage n'emprunte de sprite : le champ `placeholder` a disparu du contenu. Il ne manque plus que les dessins des **trois chats**, qui ne sont pour l'instant qu'une pastille de couleur en jeu.
 
 Les prompts pour fabriquer ces planches sont dans **`PROMPTS-SPRITES.md`** : un prompt global de style, puis un prompt court par clip, pour les humains (case de 48) comme pour les animaux (case de 32).
 
@@ -1107,3 +1115,11 @@ Le portrait du hub suit la même règle : il montre le personnage tel qu'il entr
 PixelLab rend une planche de 7 images dans une grille 3 × 3 : les deux dernières cases sont vides. Comptées comme des images — ce que faisait `addSheet`, qui posait `n = colonnes × lignes` —, le personnage disparaissait **deux temps sur neuf** à chaque boucle, un clignotement discret mais permanent.
 
 `framesOf` remonte donc la grille depuis la fin et s'arrête à la dernière case dessinée. Seules les cases vides **de fin** sont retirées : une case vide au milieu d'une planche est une image voulue (un clignotement, une disparition), et la couper décalerait tout ce qui suit. Les planches déjà en place qui remplissent leurs neuf cases ne bougent pas.
+
+### L'arme sortait de l'entrejambe
+
+L'arme était dessinée à une hauteur **fixe**, 23 px au-dessus de la position du joueur. Ce chiffre avait été calé sur le seul corps qui existait alors, celui dessiné en pixels. Les planches de l'auteur font 88 px là où ce corps en faisait 72, et la planche du jeu 60 : à hauteur fixe, l'arme tombait au bas du ventre des grands et à la hanche des petits.
+
+`Sprites.handY` la place maintenant à **45 % du corps au-dessus des pieds**, et chaque façon de dessiner un corps y déclare sa propre ligne de sol et sa propre hauteur — une planche de l'auteur pose ses pieds à `y + 25` et mesure `taille × foot`, la planche du jeu s'arrête à `y + 20` et ne remplit que ~72 % de sa case. Mesuré après correction : 45 % pour Martin, 46 % pour Gabriel, 45 % pour Jean, 44 % pour Neuf — c'est-à-dire la main, pour les quatre.
+
+C'est la même leçon que les deux cases vides : tout nombre écrit en dur pour *un* corps devient faux dès qu'un deuxième arrive.
