@@ -176,6 +176,7 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
 
   // ---------- export ----------
   const snip = await p.evaluate(() => {
+    window.confirm = () => true; // ces tests vérifient l'export AVEC les images : l'accord est donné
     document.getElementById('a-export').click();
     return document.getElementById('a-txt').value;
   });

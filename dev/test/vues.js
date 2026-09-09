@@ -192,6 +192,7 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
   );
 
   const exp = await p.evaluate(() => {
+    window.confirm = () => true; // ces tests vérifient l'export AVEC les images : l'accord est donné
     document.getElementById('a-export').click();
     const t = document.getElementById('a-txt').value;
     return { n: (t.match(/data:image\/png/g) || []).length, dir: /"e":/.test(t) && /"n":/.test(t) };
