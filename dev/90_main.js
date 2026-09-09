@@ -18,7 +18,7 @@ function render(ctx) {
     ctx.fillStyle = '#07080d'; ctx.fillRect(-W, -H, 3 * W, 3 * H);
     Room.render(ctx);
     Pickups.render(ctx);
-    const ents = G.enemies.slice(); if (G.pet) ents.push(G.pet); ents.sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
+    const ents = G.enemies.slice(); for (const pe of G.pets) if (!pe.hidden()) ents.push(pe); ents.sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
     G.player.render(ctx);
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx);
     if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);

@@ -204,7 +204,7 @@ const Pickups = {
   maybeDrop(e) {
     const r = G.room; if (!r || r.drops >= 2 || e.isBoss) return;
     const lastWave = r.waves.length && r.waves.every(w => w.done);
-    if (e.elite && RNG.chance(0.35)) { const k = RNG(); r.drops++; if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14)); else if (k < 0.75) this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else if (k < 0.9 && Content.pets().length) this.spawn(e.x, e.y, 'pet', 1, { pet: RNG.pick(Content.pets()).id }); else this.spawn(e.x, e.y, 'ally', 1); }
+    if (e.elite && RNG.chance(0.35)) { const k = RNG(); r.drops++; if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14)); else if (k < 0.75) this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else if (k < 0.9 && Content.pets().some(x => !x.hidden)) this.spawn(e.x, e.y, 'pet', 1, { pet: RNG.pick(Content.pets().filter(x => !x.hidden)).id }); else this.spawn(e.x, e.y, 'ally', 1); }
     else if (lastWave && RNG.chance(0.06)) { r.drops++; this.spawn(e.x, e.y, 'purse', RNG.int(4, 9)); }
   },
   /* arme d'essai posée au sol, une fois par palier */
@@ -630,7 +630,8 @@ class Player {
       firing = t.fire || (t.autoFire && !!tgt); wantSkill = Input.wasPressed('skill'); if (t.interact) { Input.press('KeyE'); t.interact = false; }
     } else {
       const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y); mv = Input.axis(); aim = angleTo(this.x, this.y, wm.x, wm.y);
-      firing = (Input.mouse.down && !Atelier.posing()) || Input.isDown('fire');   // atelier en mode pose : le clic sert à poser, pas à tirer wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
+      firing = (Input.mouse.down && !Atelier.posing()) || Input.isDown('fire');   // atelier en mode pose : le clic sert à poser, pas à tirer
+      wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
     }
     this.moveDir = mv; this.aim = aim; if (Math.abs(Math.cos(aim)) > 0.2) this.facing = Math.cos(aim) > 0 ? 1 : -1;
     /* --- déplacement --- */

@@ -36,7 +36,9 @@ class Pet {
   }
   get airborne() { return !!this.def.fly || this.state === 'roll'; }
   get down() { return this.downT > 0; }
-  get taunts() { return !!this.def.taunt && !this.down; }
+  get taunts() { return !!this.def.taunt && !this.down && !this.hidden(); }
+  /* absent : appelé mais pas encore venu, ou reparti se reposer */
+  hidden() { return this.mode === 'call' && this.away; }
   dmg() { return Math.round(this.def.damage * (G.player ? G.player.stats.damage : 1) * this.boost * (this.pairMul || 1)); }
   /* cadence : le mode « à l'appel » joue deux fois plus souvent, puisqu'il ne dure pas */
   every() { const e = this.def.every || 4; return this.boost > 1 ? Math.max(1, Math.round(e / 2)) : e; }
@@ -259,36 +261,43 @@ class Pet {
 
 const Pets = {
   /* donne un compagnon (remplace celui en cours) */
+  /* Un choix de compagnon peut en amener deux : `def.duo` nomme l'inséparable, qui arrive avec le premier et
+     s'en va avec lui. Ils comptent pour une seule place — c'est un attelage, pas deux compagnons. */
   give(id, silent, mode) {
     const def = Content.pet(id); if (!def) return null;
-    G.pet = new Pet(def);
+    G.pets = [new Pet(def)];
+    if (def.duo) { const d2 = Content.pet(def.duo); if (d2) G.pets.push(new Pet(d2)); }
     Pets.setMode(mode || (Meta.profile.petMode === 'call' ? 'call' : 'always'));
     Pets.applyPair();
-    if (!silent) { UI.banner(def.name, def.color || '#9fd8ff', def.desc); AudioEngine.levelUp({ intensity: 0.5 }); }
-    return G.pet;
+    if (!silent) { UI.banner(Pets.title(def), def.color || '#9fd8ff', def.desc); AudioEngine.levelUp({ intensity: 0.5 }); }
+    return G.pets[0];
   },
+  /* nom affiché : celui de l'attelage quand il y en a un */
+  title(def) { return (def && (def.duoName || def.name)) || 'Compagnon'; },
   setMode(m) {
-    const p = G.pet; if (!p) return;
-    p.mode = PET_MODES[m] ? m : 'always';
-    if (p.mode === 'call') { p.away = true; p.cdT = 0; p.callT = 0; p.boost = 1; } else { p.away = false; p.boost = 1; }
+    for (const p of G.pets) {
+      p.mode = PET_MODES[m] ? m : 'always';
+      if (p.mode === 'call') { p.away = true; p.cdT = 0; p.callT = 0; p.boost = 1; } else { p.away = false; p.boost = 1; }
+    }
   },
   /* bonus d'équipe : appliqué à l'animal, et posé sur le joueur comme un buff de run */
   applyPair() {
-    const p = G.pet, pl = G.player; if (!p || !pl || !G.run) return;
-    const pr = Content.pairOf(G.run.char && G.run.char.id, p.id); p.pairMul = 1; p.pair = null;
+    const pl = G.player; if (!G.pets.length || !pl || !G.run) return;
+    const pr = Content.pairOf(G.run.char && G.run.char.id, G.pets[0].id);
+    for (const p of G.pets) { p.pairMul = 1; p.pair = null; }
     pl.buffs = pl.buffs.filter(b => b.id !== 'pair');
     if (!pr) return;
-    p.pair = pr; p.pairMul = pr.petDamageMul || 1;
+    for (const p of G.pets) { p.pair = pr; p.pairMul = pr.petDamageMul || 1; }   // le bonus vaut pour tout l'attelage
     if (pr.mods && pr.mods.length) pl.addBuff('pair', 1e6, pr.mods, false);   // toute la run : `true` le ferait sauter au changement de salle
     UI.toast('Équipe : ' + pr.name);
   },
-  clear() { G.pet = null; },
+  clear() { G.pets = []; },
   update(dt) {
-    const p = G.pet; if (!p || !G.player || !G.room) return;
-    if (p.mode === 'call' && p.away && p.cdT <= 0 && Input.wasPressed('pet')) p.call();
-    p.update(dt);
+    if (!G.pets.length || !G.player || !G.room) return;
+    const appel = Input.wasPressed('pet');
+    for (const p of G.pets) { if (appel && p.mode === 'call' && p.away && p.cdT <= 0) p.call(); p.update(dt); }
   },
-  render(ctx) { if (G.pet && !(G.pet.mode === 'call' && G.pet.away)) G.pet.render(ctx); },
+  render(ctx) { for (const p of G.pets) if (!p.hidden()) p.render(ctx); },
   /* Vignette d'un compagnon : la première image de sa planche de repos s'il en a une, sinon son accessoire.
      Un animal animé n'a pas d'accessoire à son nom — sans ce détour, son badge n'affichait qu'une pastille. */
   icon(ctx, p, x, y, size, alpha) {
@@ -297,7 +306,7 @@ const Pets = {
     return Sprites.drawProp(ctx, Sprites.pickDir(p.def.sprite, 's'), x, y, size, size, { alpha });
   },
   /* dégâts pris par un compagnon qui attire les coups */
-  hurt(d) { if (G.pet && !(G.pet.mode === 'call' && G.pet.away)) G.pet.hurt(d); },
+  hurt(d) { for (const p of G.pets) if (!p.hidden()) { p.hurt(d); return; } },
   /* mode « à l'appel » : jauge de présence ou de repos, avec la touche à presser */
   renderCall(ctx, p) {
     const x = 16, y = H - 108; const m = PET_MODES.call;
@@ -306,7 +315,7 @@ const Pets = {
     ctx.fillStyle = 'rgba(8,10,18,.72)'; UI.roundRect(ctx, x, y, 168, 30, 8); ctx.fill();
     if (!Pets.icon(ctx, p, x + 18, y + 15, 24, p.away ? 0.35 : 1)) { ctx.globalAlpha = p.away ? 0.35 : 1; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(x + 18, y + 15, 7, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
     ctx.fillStyle = pret ? '#7fff9a' : '#e8ecf7'; ctx.font = '12px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(p.name, x + 36, y + 14);
+    ctx.fillText(Pets.title(p.def), x + 36, y + 14);
     ctx.fillStyle = '#8a93ad'; ctx.font = '10px "Segoe UI", system-ui, sans-serif';
     ctx.fillText(pret ? 'C : appeler' : p.away ? 'repos ' + Math.ceil(p.cdT) + ' s' : 'présent ' + Math.ceil(p.callT) + ' s', x + 36, y + 25);
     const k = p.away ? (p.cdT > 0 ? 1 - p.cdT / m.cd : 1) : p.callT / m.dur;
@@ -317,12 +326,13 @@ const Pets = {
   renderHud(ctx) {
     const p = G.pet; if (!p) return;
     if (p.mode === 'call') return Pets.renderCall(ctx, p);
+    const nom = Pets.title(p.def);
     const x = 16, y = H - 108;
     ctx.save();
     ctx.fillStyle = 'rgba(8,10,18,.72)'; UI.roundRect(ctx, x, y, 168, 30, 8); ctx.fill();
     if (!Pets.icon(ctx, p, x + 18, y + 15, 24, p.down ? 0.4 : 1)) { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(x + 18, y + 15, 7, 0, TAU); ctx.fill(); }
     ctx.fillStyle = p.down ? '#8a93ad' : '#e8ecf7'; ctx.font = '12px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(p.name, x + 36, y + 14);
+    ctx.fillText(nom, x + 36, y + 14);
     ctx.fillStyle = '#8a93ad'; ctx.font = '10px "Segoe UI", system-ui, sans-serif';
     ctx.fillText(p.down ? 'sonné — ' + Math.ceil(p.downT) + ' s' : (p.def.tag || ''), x + 36, y + 25);
     ctx.restore();

@@ -203,7 +203,7 @@ const UI = (() => {
           <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
           <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
           <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
-          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) && (p.petMode || 'always') !== 'none' ? esc(Content.pet(p.pet).name) + ' · ' + esc(PET_MODES[p.petMode || 'always'].name.toLowerCase()) : 'aucun'}${(() => { const pr = p.pet ? Content.pairOf(p.character, p.pet) : null; return pr && (p.petMode || 'always') !== 'none' ? ' · <span class="good">' + esc(pr.name) + '</span>' : ''; })()}</div>
+          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) && (p.petMode || 'always') !== 'none' ? esc(Content.pet(p.pet).duoName || Content.pet(p.pet).name) + ' · ' + esc(PET_MODES[p.petMode || 'always'].name.toLowerCase()) : 'aucun'}${(() => { const pr = p.pet ? Content.pairOf(p.character, p.pet) : null; return pr && (p.petMode || 'always') !== 'none' ? ' · <span class="good">' + esc(pr.name) + '</span>' : ''; })()}</div>
           <div class="muted tiny">Tenue : aucune. « Vous êtes venu comme ça ? » Elle viendra avec les greffes : 3 pour des vêtements, 6 pour l'armure, 9 pour le casque.</div>
           <h3>Changer de personnage</h3>
           <div class="cards vertical" id="hub-chars"></div>
@@ -270,15 +270,16 @@ const UI = (() => {
       const paires = Content.pairs();
       if (paires.length) box.appendChild(el('div', 'card', '<div class="cardtitle"><span>Équipes</span></div>' + paires.map(pr => {
         const ch = Content.character(pr.char), pe = Content.pet(pr.pet); const actif = p.character === pr.char && p.pet === pr.pet && mode !== 'none';
-        return `<div class="muted small${actif ? ' good' : ''}">${actif ? '✓ ' : ''}${esc((ch && ch.name) || pr.char)} + ${esc((pe && pe.name) || pr.pet)} — <b>${esc(pr.name)}</b> : ${esc(pr.desc)}</div>`;
+        return `<div class="muted small${actif ? ' good' : ''}">${actif ? '✓ ' : ''}${esc((ch && ch.name) || pr.char)} + ${esc((pe && (pe.duoName || pe.name)) || pr.pet)} — <b>${esc(pr.name)}</b> : ${esc(pr.desc)}</div>`;
       }).join('')));
       const none = el('div', 'card' + (p.pet ? '' : ' selected'), `<div class="cardtitle"><span>Aucun animal</span><span class="lvlstate">${p.pet ? 'Cliquer pour choisir' : '✓ Actif'}</span></div><div class="muted small">La case reste vide.</div>`);
       none.onclick = () => { p.pet = null; Meta.save(); AudioEngine.uiClick({}); showHub(); };
       box.appendChild(none);
       for (const a of Content.pets()) {
+        if (a.hidden) continue;   // moitié d'un attelage : elle vient avec l'autre, on ne la propose pas seule
         const owned = Meta.petUnlocked(a.id); const sel = p.pet === a.id;
         const card = el('div', 'card pet' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
-          `<div class="cardtitle"><span>${esc(a.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div>
+          `<div class="cardtitle"><span>${esc(a.duoName || a.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div>
            <div class="muted small">${esc(a.desc)}</div><div class="muted tiny">${esc(a.tag || '')}${a.damage ? ' · ' + a.damage + ' dégâts' : ''}${a.hp ? ' · ' + a.hp + ' PV' : ''}</div>
            ${owned ? '' : `<button class="btn small buy" ${p.coins < a.price ? 'disabled' : ''}>Débloquer — ◈ ${a.price}</button>`}`);
         const img = a.anim && a.anim.idle ? Sprites.sheetCanvas(a.anim.idle, 34) : Sprites.propCanvas(a.sprite, 34);

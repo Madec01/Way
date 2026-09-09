@@ -960,7 +960,7 @@ Le bonus de « personne » est posé comme un buff de run (`roomOnly: false`) : 
 
 `CONTENT.pairs` déclare les attelages qui se connaissent : `{ char, pet, name, desc, petDamageMul, mods }`. Quand le personnage et l'animal choisis forment une paire, **les deux y gagnent** — l'animal frappe plus fort, le joueur reçoit les `mods`. C'est ce qui transforme « quel compagnon est le meilleur » en « quelle équipe est la meilleure ».
 
-**Martin + Uno — Vieille complicité** : Uno mord 30 % plus fort, Martin va 8 % plus vite. Ils se connaissent, c'est son chien.
+**Martin + Uno — Vieille complicité** : Uno mord 30 % plus fort, Martin va 8 % plus vite. Ils se connaissent, c'est son chien. Les deux autres équipes sont décrites en §34.
 
 Le hub liste les équipes connues et coche celle qui est active ; la colonne Personnage rappelle l'attelage en cours.
 
@@ -970,13 +970,13 @@ Mêmes règles que pour un personnage, avec quatre clips : **repos**, **marche**
 
 Un compagnon animé n'a **pas d'accessoire à son nom** : son badge de jeu et sa carte de boutique passent par la première image de sa planche de repos (`Pets.icon`, `Sprites.sheetCanvas`), sinon il n'apparaît qu'en pastille de couleur.
 
-**Uno** (`pet_uno`) est le premier : le chien de Martin, deux planches de 3 × 3 cases de 32 px, rôle « mord et attire les coups ».
+**Uno** (`pet_uno`) est le premier : le chien de Martin, deux planches de 3 × 3 cases de 32 px, rôle « mord et attire les coups ». Choupi, Tanuki et ORI attendent encore leurs dessins (voir §34).
 
 ### Le partager
 
 « Exporter » donne le contenu complet de **`dev/content5.js`** : les images en clair (data URI), puis les `CONTENT.pets.push(...)` et `CONTENT.characters.push(...)`. On colle le texte dans le fichier, on relance `node dev/build.js`, et les amis existent chez tout le monde — **rien à déposer dans `assets/`**, le dépôt se suffit à lui-même. Les images sont enregistrées au démarrage par `Sprites.loadFriends()`.
 
-Les compagnons créés apparaissent dans l'onglet *Compagnons* de la boutique du hub (débloquer avec ses crédits, puis choisir celui qui part avec vous), et les élites peuvent en lâcher un en cours de run — celui-ci remplace le vôtre, il n'y en a jamais qu'un.
+Les compagnons créés apparaissent dans l'onglet *Compagnons* de la boutique du hub (débloquer avec ses crédits, puis choisir celui qui part avec vous), et les élites peuvent en lâcher un en cours de run — celui-ci remplace le vôtre, il n'y a jamais qu'un **choix** de compagnon à la fois (un attelage compte pour un, voir §34).
 
 Neuf gabarits restent lisibles dans `content.js` sous `petsExemples` : ils ne sont **pas** chargés, ce sont des exemples de réglages à recopier.
 
@@ -1030,3 +1030,53 @@ L'horloge elle-même n'était pas en cause : mesurée sur 25 s de lecture boucl�
 Ce que l'oreille entend à un instant donné a été envoyé à la carte son un peu plus tôt : l'image est donc en avance sur le son de cette latence, qui dépend de la machine, du casque et du navigateur. Le réglage **décalage** (en ms) de l'atelier retarde l'horloge d'autant, se règle à l'oreille contre le métronome, et est gardé dans le profil — il s'applique aussi en partie. Le clic du métronome, lui, est avancé de la même valeur pour rester sur le temps entendu.
 
 À savoir : avec un décalage positif, les *autres* sons calés sur les temps (annonces de pièges, avertisseurs) partent d'autant plus tard, puisqu'ils sont déclenchés par l'horloge et non programmés à l'avance. C'est tolérable sur un effet, ça ne l'était pas sur un métronome.
+
+---
+
+## 34. L'attelage inséparable, les trois équipes, les personnages en attente
+
+### Un compagnon qui vient à deux
+
+Choupi et Tanuki ne se quittent pas. Les déclarer comme deux compagnons séparés aurait donné le choix de n'en prendre qu'un, ce qui n'a pas de sens pour eux ; les fondre en un seul animal aurait perdu leurs deux rôles. La réponse est un **attelage** : un choix, deux animaux.
+
+Trois champs suffisent, tous sur le meneur sauf le dernier :
+
+| Champ | Sur qui | Ce qu'il fait |
+|---|---|---|
+| `duo` | le meneur (`pet_choupi`) | l'identifiant de l'inséparable |
+| `duoName` | le meneur | le nom affiché du couple — « Choupi & Tanuki » |
+| `hidden: true` | le second (`pet_tanuki`) | il n'apparaît pas en boutique : il ne s'achète pas seul |
+
+`Pets.give` crée les deux d'un coup, `Pets.title` affiche `duoName`, `Pets.setMode` pose le mode sur les deux, et `Pets.clear` les emmène ensemble. Ils arrivent ensemble, se reposent ensemble, reviennent ensemble en mode « à l'appel ».
+
+### Ce que ça a changé dans le moteur
+
+L'état des compagnons était une seule référence, `G.pet`. Il est devenu **`G.pets`, une liste**, avec `G.pet` conservé comme raccourci en lecture sur le premier — c'est ce qui a permis de ne pas réécrire tout ce qui interroge « le compagnon ». Ce qui **balaie** les compagnons a été repris pour parcourir la liste : le rendu, le tri en profondeur avec les ennemis, le badge de HUD, les dégâts encaissés, les modes, le repositionnement au changement de salle.
+
+Une équipe se déclare toujours sur le **meneur** — `Content.pairOf` regarde `G.pets[0]` — puis `Pets.applyPair` en distribue le bonus aux deux. Déclarer une paire sur `pet_tanuki` ne produirait rien.
+
+### Les trois équipes
+
+| Équipe | Le duo | Ce qu'elle donne |
+|---|---|---|
+| **Vieille complicité** | Martin + Uno | Uno mord 30 % plus fort, Martin va 8 % plus vite |
+| **La maisonnée** | Gabriel + Choupi & Tanuki | les deux chats frappent 30 % plus fort, Gabriel gagne 15 % de crédits |
+| **Œil pour œil** | Jean + ORI | Jean tape 10 % plus fort sur ce qu'ORI a désigné |
+
+Le bonus d'une équipe vaut pour **tout** l'attelage : Choupi et Tanuki reçoivent chacun le multiplicateur, sinon prendre un duo reviendrait à diluer le bonus par deux et l'attelage serait un mauvais choix par construction.
+
+### Les rôles des trois chats
+
+- **Choupi** (`collect`) — il rapporte : tout ramassable dans son rayon vient à vous.
+- **Tanuki** (`charge`) — il traverse en ligne droite et fait mal au passage.
+- **ORI** (`mark`) — il ne frappe pas, il désigne : la cible marquée encaisse 30 % de plus, de votre part comme de celle des autres.
+
+### Les personnages en attente de dessins
+
+Gabriel et Jean existent, sont jouables et débloqués, mais n'ont pas encore leurs planches : ils empruntent un `sprite` déjà présent en attendant. C'est volontaire — leurs équipes n'auraient aucun sens sans eux, et un personnage sans visage se teste pendant qu'on dessine. Il ne faut donc pas les retirer du contenu au motif qu'ils n'ont pas d'images.
+
+Les prompts pour fabriquer ces planches sont dans **`PROMPTS-SPRITES.md`** : un prompt global de style, puis un prompt court par clip, pour les humains (case de 48) comme pour les animaux (case de 32).
+
+### La compétence ne partait plus
+
+Dans la branche clavier/souris de `Player.update`, l'affectation de `wantSkill` avait glissé **à l'intérieur du commentaire** de la ligne au-dessus. Résultat : la compétence ne se déclenchait plus ni à Espace ni au clic droit, sur toute la version bureau — le tactile, qui a sa propre branche, marchait toujours. Rien ne le signalait : pas d'erreur, pas de son, juste une touche morte. Les deux affectations sont maintenant sur deux lignes distinctes.

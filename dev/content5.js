@@ -24,13 +24,20 @@ const FRIEND_SHEETS = {
 
 CONTENT.characters.push(
   {"id":"char_martin","name":"Martin","sprite":"player","desc":"Le premier stade, en caleçon. Les greffes lui feront de meilleurs vêtements — c'est déjà prévu.","anim":{"idle":"char_martin_idle","walk":"char_martin_walk","fire":"char_martin_fire","pick":"char_martin_pick","death":"char_martin_death"},"size":96,"stats":{"maxHp":100,"speed":260,"damage":1,"luck":2},"trait":{"id":"trait_martin","name":"Tel quel","desc":"Aucun avantage particulier pour le moment : ses caractéristiques restent à écrire.","mods":[],"hooks":{}},"startWeapon":"weapon_blade","unlocked":true,"price":0},
+  {"id":"char_gabriel","name":"Gabriel","sprite":"player2","desc":"En attente de ses sprites : il joue pour l'instant avec le corps du jeu.","placeholder":true,"size":64,"stats":{"maxHp":100,"speed":260,"damage":1,"luck":2},"trait":{"id":"trait_char_gabriel","name":"Tel quel","desc":"Caractéristiques à écrire — sprites à venir.","mods":[],"hooks":{}},"startWeapon":"weapon_blade","unlocked":true,"price":0},
+  {"id":"char_jean","name":"Jean","sprite":"player","desc":"En attente de ses sprites : il joue pour l'instant avec le corps du jeu.","placeholder":true,"size":64,"stats":{"maxHp":100,"speed":260,"damage":1,"luck":2},"trait":{"id":"trait_char_jean","name":"Tel quel","desc":"Caractéristiques à écrire — sprites à venir.","mods":[],"hooks":{}},"startWeapon":"weapon_blade","unlocked":true,"price":0},
 );
 
 CONTENT.pets.push(
   {"id":"pet_uno","name":"Uno","color":"#e08a4a","tag":"mord et attire les coups","desc":"Le chien de Martin. Il court au contact, mord sur le temps fort, et les ennemis proches s'en prennent à lui plutôt qu'à vous.","anim":{"idle":"pet_uno_idle","walk":"pet_uno_walk"},"sprite":"pet_uno_idle","behavior":"bite","damage":14,"every":4,"range":280,"speed":320,"knockback":2,"taunt":230,"hp":90,"revive":6,"size":64,"price":0,"unlocked":true},
+  {"id":"pet_choupi","name":"Choupi","duoName":"Choupi & Tanuki","color":"#f0c46a","tag":"ramasse à votre place · et Tanuki charge","desc":"Inséparables. Choupi rapporte tout ce qui traîne pendant que Tanuki traverse la salle en boule sur le temps fort.","behavior":"collect","damage":0,"every":4,"radius":260,"speed":280,"size":56,"price":0,"unlocked":true,"duo":"pet_tanuki","placeholder":true},
+  {"id":"pet_tanuki","name":"Tanuki","color":"#a8784a","tag":"charge en ligne droite","hidden":true,"desc":"Il ne vient jamais sans Choupi.","behavior":"charge","damage":18,"every":4,"range":420,"speed":240,"rollSpeed":560,"rollTime":0.8,"knockback":3,"size":56,"price":0,"unlocked":true,"placeholder":true},
+  {"id":"pet_ori","name":"ORI","color":"#c9a3ff","tag":"désigne une cible","desc":"Il ne frappe pas : il désigne. L'ennemi marqué encaisse 30 % de plus, de votre part comme de celle des autres.","behavior":"mark","fly":true,"damage":0,"every":4,"range":420,"markTime":4,"markMul":1.3,"speed":280,"size":52,"price":0,"unlocked":true,"placeholder":true},
 );
 
 CONTENT.pairs.push(
   {"char":"char_martin","pet":"pet_uno","name":"Vieille complicité","desc":"Ils se connaissent : Uno mord 30 % plus fort, et Martin va 8 % plus vite tant que son chien est de la partie.","petDamageMul":1.3,"mods":[{"stat":"speed","mul":1.08}]},
+  {"char":"char_gabriel","pet":"pet_choupi","name":"La maisonnée","desc":"Gabriel avec ses deux chats : ils frappent 30 % plus fort, et il ramasse 15 % de crédits en plus.","petDamageMul":1.3,"mods":[{"stat":"coinGain","mul":1.15}]},
+  {"char":"char_jean","pet":"pet_ori","name":"Œil pour œil","desc":"Jean suit ce qu'ORI désigne : il frappe 10 % plus fort, et ce qui est marqué tombe deux fois plus vite.","petDamageMul":1,"mods":[{"stat":"damage","mul":1.1}]},
 );
 /* AMIS_FIN */

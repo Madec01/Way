@@ -72,7 +72,7 @@ class Enemy {
       if (Combat.hitPlayer(this.contactDamage(), { type: 'contact', source: this, x: this.x, y: this.y })) { this.contactCd = 0.6; const a = angleTo(pl.x, pl.y, this.x, this.y); this.kvx += Math.cos(a) * 120; this.kvy += Math.sin(a) * 120; }
     }
     for (const dc of G.room.decoys) if (dist(this.x, this.y, dc.x, dc.y) < this.r + dc.r && this.contactCd <= 0) { dc.hp -= this.damage; this.contactCd = 0.6; }
-    if (G.pet && G.pet.taunts && dist(this.x, this.y, G.pet.x, G.pet.y) < this.r + G.pet.r && this.contactCd <= 0) { Pets.hurt(this.damage); this.contactCd = 0.6; }
+    for (const pe of G.pets) if (pe.taunts && dist(this.x, this.y, pe.x, pe.y) < this.r + pe.r && this.contactCd <= 0) { pe.hurt(this.damage); this.contactCd = 0.6; }
   }
   relocate() {
     this.stuckT = 0; const pl = G.player;
@@ -83,8 +83,7 @@ class Enemy {
   pickTarget() {
     const pl = G.player; let t = pl; let bd = Infinity;
     for (const dc of G.room.decoys) { const d = dist(this.x, this.y, dc.x, dc.y); if (d < bd) { bd = d; t = dc; } }
-    const pet = G.pet;
-    if (pet && pet.taunts) { const d = dist(this.x, this.y, pet.x, pet.y); if (d < pet.def.taunt && d < bd) { bd = d; t = pet; } }
+    for (const pet of G.pets) { if (!pet.taunts) continue; const d = dist(this.x, this.y, pet.x, pet.y); if (d < pet.def.taunt && d < bd) { bd = d; t = pet; } }
     return t;
   }
   /* --- archétypes --- */

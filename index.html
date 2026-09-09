@@ -3220,14 +3220,21 @@ const FRIEND_SHEETS = {
 
 CONTENT.characters.push(
   {"id":"char_martin","name":"Martin","sprite":"player","desc":"Le premier stade, en caleçon. Les greffes lui feront de meilleurs vêtements — c'est déjà prévu.","anim":{"idle":"char_martin_idle","walk":"char_martin_walk","fire":"char_martin_fire","pick":"char_martin_pick","death":"char_martin_death"},"size":96,"stats":{"maxHp":100,"speed":260,"damage":1,"luck":2},"trait":{"id":"trait_martin","name":"Tel quel","desc":"Aucun avantage particulier pour le moment : ses caractéristiques restent à écrire.","mods":[],"hooks":{}},"startWeapon":"weapon_blade","unlocked":true,"price":0},
+  {"id":"char_gabriel","name":"Gabriel","sprite":"player2","desc":"En attente de ses sprites : il joue pour l'instant avec le corps du jeu.","placeholder":true,"size":64,"stats":{"maxHp":100,"speed":260,"damage":1,"luck":2},"trait":{"id":"trait_char_gabriel","name":"Tel quel","desc":"Caractéristiques à écrire — sprites à venir.","mods":[],"hooks":{}},"startWeapon":"weapon_blade","unlocked":true,"price":0},
+  {"id":"char_jean","name":"Jean","sprite":"player","desc":"En attente de ses sprites : il joue pour l'instant avec le corps du jeu.","placeholder":true,"size":64,"stats":{"maxHp":100,"speed":260,"damage":1,"luck":2},"trait":{"id":"trait_char_jean","name":"Tel quel","desc":"Caractéristiques à écrire — sprites à venir.","mods":[],"hooks":{}},"startWeapon":"weapon_blade","unlocked":true,"price":0},
 );
 
 CONTENT.pets.push(
   {"id":"pet_uno","name":"Uno","color":"#e08a4a","tag":"mord et attire les coups","desc":"Le chien de Martin. Il court au contact, mord sur le temps fort, et les ennemis proches s'en prennent à lui plutôt qu'à vous.","anim":{"idle":"pet_uno_idle","walk":"pet_uno_walk"},"sprite":"pet_uno_idle","behavior":"bite","damage":14,"every":4,"range":280,"speed":320,"knockback":2,"taunt":230,"hp":90,"revive":6,"size":64,"price":0,"unlocked":true},
+  {"id":"pet_choupi","name":"Choupi","duoName":"Choupi & Tanuki","color":"#f0c46a","tag":"ramasse à votre place · et Tanuki charge","desc":"Inséparables. Choupi rapporte tout ce qui traîne pendant que Tanuki traverse la salle en boule sur le temps fort.","behavior":"collect","damage":0,"every":4,"radius":260,"speed":280,"size":56,"price":0,"unlocked":true,"duo":"pet_tanuki","placeholder":true},
+  {"id":"pet_tanuki","name":"Tanuki","color":"#a8784a","tag":"charge en ligne droite","hidden":true,"desc":"Il ne vient jamais sans Choupi.","behavior":"charge","damage":18,"every":4,"range":420,"speed":240,"rollSpeed":560,"rollTime":0.8,"knockback":3,"size":56,"price":0,"unlocked":true,"placeholder":true},
+  {"id":"pet_ori","name":"ORI","color":"#c9a3ff","tag":"désigne une cible","desc":"Il ne frappe pas : il désigne. L'ennemi marqué encaisse 30 % de plus, de votre part comme de celle des autres.","behavior":"mark","fly":true,"damage":0,"every":4,"range":420,"markTime":4,"markMul":1.3,"speed":280,"size":52,"price":0,"unlocked":true,"placeholder":true},
 );
 
 CONTENT.pairs.push(
   {"char":"char_martin","pet":"pet_uno","name":"Vieille complicité","desc":"Ils se connaissent : Uno mord 30 % plus fort, et Martin va 8 % plus vite tant que son chien est de la partie.","petDamageMul":1.3,"mods":[{"stat":"speed","mul":1.08}]},
+  {"char":"char_gabriel","pet":"pet_choupi","name":"La maisonnée","desc":"Gabriel avec ses deux chats : ils frappent 30 % plus fort, et il ramasse 15 % de crédits en plus.","petDamageMul":1.3,"mods":[{"stat":"coinGain","mul":1.15}]},
+  {"char":"char_jean","pet":"pet_ori","name":"Œil pour œil","desc":"Jean suit ce qu'ORI désigne : il frappe 10 % plus fort, et ce qui est marqué tombe deux fois plus vite.","petDamageMul":1,"mods":[{"stat":"damage","mul":1.1}]},
 );
 /* AMIS_FIN */
 
@@ -4281,7 +4288,7 @@ const Pickups = {
   maybeDrop(e) {
     const r = G.room; if (!r || r.drops >= 2 || e.isBoss) return;
     const lastWave = r.waves.length && r.waves.every(w => w.done);
-    if (e.elite && RNG.chance(0.35)) { const k = RNG(); r.drops++; if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14)); else if (k < 0.75) this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else if (k < 0.9 && Content.pets().length) this.spawn(e.x, e.y, 'pet', 1, { pet: RNG.pick(Content.pets()).id }); else this.spawn(e.x, e.y, 'ally', 1); }
+    if (e.elite && RNG.chance(0.35)) { const k = RNG(); r.drops++; if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14)); else if (k < 0.75) this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); else if (k < 0.9 && Content.pets().some(x => !x.hidden)) this.spawn(e.x, e.y, 'pet', 1, { pet: RNG.pick(Content.pets().filter(x => !x.hidden)).id }); else this.spawn(e.x, e.y, 'ally', 1); }
     else if (lastWave && RNG.chance(0.06)) { r.drops++; this.spawn(e.x, e.y, 'purse', RNG.int(4, 9)); }
   },
   /* arme d'essai posée au sol, une fois par palier */
@@ -4707,7 +4714,8 @@ class Player {
       firing = t.fire || (t.autoFire && !!tgt); wantSkill = Input.wasPressed('skill'); if (t.interact) { Input.press('KeyE'); t.interact = false; }
     } else {
       const wm = Camera.toWorld(Input.mouse.x, Input.mouse.y); mv = Input.axis(); aim = angleTo(this.x, this.y, wm.x, wm.y);
-      firing = (Input.mouse.down && !Atelier.posing()) || Input.isDown('fire');   // atelier en mode pose : le clic sert à poser, pas à tirer wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
+      firing = (Input.mouse.down && !Atelier.posing()) || Input.isDown('fire');   // atelier en mode pose : le clic sert à poser, pas à tirer
+      wantSkill = Input.wasPressed('skill') || Input.wasPressed('mouse2');
     }
     this.moveDir = mv; this.aim = aim; if (Math.abs(Math.cos(aim)) > 0.2) this.facing = Math.cos(aim) > 0 ? 1 : -1;
     /* --- déplacement --- */
@@ -4830,7 +4838,9 @@ class Pet {
   }
   get airborne() { return !!this.def.fly || this.state === 'roll'; }
   get down() { return this.downT > 0; }
-  get taunts() { return !!this.def.taunt && !this.down; }
+  get taunts() { return !!this.def.taunt && !this.down && !this.hidden(); }
+  /* absent : appelé mais pas encore venu, ou reparti se reposer */
+  hidden() { return this.mode === 'call' && this.away; }
   dmg() { return Math.round(this.def.damage * (G.player ? G.player.stats.damage : 1) * this.boost * (this.pairMul || 1)); }
   /* cadence : le mode « à l'appel » joue deux fois plus souvent, puisqu'il ne dure pas */
   every() { const e = this.def.every || 4; return this.boost > 1 ? Math.max(1, Math.round(e / 2)) : e; }
@@ -5053,36 +5063,43 @@ class Pet {
 
 const Pets = {
   /* donne un compagnon (remplace celui en cours) */
+  /* Un choix de compagnon peut en amener deux : `def.duo` nomme l'inséparable, qui arrive avec le premier et
+     s'en va avec lui. Ils comptent pour une seule place — c'est un attelage, pas deux compagnons. */
   give(id, silent, mode) {
     const def = Content.pet(id); if (!def) return null;
-    G.pet = new Pet(def);
+    G.pets = [new Pet(def)];
+    if (def.duo) { const d2 = Content.pet(def.duo); if (d2) G.pets.push(new Pet(d2)); }
     Pets.setMode(mode || (Meta.profile.petMode === 'call' ? 'call' : 'always'));
     Pets.applyPair();
-    if (!silent) { UI.banner(def.name, def.color || '#9fd8ff', def.desc); AudioEngine.levelUp({ intensity: 0.5 }); }
-    return G.pet;
+    if (!silent) { UI.banner(Pets.title(def), def.color || '#9fd8ff', def.desc); AudioEngine.levelUp({ intensity: 0.5 }); }
+    return G.pets[0];
   },
+  /* nom affiché : celui de l'attelage quand il y en a un */
+  title(def) { return (def && (def.duoName || def.name)) || 'Compagnon'; },
   setMode(m) {
-    const p = G.pet; if (!p) return;
-    p.mode = PET_MODES[m] ? m : 'always';
-    if (p.mode === 'call') { p.away = true; p.cdT = 0; p.callT = 0; p.boost = 1; } else { p.away = false; p.boost = 1; }
+    for (const p of G.pets) {
+      p.mode = PET_MODES[m] ? m : 'always';
+      if (p.mode === 'call') { p.away = true; p.cdT = 0; p.callT = 0; p.boost = 1; } else { p.away = false; p.boost = 1; }
+    }
   },
   /* bonus d'équipe : appliqué à l'animal, et posé sur le joueur comme un buff de run */
   applyPair() {
-    const p = G.pet, pl = G.player; if (!p || !pl || !G.run) return;
-    const pr = Content.pairOf(G.run.char && G.run.char.id, p.id); p.pairMul = 1; p.pair = null;
+    const pl = G.player; if (!G.pets.length || !pl || !G.run) return;
+    const pr = Content.pairOf(G.run.char && G.run.char.id, G.pets[0].id);
+    for (const p of G.pets) { p.pairMul = 1; p.pair = null; }
     pl.buffs = pl.buffs.filter(b => b.id !== 'pair');
     if (!pr) return;
-    p.pair = pr; p.pairMul = pr.petDamageMul || 1;
+    for (const p of G.pets) { p.pair = pr; p.pairMul = pr.petDamageMul || 1; }   // le bonus vaut pour tout l'attelage
     if (pr.mods && pr.mods.length) pl.addBuff('pair', 1e6, pr.mods, false);   // toute la run : `true` le ferait sauter au changement de salle
     UI.toast('Équipe : ' + pr.name);
   },
-  clear() { G.pet = null; },
+  clear() { G.pets = []; },
   update(dt) {
-    const p = G.pet; if (!p || !G.player || !G.room) return;
-    if (p.mode === 'call' && p.away && p.cdT <= 0 && Input.wasPressed('pet')) p.call();
-    p.update(dt);
+    if (!G.pets.length || !G.player || !G.room) return;
+    const appel = Input.wasPressed('pet');
+    for (const p of G.pets) { if (appel && p.mode === 'call' && p.away && p.cdT <= 0) p.call(); p.update(dt); }
   },
-  render(ctx) { if (G.pet && !(G.pet.mode === 'call' && G.pet.away)) G.pet.render(ctx); },
+  render(ctx) { for (const p of G.pets) if (!p.hidden()) p.render(ctx); },
   /* Vignette d'un compagnon : la première image de sa planche de repos s'il en a une, sinon son accessoire.
      Un animal animé n'a pas d'accessoire à son nom — sans ce détour, son badge n'affichait qu'une pastille. */
   icon(ctx, p, x, y, size, alpha) {
@@ -5091,7 +5108,7 @@ const Pets = {
     return Sprites.drawProp(ctx, Sprites.pickDir(p.def.sprite, 's'), x, y, size, size, { alpha });
   },
   /* dégâts pris par un compagnon qui attire les coups */
-  hurt(d) { if (G.pet && !(G.pet.mode === 'call' && G.pet.away)) G.pet.hurt(d); },
+  hurt(d) { for (const p of G.pets) if (!p.hidden()) { p.hurt(d); return; } },
   /* mode « à l'appel » : jauge de présence ou de repos, avec la touche à presser */
   renderCall(ctx, p) {
     const x = 16, y = H - 108; const m = PET_MODES.call;
@@ -5100,7 +5117,7 @@ const Pets = {
     ctx.fillStyle = 'rgba(8,10,18,.72)'; UI.roundRect(ctx, x, y, 168, 30, 8); ctx.fill();
     if (!Pets.icon(ctx, p, x + 18, y + 15, 24, p.away ? 0.35 : 1)) { ctx.globalAlpha = p.away ? 0.35 : 1; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(x + 18, y + 15, 7, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
     ctx.fillStyle = pret ? '#7fff9a' : '#e8ecf7'; ctx.font = '12px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(p.name, x + 36, y + 14);
+    ctx.fillText(Pets.title(p.def), x + 36, y + 14);
     ctx.fillStyle = '#8a93ad'; ctx.font = '10px "Segoe UI", system-ui, sans-serif';
     ctx.fillText(pret ? 'C : appeler' : p.away ? 'repos ' + Math.ceil(p.cdT) + ' s' : 'présent ' + Math.ceil(p.callT) + ' s', x + 36, y + 25);
     const k = p.away ? (p.cdT > 0 ? 1 - p.cdT / m.cd : 1) : p.callT / m.dur;
@@ -5111,12 +5128,13 @@ const Pets = {
   renderHud(ctx) {
     const p = G.pet; if (!p) return;
     if (p.mode === 'call') return Pets.renderCall(ctx, p);
+    const nom = Pets.title(p.def);
     const x = 16, y = H - 108;
     ctx.save();
     ctx.fillStyle = 'rgba(8,10,18,.72)'; UI.roundRect(ctx, x, y, 168, 30, 8); ctx.fill();
     if (!Pets.icon(ctx, p, x + 18, y + 15, 24, p.down ? 0.4 : 1)) { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(x + 18, y + 15, 7, 0, TAU); ctx.fill(); }
     ctx.fillStyle = p.down ? '#8a93ad' : '#e8ecf7'; ctx.font = '12px "Segoe UI", system-ui, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(p.name, x + 36, y + 14);
+    ctx.fillText(nom, x + 36, y + 14);
     ctx.fillStyle = '#8a93ad'; ctx.font = '10px "Segoe UI", system-ui, sans-serif';
     ctx.fillText(p.down ? 'sonné — ' + Math.ceil(p.downT) + ' s' : (p.def.tag || ''), x + 36, y + 25);
     ctx.restore();
@@ -5200,7 +5218,7 @@ class Enemy {
       if (Combat.hitPlayer(this.contactDamage(), { type: 'contact', source: this, x: this.x, y: this.y })) { this.contactCd = 0.6; const a = angleTo(pl.x, pl.y, this.x, this.y); this.kvx += Math.cos(a) * 120; this.kvy += Math.sin(a) * 120; }
     }
     for (const dc of G.room.decoys) if (dist(this.x, this.y, dc.x, dc.y) < this.r + dc.r && this.contactCd <= 0) { dc.hp -= this.damage; this.contactCd = 0.6; }
-    if (G.pet && G.pet.taunts && dist(this.x, this.y, G.pet.x, G.pet.y) < this.r + G.pet.r && this.contactCd <= 0) { Pets.hurt(this.damage); this.contactCd = 0.6; }
+    for (const pe of G.pets) if (pe.taunts && dist(this.x, this.y, pe.x, pe.y) < this.r + pe.r && this.contactCd <= 0) { pe.hurt(this.damage); this.contactCd = 0.6; }
   }
   relocate() {
     this.stuckT = 0; const pl = G.player;
@@ -5211,8 +5229,7 @@ class Enemy {
   pickTarget() {
     const pl = G.player; let t = pl; let bd = Infinity;
     for (const dc of G.room.decoys) { const d = dist(this.x, this.y, dc.x, dc.y); if (d < bd) { bd = d; t = dc; } }
-    const pet = G.pet;
-    if (pet && pet.taunts) { const d = dist(this.x, this.y, pet.x, pet.y); if (d < pet.def.taunt && d < bd) { bd = d; t = pet; } }
+    for (const pet of G.pets) { if (!pet.taunts) continue; const d = dist(this.x, this.y, pet.x, pet.y); if (d < pet.def.taunt && d < bd) { bd = d; t = pet; } }
     return t;
   }
   /* --- archétypes --- */
@@ -7155,7 +7172,9 @@ const Tempo = {
 const G = {
   state: 'boot',           // boot | menu | hub | run
   mode: 'normal',          // normal | test
-  player: null, enemies: [], room: null, run: null, pet: null,
+  player: null, enemies: [], room: null, run: null,
+  pets: [],                      // compagnons présents : un seul d'ordinaire, deux pour un duo inséparable
+  get pet() { return this.pets[0] || null; },   // le meneur, celui que le HUD montre et que les paires visent
   paused: false, overlay: null, shake: 0,
   difficulty: { hpMul: 1, damageMul: 1, speedMul: 1, fireRateMul: 1 },
   debug: { difficulty: 1, xpMul: 1, coinMul: 1, forceRarity: null, invuln: false, hitboxes: false, showScores: false, open: false },
@@ -7199,7 +7218,7 @@ const Room = {
     const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
     if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.pulse = 0; Camera.snap(pl.x, pl.y);
-    if (G.pet) G.pet.snap();   // le compagnon franchit la porte avec le joueur — après que celui-ci a pris sa place
+    for (const pe of G.pets) pe.snap();   // les compagnons franchissent la porte avec le joueur — après qu'il a pris sa place
     /* fin des effets « cette salle seulement » : arme d'essai rendue, reliques retirées */
     if (pl.trialWeapon) { pl.weapon = pl.trialWeapon.prev; pl.trialWeapon = null; }
     if (pl.buffs.some(b => b.roomOnly)) pl.buffs = pl.buffs.filter(b => !b.roomOnly);
@@ -7404,7 +7423,7 @@ const Run = {
       stats: { kills: 0, damageDealt: 0, damageTaken: 0, hitsTaken: 0, shots: 0, skillUses: 0, coins: 0, roomsEntered: 0, roomTimes: [], bossKilled: false, deathCause: null, deathRoom: null, levelReached: 1 },
       skillChoices: null, weaponDropRoom: RNG.pick([1, 3, 6, 7]),
     };
-    G.pet = null;
+    G.pets = [];
     G.player = new Player(charDef);
     G.player.hp = 0; G.player.recompute(); G.player.hp = G.player.stats.maxHp;
     G.state = 'run'; G.paused = false;
@@ -7721,7 +7740,7 @@ const UI = (() => {
           <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
           <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
           <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
-          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) && (p.petMode || 'always') !== 'none' ? esc(Content.pet(p.pet).name) + ' · ' + esc(PET_MODES[p.petMode || 'always'].name.toLowerCase()) : 'aucun'}${(() => { const pr = p.pet ? Content.pairOf(p.character, p.pet) : null; return pr && (p.petMode || 'always') !== 'none' ? ' · <span class="good">' + esc(pr.name) + '</span>' : ''; })()}</div>
+          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) && (p.petMode || 'always') !== 'none' ? esc(Content.pet(p.pet).duoName || Content.pet(p.pet).name) + ' · ' + esc(PET_MODES[p.petMode || 'always'].name.toLowerCase()) : 'aucun'}${(() => { const pr = p.pet ? Content.pairOf(p.character, p.pet) : null; return pr && (p.petMode || 'always') !== 'none' ? ' · <span class="good">' + esc(pr.name) + '</span>' : ''; })()}</div>
           <div class="muted tiny">Tenue : aucune. « Vous êtes venu comme ça ? » Elle viendra avec les greffes : 3 pour des vêtements, 6 pour l'armure, 9 pour le casque.</div>
           <h3>Changer de personnage</h3>
           <div class="cards vertical" id="hub-chars"></div>
@@ -7788,15 +7807,16 @@ const UI = (() => {
       const paires = Content.pairs();
       if (paires.length) box.appendChild(el('div', 'card', '<div class="cardtitle"><span>Équipes</span></div>' + paires.map(pr => {
         const ch = Content.character(pr.char), pe = Content.pet(pr.pet); const actif = p.character === pr.char && p.pet === pr.pet && mode !== 'none';
-        return `<div class="muted small${actif ? ' good' : ''}">${actif ? '✓ ' : ''}${esc((ch && ch.name) || pr.char)} + ${esc((pe && pe.name) || pr.pet)} — <b>${esc(pr.name)}</b> : ${esc(pr.desc)}</div>`;
+        return `<div class="muted small${actif ? ' good' : ''}">${actif ? '✓ ' : ''}${esc((ch && ch.name) || pr.char)} + ${esc((pe && (pe.duoName || pe.name)) || pr.pet)} — <b>${esc(pr.name)}</b> : ${esc(pr.desc)}</div>`;
       }).join('')));
       const none = el('div', 'card' + (p.pet ? '' : ' selected'), `<div class="cardtitle"><span>Aucun animal</span><span class="lvlstate">${p.pet ? 'Cliquer pour choisir' : '✓ Actif'}</span></div><div class="muted small">La case reste vide.</div>`);
       none.onclick = () => { p.pet = null; Meta.save(); AudioEngine.uiClick({}); showHub(); };
       box.appendChild(none);
       for (const a of Content.pets()) {
+        if (a.hidden) continue;   // moitié d'un attelage : elle vient avec l'autre, on ne la propose pas seule
         const owned = Meta.petUnlocked(a.id); const sel = p.pet === a.id;
         const card = el('div', 'card pet' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
-          `<div class="cardtitle"><span>${esc(a.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div>
+          `<div class="cardtitle"><span>${esc(a.duoName || a.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div>
            <div class="muted small">${esc(a.desc)}</div><div class="muted tiny">${esc(a.tag || '')}${a.damage ? ' · ' + a.damage + ' dégâts' : ''}${a.hp ? ' · ' + a.hp + ' PV' : ''}</div>
            ${owned ? '' : `<button class="btn small buy" ${p.coins < a.price ? 'disabled' : ''}>Débloquer — ◈ ${a.price}</button>`}`);
         const img = a.anim && a.anim.idle ? Sprites.sheetCanvas(a.anim.idle, 34) : Sprites.propCanvas(a.sprite, 34);
@@ -9328,7 +9348,7 @@ function render(ctx) {
     ctx.fillStyle = '#07080d'; ctx.fillRect(-W, -H, 3 * W, 3 * H);
     Room.render(ctx);
     Pickups.render(ctx);
-    const ents = G.enemies.slice(); if (G.pet) ents.push(G.pet); ents.sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
+    const ents = G.enemies.slice(); for (const pe of G.pets) if (!pe.hidden()) ents.push(pe); ents.sort((a, b) => a.y - b.y); for (const e of ents) e.render(ctx);
     G.player.render(ctx);
     Projectiles.render(ctx); Room.renderFx(ctx); Particles.render(ctx);
     if (G.room.challenge) Challenge.renderOverlay(ctx, G.room);

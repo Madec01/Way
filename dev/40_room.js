@@ -6,7 +6,9 @@
 const G = {
   state: 'boot',           // boot | menu | hub | run
   mode: 'normal',          // normal | test
-  player: null, enemies: [], room: null, run: null, pet: null,
+  player: null, enemies: [], room: null, run: null,
+  pets: [],                      // compagnons présents : un seul d'ordinaire, deux pour un duo inséparable
+  get pet() { return this.pets[0] || null; },   // le meneur, celui que le HUD montre et que les paires visent
   paused: false, overlay: null, shake: 0,
   difficulty: { hpMul: 1, damageMul: 1, speedMul: 1, fireRateMul: 1 },
   debug: { difficulty: 1, xpMul: 1, coinMul: 1, forceRarity: null, invuln: false, hitboxes: false, showScores: false, open: false },
@@ -50,7 +52,7 @@ const Room = {
     const chId = Challenge.pick(def, RNG, G.run.usedChallenges || (G.run.usedChallenges = []));
     if (chId) { if (Challenge.DEFS[chId].replacesTraps) { G.room.traps = []; G.room.modular = []; } G.room.challenge = Challenge.create(chId, G.room); G.run.usedChallenges.push(chId); }
     const pl = G.player; pl.x = ROOM_X + TILE * 1.5; pl.y = ROOM_Y + ROOM_H / 2; pl.dashing = false; pl.orbs = null; pl.charge = 0; Camera.pulse = 0; Camera.snap(pl.x, pl.y);
-    if (G.pet) G.pet.snap();   // le compagnon franchit la porte avec le joueur — après que celui-ci a pris sa place
+    for (const pe of G.pets) pe.snap();   // les compagnons franchissent la porte avec le joueur — après qu'il a pris sa place
     /* fin des effets « cette salle seulement » : arme d'essai rendue, reliques retirées */
     if (pl.trialWeapon) { pl.weapon = pl.trialWeapon.prev; pl.trialWeapon = null; }
     if (pl.buffs.some(b => b.roomOnly)) pl.buffs = pl.buffs.filter(b => !b.roomOnly);
@@ -255,7 +257,7 @@ const Run = {
       stats: { kills: 0, damageDealt: 0, damageTaken: 0, hitsTaken: 0, shots: 0, skillUses: 0, coins: 0, roomsEntered: 0, roomTimes: [], bossKilled: false, deathCause: null, deathRoom: null, levelReached: 1 },
       skillChoices: null, weaponDropRoom: RNG.pick([1, 3, 6, 7]),
     };
-    G.pet = null;
+    G.pets = [];
     G.player = new Player(charDef);
     G.player.hp = 0; G.player.recompute(); G.player.hp = G.player.stats.maxHp;
     G.state = 'run'; G.paused = false;
