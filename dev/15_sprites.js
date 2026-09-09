@@ -369,8 +369,9 @@ const Sprites = (() => {
     if (near) { ctx.fillStyle = '#fff'; ctx.font = 'bold 14px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(STR.interact, ch.x, ch.y - 36); }
     ctx.restore();
   }
-  /* ---------- Corps du Passeur : nu au départ (mosaïque sur les parties intimes), puis tenue de route, armure sans casque, chevalier complet ----------
-     tier 0 : nu · 1 : vêtements · 2 : armure du sprite sans le casque (tête dessinée) · 3 : sprite complet.
+  /* ---------- Corps dessiné : le personnage est habillé dès la première salle ----------
+     Il n'y a plus de paliers de tenue. Un personnage sans image de l'auteur prend directement sa planche de
+     sprites ; celui qui porte un visage garde le corps dessiné, habillé, pour que le visage reste visible.
      Dessin en « pixels » de 3 px sur une grille 16×28, même ancrage que les sprites (pieds). */
   const BODY_PALETTES = { player: { skin: '#e8b58f', skin2: '#c98d6b', hair: '#5a3a22', eye: '#1a1a2a', cloth: '#7a5a3a', pants: '#3a5a8a', boot: '#3a2a1a' }, player2: { skin: '#f0c4a0', skin2: '#d09a78', hair: '#e2c15a', eye: '#1a1a2a', cloth: '#3a6a4a', pants: '#5a3a5a', boot: '#3a2a1a' } };
   /* ---- planches d'animation de l'auteur ----
@@ -386,7 +387,7 @@ const Sprites = (() => {
         const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0);
         const size = fw || guessFrame(g, img.width, img.height);
         sheets[name] = { c, fw: size, fh: size, cols: Math.max(1, Math.round(img.width / size)), rows: Math.max(1, Math.round(img.height / size)) };
-        sheets[name].n = sheets[name].cols * sheets[name].rows;
+        sheets[name].n = framesOf(g, img.width, img.height, size, sheets[name].cols, sheets[name].rows);
         sheets[name].foot = footOf(g, img.width, img.height, size);   // où sont les pieds dans la case, pour les poser au sol
         res(sheets[name]);
       };
@@ -401,6 +402,20 @@ const Sprites = (() => {
       if (cols > 0 && rows > 0 && w % cols === 0 && h % rows === 0 && w / cols === h / rows) return w / cols;
     } catch (e) { /* image d'une autre origine : on retombe sur la valeur par défaut */ }
     return Math.min(w, h) >= 48 && w % 48 === 0 ? 48 : Math.min(w, h);
+  }
+  /* Nombre d'images réellement dessinées. Une planche de 7 images livrée en grille 3×3 traîne deux cases vides
+     à la fin : comptées comme des images, le personnage disparaîtrait deux temps sur neuf à chaque boucle. Seules
+     les cases vides de FIN sont retirées — une case vide au milieu est une image voulue (un clignotement). */
+  function framesOf(g, w, h, size, cols, rows) {
+    const total = cols * rows;
+    try {
+      const d = g.getImageData(0, 0, w, h).data;
+      for (let i = total - 1; i > 0; i--) {
+        const cx = (i % cols) * size, cy = Math.floor(i / cols) * size;
+        for (let y = cy; y < cy + size && y < h; y++) for (let x = cx; x < cx + size && x < w; x++) if (d[(y * w + x) * 4 + 3] > 10) return i + 1;
+      }
+    } catch (e) { /* image d'une autre origine : on garde la grille entière */ }
+    return total;
   }
   /* Fraction de la case occupée jusqu'au bas du dessin. Une planche a presque toujours du vide sous les pieds :
      sans ce repère, le personnage flotte au-dessus du sol d'autant de pixels que la marge. */
@@ -491,8 +506,7 @@ const Sprites = (() => {
     /* `face` : image de l'auteur collée à la place de la tête. Un personnage qui en porte une garde toujours le corps
        dessiné en pixels (jamais la planche de sprites), sinon le visage disparaîtrait dès la tenue complète. */
     const face = pickDir(opts.face, opts.dir || 's') ? props[pickDir(opts.face, opts.dir || 's')] : null;
-    const tier = opts.tier == null ? 3 : (face ? Math.min(2, opts.tier) : opts.tier);
-    if (tier >= 3) return draw(ctx, key, x, y, opts);
+    if (!face) return draw(ctx, key, x, y, opts);
     const d = SPRITE_DEFS[key] || SPRITE_DEFS.player; const pal = BODY_PALETTES[key] || BODY_PALETTES.player;
     const u = SCALE * (opts.scale || 1); const left = -8 * u, top = -14 * u - 8;   // même ancrage que draw() pour les sprites 16×28 à pied
     const moving = opts.walk != null && opts.walk > 0; const step = moving ? (Math.floor(opts.walk * 10) % 2 ? 1 : -1) : 0; const bob = moving && step > 0 ? 1 : 0;
@@ -502,31 +516,23 @@ const Sprites = (() => {
     if (face) { ctx.save(); ctx.imageSmoothingEnabled = true; if (opts.flip) ctx.scale(-1, 1); ctx.drawImage(face, left + (opts.flip ? -12 : 4) * u, top + (0 + bob) * u, 8 * u, 8 * u); ctx.restore(); if (opts.flash) { ctx.globalAlpha = 0.6; px(4, 0, 8, 8, '#fff'); ctx.globalAlpha = 1; } }
     else { px(5, 2, 6, 6, pal.skin); px(4, 1, 8, 2, pal.hair); px(4, 3, 1, 2, pal.hair); px(11, 3, 1, 2, pal.hair); px(9, 4, 1, 1, pal.eye); px(7, 5, 3, 1, pal.skin2); }
     px(7, 8, 2, 1, pal.skin);  // cou
-    if (tier === 2 && ready) {
-      /* armure du sprite (sans la tête) : on découpe la partie basse du sprite */
+    if (ready) {
+      /* le corps de la planche, sans la tête : c'est la tenue la plus soignée, et le visage reste celui de l'auteur */
       const [sx, sy, sw, sh] = moving ? d.run : d.idle; const frame = Math.floor((opts.walk || Time.now) * (moving ? 10 : 6)) % d.n; const cut = 10;
       ctx.drawImage(sheet, sx + frame * sw, sy + cut, sw, sh - cut, left, top + cut * u, sw * u, (sh - cut) * u);
       if (opts.flash) { ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillRect(left, top + cut * u, sw * u, (sh - cut) * u); }
     } else {
-      /* torse, bras, jambes */
-      px(5, 9, 6, 8, tier >= 1 ? pal.cloth : pal.skin); px(3, 10, 2, 7, pal.skin); px(11, 10, 2, 7, pal.skin);
-      if (tier === 0) { px(6, 11, 1, 1, pal.skin2); px(9, 11, 1, 1, pal.skin2); px(7, 13, 2, 3, pal.skin2); }
-      px(5, 17, 2, 6, tier >= 1 ? pal.pants : pal.skin); px(9, 17 + (moving ? step : 0), 2, 6 - (moving ? step : 0), tier >= 1 ? pal.pants : pal.skin);
-      px(5, 23, 3, 2, tier >= 1 ? pal.boot : pal.skin2); px(9, 23, 3, 2, tier >= 1 ? pal.boot : pal.skin2);
-      if (tier === 0) {
-        /* mosaïque de floutage sur les parties intimes */
-        const cols = ['#d9a27e', '#c48b68', '#b57457', '#e0b090']; let k = 0;
-        for (let gy = 16; gy < 20; gy += 2) for (let gx = 5; gx < 11; gx += 2) { px(gx, gy, 2, 2, cols[(k++ + Math.floor(Time.now * 2)) % cols.length]); }
-        ctx.filter = 'blur(1px)'; ctx.fillStyle = 'rgba(230,180,150,.35)'; ctx.fillRect(left + 5 * u, top + (16 + bob) * u, 6 * u, 4 * u); ctx.filter = 'none';
-      } else { px(5, 16, 6, 4, pal.pants); px(5, 9, 6, 1, pal.cloth); }
+      /* la planche n'est pas encore chargée : torse, bras, jambes dessinés, habillés */
+      px(5, 9, 6, 8, pal.cloth); px(3, 10, 2, 7, pal.skin); px(11, 10, 2, 7, pal.skin);
+      px(5, 17, 2, 6, pal.pants); px(9, 17 + (moving ? step : 0), 2, 6 - (moving ? step : 0), pal.pants);
+      px(5, 23, 3, 2, pal.boot); px(9, 23, 3, 2, pal.boot);
+      px(5, 16, 6, 4, pal.pants); px(5, 9, 6, 1, pal.cloth);
     }
     ctx.restore(); return true;
   }
-  /* palier de tenue selon le nombre de greffes possédées */
-  function bodyTier(upgrades) { const n = (upgrades || []).reduce((s, u) => s + (u.stacks || 1), 0); return n >= 9 ? 3 : n >= 6 ? 2 : n >= 3 ? 1 : 0; }
-  function portraitBody(key, tier, scale = 5, face, body, size) {
+  function portraitBody(key, scale = 5, face, body, size) {
     const c = document.createElement('canvas'); c.width = 16 * scale; c.height = 30 * scale; c.className = 'portrait-canvas'; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
-    const drawIt = () => { g.clearRect(0, 0, c.width, c.height); drawBody(g, key, c.width / 2, c.height - 8, { tier, scale: scale / SCALE, walk: 0, face, body, size }); if (c.isConnected) setTimeout(drawIt, 250); else setTimeout(() => { if (c.isConnected) drawIt(); }, 500); };
+    const drawIt = () => { g.clearRect(0, 0, c.width, c.height); drawBody(g, key, c.width / 2, c.height - 8, { scale: scale / SCALE, walk: 0, face, body, size }); if (c.isConnected) setTimeout(drawIt, 250); else setTimeout(() => { if (c.isConnected) drawIt(); }, 500); };
     drawIt(); return c;
   }
   /* portrait DOM (canvas) d'un sprite, pour le hub */
@@ -537,7 +543,7 @@ const Sprites = (() => {
     const draw = () => { g.clearRect(0, 0, c.width, c.height); g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height); f = (f + 1) % d.n; if (c.isConnected) setTimeout(draw, 180); else setTimeout(() => { if (c.isConnected) draw(); }, 500); };
     draw(); return c;
   }
-  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, pickDir, dirFrom, gait, addSheet, drawSheet, sheetInfo, sheetCanvas, CLIPS, draw, drawBody, bodyTier, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
+  return { load, loadProps, drawProp, drawDeco, clearFloor, addCustom, loadCustoms, loadFriends, propNames, propCanvas, pickDir, dirFrom, gait, addSheet, drawSheet, sheetInfo, sheetCanvas, CLIPS, draw, drawBody, portraitBody, tile, drawFloor, drawBlock, drawChest, portrait, setVariant, clearVariants, variantOf, get variants() { return propVars; }, get picks() { return propForced(); }, get ready() { return ready; }, get failed() { return failed; } };
 })();
 
 /* ---------- Musique : pistes CC-BY (voir CREDITS.md), fallback génératif ---------- */

@@ -493,7 +493,7 @@ La salle 2 est une « salle aléatoire » : combat à 3 vagues avec un défi gar
 | Allié | 20 % des drops d'élite, ou relique Sifflet | Un Passeur détraqué qui suit le joueur 25 s et tire 2,2 fois/s à 40 % des dégâts de l'arme |
 | Relique | 30 % des drops d'élite, ou récompense de la Séquence | Effet pour la salle seulement : Jambon fumé (+40 PV, régén +3), Parapluie renforcé (bouclier 60, armure +3), Lunettes de visée (crit +30 %), Bottes de facteur (vitesse +30 %, cadence +15 %), Sifflet de chef de gare (allié) |
 
-**Apparence** (`Sprites.drawBody`) : la tenue suit le nombre de greffes possédées. 0 à 2 : nu, mosaïque de floutage sur les parties intimes ; 3 à 5 : vêtements de route ; 6 à 8 : l'armure du sprite sans le casque ; 9 et plus : le chevalier complet. L'arme est dessinée en main, orientée vers la visée. Les greffes de brûlure, foudre, gel et poison ajoutent une aura (flammes aux pieds, arcs électriques, givre, bulles). Dans le hub, le portrait est nu. Le panneau debug force une tenue.
+**Apparence** (`Sprites.drawBody`) : le personnage est **habillé dès la première salle**, et son apparence ne change plus en cours de run (voir §35). L'arme est dessinée en main, orientée vers la visée. Les greffes de brûlure, foudre, gel et poison ajoutent une aura (flammes aux pieds, arcs électriques, givre, bulles).
 
 ---
 
@@ -896,7 +896,7 @@ Le jeu ne livre **aucun** compagnon ni personnage d'ami : ce sont ceux avec qui 
 
 Réglables : dégâts, cadence (du temps à la mesure), taille, teinte, prix au hub, et la phrase qui le décrit.
 
-**Un copain** : son visage devient un **personnage jouable**. La photo est collée à la place de la tête sur le corps dessiné en pixels — un personnage qui porte un visage garde toujours ce corps-là, jamais la planche de sprites, sinon le visage disparaîtrait dès la tenue complète. Réglables : PV, vitesse, chance, arme de départ, et un caractère choisi parmi sept (apprend vite, cogne fort, va vite, encaisse, vise juste, a de la chance, aucun).
+**Un copain** : son visage devient un **personnage jouable**. La photo est collée à la place de la tête sur le corps dessiné en pixels — un personnage qui porte un visage garde toujours ce corps-là, jamais la planche de sprites, sinon la planche de sprites recouvrirait le visage. Réglables : PV, vitesse, chance, arme de départ, et un caractère choisi parmi sept (apprend vite, cogne fort, va vite, encaisse, vise juste, a de la chance, aucun).
 
 ### Quelle taille pour une image
 
@@ -933,13 +933,13 @@ Deux repères sont calculés au chargement de la planche :
 
 Une planche prime sur le sprite fixe, qui prime sur le visage collé : c'est toujours le dessin le plus fini qui gagne. La démarche procédurale (`gait`) s'efface pendant la marche animée — la planche fait déjà le travail.
 
-**Martin** (`char_martin`, dans `content5.js`) est le premier personnage dessiné à la main : cinq planches de 3 × 3 cases de 48 px, vue de profil, premier stade en caleçon. Ses caractéristiques sont volontairement neutres pour l'instant.
+**Martin** (`char_martin`, dans `content5.js`) est le premier personnage dessiné à la main : cinq planches de 3 × 3 cases de 48 px, vue de profil — chemise rose, cravate verte, lunettes et barbe. Ses caractéristiques sont volontairement neutres pour l'instant.
 
 ### Visage collé ou sprite entier
 
 Un copain accepte les deux :
 
-- **Visage** : la photo est collée à la place de la tête sur le corps dessiné en pixels du jeu. Le personnage garde ce corps-là quoi qu'il arrive (jamais la planche de sprites), sinon le visage disparaîtrait dès la tenue complète.
+- **Visage** : la photo est collée à la place de la tête sur le corps dessiné en pixels du jeu. Le personnage garde ce corps-là quoi qu'il arrive (jamais la planche de sprites), sinon la planche de sprites recouvrirait le visage.
 - **Sprite entier** : l'image remplace le corps, posée sur la ligne de sol du corps standard, à la taille demandée. C'est la voie pour un personnage entièrement dessiné à la main. Un bouton retire le sprite entier pour revenir au visage collé.
 
 Tout est versé dans le contenu **tout de suite** — l'animal est adoptable par « Essayer », le copain prend les commandes — et gardé dans le navigateur pendant qu'on travaille. `Content.invalidate()` est appelé à chaque changement : l'index par id est mis en cache, et sans ça un personnage créé en cours de partie reste introuvable et l'appel retombe silencieusement sur le premier de la liste.
@@ -970,7 +970,7 @@ Mêmes règles que pour un personnage, avec quatre clips : **repos**, **marche**
 
 Un compagnon animé n'a **pas d'accessoire à son nom** : son badge de jeu et sa carte de boutique passent par la première image de sa planche de repos (`Pets.icon`, `Sprites.sheetCanvas`), sinon il n'apparaît qu'en pastille de couleur.
 
-**Uno** (`pet_uno`) est le premier : le chien de Martin, deux planches de 3 × 3 cases de 32 px, rôle « mord et attire les coups ». Choupi, Tanuki et ORI attendent encore leurs dessins (voir §34).
+**Uno** (`pet_uno`) est le premier : le chien de Martin, quatre planches de 3 × 3 cases de 32 px — repos, marche, attaque, blessé — rôle « mord et attire les coups ». Choupi, Tanuki et ORI attendent encore leurs dessins (voir §34).
 
 ### Le partager
 
@@ -1073,10 +1073,37 @@ Le bonus d'une équipe vaut pour **tout** l'attelage : Choupi et Tanuki reçoive
 
 ### Les personnages en attente de dessins
 
-Gabriel et Jean existent, sont jouables et débloqués, mais n'ont pas encore leurs planches : ils empruntent un `sprite` déjà présent en attendant. C'est volontaire — leurs équipes n'auraient aucun sens sans eux, et un personnage sans visage se teste pendant qu'on dessine. Il ne faut donc pas les retirer du contenu au motif qu'ils n'ont pas d'images.
+**Gabriel** a maintenant ses cinq planches (capuche noire, chignon, lunettes) : mêmes cases de 48 px que Martin, même taille d'affichage de 96, mêmes pieds sur la ligne de sol. Il ne reste que **Jean**, qui emprunte un `sprite` déjà présent en attendant. C'est volontaire — son équipe n'aurait aucun sens sans lui, et un personnage sans visage se teste pendant qu'on dessine ; il ne faut donc pas le retirer du contenu au motif qu'il n'a pas d'images.
 
 Les prompts pour fabriquer ces planches sont dans **`PROMPTS-SPRITES.md`** : un prompt global de style, puis un prompt court par clip, pour les humains (case de 48) comme pour les animaux (case de 32).
 
 ### La compétence ne partait plus
 
 Dans la branche clavier/souris de `Player.update`, l'affectation de `wantSkill` avait glissé **à l'intérieur du commentaire** de la ligne au-dessus. Résultat : la compétence ne se déclenchait plus ni à Espace ni au clic droit, sur toute la version bureau — le tactile, qui a sa propre branche, marchait toujours. Rien ne le signalait : pas d'erreur, pas de son, juste une touche morte. Les deux affectations sont maintenant sur deux lignes distinctes.
+
+---
+
+## 35. Les habits évolutifs, abandonnés
+
+Le personnage se rhabillait au fil de la run : nu jusqu'à deux greffes (avec une mosaïque de floutage), vêtements de route à trois, l'armure du sprite sans le casque à six, le chevalier complet à neuf. C'était joli sur le papier et coûteux à dessiner — quatre tenues par personnage, à multiplier par chaque copain à venir. **Abandonné : les personnages sont habillés dès la première salle.**
+
+Ce qui disparaît : `Sprites.bodyTier`, l'option `tier` de `drawBody`, le palier `nu` et sa mosaïque, le sélecteur *Tenue* du panneau de débogage et `G.debug.forceTier`.
+
+Ce qui reste, et qui suffit — `drawBody` choisit désormais entre trois choses, sans palier :
+
+| Ce que porte le personnage | Ce qui est dessiné |
+|---|---|
+| une planche d'animation (`anim`) | la planche, c'est le cas de Martin |
+| un sprite entier (`body`) | l'image de l'auteur, posée sur la ligne de sol |
+| un visage (`face`) | le corps de la planche à partir du cou, surmonté du visage |
+| rien de tout ça | la planche de sprites du jeu, entière |
+
+Le cas du **visage** est le seul qui garde le corps dessiné : la planche complète recouvrirait la tête, et le copain perdrait ce qui le rend reconnaissable. Il reçoit donc le corps de la planche coupé sous le cou — la même tenue que les autres, simplement décapitée pour laisser la place. Le corps dessiné en pixels ne sert plus que de secours, tant que la planche n'est pas chargée, et il est habillé lui aussi.
+
+Le portrait du hub suit la même règle : il montre le personnage tel qu'il entrera en salle 1, plus un corps nu.
+
+### Les deux cases vides du bout de planche
+
+PixelLab rend une planche de 7 images dans une grille 3 × 3 : les deux dernières cases sont vides. Comptées comme des images — ce que faisait `addSheet`, qui posait `n = colonnes × lignes` —, le personnage disparaissait **deux temps sur neuf** à chaque boucle, un clignotement discret mais permanent.
+
+`framesOf` remonte donc la grille depuis la fin et s'arrête à la dernière case dessinée. Seules les cases vides **de fin** sont retirées : une case vide au milieu d'une planche est une image voulue (un clignotement, une disparition), et la couper décalerait tout ce qui suit. Les planches déjà en place qui remplissent leurs neuf cases ne bougent pas.
