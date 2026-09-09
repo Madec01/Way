@@ -798,6 +798,7 @@ const Engine = (() => {
 /* =========================================================================
    WAY — 05_balance.js — constantes d'équilibrage (données, modifiables sans toucher au moteur)
    ========================================================================= */
+'use strict';
 const BALANCE = {
   /* XP nécessaire pour passer du niveau N au suivant : a + b·N + c·N² */
   xp: { a: 34, b: 25, c: 4.4 },
@@ -2885,6 +2886,7 @@ const BALANCE = {
 </script>
 <script>
 /* ==== content.js ==== */
+'use strict';
 const CONTENT = {
   // =====================================================================
   // PERSONNAGES
@@ -5181,6 +5183,7 @@ const CONTENT = {
    Variantes d'ennemis plus rapides et plus résistantes, salves, élites, boss ÉTALON 12 « la Serriste ».
    ========================================================================= */
 
+'use strict';
 CONTENT.biomes.push({
   id: 'biome_2',
   name: 'LA SERRE',
@@ -5871,6 +5874,7 @@ CONTENT.rooms.push(
    Décor : cactus, rochers, tonneaux, caisses, chariots (icônes game-icons.net rastérisées en pixels, voir Sprites.props).
    ========================================================================= */
 
+'use strict';
 CONTENT.biomes.push({
   id: 'biome_3',
   name: 'LA CONCESSION',
@@ -6758,6 +6762,7 @@ CONTENT.rooms.push(
    Décor : colonnes, jarres, fontaines, palmiers, braseros, tentures (icônes game-icons.net rastérisées, voir Sprites.props).
    ========================================================================= */
 
+'use strict';
 CONTENT.biomes.push({
   id: 'biome_4',
   name: 'LE SÉRAIL',
@@ -8014,6 +8019,7 @@ CONTENT.pairs.push(
    Accès au contenu déclaratif (CONTENT défini juste avant) + textes de lore.
    ========================================================================= */
 
+'use strict';
 const LORE = {
   title: 'WAY',
   subtitle: 'Roguelite à salles',
@@ -8157,6 +8163,7 @@ const Content = (() => {
    Sprites (0x72 Dungeon Tileset II, CC0) avec fallback Canvas marqué TODO_SPRITE ; sol/murs ; musique.
    ========================================================================= */
 
+'use strict';
 const ASSET_BASE = 'assets/';
 const SHEET_URL = ASSET_BASE + 'sprites/0x72_dungeon_tileset_ii/0x72_DungeonTilesetII_v1.4.png';
 const SCALE = 3;
@@ -9779,6 +9786,7 @@ const Music = (() => {
    Stats (agrégation des modificateurs), raretés, XP, scores de salle, argent.
    ========================================================================= */
 
+'use strict';
 const BASE_STATS = {
   maxHp: 100,
   speed: 260,
@@ -10056,6 +10064,7 @@ const Progression = (() => {
    Tout lit/écrit l'état global G (défini dans 40_room.js).
    ========================================================================= */
 
+'use strict';
 /* ---------- Particules (cosmétique) ---------- */
 const Particles = {
   list: [],
@@ -12149,6 +12158,7 @@ class Player {
 </script>
 <script>
 /* ==== 31_pets.js ==== */
+'use strict';
 /* =========================================================================
    SALLE ZÉRO — 31_pets.js — compagnons
    Un animal ramassé en cours de run suit le joueur jusqu'à la fin du niveau. Il n'a qu'un comportement, mais il le
@@ -12808,6 +12818,7 @@ const Pets = {
    Ennemis (7 archétypes, machine à états avec télégraphie) et mini-boss (phases, patterns, faiblesse).
    ========================================================================= */
 
+'use strict';
 const ENEMY_ARCHETYPES = ['rusher', 'shooter', 'tank', 'kamikaze', 'summoner', 'swarm', 'dasher'];
 
 function enemyProjectile(e, a, o = {}) {
@@ -14513,6 +14524,7 @@ Boss.prototype.hitFromBehind = function (fromX, fromY) {
    Ils ne blessent jamais — c'est la lecture de la salle qu'ils portent, pas la difficulté.
    ========================================================================= */
 
+'use strict';
 /* Coup en cours et coup suivant dans une partition triée, par dichotomie.
    `at` / `idx` : le dernier coup à ou avant `t` (celui de la boucle précédente si `t` tombe avant le premier) ;
    `nextAt` / `nextIdx` : le suivant. Indices croissants dans le temps, donc utilisables comme repère de tir. */
@@ -14817,6 +14829,7 @@ const Anim = {
    Chaque piège expose update(dt, rt), render(ctx), dangerAt(x, y) (pour le bot) et hitPlayer.
    ========================================================================= */
 
+'use strict';
 const TRAP_KINDS = [
   'laser_sweep',
   'laser_rotate',
@@ -15704,6 +15717,7 @@ class Trap {
 </script>
 <script>
 /* ==== 35_terrain.js ==== */
+'use strict';
 /* =========================================================================
    WAY — 35_terrain.js
    Couche de terrain : une salle déclare un plan ASCII (13 lignes de 24 caractères), compilé au chargement en
@@ -15983,6 +15997,7 @@ const Terrain = (() => {
 </script>
 <script>
 /* ==== 36_modular.js ==== */
+'use strict';
 /* =========================================================================
    SUJET NEUF — 36_modular.js
    Salles modulaires (salles 6-7) : éléments de décor animés avec collision, déterministes (temps de salle).
@@ -16358,6 +16373,7 @@ const Modular = (() => {
    switches (3 interrupteurs dans l'ordre, récompense), lights (lumières coupées), timer (chrono, enragés après).
    ========================================================================= */
 
+'use strict';
 const CHALLENGE_DEFS = {
   capture: {
     name: 'Capture de zone',
@@ -17340,6 +17356,7 @@ const Challenge = (() => {
 </script>
 <script>
 /* ==== 39_tempo.js ==== */
+'use strict';
 /* ==== 39_tempo.js — chef d'orchestre (Beat) + salle du tempo (Tempo) ====
    Beat : temps musical calé sur la piste en cours. assets/music/tempo.json (généré par dev/analyze_music.py) donne
    BPM, décalage du premier temps et tonalité de chaque piste ; sans piste ou fichier absent → métronome interne 120 BPM.
@@ -18094,6 +18111,7 @@ const Tempo = {
    État global G, Room (chargement, vagues, portes, transitions), Run (déroulé d'un niveau).
    ========================================================================= */
 
+'use strict';
 const G = {
   state: 'boot', // boot | menu | hub | run
   mode: 'normal', // normal | test
@@ -19101,6 +19119,7 @@ const Run = {
    Écrans DOM (menu, hub, préparation, choix, pause, fin, crédits) et HUD canvas.
    ========================================================================= */
 
+'use strict';
 const UI = (() => {
   const $ = sel => document.querySelector(sel);
   const el = (tag, cls, html) => {
@@ -20452,6 +20471,7 @@ const UI = (() => {
    Activé automatiquement au premier contact tactile.
    ========================================================================= */
 
+'use strict';
 const Touch = (() => {
   let layer,
     stick,
@@ -20619,6 +20639,7 @@ const Touch = (() => {
    des vagues d'ennemis des deux biomes, en changeant d'arme régulièrement. Utilise le vrai moteur.
    ========================================================================= */
 
+'use strict';
 const Attract = (() => {
   let running = false,
     spawnT = 0,
@@ -20816,6 +20837,7 @@ const Attract = (() => {
    Méta-progression : profils Normal (localStorage) / Test (tout débloqué, jamais sauvegardé), argent, passifs, déblocages.
    ========================================================================= */
 
+'use strict';
 const SAVE_KEY = 'sujet_neuf_save_v1';
 const Meta = (() => {
   const fresh = () => ({
@@ -21047,6 +21069,7 @@ const Meta = (() => {
    Panneau debug (mode Test), écran de test audio, harness window.__autoplay(config).
    ========================================================================= */
 
+'use strict';
 const Debug = (() => {
   let panel,
     open = false,
@@ -21629,6 +21652,7 @@ const Debug = (() => {
 </script>
 <script>
 /* ==== 80_atelier.js ==== */
+'use strict';
 /* =========================================================================
    SALLE ZÉRO — 80_atelier.js — Atelier rythme
    Une salle vierge, la piste du biome découpée en temps cliquables, et une partition par élément posé.
@@ -23429,6 +23453,7 @@ const Atelier = (() => {
    SALLE ZÉRO — 90_main.js — point d'entrée, boucle update/render.
    ========================================================================= */
 
+'use strict';
 function update(dt, rawDt) {
   Beat.update();
   UI.update(rawDt);

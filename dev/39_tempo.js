@@ -1,3 +1,4 @@
+'use strict';
 /* ==== 39_tempo.js — chef d'orchestre (Beat) + salle du tempo (Tempo) ====
    Beat : temps musical calé sur la piste en cours. assets/music/tempo.json (généré par dev/analyze_music.py) donne
    BPM, décalage du premier temps et tonalité de chaque piste ; sans piste ou fichier absent → métronome interne 120 BPM.

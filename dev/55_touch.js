@@ -5,6 +5,7 @@
    Activé automatiquement au premier contact tactile.
    ========================================================================= */
 
+'use strict';
 const Touch = (() => {
   let layer,
     stick,

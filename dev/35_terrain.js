@@ -1,3 +1,4 @@
+'use strict';
 /* =========================================================================
    WAY — 35_terrain.js
    Couche de terrain : une salle déclare un plan ASCII (13 lignes de 24 caractères), compilé au chargement en

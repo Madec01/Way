@@ -3,6 +3,7 @@
    État global G, Room (chargement, vagues, portes, transitions), Run (déroulé d'un niveau).
    ========================================================================= */
 
+'use strict';
 const G = {
   state: 'boot', // boot | menu | hub | run
   mode: 'normal', // normal | test

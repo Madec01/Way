@@ -4,6 +4,7 @@
    Décor : cactus, rochers, tonneaux, caisses, chariots (icônes game-icons.net rastérisées en pixels, voir Sprites.props).
    ========================================================================= */
 
+'use strict';
 CONTENT.biomes.push({
   id: 'biome_3',
   name: 'LA CONCESSION',

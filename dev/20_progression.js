@@ -3,6 +3,7 @@
    Stats (agrégation des modificateurs), raretés, XP, scores de salle, argent.
    ========================================================================= */
 
+'use strict';
 const BASE_STATS = {
   maxHp: 100,
   speed: 260,

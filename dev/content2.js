@@ -3,6 +3,7 @@
    Variantes d'ennemis plus rapides et plus résistantes, salves, élites, boss ÉTALON 12 « la Serriste ».
    ========================================================================= */
 
+'use strict';
 CONTENT.biomes.push({
   id: 'biome_2',
   name: 'LA SERRE',

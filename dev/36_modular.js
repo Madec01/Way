@@ -1,3 +1,4 @@
+'use strict';
 /* =========================================================================
    SUJET NEUF — 36_modular.js
    Salles modulaires (salles 6-7) : éléments de décor animés avec collision, déterministes (temps de salle).

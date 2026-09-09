@@ -4,6 +4,7 @@
    des vagues d'ennemis des deux biomes, en changeant d'arme régulièrement. Utilise le vrai moteur.
    ========================================================================= */
 
+'use strict';
 const Attract = (() => {
   let running = false,
     spawnT = 0,

@@ -3,6 +3,7 @@
    Panneau debug (mode Test), écran de test audio, harness window.__autoplay(config).
    ========================================================================= */
 
+'use strict';
 const Debug = (() => {
   let panel,
     open = false,

@@ -3,6 +3,7 @@
    Méta-progression : profils Normal (localStorage) / Test (tout débloqué, jamais sauvegardé), argent, passifs, déblocages.
    ========================================================================= */
 
+'use strict';
 const SAVE_KEY = 'sujet_neuf_save_v1';
 const Meta = (() => {
   const fresh = () => ({

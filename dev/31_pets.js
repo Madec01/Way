@@ -1,3 +1,4 @@
+'use strict';
 /* =========================================================================
    SALLE ZÉRO — 31_pets.js — compagnons
    Un animal ramassé en cours de run suit le joueur jusqu'à la fin du niveau. Il n'a qu'un comportement, mais il le

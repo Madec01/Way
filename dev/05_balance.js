@@ -1,6 +1,7 @@
 /* =========================================================================
    WAY — 05_balance.js — constantes d'équilibrage (données, modifiables sans toucher au moteur)
    ========================================================================= */
+'use strict';
 const BALANCE = {
   /* XP nécessaire pour passer du niveau N au suivant : a + b·N + c·N² */
   xp: { a: 34, b: 25, c: 4.4 },

@@ -2,6 +2,7 @@
    SALLE ZÉRO — 90_main.js — point d'entrée, boucle update/render.
    ========================================================================= */
 
+'use strict';
 function update(dt, rawDt) {
   Beat.update();
   UI.update(rawDt);

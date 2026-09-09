@@ -1,3 +1,4 @@
+'use strict';
 /* Installe des sprites exportés depuis PixelLab dans assets/sprites/pixel/.
    Usage : node dev/install-sprites.js <dossier contenant les .zip>
 

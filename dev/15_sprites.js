@@ -3,6 +3,7 @@
    Sprites (0x72 Dungeon Tileset II, CC0) avec fallback Canvas marqué TODO_SPRITE ; sol/murs ; musique.
    ========================================================================= */
 
+'use strict';
 const ASSET_BASE = 'assets/';
 const SHEET_URL = ASSET_BASE + 'sprites/0x72_dungeon_tileset_ii/0x72_DungeonTilesetII_v1.4.png';
 const SCALE = 3;

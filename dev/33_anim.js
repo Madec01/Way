@@ -5,6 +5,7 @@
    Ils ne blessent jamais — c'est la lecture de la salle qu'ils portent, pas la difficulté.
    ========================================================================= */
 
+'use strict';
 /* Coup en cours et coup suivant dans une partition triée, par dichotomie.
    `at` / `idx` : le dernier coup à ou avant `t` (celui de la boucle précédente si `t` tombe avant le premier) ;
    `nextAt` / `nextIdx` : le suivant. Indices croissants dans le temps, donc utilisables comme repère de tir. */

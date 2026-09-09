@@ -3,6 +3,7 @@
    Écrans DOM (menu, hub, préparation, choix, pause, fin, crédits) et HUD canvas.
    ========================================================================= */
 
+'use strict';
 const UI = (() => {
   const $ = sel => document.querySelector(sel);
   const el = (tag, cls, html) => {

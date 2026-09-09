@@ -1,3 +1,4 @@
+'use strict';
 /* =========================================================================
    SALLE ZÉRO — 80_atelier.js — Atelier rythme
    Une salle vierge, la piste du biome découpée en temps cliquables, et une partition par élément posé.

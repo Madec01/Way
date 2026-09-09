@@ -3,6 +3,7 @@
    Ennemis (7 archétypes, machine à états avec télégraphie) et mini-boss (phases, patterns, faiblesse).
    ========================================================================= */
 
+'use strict';
 const ENEMY_ARCHETYPES = ['rusher', 'shooter', 'tank', 'kamikaze', 'summoner', 'swarm', 'dasher'];
 
 function enemyProjectile(e, a, o = {}) {

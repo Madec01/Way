@@ -5,6 +5,7 @@
    switches (3 interrupteurs dans l'ordre, récompense), lights (lumières coupées), timer (chrono, enragés après).
    ========================================================================= */
 
+'use strict';
 const CHALLENGE_DEFS = {
   capture: {
     name: 'Capture de zone',

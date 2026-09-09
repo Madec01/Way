@@ -4,6 +4,7 @@
    Tout lit/écrit l'état global G (défini dans 40_room.js).
    ========================================================================= */
 
+'use strict';
 /* ---------- Particules (cosmétique) ---------- */
 const Particles = {
   list: [],

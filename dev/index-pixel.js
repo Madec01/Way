@@ -2,6 +2,7 @@
    À relancer après chaque dépôt de sprites : node dev/index-pixel.js
    Nommage : <accessoire>.png pour la première version, <accessoire>_v2.png, _v3.png… pour les essais suivants.
    Le nom doit être celui d'un accessoire connu (clés de PROP_DEFS dans dev/15_sprites.js) ; les autres sont signalés. */
+'use strict';
 const fs = require('fs'),
   path = require('path');
 const dir = path.join(__dirname, '..', 'assets', 'sprites', 'pixel');

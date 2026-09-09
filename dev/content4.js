@@ -4,6 +4,7 @@
    Décor : colonnes, jarres, fontaines, palmiers, braseros, tentures (icônes game-icons.net rastérisées, voir Sprites.props).
    ========================================================================= */
 
+'use strict';
 CONTENT.biomes.push({
   id: 'biome_4',
   name: 'LE SÉRAIL',

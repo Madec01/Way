@@ -4,6 +4,7 @@
    Chaque piège expose update(dt, rt), render(ctx), dangerAt(x, y) (pour le bot) et hitPlayer.
    ========================================================================= */
 
+'use strict';
 const TRAP_KINDS = [
   'laser_sweep',
   'laser_rotate',

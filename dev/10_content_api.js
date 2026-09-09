@@ -3,6 +3,7 @@
    Accès au contenu déclaratif (CONTENT défini juste avant) + textes de lore.
    ========================================================================= */
 
+'use strict';
 const LORE = {
   title: 'WAY',
   subtitle: 'Roguelite à salles',

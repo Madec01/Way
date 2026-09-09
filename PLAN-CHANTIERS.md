@@ -8,6 +8,8 @@ La taille est donnée en **séances** — une séance, c'est une session de trav
 
 Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
+**Tranchées le 9 septembre 2026** : Neuf et Marge partent ; le décor animé se livre (4 salles cadencées au chantier 9) ; profil seul pour les planches.
+
 | Décision | Ce que ça engage | Mon avis |
 |---|---|---|
 | **Neuf et Marge : on les garde ?** [22] [35] | S'ils partent, leurs traits vont à deux amis et l'échelle 60 px contre 88 disparaît d'elle-même. S'ils restent, il faut les redessiner en case 48. | Les retirer. Le jeu est celui des amis. |
@@ -16,7 +18,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
 ---
 
-## Chantier 0 — Le socle
+## Chantier 0 — Le socle ✔ *(fait le 9 septembre 2026)*
 
 **Objectif** : tout ce qui suit doit pouvoir être vérifié et lu. Une séance qui ne change rien au jeu et rend les vingt suivantes possibles.
 
@@ -28,6 +30,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
 **Fini quand** : `node dev/test/run.js` passe en vert sur `main`, le dépôt n'a plus de fichier parasite, aucune ligne de `dev/` ne dépasse 140 caractères.
 **Taille** : 1 séance.
+**Bilan** : 17 tests dans `dev/test/`, tous verts ; 748 Ko d'assets et les fichiers parasites retirés ; Prettier appliqué en un commit seul (173 lignes insécables restent au-delà de 140) ; `'use strict'` sur 31 fichiers ; `build.js` refuse deux fichiers qui déclarent le même nom (108 noms de premier niveau contrôlés).
 
 ## Chantier 1 — Ce que les amis verront demain
 

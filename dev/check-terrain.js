@@ -4,6 +4,7 @@
    Contrôles : nombre de lignes, largeur des lignes, caractères inconnus, tuile d'entrée praticable,
    porte atteignable depuis l'entrée (parcours en largeur). Une salle coupée en deux est une run perdue :
    ça doit casser le build, pas se découvrir en jouant. */
+'use strict';
 const fs = require('fs'),
   path = require('path');
 const COLS = 24,
