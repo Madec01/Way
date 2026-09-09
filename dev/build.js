@@ -51,9 +51,18 @@ for (const f of ORDER) {
     declares[nom] = f;
   }
 }
-const scripts = ORDER.map(
-  f => `<script>\n/* ==== ${f} ==== */\n${fs.readFileSync(path.join(dev, f), 'utf8').replace(/<\/script/gi, '<\\/script')}\n</script>`
-).join('\n');
+const stamp = `<script>window.WAY_BUILD = '${new Date().toISOString().slice(0, 16).replace('T', ' ')}';</script>\n`;
+const scripts =
+  stamp +
+  ORDER.map(
+    f => `<script>\n/* ==== ${f} ==== */\n${fs.readFileSync(path.join(dev, f), 'utf8').replace(/<\/script/gi, '<\\/script')}\n</script>`
+  ).join('\n');
 html = html.replace('<!--@@SCRIPTS@@-->', scripts);
 fs.writeFileSync(out, html);
-console.log('index.html :', (fs.statSync(out).size / 1024).toFixed(0), 'Ko ·', Object.keys(declares).length, 'noms de premier niveau, aucun doublon');
+console.log(
+  'index.html :',
+  (fs.statSync(out).size / 1024).toFixed(0),
+  'Ko ·',
+  Object.keys(declares).length,
+  'noms de premier niveau, aucun doublon'
+);

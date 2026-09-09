@@ -409,7 +409,7 @@ const Atelier = (() => {
     for (const [k] of CLIPS_UI) if (c.sheets && c.sheets[k]) anim[k] = c.id + '_' + k;
     return {
       id: c.id,
-      name: c.name || 'Copain',
+      name: c.pseudo || c.name || 'Copain', // le pseudo, s'il existe, est le seul nom qui sort du navigateur
       sprite: 'player',
       face: c.imgBody || anim.idle ? null : c.sprite,
       body: corps,
@@ -864,6 +864,7 @@ const Atelier = (() => {
       h += `<div class="amicard" data-c="${i}">
         <div class="amitop"><span class="amiimg" data-img="c${i}"></span>
           <input type="text" class="aminom" data-f="name" value="${(c.name || '').replace(/"/g, '&quot;')}" placeholder="Son nom">
+          <input type="text" class="aminom" data-f="pseudo" value="${(c.pseudo || '').replace(/"/g, '&quot;')}" placeholder="Pseudo public (facultatif)" title="Si rempli, c'est ce nom qui part dans le fichier partagé, pas le prénom">
           <button class="btn tiny" data-tryc="${i}">Essayer</button><button class="btn tiny ghost" data-delc="${i}">×</button></div>
         <div class="amirow"><label class="amivue${c.img ? ' ok' : ''}">visage <input type="file" accept="image/*" data-filec="${i}"></label>
           <span class="amuted">ou sprite entier :</span>
@@ -1589,13 +1590,17 @@ const Atelier = (() => {
       .join('');
   const par = p => (Object.keys(p || {}).length ? `, params: { ${inner(p).replace(/, $/, '')} }` : '');
   /* export de l'établi Amis : le contenu complet de dev/content5.js, images comprises */
-  function amisSnippet() {
+  /* Les photos (visages, sprites entiers importés) ne partent dans le fichier public que si on l'a demandé :
+     une fois dans content5.js et poussées, elles sont indexables et impossibles à rappeler. Les planches dessinées
+     partent toujours. Sans les photos, un copain retombe sur le corps du jeu et un animal sur sa pastille. */
+  function amisSnippet(avecPhotos) {
     const src = amis.pets.concat(amis.chars);
     const imgs = [];
     const shs = [];
-    for (const a of src) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) imgs.push([a[k], a[f]]);
+    if (avecPhotos) for (const a of src) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) imgs.push([a[k], a[f]]);
     for (const c of amis.chars) if (c.sheets) for (const k in c.sheets) shs.push([c.id + '_' + k, c.sheets[k], c.fw || 0]);
     let out = '/* AMIS_DEBUT */\n';
+    if (!avecPhotos) out += "/* photos non exportées : accord non donné (voir l'établi Amis) */\n";
     out += 'const FRIEND_IMAGES = {\n' + imgs.map(([k, v]) => `  '${k}': '${v}',`).join('\n') + '\n};\n\n';
     out += 'const FRIEND_SHEETS = {\n' + shs.map(([k, v, w]) => `  '${k}': { fw: ${w}, url: '${v}' },`).join('\n') + '\n};\n\n';
     out += 'CONTENT.pets.push(\n' + amis.pets.map(p => '  ' + JSON.stringify(petDef(p)) + ',').join('\n') + '\n);\n\n';
@@ -1603,9 +1608,25 @@ const Atelier = (() => {
     out += '/* AMIS_FIN */\n';
     return out.replace(/"atelier":true,?/g, '');
   }
+  function photosPresentes() {
+    let n = 0;
+    for (const a of amis.pets.concat(amis.chars)) for (const [f] of IMG_SLOTS) if (a[f]) n++;
+    return n;
+  }
   function showIo() {
     $('#a-io').hidden = false;
-    $('#a-txt').value = st.tab === 'amis' ? amisSnippet() : snippet();
+    if (st.tab !== 'amis') {
+      $('#a-txt').value = snippet();
+      return;
+    }
+    const n = photosPresentes();
+    const accord =
+      n > 0 &&
+      window.confirm(
+        `Ce texte va embarquer ${n} photo(s) (visages, images importées) dans un fichier PUBLIC : une fois en ligne, elles sont indexables et ne se rappellent pas.\n\nAs-tu l'accord des personnes concernées ?\n\nOK = exporter avec les photos · Annuler = exporter sans (les planches dessinées partent quand même)`
+      );
+    $('#a-txt').value = amisSnippet(accord);
+    if (n > 0 && !accord) UI.toast('Export sans les photos : les copains reprennent le corps du jeu', 5);
   }
   /* relit le bloc « atelier:{…} » qu'écrit l'export : un aller-retour complet sans réécrire à la main */
   function importText(txt) {

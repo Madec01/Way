@@ -447,6 +447,7 @@ const Projectiles = {
   },
 };
 /* durée d'un clip : nombre d'images de la planche divisé par sa cadence */
+const PICK_CLIP_KINDS = new Set(['purse', 'heart', 'relic', 'weapon', 'ally', 'pet']);
 function clipLen(sheetName, clip) {
   const inf = Sprites.sheetInfo && Sprites.sheetInfo(sheetName);
   const cf = (Sprites.CLIPS && Sprites.CLIPS[clip]) || { fps: 10 };
@@ -1046,7 +1047,10 @@ const Combat = {
   },
   collect(p) {
     const pl = G.player;
-    if (pl.char && pl.char.anim && pl.char.anim.pick && p.kind !== 'coin') pl.pickT = clipLen(pl.char.anim.pick, 'pick'); // pas sur chaque pièce : l'animation ne ferait que sursauter
+    /* Se baisser pour ramasser : seulement pour un objet qu'on tient (bourse, cœur, relique, arme, allié, compagnon).
+       Sur une pièce, un orbe d'XP ou un fragment — qui tombent par dizaines à chaque ennemi — le personnage passait
+       son temps courbé et cessait de tirer à chaque kill. */
+    if (pl.char && pl.char.anim && pl.char.anim.pick && PICK_CLIP_KINDS.has(p.kind)) pl.pickT = clipLen(pl.char.anim.pick, 'pick');
     /* série de ramassages : la hauteur monte d'un cran à chaque orbe pris dans la demi-seconde (cascade), au lieu d'empiler 30 fois le même son */
     const streak = Time.now - (Pickups.lastT || -9) < 0.5 ? Math.min((Pickups.streak || 0) + 1, 12) : 0;
     Pickups.lastT = Time.now;
@@ -1867,8 +1871,11 @@ class Player {
     }
   }
   render(ctx) {
-    if (this.dead) return;
-    const blink = Time.now < this.invulnUntil && Math.floor(Time.now * 20) % 2 === 0 && !this.dashing;
+    /* Mort : le corps reste et joue sa chute — s'il a une planche pour ça. Sans planche, il disparaît comme avant.
+       Rien d'autre ne se dessine sur un mort : ni arme en main, ni aura, ni clignotement. */
+    const chute = this.dead && !!(this.char && this.char.anim && this.char.anim.death);
+    if (this.dead && !chute) return;
+    const blink = !this.dead && Time.now < this.invulnUntil && Math.floor(Time.now * 20) % 2 === 0 && !this.dashing;
     ctx.save();
     if (blink) ctx.globalAlpha = 0.45;
     /* ombre */
@@ -1879,7 +1886,7 @@ class Player {
     /* auras selon les greffes (artefacts visibles) */
     const fx = this.hooks;
     const hasFx = eff => fx.onHit.some(h => h.effect === eff) || fx.passive.some(h => h.effect === eff);
-    if (hasFx('burn') || hasFx('burn_aura')) {
+    if (!this.dead && (hasFx('burn') || hasFx('burn_aura'))) {
       if (VFX_RNG.chance(0.5))
         Particles.spawn(this.x + VFX_RNG.range(-10, 10), this.y + this.r - 4, {
           count: 1,
@@ -1903,7 +1910,7 @@ class Player {
       ctx.fill();
       ctx.restore();
     }
-    if (hasFx('chain') || hasFx('lightning_storm')) {
+    if (!this.dead && (hasFx('chain') || hasFx('lightning_storm'))) {
       if (VFX_RNG.chance(0.12)) {
         const a = VFX_RNG.range(0, TAU);
         G.room.beams.push({
@@ -1919,7 +1926,7 @@ class Player {
         });
       }
     }
-    if (hasFx('freeze') || hasFx('frost_bonus')) {
+    if (!this.dead && (hasFx('freeze') || hasFx('frost_bonus'))) {
       if (VFX_RNG.chance(0.3))
         Particles.spawn(this.x + VFX_RNG.range(-12, 12), this.y - VFX_RNG.range(0, 24), {
           count: 1,
@@ -1930,7 +1937,7 @@ class Player {
           glow: true,
         });
     }
-    if (hasFx('poison')) {
+    if (!this.dead && hasFx('poison')) {
       if (VFX_RNG.chance(0.2))
         Particles.spawn(this.x + VFX_RNG.range(-8, 8), this.y - 20, {
           count: 1,
@@ -1974,7 +1981,7 @@ class Player {
       },
     });
     /* arme en main, orientée vers la visée */
-    if (this.weapon) {
+    if (this.weapon && !this.dead) {
       const col = WEAPON_COLORS[this.weapon.family] || '#fff';
       /* l'arme part de la main, pas d'une hauteur fixe : elle dépend du corps dessiné (voir Sprites.handY) */
       const hMain = Sprites.handY((this.char && this.char.sprite) || 'player', this.y, {

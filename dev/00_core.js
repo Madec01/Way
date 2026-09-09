@@ -121,15 +121,107 @@ const STR = {
   paused: 'Pause',
   resume: 'Reprendre',
   quit: 'Abandonner la run',
-  dead: 'Sujet perdu',
+  dead: 'Vaincu',
   toHub: 'Retour au hub',
-  victory: 'Protocole terminé',
+  victory: 'Palier terminé',
   pending: 'en attente',
   wave: 'Vague',
   boss: 'Mini-boss',
   ready: 'Prêt',
   interact: 'E : interagir',
 };
+
+/* ---------- Rapport : ce qu'un ami peut envoyer quand ça casse ----------
+   Toute erreur JavaScript non rattrapée est notée dans le navigateur (les 20 dernières), avec la salle en cours.
+   « Copier le rapport » (pause, fin de partie) met dans le presse-papiers un texte lisible : version, navigateur,
+   profil, partie en cours, journal. Sans ça, un ami qui plante ne peut rien dire d'autre que « ça a planté ». */
+const Rapport = (() => {
+  const CLE = 'way_journal';
+  const MAX = 20;
+  let dernierToast = -1e9;
+  function lire() {
+    try {
+      return JSON.parse(localStorage.getItem(CLE) || '[]');
+    } catch (e) {
+      return [];
+    }
+  }
+  function noter(msg, ou) {
+    const j = lire();
+    const G_ = typeof G !== 'undefined' ? G : null;
+    j.push({
+      t: new Date().toISOString(),
+      msg: String(msg || 'erreur').slice(0, 300),
+      ou: String(ou || '').slice(0, 200),
+      salle: G_ && G_.room ? G_.room.index : null,
+      etat: G_ ? G_.state : null,
+    });
+    while (j.length > MAX) j.shift();
+    try {
+      localStorage.setItem(CLE, JSON.stringify(j));
+    } catch (e) {
+      /* stockage indisponible : le journal reste en mémoire pour ce rapport-ci */
+    }
+    if (Date.now() - dernierToast > 10000) {
+      dernierToast = Date.now();
+      try {
+        if (typeof UI !== 'undefined' && UI.toast)
+          UI.toast("Le jeu a rencontré une erreur. Pause → « Copier le rapport » pour l'envoyer.", 7);
+      } catch (e) {
+        /* l'interface n'est pas encore là */
+      }
+    }
+  }
+  window.addEventListener('error', e => noter(e.message, (e.filename || '').split('/').pop() + ':' + e.lineno));
+  window.addEventListener('unhandledrejection', e => noter((e.reason && e.reason.message) || e.reason, 'promesse'));
+  function texte() {
+    const G_ = typeof G !== 'undefined' ? G : null;
+    const p = typeof Meta !== 'undefined' && Meta.profile ? Meta.profile : {};
+    const r = G_ && G_.run;
+    const l = [
+      'WAY — rapport',
+      'version : ' + (window.WAY_BUILD || 'inconnue'),
+      'navigateur : ' + navigator.userAgent,
+      'écran : ' +
+        window.innerWidth +
+        '×' +
+        window.innerHeight +
+        (typeof Input !== 'undefined' && Input.touch && Input.touch.active ? ' tactile' : ''),
+      'mode : ' + (G_ ? G_.mode : '?') + ' · état : ' + (G_ ? G_.state : '?'),
+      `profil : ${p.runs || 0} parties, ${p.wins || 0} gagnées, ${p.deaths || 0} morts, ${p.coins || 0} crédits, personnage ${p.character || '—'}, compagnon ${p.pet || '—'} (${p.petMode || '—'})`,
+      r
+        ? `partie : ${r.biome ? r.biome.id : '?'} salle ${G_.room ? G_.room.index : '?'}, niveau ${r.level}, ${r.weapon || '?'} + ${r.skill || '?'}`
+        : 'partie : aucune',
+      '',
+      'journal (' + lire().length + ') :',
+    ];
+    for (const e of lire()) l.push(`  ${e.t}  salle ${e.salle == null ? '—' : e.salle}  ${e.msg}  @ ${e.ou}`);
+    return l.join('\n');
+  }
+  async function copier() {
+    const t = texte();
+    try {
+      await navigator.clipboard.writeText(t);
+      return true;
+    } catch (e) {
+      /* pas de presse-papiers (http, vieux navigateur) : on montre le texte, à copier à la main */
+      try {
+        window.prompt('Copie ce rapport :', t);
+      } catch (e2) {
+        /* rien à faire */
+      }
+      return false;
+    }
+  }
+  function vider() {
+    try {
+      localStorage.removeItem(CLE);
+    } catch (e) {
+      /* rien */
+    }
+  }
+  return { noter, lire, texte, copier, vider };
+})();
 
 /* ---------- Caméra (zoom + suivi du joueur ; le HUD n'est pas affecté) ---------- */
 const Camera = {

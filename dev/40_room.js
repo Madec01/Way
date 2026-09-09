@@ -930,8 +930,17 @@ const Run = {
     Meta.addCoins(total);
     Meta.recordRun(false);
     Meta.unlockLore('deaths_3');
-    G.paused = true;
-    UI.showEnd({ victory: false, kept, pending: r.coinsPending, validated: r.coinsValidated, total });
+    /* Le personnage tombe avant que l'écran de fin ne s'affiche : la durée de sa planche de mort, plus un temps
+       d'arrêt sur la dernière image. Sans planche (ou pour le bot), tout de suite, comme avant. */
+    const pl = G.player;
+    const chute = pl && pl.char && pl.char.anim && pl.char.anim.death && !G.autoplay ? clipLen(pl.char.anim.death, 'death') + 0.35 : 0;
+    const fin = () => {
+      if (G.state !== 'run' || G.overlay === 'end') return;
+      G.paused = true;
+      UI.showEnd({ victory: false, kept, pending: r.coinsPending, validated: r.coinsValidated, total });
+    };
+    if (chute > 0) setTimeout(fin, chute * 1000);
+    else fin();
     Music.dying(2.2, () => {
       if (G.overlay === 'end' || G.state === 'hub') Music.play('hub');
     }); // la bande ralentit et descend, puis le hub

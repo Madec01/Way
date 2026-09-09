@@ -167,3 +167,21 @@ Salle 4 (coffre) = checkpoint : tout ce qui est en attente est validé. Fin de n
 ## 7. Boss revanche (`bosses[].revenge`, salle 9)
 
 `{ hpMul, plateHits, window, name, phaseText, mimic, extraPhases: [phase...] }`. Le boss reprend ses phases de la salle 5, plus `extraPhases` (triées par seuil de PV). Sa faiblesse dorsale est couverte par une plaque : inactive tant que `plateHits` coups dans le dos ne l'ont pas arrachée, puis fenêtre réduite à `window`. Avec `mimic`, un pattern miroir de la compétence choisie en salle 1 est inséré en tête de la 2e phase : dash → charge courte, blink → `teleport` (dans le dos + éventail), turret → `summon`, shockwave → `slam`, shield → `shield` (dégâts ×0,15 pendant 3 s), slowtime → `slow` (joueur ralenti), magnet → `pull` (aspiration + explosion), overdrive → `ring` rapide.
+
+## 8. Sauvegarde (`Meta.profile`, localStorage)
+
+Clé **`way_save`** (anciennement `sujet_neuf_save_v1`, encore relue). Version courante **2**. Une sauvegarde se lit en quatre temps (`Meta.load`) : trouver le blob (clé actuelle, sinon les anciennes) ; s'il va être transformé ou déplacé, en garder une copie sous `way_save_secours_v<N>` (jamais écrasée) ; le faire monter de version par `MIGRATIONS[v]` (une fonction par saut, on n'en modifie jamais une existante) ; le **fusionner** dans un profil neuf, objet par objet — un `volume: { master }` garde `sfx` et `music` par défaut, un champ inconnu est conservé. Une version **plus récente** que le jeu est lue telle quelle et n'est pas rabaissée.
+
+| champ | v | sens |
+|---|---|---|
+| `v` | 1 | version du format |
+| `coins`, `runs`, `wins`, `deaths`, `bestLevel` | 1 | compteurs |
+| `metaTiers` | 1 | `{ id: palier }` calibrations achetées |
+| `weapons`, `characters`, `skills`, `pets`, `lore` | 1 | ids débloqués |
+| `pet`, `petMode`, `character` | 1 | choix de départ (`petMode` : `always` / `call` / `none`) |
+| `cleared` | 1 | `{ biomeId: victoires }` |
+| `volume` | 1 | `{ master, sfx, music }` 0..1 |
+| `zoom` | 2 | zoom caméra choisi ; 0 = automatique |
+| `lag` | 2 | décalage son/image calibré dans l'atelier, en secondes |
+
+Autres clés du navigateur : `way_amis_v1` (l'établi Amis), `way.props.custom` (images importées), `way_journal` (les 20 dernières erreurs, voir `Rapport`).

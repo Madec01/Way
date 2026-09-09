@@ -510,6 +510,8 @@ const Pets = {
     const def = Content.pet(id);
     if (!def) return null;
     G.pets = [new Pet(def)];
+    /* Parti sans animal, le joueur gardait sa part (+12 % dégâts, +20 PV) : un compagnon ramassé en route l'annule. */
+    if (G.player) G.player.buffs = G.player.buffs.filter(b => b.id !== 'solo');
     if (def.duo) {
       const d2 = Content.pet(def.duo);
       if (d2) G.pets.push(new Pet(d2));

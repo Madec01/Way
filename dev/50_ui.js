@@ -414,7 +414,7 @@ const UI = (() => {
     s.innerHTML = `
       <div class="hub2">
         <header class="hubhead">
-          <div class="hubid"><div class="stamp"><span>Salle Zéro</span><span class="sep">·</span><span>Ton camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
+          <div class="hubid"><div class="stamp"><span>WAY</span><span class="sep">·</span><span>Ton camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
           <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits consignés${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
           <div class="hubactions"><button class="btn ghost small" id="hub-menu">Menu</button></div>
         </header>
@@ -480,7 +480,7 @@ const UI = (() => {
       cc.appendChild(card);
     });
     const pb = s.querySelector('#hub-portrait');
-    const pc = Sprites.portraitBody(cur.sprite || 'player', 5, cur.face, cur.body, cur.size);
+    const pc = Sprites.portraitBody(cur.sprite || 'player', 5, cur.face, cur.body, cur.size, cur.anim);
     if (pc) pb.appendChild(pc);
     s.querySelectorAll('[data-biome]').forEach(
       c =>
@@ -849,7 +849,7 @@ const UI = (() => {
         ${Input.touch.active ? `<label>Tir automatique (tactile) <input type="checkbox" id="pause-autofire" ${Input.touch.autoFire ? 'checked' : ''}></label>` : ''}
         <label>Zoom caméra <select id="pause-zoom">${[1, 1.25, 1.5, 1.75, 2].map(z => `<option value="${z}" ${Math.abs(Camera.zoom - z) < 0.01 ? 'selected' : ''}>${z}×</option>`).join('')}</select></label>
       </div>
-      <div class="row small"><button class="btn ghost" id="pause-fs">${Fullscreen.active ? 'Quitter le plein écran' : 'Plein écran'}</button></div>
+      <div class="row small"><button class="btn ghost" id="pause-fs">${Fullscreen.active ? 'Quitter le plein écran' : 'Plein écran'}</button><button class="btn ghost" id="pause-report" title="Met dans le presse-papiers un rapport à envoyer si quelque chose a cassé">Copier le rapport</button></div>
       <div class="row"><button class="btn primary" id="pause-resume">${STR.resume}</button><button class="btn ghost" id="pause-quit">${STR.quit}</button></div></div>`;
     s.querySelectorAll('input[type=range]').forEach(
       i =>
@@ -864,6 +864,8 @@ const UI = (() => {
       Meta.profile.zoom = +e.target.value;
       Meta.save();
     };
+    s.querySelector('#pause-report').onclick = () =>
+      Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));
     s.querySelector('#pause-fs').onclick = () => {
       Fullscreen.toggle();
       setTimeout(() => {
@@ -893,20 +895,22 @@ const UI = (() => {
     const s = screens.end;
     const st = G.run.stats;
     s.innerHTML = `<div class="panel center end">
-      <div class="eyebrow">${victory ? 'Case 9 cochée — protocole H-9 terminé' : 'Réimpression'}</div>
+      <div class="eyebrow">${victory ? 'Neuf salles, une sortie' : 'Fin de la partie'}</div>
       <h2 class="${victory ? 'good' : 'bad'}">${victory ? STR.victory : STR.dead}</h2>
-      <p class="muted">${esc(victory ? "Le formulaire s'arrête à la case 9. La question n'a pas de case. Poursuivez." : Content.pick('death'))}</p>
+      <p class="muted">${esc(victory ? "Le palier suivant t'attend au camp de base." : Content.pick('death'))}</p>
       <div class="grid2">
         <div>Crédits consignés (salle 4)</div><div>◈ ${fmt(validated)}</div>
         <div>${victory ? 'Crédits en attente validés' : `Crédits en attente conservés (${Math.round(clamp(0.1 * (st.deathRoom - G.run.lastCheckpoint), 0, 1) * 100)} % de ${fmt(pending)})`}</div><div>◈ ${fmt(kept)}</div>
-        ${bonus ? `<div>Prime de fin de protocole</div><div>◈ ${fmt(bonus)}</div>` : ''}
+        ${bonus ? `<div>Prime de fin de palier</div><div>◈ ${fmt(bonus)}</div>` : ''}
         <div><b>Total</b></div><div><b>◈ ${fmt(total)}</b></div>
         <div>Niveau atteint</div><div>${st.levelReached}</div>
         <div>Ennemis neutralisés</div><div>${st.kills}</div>
         <div>Dégâts subis / coups</div><div>${fmt(st.damageTaken)} / ${st.hitsTaken}</div>
         <div>Salles</div><div class="small">${st.roomTimes.map(r => `S${r.room} ${r.time}s ${r.hits} coup(s) q${Math.round(r.score * 100)}`).join(' · ') || '—'}</div>
       </div>
-      <div class="row"><button class="btn primary big" id="end-hub">${STR.toHub}</button></div></div>`;
+      <div class="row"><button class="btn primary big" id="end-hub">${STR.toHub}</button><button class="btn ghost" id="end-report">Copier le rapport</button></div></div>`;
+    s.querySelector('#end-report').onclick = () =>
+      Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));
     s.querySelector('#end-hub').onclick = () => {
       hideAll();
       Run.toHub();

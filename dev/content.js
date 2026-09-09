@@ -3,43 +3,7 @@ const CONTENT = {
   // =====================================================================
   // PERSONNAGES
   // =====================================================================
-  characters: [
-    {
-      id: 'char_neuf',
-      name: 'Neuf (Sujet 09)',
-      desc: 'Neuvième impression du lot standard. Le modèle par défaut du Site : il accepte toutes les greffes.',
-      stats: { maxHp: 100, speed: 260, damage: 1.0, luck: 2 },
-      trait: {
-        id: 'trait_tolerance_tissulaire',
-        name: 'Tolérance tissulaire',
-        desc: 'Les greffes prennent mieux : +15 % XP, +2 chance. Cicatrise 10 % des PV max à chaque nouvelle salle.',
-        mods: [
-          { stat: 'xpGain', mul: 1.15 },
-          { stat: 'luck', add: 2 },
-        ],
-        hooks: { onRoomStart: [{ effect: 'heal_on_room', fraction: 0.1 }] },
-      },
-      startWeapon: 'weapon_blade',
-      unlocked: true,
-      price: 0,
-    },
-    {
-      id: 'char_marge',
-      name: 'Marge',
-      desc: "Ancienne technicienne des pièges d'ADMISSION, reclassée sujet. Moins robuste, mais le Site la blesse moins.",
-      stats: { maxHp: 80, speed: 280, damage: 1.0, luck: 0 },
-      trait: {
-        id: 'trait_connaissance_du_site',
-        name: 'Connaissance du Site',
-        desc: "Pièges : -50 % dégâts subis. Fragments d'énergie doublés. +20 % vitesse pendant 2 s quand un piège vous touche.",
-        mods: [{ stat: 'trapDamageMul', mul: 0.5 }],
-        hooks: { passive: [{ effect: 'fragments_double' }], onTrapDamage: [{ effect: 'speed_burst', speedMul: 1.2, duration: 2 }] },
-      },
-      startWeapon: 'weapon_pistol',
-      unlocked: false,
-      price: 400,
-    },
-  ],
+  characters: [],
 
   // =====================================================================
   // ARMES  (DPS théorique nu entre parenthèses dans desc)
@@ -1366,7 +1330,7 @@ const CONTENT = {
       name: 'ADMISSION',
       order: 1,
       tagline: 'Un hôpital désaffecté : couloirs étroits, néons, pièges mécaniques. Le niveau pour apprendre.',
-      desc: "Palier -1, Protocole H-9. L'ancien service d'accueil du Site réaménagé en parcours : guichets devenus couverts, bancs devenus obstacles, rails de brancards devenus rails de pièges. Néons qui clignotent, sols humides. Taux de perte : 71 %.",
+      desc: "Un ancien service d'accueil réaménagé en parcours : guichets devenus couverts, bancs devenus obstacles, rails de brancards devenus rails de pièges. Néons qui clignotent, sols humides. Le premier palier : on y apprend tout.",
       levelPassives: [
         {
           bonus: { name: 'Stimulant', desc: '+15 % vitesse de déplacement.', mods: [{ stat: 'speed', mul: 1.15 }], hooks: {} },
@@ -1392,7 +1356,7 @@ const CONTENT = {
             hooks: {},
           },
           malus: {
-            name: "Protocole d'urgence",
+            name: 'Peau fine',
             desc: 'Invulnérabilité après un coup réduite de 0,6 s à 0,3 s.',
             mods: [{ stat: 'invulnTime', add: -0.3 }],
             hooks: {},

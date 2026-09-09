@@ -91,7 +91,8 @@ async function boot() {
   window.__autoplay = Debug.autoplay;
   window.__atelier = Atelier;
   window.addEventListener('keydown', e => {
-    if (e.code === 'F2') {
+    if (e.code === 'F2' && G.mode === 'test') {
+      // l'atelier est un outil de fabrication : un ami qui tâtonne les touches ne doit pas tomber dedans
       e.preventDefault();
       Atelier.toggle();
     }

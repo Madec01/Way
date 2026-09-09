@@ -4,10 +4,16 @@
    ========================================================================= */
 
 'use strict';
-const SAVE_KEY = 'sujet_neuf_save_v1';
+/* La sauvegarde a une version. La lire, c'est : trouver le bon blob (clé actuelle, sinon les anciennes), en garder
+   une copie de secours si on va le transformer, le faire passer de version en version, puis le FUSIONNER dans un
+   profil neuf — champ à champ pour les objets, sinon un `volume: { master }` d'une vieille version perdait
+   `sfx` et `music`, et un profil d'une autre version repartait à zéro sans un mot. */
+const SAVE_KEY = 'way_save';
+const SAVE_KEYS_ANCIENNES = ['sujet_neuf_save_v1'];
+const SAVE_VERSION = 2;
 const Meta = (() => {
   const fresh = () => ({
-    v: 1,
+    v: SAVE_VERSION,
     coins: 0,
     metaTiers: {},
     weapons: [],
@@ -24,16 +30,56 @@ const Meta = (() => {
     bestLevel: 0,
     character: null,
     volume: { master: 0.8, sfx: 0.9, music: 0.6 },
+    zoom: 0, // 0 = automatique (1 au clavier, 1,5 au tactile)
+    lag: 0, // décalage son/image calibré dans l'atelier, en secondes
   });
   let normal = fresh();
   let test = null;
   let profile = normal;
+  const estObjet = x => x && typeof x === 'object' && !Array.isArray(x);
+  /* fusion profonde : les objets champ à champ, les tableaux et les valeurs simples tels quels ; un champ inconnu
+     du profil neuf est gardé (il vient peut-être d'une version plus récente du jeu) */
+  function fusion(base, d) {
+    for (const k in d) {
+      if (estObjet(d[k]) && estObjet(base[k])) fusion(base[k], d[k]);
+      else if (d[k] !== undefined) base[k] = d[k];
+    }
+    return base;
+  }
+  /* une fonction par saut de version : v → v + 1. Ajouter ici, jamais modifier une entrée existante. */
+  const MIGRATIONS = {
+    1: d => d, // v1 → v2 : mêmes champs ; `zoom` et `lag` arrivent avec leurs défauts par la fusion
+  };
+  function migrate(d) {
+    let v = +d.v || 1;
+    while (v < SAVE_VERSION && MIGRATIONS[v]) {
+      d = MIGRATIONS[v](d) || d;
+      v++;
+    }
+    d.v = Math.max(v, +d.v || 1);
+    return d;
+  }
   function load() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      let raw = localStorage.getItem(SAVE_KEY);
+      let cle = SAVE_KEY;
+      for (const k of SAVE_KEYS_ANCIENNES) if (!raw && (raw = localStorage.getItem(k))) cle = k;
       if (raw) {
         const d = JSON.parse(raw);
-        if (d && d.v === 1) normal = Object.assign(fresh(), d);
+        if (estObjet(d)) {
+          const v = +d.v || 1;
+          if (v > SAVE_VERSION)
+            console.warn(`[Meta] sauvegarde v${v}, ce jeu connaît la v${SAVE_VERSION} : lue telle quelle, rien n'est jeté`);
+          /* on va la transformer ou la déplacer : on en garde une copie avant, sous une clé qu'on n'écrase jamais */
+          if (v !== SAVE_VERSION || cle !== SAVE_KEY) {
+            try {
+              localStorage.setItem(`way_save_secours_v${v}`, raw);
+            } catch (e) {
+              /* stockage plein : la copie de secours est un confort, pas une condition */
+            }
+          }
+          normal = fusion(fresh(), migrate(d));
+        }
       }
     } catch (e) {
       console.warn('[Meta] sauvegarde illisible', e);

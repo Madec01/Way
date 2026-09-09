@@ -1131,3 +1131,25 @@ Choupi et Tanuki (les chats de Gabriel) et ORI (le chat de Jean) ont chacun leur
 En les posant côte à côte, un défaut est apparu : la ligne de sol d'un compagnon était **proportionnelle à sa taille** (`y + taille × 0,34`). Un chat de 32 posait ses pattes 11 px au-dessus de celles d'un chien de 64 placé au même endroit, et tous flottaient au-dessus de la ligne du joueur (`y + 25`). Un animal dessiné par une planche prend maintenant la ligne de sol du joueur, ombre comprise.
 
 Et une seconde erreur, que j'ai d'abord validée à tort : l'option `foot` de `drawSheet` portait un `− dh/2` de trop, si bien que le **dessin** se retrouvait une demi-case au-dessus de son ombre — pattes d'Uno à y−8, des chats à y−24, ombres à y+31. Mon test mesurait la boîte de tout ce que `Pet.render` dessine, ombre comprise, et concluait « à 3 px près » sur l'ombre. Le seuil alpha du test est passé à 200 (l'ombre est à 82) : mesuré ensuite, pattes d'Uno, Choupi et Tanuki à **y+24**, pieds de Martin à y+24, ORI 15 px plus haut parce qu'il vole. La leçon vaut pour tous les tests d'image : **dire ce qu'on mesure**, et ne pas laisser une ombre passer pour des pattes.
+
+---
+
+## 36. Chantier 1 — ce que les amis voient à leur première partie
+
+Sept corrections, toutes petites, toutes visibles.
+
+- **La mort se joue.** `Player.render` s'arrêtait dès `dead` : les planches de chute de Martin, Gabriel et Jean n'étaient jamais dessinées et l'écran de fin tombait sur un personnage disparu. Le corps reste et joue son clip (sans arme, sans aura, sans clignotement) ; `Run.onPlayerDeath` attend la durée de la planche plus 0,35 s avant d'afficher l'écran de fin — sauf pour le bot, où rien n'attend. Un personnage sans planche de mort disparaît comme avant.
+- **Le portrait du hub montre la planche.** `portraitBody` reçoit `anim` et dessine le repos à ×3 de la case (48 → 144 px), pixels carrés, en respirant. Sans ce cas, Martin s'affichait en chevalier orange.
+- **Se baisser, seulement pour un vrai objet.** `Combat.collect` n'excluait que les pièces : chaque orbe d'XP courbait le personnage 0,57 s et coupait le tir à chaque kill. `PICK_CLIP_KINDS` = bourse, cœur, relique, arme, allié, compagnon.
+- **« Personne » ne se cumule plus.** `Pets.give` retire le buff `solo` : un compagnon ramassé en route annule la part gardée.
+- **F2 en mode test seulement.** Un ami qui tâtonne les touches tombait dans l'éditeur de niveau.
+- **Les mots de l'ancien lore sont partis** des libellés (`STR`), des phrases du hub, d'entrée de palier, de mort, de boss, du synopsis, de l'écran de fin, du malus « Protocole d'urgence » (devenu « Peau fine ») et des descriptions de biome et de boss. Les *fragments* (onglet du hub) racontent encore l'ancienne histoire : c'est un autre chantier, ou une décision.
+- **Neuf et Marge sont retirés** du contenu. Leurs traits — *Tolérance tissulaire* (+15 % XP, +2 chance, soin par salle) et *Connaissance du Site* (pièges −50 %, fragments ×2) — sont à attribuer à deux amis au chantier 5. `Content.character()` retombe désormais sur Martin.
+
+Tests : `mort.js` (la chute dessinée, l'écran de fin retardé, le clip « ramasse ») et `premiere_partie.js` (les mots bannis, le portrait, F2, « Personne », Neuf et Marge).
+
+## 37. Chantier 2 — la sauvegarde et la vie privée
+
+- **Une sauvegarde versionnée** (SCHEMA.md §8) : `way_save`, version 2, migration par saut, fusion profonde, copie de secours avant toute transformation, ancienne clé relue. Mesuré avant : un profil `{v:2, coins:999}` devenait `coins: 0` sans avertissement, un `volume: { master }` perdait `sfx` et `music`. Test : `sauvegarde.js`.
+- **`Rapport`** (00_core.js) : toute erreur non rattrapée (`error`, `unhandledrejection`) est notée dans `way_journal` avec la salle et l'état, un toast le signale (au plus un toutes les 10 s), et « Copier le rapport » — dans la pause et sur l'écran de fin — met dans le presse-papiers version, navigateur, écran, profil, partie en cours et journal. `build.js` écrit `window.WAY_BUILD` pour que la version soit lisible. Test : `rapport.js`.
+- **Les photos ne partent qu'avec l'accord.** L'export de l'établi Amis compte les images importées (visages, sprites entiers) et demande l'accord des personnes avant de les embarquer dans un fichier public ; refusé, l'export part sans elles (les planches dessinées partent toujours) et le dit en tête du texte. Un champ **pseudo** sur chaque copain remplace le prénom dans le fichier exporté, s'il est rempli. Test : `export.js`.

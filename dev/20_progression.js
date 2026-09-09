@@ -220,7 +220,7 @@ const Progression = (() => {
   }
   /* Plancher de coffre selon score moyen */
   function chestOptions(avgScore, diedInWindow) {
-    if (diedInWindow) return { noColossal: true, label: 'Sujet perdu : tirage dégradé' };
+    if (diedInWindow) return { noColossal: true, label: 'Mort récente : tirage dégradé' };
     if (avgScore >= BALANCE.chest.colossalAt) return { guarantee: 'colossal', shiftEpic: true, label: 'Sans dégât : Colossal garanti' };
     if (avgScore >= BALANCE.chest.epicAt) return { guarantee: 'epic', shiftEpic: true, label: 'Épique garanti' };
     if (avgScore >= BALANCE.chest.rareAt) return { guarantee: 'rare', label: 'Rare garanti' };

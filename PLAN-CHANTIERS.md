@@ -32,7 +32,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Taille** : 1 séance.
 **Bilan** : 17 tests dans `dev/test/`, tous verts ; 748 Ko d'assets et les fichiers parasites retirés ; Prettier appliqué en un commit seul (173 lignes insécables restent au-delà de 140) ; `'use strict'` sur 31 fichiers ; `build.js` refuse deux fichiers qui déclarent le même nom (108 noms de premier niveau contrôlés).
 
-## Chantier 1 — Ce que les amis verront demain
+## Chantier 1 — Ce que les amis verront demain ✔ *(fait le 9 septembre 2026)*
 
 **Objectif** : les défauts visibles à la première partie, tous petits, tous mesurés. Rien de structurel.
 
@@ -46,8 +46,9 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
 **Fini quand** : un test `mort.js` mesure des pixels dessinés après la mort ; le portrait du hub fait 147 px de dessin pour Martin ; une run complète n'affiche aucun mot de l'ancien lore.
 **Taille** : 1 séance.
+**Bilan** : les sept points faits (CONTENT.md §36) ; `mort.js` et `premiere_partie.js` couvrent chute, écran de fin différé, clip « ramasse », mots bannis, portrait, F2, « Personne », Neuf et Marge. Les traits de Neuf et Marge attendent le chantier 5. Les *fragments* du hub racontent encore l'ancien lore : à trancher.
 
-## Chantier 2 — La sauvegarde et la vie privée
+## Chantier 2 — La sauvegarde et la vie privée ✔ *(fait le 9 septembre 2026)*
 
 **Objectif** : ne jamais perdre la progression d'un ami, et ne jamais publier ce qu'il n'a pas accepté. À faire **avant** le chantier 7, qui change la forme du profil.
 
@@ -58,6 +59,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
 **Fini quand** : un profil `{v: 1}` et un profil `{v: 2}` fabriqués se chargent tous deux sans perte (test) ; un `throw` volontaire produit un rapport copiable ; l'export refuse une photo sans consentement.
 **Taille** : 1 séance.
+**Bilan** : `way_save` v2 avec migration, fusion profonde et copie de secours (SCHEMA.md §8) ; `Rapport` note toute erreur et « Copier le rapport » est dans la pause et l'écran de fin ; l'export demande l'accord pour les photos et un pseudo remplace le prénom. Tests `sauvegarde.js` (11), `rapport.js` (7), `export.js` (3).
 
 ## Chantier 3 — Un corps, une ligne de sol
 

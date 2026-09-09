@@ -364,6 +364,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
+<script>window.WAY_BUILD = '2026-09-09 20:44';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -489,15 +490,107 @@ const STR = {
   paused: 'Pause',
   resume: 'Reprendre',
   quit: 'Abandonner la run',
-  dead: 'Sujet perdu',
+  dead: 'Vaincu',
   toHub: 'Retour au hub',
-  victory: 'Protocole terminé',
+  victory: 'Palier terminé',
   pending: 'en attente',
   wave: 'Vague',
   boss: 'Mini-boss',
   ready: 'Prêt',
   interact: 'E : interagir',
 };
+
+/* ---------- Rapport : ce qu'un ami peut envoyer quand ça casse ----------
+   Toute erreur JavaScript non rattrapée est notée dans le navigateur (les 20 dernières), avec la salle en cours.
+   « Copier le rapport » (pause, fin de partie) met dans le presse-papiers un texte lisible : version, navigateur,
+   profil, partie en cours, journal. Sans ça, un ami qui plante ne peut rien dire d'autre que « ça a planté ». */
+const Rapport = (() => {
+  const CLE = 'way_journal';
+  const MAX = 20;
+  let dernierToast = -1e9;
+  function lire() {
+    try {
+      return JSON.parse(localStorage.getItem(CLE) || '[]');
+    } catch (e) {
+      return [];
+    }
+  }
+  function noter(msg, ou) {
+    const j = lire();
+    const G_ = typeof G !== 'undefined' ? G : null;
+    j.push({
+      t: new Date().toISOString(),
+      msg: String(msg || 'erreur').slice(0, 300),
+      ou: String(ou || '').slice(0, 200),
+      salle: G_ && G_.room ? G_.room.index : null,
+      etat: G_ ? G_.state : null,
+    });
+    while (j.length > MAX) j.shift();
+    try {
+      localStorage.setItem(CLE, JSON.stringify(j));
+    } catch (e) {
+      /* stockage indisponible : le journal reste en mémoire pour ce rapport-ci */
+    }
+    if (Date.now() - dernierToast > 10000) {
+      dernierToast = Date.now();
+      try {
+        if (typeof UI !== 'undefined' && UI.toast)
+          UI.toast("Le jeu a rencontré une erreur. Pause → « Copier le rapport » pour l'envoyer.", 7);
+      } catch (e) {
+        /* l'interface n'est pas encore là */
+      }
+    }
+  }
+  window.addEventListener('error', e => noter(e.message, (e.filename || '').split('/').pop() + ':' + e.lineno));
+  window.addEventListener('unhandledrejection', e => noter((e.reason && e.reason.message) || e.reason, 'promesse'));
+  function texte() {
+    const G_ = typeof G !== 'undefined' ? G : null;
+    const p = typeof Meta !== 'undefined' && Meta.profile ? Meta.profile : {};
+    const r = G_ && G_.run;
+    const l = [
+      'WAY — rapport',
+      'version : ' + (window.WAY_BUILD || 'inconnue'),
+      'navigateur : ' + navigator.userAgent,
+      'écran : ' +
+        window.innerWidth +
+        '×' +
+        window.innerHeight +
+        (typeof Input !== 'undefined' && Input.touch && Input.touch.active ? ' tactile' : ''),
+      'mode : ' + (G_ ? G_.mode : '?') + ' · état : ' + (G_ ? G_.state : '?'),
+      `profil : ${p.runs || 0} parties, ${p.wins || 0} gagnées, ${p.deaths || 0} morts, ${p.coins || 0} crédits, personnage ${p.character || '—'}, compagnon ${p.pet || '—'} (${p.petMode || '—'})`,
+      r
+        ? `partie : ${r.biome ? r.biome.id : '?'} salle ${G_.room ? G_.room.index : '?'}, niveau ${r.level}, ${r.weapon || '?'} + ${r.skill || '?'}`
+        : 'partie : aucune',
+      '',
+      'journal (' + lire().length + ') :',
+    ];
+    for (const e of lire()) l.push(`  ${e.t}  salle ${e.salle == null ? '—' : e.salle}  ${e.msg}  @ ${e.ou}`);
+    return l.join('\n');
+  }
+  async function copier() {
+    const t = texte();
+    try {
+      await navigator.clipboard.writeText(t);
+      return true;
+    } catch (e) {
+      /* pas de presse-papiers (http, vieux navigateur) : on montre le texte, à copier à la main */
+      try {
+        window.prompt('Copie ce rapport :', t);
+      } catch (e2) {
+        /* rien à faire */
+      }
+      return false;
+    }
+  }
+  function vider() {
+    try {
+      localStorage.removeItem(CLE);
+    } catch (e) {
+      /* rien */
+    }
+  }
+  return { noter, lire, texte, copier, vider };
+})();
 
 /* ---------- Caméra (zoom + suivi du joueur ; le HUD n'est pas affecté) ---------- */
 const Camera = {
@@ -2891,43 +2984,7 @@ const CONTENT = {
   // =====================================================================
   // PERSONNAGES
   // =====================================================================
-  characters: [
-    {
-      id: 'char_neuf',
-      name: 'Neuf (Sujet 09)',
-      desc: 'Neuvième impression du lot standard. Le modèle par défaut du Site : il accepte toutes les greffes.',
-      stats: { maxHp: 100, speed: 260, damage: 1.0, luck: 2 },
-      trait: {
-        id: 'trait_tolerance_tissulaire',
-        name: 'Tolérance tissulaire',
-        desc: 'Les greffes prennent mieux : +15 % XP, +2 chance. Cicatrise 10 % des PV max à chaque nouvelle salle.',
-        mods: [
-          { stat: 'xpGain', mul: 1.15 },
-          { stat: 'luck', add: 2 },
-        ],
-        hooks: { onRoomStart: [{ effect: 'heal_on_room', fraction: 0.1 }] },
-      },
-      startWeapon: 'weapon_blade',
-      unlocked: true,
-      price: 0,
-    },
-    {
-      id: 'char_marge',
-      name: 'Marge',
-      desc: "Ancienne technicienne des pièges d'ADMISSION, reclassée sujet. Moins robuste, mais le Site la blesse moins.",
-      stats: { maxHp: 80, speed: 280, damage: 1.0, luck: 0 },
-      trait: {
-        id: 'trait_connaissance_du_site',
-        name: 'Connaissance du Site',
-        desc: "Pièges : -50 % dégâts subis. Fragments d'énergie doublés. +20 % vitesse pendant 2 s quand un piège vous touche.",
-        mods: [{ stat: 'trapDamageMul', mul: 0.5 }],
-        hooks: { passive: [{ effect: 'fragments_double' }], onTrapDamage: [{ effect: 'speed_burst', speedMul: 1.2, duration: 2 }] },
-      },
-      startWeapon: 'weapon_pistol',
-      unlocked: false,
-      price: 400,
-    },
-  ],
+  characters: [],
 
   // =====================================================================
   // ARMES  (DPS théorique nu entre parenthèses dans desc)
@@ -4254,7 +4311,7 @@ const CONTENT = {
       name: 'ADMISSION',
       order: 1,
       tagline: 'Un hôpital désaffecté : couloirs étroits, néons, pièges mécaniques. Le niveau pour apprendre.',
-      desc: "Palier -1, Protocole H-9. L'ancien service d'accueil du Site réaménagé en parcours : guichets devenus couverts, bancs devenus obstacles, rails de brancards devenus rails de pièges. Néons qui clignotent, sols humides. Taux de perte : 71 %.",
+      desc: "Un ancien service d'accueil réaménagé en parcours : guichets devenus couverts, bancs devenus obstacles, rails de brancards devenus rails de pièges. Néons qui clignotent, sols humides. Le premier palier : on y apprend tout.",
       levelPassives: [
         {
           bonus: { name: 'Stimulant', desc: '+15 % vitesse de déplacement.', mods: [{ stat: 'speed', mul: 1.15 }], hooks: {} },
@@ -4280,7 +4337,7 @@ const CONTENT = {
             hooks: {},
           },
           malus: {
-            name: "Protocole d'urgence",
+            name: 'Peau fine',
             desc: 'Invulnérabilité après un coup réduite de 0,6 s à 0,3 s.',
             mods: [{ stat: 'invulnTime', add: -0.3 }],
             hooks: {},
@@ -5373,7 +5430,7 @@ CONTENT.bosses.push({
   id: 'boss_serriste',
   name: 'Étalon 12, dite « la Serriste »',
   subtitle: 'Elle a fait pousser ce que vous portez.',
-  desc: "Sujet de référence de LA SERRE, greffée jusqu'à l'os de matériel végétal. Vaporise, enracine, et charge quand on la croit lente : après une charge, ses racines mettent 1,2 s à se rétracter.",
+  desc: "La gardienne de LA SERRE, greffée jusqu'à l'os de matériel végétal. Vaporise, enracine, et charge quand on la croit lente : après une charge, ses racines mettent 1,2 s à se rétracter.",
   hp: 2600,
   speed: 130,
   radius: 36,
@@ -8024,32 +8081,32 @@ const LORE = {
   title: 'WAY',
   subtitle: 'Roguelite à salles',
   hub: [
-    'Salle Zéro. Vous êtes en stockage. Reposez-vous, ça compte.',
-    'Réimpression terminée. Aucun défaut visible. Les autres, on verra.',
-    'Le Magasinier a du neuf. Enfin, du propre.',
-    'Vos crédits ont été validés. Le Bureau vous remercie de votre consentement.',
-    'Itération suivante prête. Le formulaire est toujours vierge.',
-    "Rien n'a changé pendant votre absence. C'est le principe.",
+    'Le camp de base. Le chien dort, les chats surveillent la porte.',
+    'Tout le monde est rentré. Pas dans le même état, mais rentré.',
+    'Le magasin a du neuf. Enfin, du propre.',
+    'Les crédits consignés en salle 4 sont à toi. Le reste, tu le sais.',
+    'Neuf salles. Une sortie. Même chose que la dernière fois, en mieux préparé.',
+    "Rien n'a bougé pendant ton absence. C'est reposant.",
   ],
   levelEnter: [
-    "Protocole H-9, rév. 3. Conditions d'essai lues. Poursuivez.",
-    'Palier ouvert. Neuf cases. Le Bureau observe.',
-    "Variable stimulée, variable inhibée. Vous n'êtes pas consulté.",
-    'Sujet admis. Le taux de perte est une formalité.',
+    "Neuf salles. La porte du fond ne s'ouvre que quand la salle est vide.",
+    "Palier ouvert. Le compagnon te suit, l'arme est chargée.",
+    "Salle 4 : tes crédits sont mis à l'abri. Salle 5 : le boss. Après, on verra.",
+    'Ce qui tombe se ramasse. Ce qui brille se ramasse deux fois plus vite.',
   ],
   death: [
-    'Sujet non conforme. Réimpression programmée.',
-    'Données non consignées perdues. Le Site récupère le reste.',
-    "Itération close. La matrice retient ce qu'elle peut.",
-    'Décès enregistré. Case correspondante : non cochée.',
+    'Tombé. Les crédits consignés sont gardés, le reste repart au sol.',
+    "La salle a gagné cette fois. Elle n'a pas changé : toi si.",
+    "Le compagnon est rentré seul. Il t'attend au camp.",
+    'Une salle de plus que la dernière fois, ou une de moins ? Regarde en bas.',
   ],
   bossWin: [
-    'Étalon retiré au seuil critique. Il sera mis à jour.',
-    'Confrontation validée. Vos données seront utiles. À lui.',
-    "Case 5 cochée. L'Étalon vous remercie pour l'entraînement.",
+    'Le boss est à terre. Il se relèvera en salle 9, plus vif.',
+    'Salle 5 vidée. La moitié du chemin, la plus facile.',
+    "Le gros est tombé. Le coffre de la salle 8 va s'en souvenir.",
   ],
   synopsis:
-    "Vous êtes un sujet d'essai imprimé pour le Protocole H-9 : neuf salles, un formulaire, une sortie. Le Site vous greffe ce qu'il a sous la main, mesure vos réactions, et rémunère votre consentement. À la case 4, vos données sont consignées. À la case 9, l'Étalon vous attend avec vos propres réponses.",
+    "Neuf salles, un compagnon, une sortie. Chaque salle se vide avant que la porte du fond ne s'ouvre ; à la quatrième, tes crédits sont mis à l'abri ; à la cinquième, le boss ; à la neuvième, il revient. Entre les deux, tu ramasses ce qui tombe et tu choisis ce qui te rend plus fort.",
   fragments: [
     {
       id: 'room3_done',
@@ -9371,16 +9428,22 @@ const Sprites = (() => {
     ctx.restore();
     return true;
   }
-  function portraitBody(key, scale = 5, face, body, size) {
+  function portraitBody(key, scale = 5, face, body, size, anim) {
     const c = document.createElement('canvas');
-    c.width = 16 * scale;
-    c.height = 30 * scale;
+    /* Un personnage à planche est dessiné à ×3 de sa case (48 → 144 px), pixels carrés, et respire au repos.
+       Sans ce cas, le portrait retombait sur la planche du jeu : Martin s'affichait en chevalier orange. */
+    const planche = anim && anim.idle && sheets[anim.idle];
+    const tailleP = planche ? planche.fw * 3 : 0;
+    c.width = planche ? Math.max(96, Math.ceil(tailleP * 0.9)) : 16 * scale;
+    c.height = planche ? Math.ceil(tailleP * 1.05) + 8 : 30 * scale;
     c.className = 'portrait-canvas';
     const g = c.getContext('2d');
     g.imageSmoothingEnabled = false;
     const drawIt = () => {
       g.clearRect(0, 0, c.width, c.height);
-      drawBody(g, key, c.width / 2, c.height - 8, { scale: scale / SCALE, walk: 0, face, body, size });
+      if (planche)
+        drawBody(g, key, c.width / 2, c.height - 8 - 25, { anim, clip: 'idle', clipT: performance.now() / 1000, size: tailleP, walk: 0 });
+      else drawBody(g, key, c.width / 2, c.height - 8, { scale: scale / SCALE, walk: 0, face, body, size });
       if (c.isConnected) setTimeout(drawIt, 250);
       else
         setTimeout(() => {
@@ -10003,7 +10066,7 @@ const Progression = (() => {
   }
   /* Plancher de coffre selon score moyen */
   function chestOptions(avgScore, diedInWindow) {
-    if (diedInWindow) return { noColossal: true, label: 'Sujet perdu : tirage dégradé' };
+    if (diedInWindow) return { noColossal: true, label: 'Mort récente : tirage dégradé' };
     if (avgScore >= BALANCE.chest.colossalAt) return { guarantee: 'colossal', shiftEpic: true, label: 'Sans dégât : Colossal garanti' };
     if (avgScore >= BALANCE.chest.epicAt) return { guarantee: 'epic', shiftEpic: true, label: 'Épique garanti' };
     if (avgScore >= BALANCE.chest.rareAt) return { guarantee: 'rare', label: 'Rare garanti' };
@@ -10507,6 +10570,7 @@ const Projectiles = {
   },
 };
 /* durée d'un clip : nombre d'images de la planche divisé par sa cadence */
+const PICK_CLIP_KINDS = new Set(['purse', 'heart', 'relic', 'weapon', 'ally', 'pet']);
 function clipLen(sheetName, clip) {
   const inf = Sprites.sheetInfo && Sprites.sheetInfo(sheetName);
   const cf = (Sprites.CLIPS && Sprites.CLIPS[clip]) || { fps: 10 };
@@ -11106,7 +11170,10 @@ const Combat = {
   },
   collect(p) {
     const pl = G.player;
-    if (pl.char && pl.char.anim && pl.char.anim.pick && p.kind !== 'coin') pl.pickT = clipLen(pl.char.anim.pick, 'pick'); // pas sur chaque pièce : l'animation ne ferait que sursauter
+    /* Se baisser pour ramasser : seulement pour un objet qu'on tient (bourse, cœur, relique, arme, allié, compagnon).
+       Sur une pièce, un orbe d'XP ou un fragment — qui tombent par dizaines à chaque ennemi — le personnage passait
+       son temps courbé et cessait de tirer à chaque kill. */
+    if (pl.char && pl.char.anim && pl.char.anim.pick && PICK_CLIP_KINDS.has(p.kind)) pl.pickT = clipLen(pl.char.anim.pick, 'pick');
     /* série de ramassages : la hauteur monte d'un cran à chaque orbe pris dans la demi-seconde (cascade), au lieu d'empiler 30 fois le même son */
     const streak = Time.now - (Pickups.lastT || -9) < 0.5 ? Math.min((Pickups.streak || 0) + 1, 12) : 0;
     Pickups.lastT = Time.now;
@@ -11927,8 +11994,11 @@ class Player {
     }
   }
   render(ctx) {
-    if (this.dead) return;
-    const blink = Time.now < this.invulnUntil && Math.floor(Time.now * 20) % 2 === 0 && !this.dashing;
+    /* Mort : le corps reste et joue sa chute — s'il a une planche pour ça. Sans planche, il disparaît comme avant.
+       Rien d'autre ne se dessine sur un mort : ni arme en main, ni aura, ni clignotement. */
+    const chute = this.dead && !!(this.char && this.char.anim && this.char.anim.death);
+    if (this.dead && !chute) return;
+    const blink = !this.dead && Time.now < this.invulnUntil && Math.floor(Time.now * 20) % 2 === 0 && !this.dashing;
     ctx.save();
     if (blink) ctx.globalAlpha = 0.45;
     /* ombre */
@@ -11939,7 +12009,7 @@ class Player {
     /* auras selon les greffes (artefacts visibles) */
     const fx = this.hooks;
     const hasFx = eff => fx.onHit.some(h => h.effect === eff) || fx.passive.some(h => h.effect === eff);
-    if (hasFx('burn') || hasFx('burn_aura')) {
+    if (!this.dead && (hasFx('burn') || hasFx('burn_aura'))) {
       if (VFX_RNG.chance(0.5))
         Particles.spawn(this.x + VFX_RNG.range(-10, 10), this.y + this.r - 4, {
           count: 1,
@@ -11963,7 +12033,7 @@ class Player {
       ctx.fill();
       ctx.restore();
     }
-    if (hasFx('chain') || hasFx('lightning_storm')) {
+    if (!this.dead && (hasFx('chain') || hasFx('lightning_storm'))) {
       if (VFX_RNG.chance(0.12)) {
         const a = VFX_RNG.range(0, TAU);
         G.room.beams.push({
@@ -11979,7 +12049,7 @@ class Player {
         });
       }
     }
-    if (hasFx('freeze') || hasFx('frost_bonus')) {
+    if (!this.dead && (hasFx('freeze') || hasFx('frost_bonus'))) {
       if (VFX_RNG.chance(0.3))
         Particles.spawn(this.x + VFX_RNG.range(-12, 12), this.y - VFX_RNG.range(0, 24), {
           count: 1,
@@ -11990,7 +12060,7 @@ class Player {
           glow: true,
         });
     }
-    if (hasFx('poison')) {
+    if (!this.dead && hasFx('poison')) {
       if (VFX_RNG.chance(0.2))
         Particles.spawn(this.x + VFX_RNG.range(-8, 8), this.y - 20, {
           count: 1,
@@ -12034,7 +12104,7 @@ class Player {
       },
     });
     /* arme en main, orientée vers la visée */
-    if (this.weapon) {
+    if (this.weapon && !this.dead) {
       const col = WEAPON_COLORS[this.weapon.family] || '#fff';
       /* l'arme part de la main, pas d'une hauteur fixe : elle dépend du corps dessiné (voir Sprites.handY) */
       const hMain = Sprites.handY((this.char && this.char.sprite) || 'player', this.y, {
@@ -12670,6 +12740,8 @@ const Pets = {
     const def = Content.pet(id);
     if (!def) return null;
     G.pets = [new Pet(def)];
+    /* Parti sans animal, le joueur gardait sa part (+12 % dégâts, +20 PV) : un compagnon ramassé en route l'annule. */
+    if (G.player) G.player.buffs = G.player.buffs.filter(b => b.id !== 'solo');
     if (def.duo) {
       const d2 = Content.pet(def.duo);
       if (d2) G.pets.push(new Pet(d2));
@@ -19038,8 +19110,17 @@ const Run = {
     Meta.addCoins(total);
     Meta.recordRun(false);
     Meta.unlockLore('deaths_3');
-    G.paused = true;
-    UI.showEnd({ victory: false, kept, pending: r.coinsPending, validated: r.coinsValidated, total });
+    /* Le personnage tombe avant que l'écran de fin ne s'affiche : la durée de sa planche de mort, plus un temps
+       d'arrêt sur la dernière image. Sans planche (ou pour le bot), tout de suite, comme avant. */
+    const pl = G.player;
+    const chute = pl && pl.char && pl.char.anim && pl.char.anim.death && !G.autoplay ? clipLen(pl.char.anim.death, 'death') + 0.35 : 0;
+    const fin = () => {
+      if (G.state !== 'run' || G.overlay === 'end') return;
+      G.paused = true;
+      UI.showEnd({ victory: false, kept, pending: r.coinsPending, validated: r.coinsValidated, total });
+    };
+    if (chute > 0) setTimeout(fin, chute * 1000);
+    else fin();
     Music.dying(2.2, () => {
       if (G.overlay === 'end' || G.state === 'hub') Music.play('hub');
     }); // la bande ralentit et descend, puis le hub
@@ -19530,7 +19611,7 @@ const UI = (() => {
     s.innerHTML = `
       <div class="hub2">
         <header class="hubhead">
-          <div class="hubid"><div class="stamp"><span>Salle Zéro</span><span class="sep">·</span><span>Ton camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
+          <div class="hubid"><div class="stamp"><span>WAY</span><span class="sep">·</span><span>Ton camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
           <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits consignés${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
           <div class="hubactions"><button class="btn ghost small" id="hub-menu">Menu</button></div>
         </header>
@@ -19596,7 +19677,7 @@ const UI = (() => {
       cc.appendChild(card);
     });
     const pb = s.querySelector('#hub-portrait');
-    const pc = Sprites.portraitBody(cur.sprite || 'player', 5, cur.face, cur.body, cur.size);
+    const pc = Sprites.portraitBody(cur.sprite || 'player', 5, cur.face, cur.body, cur.size, cur.anim);
     if (pc) pb.appendChild(pc);
     s.querySelectorAll('[data-biome]').forEach(
       c =>
@@ -19965,7 +20046,7 @@ const UI = (() => {
         ${Input.touch.active ? `<label>Tir automatique (tactile) <input type="checkbox" id="pause-autofire" ${Input.touch.autoFire ? 'checked' : ''}></label>` : ''}
         <label>Zoom caméra <select id="pause-zoom">${[1, 1.25, 1.5, 1.75, 2].map(z => `<option value="${z}" ${Math.abs(Camera.zoom - z) < 0.01 ? 'selected' : ''}>${z}×</option>`).join('')}</select></label>
       </div>
-      <div class="row small"><button class="btn ghost" id="pause-fs">${Fullscreen.active ? 'Quitter le plein écran' : 'Plein écran'}</button></div>
+      <div class="row small"><button class="btn ghost" id="pause-fs">${Fullscreen.active ? 'Quitter le plein écran' : 'Plein écran'}</button><button class="btn ghost" id="pause-report" title="Met dans le presse-papiers un rapport à envoyer si quelque chose a cassé">Copier le rapport</button></div>
       <div class="row"><button class="btn primary" id="pause-resume">${STR.resume}</button><button class="btn ghost" id="pause-quit">${STR.quit}</button></div></div>`;
     s.querySelectorAll('input[type=range]').forEach(
       i =>
@@ -19980,6 +20061,8 @@ const UI = (() => {
       Meta.profile.zoom = +e.target.value;
       Meta.save();
     };
+    s.querySelector('#pause-report').onclick = () =>
+      Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));
     s.querySelector('#pause-fs').onclick = () => {
       Fullscreen.toggle();
       setTimeout(() => {
@@ -20009,20 +20092,22 @@ const UI = (() => {
     const s = screens.end;
     const st = G.run.stats;
     s.innerHTML = `<div class="panel center end">
-      <div class="eyebrow">${victory ? 'Case 9 cochée — protocole H-9 terminé' : 'Réimpression'}</div>
+      <div class="eyebrow">${victory ? 'Neuf salles, une sortie' : 'Fin de la partie'}</div>
       <h2 class="${victory ? 'good' : 'bad'}">${victory ? STR.victory : STR.dead}</h2>
-      <p class="muted">${esc(victory ? "Le formulaire s'arrête à la case 9. La question n'a pas de case. Poursuivez." : Content.pick('death'))}</p>
+      <p class="muted">${esc(victory ? "Le palier suivant t'attend au camp de base." : Content.pick('death'))}</p>
       <div class="grid2">
         <div>Crédits consignés (salle 4)</div><div>◈ ${fmt(validated)}</div>
         <div>${victory ? 'Crédits en attente validés' : `Crédits en attente conservés (${Math.round(clamp(0.1 * (st.deathRoom - G.run.lastCheckpoint), 0, 1) * 100)} % de ${fmt(pending)})`}</div><div>◈ ${fmt(kept)}</div>
-        ${bonus ? `<div>Prime de fin de protocole</div><div>◈ ${fmt(bonus)}</div>` : ''}
+        ${bonus ? `<div>Prime de fin de palier</div><div>◈ ${fmt(bonus)}</div>` : ''}
         <div><b>Total</b></div><div><b>◈ ${fmt(total)}</b></div>
         <div>Niveau atteint</div><div>${st.levelReached}</div>
         <div>Ennemis neutralisés</div><div>${st.kills}</div>
         <div>Dégâts subis / coups</div><div>${fmt(st.damageTaken)} / ${st.hitsTaken}</div>
         <div>Salles</div><div class="small">${st.roomTimes.map(r => `S${r.room} ${r.time}s ${r.hits} coup(s) q${Math.round(r.score * 100)}`).join(' · ') || '—'}</div>
       </div>
-      <div class="row"><button class="btn primary big" id="end-hub">${STR.toHub}</button></div></div>`;
+      <div class="row"><button class="btn primary big" id="end-hub">${STR.toHub}</button><button class="btn ghost" id="end-report">Copier le rapport</button></div></div>`;
+    s.querySelector('#end-report').onclick = () =>
+      Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));
     s.querySelector('#end-hub').onclick = () => {
       hideAll();
       Run.toHub();
@@ -20838,10 +20923,16 @@ const Attract = (() => {
    ========================================================================= */
 
 'use strict';
-const SAVE_KEY = 'sujet_neuf_save_v1';
+/* La sauvegarde a une version. La lire, c'est : trouver le bon blob (clé actuelle, sinon les anciennes), en garder
+   une copie de secours si on va le transformer, le faire passer de version en version, puis le FUSIONNER dans un
+   profil neuf — champ à champ pour les objets, sinon un `volume: { master }` d'une vieille version perdait
+   `sfx` et `music`, et un profil d'une autre version repartait à zéro sans un mot. */
+const SAVE_KEY = 'way_save';
+const SAVE_KEYS_ANCIENNES = ['sujet_neuf_save_v1'];
+const SAVE_VERSION = 2;
 const Meta = (() => {
   const fresh = () => ({
-    v: 1,
+    v: SAVE_VERSION,
     coins: 0,
     metaTiers: {},
     weapons: [],
@@ -20858,16 +20949,56 @@ const Meta = (() => {
     bestLevel: 0,
     character: null,
     volume: { master: 0.8, sfx: 0.9, music: 0.6 },
+    zoom: 0, // 0 = automatique (1 au clavier, 1,5 au tactile)
+    lag: 0, // décalage son/image calibré dans l'atelier, en secondes
   });
   let normal = fresh();
   let test = null;
   let profile = normal;
+  const estObjet = x => x && typeof x === 'object' && !Array.isArray(x);
+  /* fusion profonde : les objets champ à champ, les tableaux et les valeurs simples tels quels ; un champ inconnu
+     du profil neuf est gardé (il vient peut-être d'une version plus récente du jeu) */
+  function fusion(base, d) {
+    for (const k in d) {
+      if (estObjet(d[k]) && estObjet(base[k])) fusion(base[k], d[k]);
+      else if (d[k] !== undefined) base[k] = d[k];
+    }
+    return base;
+  }
+  /* une fonction par saut de version : v → v + 1. Ajouter ici, jamais modifier une entrée existante. */
+  const MIGRATIONS = {
+    1: d => d, // v1 → v2 : mêmes champs ; `zoom` et `lag` arrivent avec leurs défauts par la fusion
+  };
+  function migrate(d) {
+    let v = +d.v || 1;
+    while (v < SAVE_VERSION && MIGRATIONS[v]) {
+      d = MIGRATIONS[v](d) || d;
+      v++;
+    }
+    d.v = Math.max(v, +d.v || 1);
+    return d;
+  }
   function load() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      let raw = localStorage.getItem(SAVE_KEY);
+      let cle = SAVE_KEY;
+      for (const k of SAVE_KEYS_ANCIENNES) if (!raw && (raw = localStorage.getItem(k))) cle = k;
       if (raw) {
         const d = JSON.parse(raw);
-        if (d && d.v === 1) normal = Object.assign(fresh(), d);
+        if (estObjet(d)) {
+          const v = +d.v || 1;
+          if (v > SAVE_VERSION)
+            console.warn(`[Meta] sauvegarde v${v}, ce jeu connaît la v${SAVE_VERSION} : lue telle quelle, rien n'est jeté`);
+          /* on va la transformer ou la déplacer : on en garde une copie avant, sous une clé qu'on n'écrase jamais */
+          if (v !== SAVE_VERSION || cle !== SAVE_KEY) {
+            try {
+              localStorage.setItem(`way_save_secours_v${v}`, raw);
+            } catch (e) {
+              /* stockage plein : la copie de secours est un confort, pas une condition */
+            }
+          }
+          normal = fusion(fresh(), migrate(d));
+        }
       }
     } catch (e) {
       console.warn('[Meta] sauvegarde illisible', e);
@@ -22063,7 +22194,7 @@ const Atelier = (() => {
     for (const [k] of CLIPS_UI) if (c.sheets && c.sheets[k]) anim[k] = c.id + '_' + k;
     return {
       id: c.id,
-      name: c.name || 'Copain',
+      name: c.pseudo || c.name || 'Copain', // le pseudo, s'il existe, est le seul nom qui sort du navigateur
       sprite: 'player',
       face: c.imgBody || anim.idle ? null : c.sprite,
       body: corps,
@@ -22518,6 +22649,7 @@ const Atelier = (() => {
       h += `<div class="amicard" data-c="${i}">
         <div class="amitop"><span class="amiimg" data-img="c${i}"></span>
           <input type="text" class="aminom" data-f="name" value="${(c.name || '').replace(/"/g, '&quot;')}" placeholder="Son nom">
+          <input type="text" class="aminom" data-f="pseudo" value="${(c.pseudo || '').replace(/"/g, '&quot;')}" placeholder="Pseudo public (facultatif)" title="Si rempli, c'est ce nom qui part dans le fichier partagé, pas le prénom">
           <button class="btn tiny" data-tryc="${i}">Essayer</button><button class="btn tiny ghost" data-delc="${i}">×</button></div>
         <div class="amirow"><label class="amivue${c.img ? ' ok' : ''}">visage <input type="file" accept="image/*" data-filec="${i}"></label>
           <span class="amuted">ou sprite entier :</span>
@@ -23243,13 +23375,17 @@ const Atelier = (() => {
       .join('');
   const par = p => (Object.keys(p || {}).length ? `, params: { ${inner(p).replace(/, $/, '')} }` : '');
   /* export de l'établi Amis : le contenu complet de dev/content5.js, images comprises */
-  function amisSnippet() {
+  /* Les photos (visages, sprites entiers importés) ne partent dans le fichier public que si on l'a demandé :
+     une fois dans content5.js et poussées, elles sont indexables et impossibles à rappeler. Les planches dessinées
+     partent toujours. Sans les photos, un copain retombe sur le corps du jeu et un animal sur sa pastille. */
+  function amisSnippet(avecPhotos) {
     const src = amis.pets.concat(amis.chars);
     const imgs = [];
     const shs = [];
-    for (const a of src) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) imgs.push([a[k], a[f]]);
+    if (avecPhotos) for (const a of src) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) imgs.push([a[k], a[f]]);
     for (const c of amis.chars) if (c.sheets) for (const k in c.sheets) shs.push([c.id + '_' + k, c.sheets[k], c.fw || 0]);
     let out = '/* AMIS_DEBUT */\n';
+    if (!avecPhotos) out += "/* photos non exportées : accord non donné (voir l'établi Amis) */\n";
     out += 'const FRIEND_IMAGES = {\n' + imgs.map(([k, v]) => `  '${k}': '${v}',`).join('\n') + '\n};\n\n';
     out += 'const FRIEND_SHEETS = {\n' + shs.map(([k, v, w]) => `  '${k}': { fw: ${w}, url: '${v}' },`).join('\n') + '\n};\n\n';
     out += 'CONTENT.pets.push(\n' + amis.pets.map(p => '  ' + JSON.stringify(petDef(p)) + ',').join('\n') + '\n);\n\n';
@@ -23257,9 +23393,25 @@ const Atelier = (() => {
     out += '/* AMIS_FIN */\n';
     return out.replace(/"atelier":true,?/g, '');
   }
+  function photosPresentes() {
+    let n = 0;
+    for (const a of amis.pets.concat(amis.chars)) for (const [f] of IMG_SLOTS) if (a[f]) n++;
+    return n;
+  }
   function showIo() {
     $('#a-io').hidden = false;
-    $('#a-txt').value = st.tab === 'amis' ? amisSnippet() : snippet();
+    if (st.tab !== 'amis') {
+      $('#a-txt').value = snippet();
+      return;
+    }
+    const n = photosPresentes();
+    const accord =
+      n > 0 &&
+      window.confirm(
+        `Ce texte va embarquer ${n} photo(s) (visages, images importées) dans un fichier PUBLIC : une fois en ligne, elles sont indexables et ne se rappellent pas.\n\nAs-tu l'accord des personnes concernées ?\n\nOK = exporter avec les photos · Annuler = exporter sans (les planches dessinées partent quand même)`
+      );
+    $('#a-txt').value = amisSnippet(accord);
+    if (n > 0 && !accord) UI.toast('Export sans les photos : les copains reprennent le corps du jeu', 5);
   }
   /* relit le bloc « atelier:{…} » qu'écrit l'export : un aller-retour complet sans réécrire à la main */
   function importText(txt) {
@@ -23542,7 +23694,8 @@ async function boot() {
   window.__autoplay = Debug.autoplay;
   window.__atelier = Atelier;
   window.addEventListener('keydown', e => {
-    if (e.code === 'F2') {
+    if (e.code === 'F2' && G.mode === 'test') {
+      // l'atelier est un outil de fabrication : un ami qui tâtonne les touches ne doit pas tomber dedans
       e.preventDefault();
       Atelier.toggle();
     }

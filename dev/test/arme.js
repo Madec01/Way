@@ -1,6 +1,6 @@
 const { test, out } = require('./lib');
 test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs }) => {
-  const persos = ['char_martin', 'char_gabriel', 'char_jean', 'char_neuf'];
+  const persos = ['char_martin', 'char_gabriel', 'char_jean'];
   const s = await p.$('.menuscreen.splash');
   if (s) {
     await s.click();

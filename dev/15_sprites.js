@@ -1211,16 +1211,22 @@ const Sprites = (() => {
     ctx.restore();
     return true;
   }
-  function portraitBody(key, scale = 5, face, body, size) {
+  function portraitBody(key, scale = 5, face, body, size, anim) {
     const c = document.createElement('canvas');
-    c.width = 16 * scale;
-    c.height = 30 * scale;
+    /* Un personnage à planche est dessiné à ×3 de sa case (48 → 144 px), pixels carrés, et respire au repos.
+       Sans ce cas, le portrait retombait sur la planche du jeu : Martin s'affichait en chevalier orange. */
+    const planche = anim && anim.idle && sheets[anim.idle];
+    const tailleP = planche ? planche.fw * 3 : 0;
+    c.width = planche ? Math.max(96, Math.ceil(tailleP * 0.9)) : 16 * scale;
+    c.height = planche ? Math.ceil(tailleP * 1.05) + 8 : 30 * scale;
     c.className = 'portrait-canvas';
     const g = c.getContext('2d');
     g.imageSmoothingEnabled = false;
     const drawIt = () => {
       g.clearRect(0, 0, c.width, c.height);
-      drawBody(g, key, c.width / 2, c.height - 8, { scale: scale / SCALE, walk: 0, face, body, size });
+      if (planche)
+        drawBody(g, key, c.width / 2, c.height - 8 - 25, { anim, clip: 'idle', clipT: performance.now() / 1000, size: tailleP, walk: 0 });
+      else drawBody(g, key, c.width / 2, c.height - 8, { scale: scale / SCALE, walk: 0, face, body, size });
       if (c.isConnected) setTimeout(drawIt, 250);
       else
         setTimeout(() => {
