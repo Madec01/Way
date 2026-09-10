@@ -10,21 +10,24 @@ test(async ({ page: p, ok, entrer, salle, run, sansPause }) => {
 
   /* --- hub --- */
   const hub = await p.evaluate(() => {
-    const tabs = [...document.querySelectorAll('#screen-hub .tab, .hub .tab, .tab')];
-    const boite = tabs.length ? tabs[0].closest('.hubcol') || tabs[0].parentElement.parentElement : null;
+    const texte = document.querySelector('#ui').textContent;
+    const gele = Attract.frozen;
+    UI.showShop();
+    const tabs = [...document.querySelectorAll('.tab')];
+    const boite = tabs[0].closest('.panel');
     const droite = boite ? boite.getBoundingClientRect().right : innerWidth;
     const dehors = tabs.filter(t => t.getBoundingClientRect().right > droite + 1 || t.getBoundingClientRect().left < 0).length;
-    const texte = document.querySelector('#ui').textContent;
+    UI.showHub();
     return {
       n: tabs.length,
       dehors,
       libelles: tabs.map(t => t.textContent.trim()),
       tenue: /Tenue :/.test(texte),
       calib: /calibration\(s\)/.test(texte),
-      gele: Attract.frozen,
+      gele,
     };
   });
-  ok('les cinq onglets de la boutique sont dans le cadre', hub.n === 5 && hub.dehors === 0, `${hub.n} onglets, ${hub.dehors} dehors`);
+  ok('les onglets de la boutique sont tous dans le cadre', hub.n === 3 && hub.dehors === 0, `${hub.n} onglets, ${hub.dehors} dehors`);
   ok(
     'l’onglet des compétences s’appelle « Compétences »',
     hub.libelles.includes('Compétences') && !hub.libelles.includes('Personnages'),

@@ -1099,8 +1099,8 @@ const CONTENT = {
     },
     {
       id: 'meta_reroll',
-      name: 'Re-roll',
-      desc: 'Relancer les choix de level-up.',
+      name: 'Relance',
+      desc: 'Relancer les choix de montée de niveau.',
       tiers: [
         { price: 30, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
         { price: 70, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },

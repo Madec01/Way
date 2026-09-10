@@ -25,29 +25,24 @@ test(async ({ page: p, ok, entrer }) => {
     dep.pets.join(' · ') + ` · ${dep.credits} crédits`
   );
 
-  const shop = await p.evaluate(() => {
-    const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.tab === 'animaux');
-    t.click();
-    return {
-      cartes: [...document.querySelectorAll('#hub-shop .card')].map(c => c.querySelector('.cardtitle span').textContent),
-      modes: [...document.querySelectorAll('#hub-shop [data-mode]')].map(b => b.textContent),
-    };
-  });
+  const shop = await p.evaluate(() => ({
+    cartes: [...document.querySelectorAll('#hub-pets .card.pet')].map(c => c.querySelector('.cardtitle span').textContent),
+    modes: [...document.querySelectorAll('#hub-team [data-mode]')].map(b => b.textContent),
+  }));
   await p.waitForTimeout(300);
   ok(
-    "l'onglet Compagnons montre Uno et les trois modes",
-    shop.cartes.includes('Uno') && shop.modes.length === 3,
+    'le camp montre Uno parmi les compagnons, la carte « Seul », et les deux modes dans la carte d’équipe',
+    shop.cartes.includes('Uno') && shop.cartes.includes('Seul') && shop.modes.length === 2,
     shop.cartes.join(' | ') + ' — modes : ' + shop.modes.join(', ')
   );
 
   const choix = await p.evaluate(() => {
-    const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.tab === 'animaux');
-    t.click();
-    [...document.querySelectorAll('#hub-shop .card.pet')].find(c => c.textContent.includes('Uno')).click();
-    return { pet: Meta.profile.pet };
+    [...document.querySelectorAll('#hub-pets .card.pet')].find(c => c.textContent.includes('Seul')).click();
+    [...document.querySelectorAll('#hub-pets .card.pet')].find(c => c.textContent.includes('Uno')).click();
+    return { pet: Meta.profile.pet, mode: Meta.profile.petMode };
   });
   await p.waitForTimeout(400);
-  ok('un clic le choisit comme compagnon de départ', choix.pet === 'pet_uno');
+  ok('un clic le choisit comme compagnon de départ', choix.pet === 'pet_uno' && choix.mode === 'always', choix.mode);
 
   const perso = await p.evaluate(() => {
     const c = [...document.querySelectorAll('#hub-chars .card')].find(x => x.textContent.includes('Martin'));
@@ -55,12 +50,8 @@ test(async ({ page: p, ok, entrer }) => {
     return { char: Meta.profile.character };
   });
   await p.waitForTimeout(400);
-  const equipe = await p.evaluate(() => document.querySelector('.hubcol.subject').textContent.replace(/\s+/g, ' '));
-  ok(
-    "choisir Martin affiche l'équipe",
-    perso.char === 'char_martin' && /Vieille complicité/.test(equipe),
-    (equipe.match(/Compagnon[^T]*/) || [''])[0].trim()
-  );
+  const equipe = await p.evaluate(() => document.querySelector('#hub-team').textContent.replace(/\s+/g, ' '));
+  ok("choisir Martin affiche l'équipe", perso.char === 'char_martin' && /Vieille complicité/.test(equipe), equipe.slice(0, 80));
 
   const enjeu = await p.evaluate(async () => {
     document.getElementById('hub-enter').click();

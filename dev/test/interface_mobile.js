@@ -6,8 +6,11 @@ test(
   async ({ page: p, ok, entrer, salle, sansPause }) => {
     await entrer('test');
     const hub = await p.evaluate(() => {
+      UI.showShop();
       const tabs = [...document.querySelectorAll('.tab')];
       const dehors = tabs.filter(t => t.getBoundingClientRect().right > innerWidth + 1 || t.getBoundingClientRect().left < -1).length;
+      const hautes = tabs.filter(t => t.getBoundingClientRect().height < 43).length;
+      UI.showHub();
       const petits = [];
       for (const el of document.querySelectorAll('#screen-hub *')) {
         if (!el.offsetParent) continue;
@@ -19,10 +22,9 @@ test(
         const min = etiquette ? 11 : 12;
         if (fs < min - 0.1) petits.push(`${el.className || el.tagName}:${fs.toFixed(1)}`);
       }
-      const hautes = [...document.querySelectorAll('.tab')].filter(t => t.getBoundingClientRect().height < 43).length;
       return { n: tabs.length, dehors, petits: petits.slice(0, 6), nPetits: petits.length, hautes };
     });
-    ok('les cinq onglets tiennent dans l’écran du téléphone', hub.n === 5 && hub.dehors === 0, `${hub.dehors} dehors`);
+    ok('les onglets de la boutique tiennent dans l’écran du téléphone', hub.n === 3 && hub.dehors === 0, `${hub.dehors} dehors`);
     ok('aucun texte du hub sous 12 px (11 pour une étiquette)', hub.nPetits === 0, hub.petits.join(' ') || 'tout ≥ 12 px');
     ok('les onglets font au moins 44 px de haut au doigt', hub.hautes === 0, hub.hautes + ' trop bas');
 

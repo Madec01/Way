@@ -347,3 +347,74 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 #atelier .amivue{border:1px solid var(--line);border-radius:5px;padding:1px 4px;color:#8a93ad}
 #atelier .amivue.ok{border-color:#7fff9a;color:#7fff9a}
 .card.modes .btn{margin:0 .25em .25em 0}
+/* ---------- Hub en trois questions (chantier I-3) ---------- */
+.hub3{position:absolute;inset:0;display:flex;flex-direction:column;gap:calc(10px*var(--ui-scale));padding:calc(14px*var(--ui-scale)) calc(24px*var(--ui-scale));box-sizing:border-box;max-width:1120px;margin:0 auto}
+.hub3 .hubhead{grid-column:auto;flex:none}
+.hubcoins .credits{font-size:max(16px,1.3em);font-weight:700;color:var(--gold);text-shadow:0 0 12px rgba(255,209,102,.4)}
+.hubactions .dot{display:inline-block;width:.55em;height:.55em;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);margin-left:.35em;vertical-align:middle}
+.hubbody{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:calc(10px*var(--ui-scale));padding:.6em 1em;background:rgba(8,10,18,.93);border:1px solid var(--line);border-radius:12px}
+.hstep h2{display:flex;align-items:center;gap:.5em;margin:.2em 0 .45em;font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.35em;letter-spacing:.05em;font-weight:400}
+.hstep.qui h2{color:#7fff9a}.hstep.qui .stepnum{background:#7fff9a}
+.hstep.avec h2{color:#e08a4a}.hstep.avec .stepnum{background:#e08a4a}
+.hstep.ou h2{color:#ffb347}.hstep.ou .stepnum{background:#ffb347}
+.hub3 .row{display:flex;gap:.7em;flex-wrap:wrap;align-items:stretch;justify-content:flex-start;padding-left:2.3em}
+.hub3 .card.big{min-width:0;max-width:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.3em;text-align:center;padding:.6em .7em;cursor:pointer;user-select:none}
+.hub3 .card.char.big{width:calc(150px*var(--ui-scale));min-height:calc(172px*var(--ui-scale))}
+.hub3 .card.pet.big{width:calc(132px*var(--ui-scale));min-height:calc(138px*var(--ui-scale))}
+.hub3 .card.big .portrait{width:calc(120px*var(--ui-scale));height:calc(116px*var(--ui-scale));background:none;box-shadow:none;align-items:flex-end}
+.hub3 .card.big .portrait-canvas{width:calc(110px*var(--ui-scale));margin-bottom:0}
+.hub3 .cardname{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.25em;letter-spacing:.04em}
+.hub3 .card.pet.big .cardtitle{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.1em;padding:0}
+.hub3 .card.pet.big .cardtitle span{font-weight:400}
+.hub3 .card.pet.big .peticon{position:static;opacity:1;image-rendering:pixelated}
+.peticonbox{height:calc(72px*var(--ui-scale));display:flex;align-items:flex-end;justify-content:center}
+.seulglyph{font-family:"Silkscreen",monospace;font-size:2em;color:var(--muted)}
+.hub3 .card.big.selected{border-color:var(--gold);box-shadow:0 0 22px rgba(255,209,102,.3)}
+.hub3 .card.char.big.selected{border-color:#7fff9a;box-shadow:0 0 22px rgba(127,255,154,.3)}
+.hub3 .card.pet.big.selected{border-color:#e08a4a;box-shadow:0 0 22px rgba(224,138,74,.35)}
+.hub3 .card.big .pickmark{margin:0;font-size:1em}
+.hub3 .card.big.locked{opacity:.75}
+.hub3 .card.big.locked .portrait-canvas,.hub3 .card.big.locked .peticon{filter:grayscale(1) brightness(.5)}
+.teamcard{border:1px solid var(--line);border-radius:12px;padding:.7em 1em;background:linear-gradient(90deg,rgba(255,209,102,.06),rgba(8,10,18,.6));display:flex;flex-direction:column;gap:.35em}
+.teamcard.attelage{border-color:rgba(255,209,102,.6)}
+.teamhead{display:flex;align-items:baseline;gap:.8em;flex-wrap:wrap}
+.teamnames{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.4em;letter-spacing:.04em}
+.teamtag{color:var(--gold);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:max(12px,.85em)}
+.jauges{display:flex;gap:1.2em;flex-wrap:wrap}
+.jauge{display:flex;align-items:center;gap:.4em;font-size:max(12px,.85em)}
+.jauge .jl{color:var(--muted);min-width:3.6em}
+.jauge .jb{display:inline-block;width:6em;height:.55em;background:#12203a;border-radius:3px;overflow:hidden}
+.jauge .jb i{display:block;height:100%;background:var(--accent)}
+.jauge .jv{font-family:"Silkscreen",monospace;font-size:max(12px,.85em)}
+.teammode{display:flex;align-items:center;gap:.4em;flex-wrap:wrap}
+.teammode .modedesc{flex-basis:100%}
+.hub3 .card.level{width:calc(210px*var(--ui-scale));min-width:0;max-width:none;padding:.55em .8em;cursor:pointer}
+.hub3 .card.level.locked{width:calc(120px*var(--ui-scale));opacity:.55;cursor:default}
+.hub3 .card.level .lvlhead{flex-direction:column;align-items:flex-start;gap:0}
+.hub3 .card.level .lvlname{font-size:1.15em}
+.hub3 .card.level .lvlmeta{margin:.2em 0}
+.etoiles{color:var(--gold);font-size:max(14px,1em);letter-spacing:.05em}
+.pairsline{margin-top:.5em;line-height:1.7}
+.pairchip{display:inline-block;margin:0 .3em;padding:.05em .45em;border:1px solid var(--line);border-radius:6px;white-space:nowrap}
+.hub3 .cta.big{flex:none;margin:0;width:100%;align-items:center;text-align:center;padding:.7em 1.2em}
+.hub3 .cta.big .l{font-size:1.5em}
+.shoppanel{width:min(60em,100%);max-height:100%;display:flex;flex-direction:column;gap:.6em}
+.shophead{display:flex;align-items:center;justify-content:space-between;gap:1em;flex-wrap:wrap}
+.shophead h2{margin:0}
+.shoppanel .shop{overflow:auto;min-height:0}
+body.touch .hub3{padding:calc(8px*var(--ui-scale))}
+@media (max-width:900px){
+  .hub3 .row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:.3em;scrollbar-width:thin}
+  .hub3 .card.big,.hub3 .card.level{flex:none}
+  .hubhead{flex-wrap:wrap;gap:.5em}
+  .hubid .intercom{display:none}
+  .jauges{gap:.6em}
+}
+@media (max-width:900px){
+  .hub3 .card.char.big{width:calc(112px*var(--ui-scale));min-height:calc(130px*var(--ui-scale))}
+  .hub3 .card.big .portrait{width:calc(90px*var(--ui-scale));height:calc(86px*var(--ui-scale))}
+  .hub3 .card.big .portrait-canvas{width:calc(80px*var(--ui-scale))}
+  .hub3 .card.pet.big{width:calc(104px*var(--ui-scale));min-height:calc(112px*var(--ui-scale))}
+  .peticonbox{height:calc(56px*var(--ui-scale))}
+  .hub3 .row{padding-left:0}
+}

@@ -153,7 +153,7 @@ Répartition : Commune 18 · Rare 22 · Épique 15 · Colossale 6. Reprendre une
 | `meta_memoire_selective` | Mémoire sélective | 1 | 30 | `selective_memory` |
 | `meta_apercu_coffre` | Aperçu du coffre | 1 | 30 | `chest_preview` |
 | `meta_quatrieme_choix` | Quatrième choix | 1 | 40 | `fourth_choice` |
-| `meta_reroll` | Re-roll | 3 | 30 / 70 / 140 | `reroll` / `reroll` / `reroll` |
+| `meta_reroll` | Relance | 3 | 30 / 70 / 140 | `reroll` / `reroll` / `reroll` |
 | `meta_celerite` | Célérité | 3 | 20 / 50 / 100 | speed ×1.04 / speed ×1.04 / speed ×1.04 |
 | `meta_carapace` | Carapace | 3 | 30 / 70 / 130 | armor +1 / armor +1 / armor +1 |
 | `meta_isolation` | Isolation | 3 | 20 / 60 / 110 | trapDamageMul ×0.85 / trapDamageMul ×0.85 / trapDamageMul ×0.85 |
@@ -1351,4 +1351,23 @@ Avant, `#ff5e7a` avait cinq emplois contradictoires (barre de PV pleine, barre e
 Pas touché, à dessein : la teinte du sol (le remède est la lumière, F-5), le CSS des menus (`.chip.bad`, I-3), l'atelier.
 
 Test : `palette.js` — 7 mesures : aucun rouge en dur hors de `PAL` ; télégraphies, barre ennemie, cœurs ; le boss télégraphie en alerte et pas dans sa couleur ; rouges sourds et aucun rouge vif ; les quatre animaux ; un dégât d'Uno en orange ; hachures à 20 %, pas à 50 %.
+
+## 47. Chantier I-3 — le hub en trois questions
+
+**Le camp pose trois questions, dans l'ordre, et un bouton répond.** `showHub()` (50_ui.js) construit `.hub3` : un en-tête (crédits en toutes lettres, bouton **Boutique** avec une pastille quand quelque chose est achetable, **Menu**), une seule zone de défilement `#hub-body`, et le bouton **▶ PARTIR** collé en bas qui récapitule tout (« PARTIR — ADMISSION, 9 salles / Martin + Uno · arme et compétence ensuite »).
+
+| Question | Ce qu'on voit | Ce qu'on ne voit plus |
+|---|---|---|
+| **1 Qui part ?** | trois cartes 150 × 172 : le portrait animé et le nom, rien d'autre | les stats en chiffres, le caractère, le prix sous chaque ami |
+| **2 Avec qui ?** | les animaux en cartes 132 × 138 avec leur sprite 64 px et une ligne de ce qu'ils font, plus une carte **Seul** de même taille qui porte le bonus (+35 % PV, +20 % dégâts) | la boutique des compagnons, les trois modes en boutons sous chaque carte |
+| **la carte d'équipe** | l'attelage (« ★ La maisonnée » et sa phrase), le caractère du personnage, trois jauges (PV / Vitesse / Chance sur `STAT_MAX`), et le mode du compagnon **à côté de ce qu'il pilote** (Tout le temps / À l'appel, description courte `PET_MODES[k].short`) | — |
+| **3 Où ?** | les paliers en ligne : le jouable en carte pleine (étoiles, « jamais fini », phrase du palier sur le choisi), les verrouillés à moitié largeur avec une seule ligne de condition ; sous la rangée, les paires bonus ⇄ malus du palier en puces (effet en infobulle) | quatre fiches de palier au même poids |
+
+**Choisir un animal** remet le mode à « tout le temps » si on était « Seul » ; **Seul** garde l'animal en mémoire (`petMode = 'none'`, `pet` inchangé). La position de défilement survit à un clic (`hubScroll`).
+
+**La boutique est un écran à part** (`screens.shop`, `showShop()`) : trois onglets Améliorations / Armes / Compétences, et une carte d'amélioration ne montre que **le palier suivant** (« Palier 2/4 : +20 PV — Acheter ◈ 60 »), plus la fiche des quatre. **Les fragments quittent le camp** : entrée « 04 Fragments » du menu principal, écran `screens.lore` (`showFragments()`), décision « le sortir du camp maintenant, réécrire plus tard si l'histoire se décide ».
+
+Chiffres : le camp tient en **moins de 250 mots** (857 avant, 296 au premier jet, ~230 après coupes : description courte des modes, phrase de palier sur le choisi seulement) ; « Gabriel avec ses chats » se fait en **deux clics** (sept interactions avant). Sous 900 px : une colonne, les rangées défilent au doigt, le bouton reste collé en bas.
+
+Test : `hub.js` — 14 mesures (les trois questions, les mots, une seule zone de défilement, portraits et sprites, les verrouillés à moitié largeur sur un profil neuf, le texte de Partir, Gabriel + chats en deux clics, la carte d'équipe, Seul, le défilement gardé, l'écran boutique et sa pastille, un seul palier par carte, les fragments depuis le menu).
 

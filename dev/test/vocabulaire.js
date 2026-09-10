@@ -32,6 +32,8 @@ test(async ({ page: p, ok, entrer, run, sansPause }) => {
     /\b(offense|defense|mobility|economy)\b/,
     /\b(BLADE|HAMMER|PISTOL|CHAIN|FLAME)\b/,
     /Réserve de greffes/,
+    /\bre-?roll\b/i,
+    /level-?ups?\b/i,
   ];
   const fautes = (texte, ou) => {
     const out = [];
@@ -79,19 +81,22 @@ test(async ({ page: p, ok, entrer, run, sansPause }) => {
     UI.showMenu();
     lis('menu');
     UI.showHub();
-    for (const t of ['passifs', 'armes', 'animaux', 'sujets']) {
+    lis('hub');
+    UI.showShop();
+    for (const t of ['passifs', 'armes', 'sujets']) {
       const b = document.querySelector(`.tab[data-tab="${t}"]`);
       if (b) b.click();
       await new Promise(r => setTimeout(r, 50));
-      lis('hub · ' + t);
+      lis('boutique · ' + t);
     }
+    UI.showHub();
     document.getElementById('hub-enter').click();
     await new Promise(r => setTimeout(r, 900));
     lis('prépa');
     return out;
   });
   const f2 = ecrans.flatMap(([ou, t]) => fautes(t, ou));
-  ok('menu, hub (4 onglets) et prépa sont propres', f2.length === 0, f2.slice(0, 8).join('\n      ') || 'aucun mot banni');
+  ok('menu, hub, boutique (3 onglets) et prépa sont propres', f2.length === 0, f2.slice(0, 8).join('\n      ') || 'aucun mot banni');
 
   /* en partie : pause, montée de niveau, HUD, fin */
   await p.click('[data-s]');

@@ -22,7 +22,7 @@ const UI = (() => {
 
   function init() {
     root = $('#ui');
-    for (const s of ['menu', 'hub', 'prep', 'choice', 'pause', 'end', 'credits', 'lore']) {
+    for (const s of ['menu', 'hub', 'shop', 'prep', 'choice', 'pause', 'end', 'credits', 'lore']) {
       const d = el('div', 'screen', '');
       d.id = 'screen-' + s;
       d.hidden = true;
@@ -211,7 +211,8 @@ const UI = (() => {
           <button class="mbtn primary" id="btn-normal"><span class="k">01</span><span class="l">Mode Normal</span><span class="d">Progression réelle, sauvegarde locale</span></button>
           <button class="mbtn" id="btn-test"><span class="k">02</span><span class="l">Mode Test</span><span class="d">Tout débloqué, panneau debug F1</span></button>
           <button class="mbtn" id="btn-credits"><span class="k">03</span><span class="l">Crédits</span><span class="d">Sprites, musiques, licences</span></button>
-          <button class="mbtn" id="btn-fs"><span class="k">04</span><span class="l">Plein écran</span><span class="d">${Fullscreen.active ? 'Quitter le plein écran' : 'Recommandé sur téléphone'}</span></button>
+          <button class="mbtn" id="btn-lore"><span class="k">04</span><span class="l">Fragments</span><span class="d">Ce que les salles ont laissé</span></button>
+          <button class="mbtn" id="btn-fs"><span class="k">05</span><span class="l">Plein écran</span><span class="d">${Fullscreen.active ? 'Quitter le plein écran' : 'Recommandé sur téléphone'}</span></button>
           <button class="mbtn ghost" id="btn-reset"><span class="k">—</span><span class="l">Réinitialiser</span><span class="d">Effacer la sauvegarde du mode Normal</span></button>
         </nav>
         <div class="audiohint">▶ Cliquez ou appuyez sur une touche pour lancer le son</div>
@@ -247,6 +248,7 @@ const UI = (() => {
       if (Input.touch.active && !Fullscreen.active) Fullscreen.enter();
     });
     onBar('#btn-credits', showCredits);
+    onBar('#btn-lore', showFragments);
     s.querySelector('#btn-fs').onclick = () => {
       Fullscreen.toggle();
       setTimeout(showMenu, 400);
@@ -400,8 +402,15 @@ const UI = (() => {
     return grainPat;
   }
 
-  /* ---------- Hub ---------- */
-  let hubTab = 'passifs';
+  /* ---------- Hub : « Qui part ? Avec qui ? Où ? Partir. » (chantier I-3) ----------
+     Une seule zone de défilement, trois questions, une carte d'équipe qui rassemble ce qui était éparpillé sur trois
+     colonnes (attelage, caractère, stats, mode du compagnon), la boutique dans son propre écran. Le hub se
+     reconstruit à chaque choix mais garde sa position de défilement. */
+  let hubScroll = 0;
+  const STAT_MAX = { maxHp: 150, speed: 320, luck: 6 };
+  function jauge(label, v, max) {
+    return `<div class="jauge"><span class="jl">${label}</span><span class="jb"><i style="width:${Math.round(clamp(v / max, 0, 1) * 100)}%"></i></span><span class="jv">${v}</span></div>`;
+  }
   function showHub() {
     G.state = 'hub';
     const p = Meta.profile;
@@ -411,67 +420,94 @@ const UI = (() => {
     const biomes = Content.biomes();
     if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id;
     const biome = biomes.find(b => b.id === p.biome);
-    const tabs = ['passifs', 'armes', 'animaux', 'sujets', 'fragments'];
-    const meta = Content.metaPassives().filter(m => Meta.tierOf(m.id) > 0).length;
+    const mode = p.petMode || 'always';
+    const pet = mode !== 'none' && p.pet ? Content.pet(p.pet) : null;
+    const pair = pet ? Content.pairOf(p.character, p.pet) : null;
+    const achetable =
+      Content.metaPassives().some(m => m.tiers[Meta.tierOf(m.id)] && p.coins >= m.tiers[Meta.tierOf(m.id)].price) ||
+      Content.weapons().some(w => !Meta.weaponUnlocked(w.id) && p.coins >= w.price);
+    const petsVisibles = Content.pets().filter(a => !a.hidden);
     s.innerHTML = `
-      <div class="hub2">
+      <div class="hub3">
         <header class="hubhead">
-          <div class="hubid"><div class="stamp"><span>WAY</span><span class="sep">·</span><span>Ton camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
-          <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits en banque${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
-          <div class="hubactions"><button class="btn ghost small" id="hub-menu">Menu</button></div>
+          <div class="hubid"><div class="stamp"><span>WAY</span><span class="sep">·</span><span>Camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
+          <div class="hubcoins"><div class="credits">${fmt(p.coins)} crédits</div>${G.mode === 'test' ? '<span class="tag test">MODE TEST</span>' : ''}</div>
+          <div class="hubactions"><button class="btn small" id="hub-shop-open">Boutique${achetable ? ' <span class="dot" title="quelque chose est achetable"></span>' : ''}</button><button class="btn ghost small" id="hub-menu">Menu</button></div>
         </header>
-        <section class="hubcol subject">
-          <div class="colhead"><span class="colnum">1</span><div><div class="coltitle">Personnage</div><div class="colsub">Qui tu envoies dans les salles</div></div></div>
-          <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
-          <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
-          <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck}</div>
-          <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) && (p.petMode || 'always') !== 'none' ? esc(Content.pet(p.pet).duoName || Content.pet(p.pet).name) + ' · ' + esc(PET_MODES[p.petMode || 'always'].name.toLowerCase()) : 'aucun'}${(() => {
-            const pr = p.pet ? Content.pairOf(p.character, p.pet) : null;
-            return pr && (p.petMode || 'always') !== 'none' ? ' · <span class="good">' + esc(pr.name) + '</span>' : '';
-          })()}</div>
-          <h3>Changer de personnage</h3>
-          <div class="cards vertical" id="hub-chars"></div>
-        </section>
-        <section class="hubcol center">
-          <div class="colhead"><span class="colnum">2</span><div><div class="coltitle">Mission</div><div class="colsub">Où tu vas : choisis un niveau, puis JOUER</div></div></div>
-          <div class="muted tiny lvlhint">Clique sur un niveau pour le sélectionner, puis sur JOUER. Chaque niveau fait 9 salles : un boss en salle 5, sa revanche en salle 9.</div>
-          <div class="cards vertical" id="hub-biomes">${biomes
-            .map(b => {
-              const ok = Meta.biomeUnlocked(b);
-              const sel = b.id === biome.id;
-              const done = (p.cleared || {})[b.id] || 0;
-              const prev = b.unlockAfter ? Content.biome(b.unlockAfter) : null;
-              return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
-            <div class="lvlhead"><span class="lvlnum">Palier ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
-            <div class="lvlmeta"><span class="tag">Difficulté ${'★'.repeat(Math.min(5, b.order))}${'☆'.repeat(Math.max(0, 5 - b.order))}</span>${done ? `<span class="tag ok">Fini ${done} fois</span>` : ok ? '<span class="tag">Jamais terminé</span>' : ''}</div>
-            <div class="muted small lvldesc">${esc(b.tagline || b.desc)}</div>
-            ${ok ? `<div class="muted tiny">Au départ, deux de ces paires bonus/malus te sont proposées, tu en choisis une :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : finir le palier ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
-          </div>`;
-            })
-            .join('')}</div>
-          <button class="cta" id="hub-enter"><span class="l">JOUER — Palier ${biome.order} · ${esc(biome.name)}</span><span class="d">Ensuite : choix de l'arme et de la compétence, puis salle 1</span></button>
-        </section>
-        <section class="hubcol shopcol">
-          <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux parties : bonus permanents</div></div></div>
-          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${{ passifs: 'Améliorations', armes: 'Armes', animaux: 'Compagnons', sujets: 'Compétences', fragments: 'Fragments' }[t] || t}</button>`).join('')}</nav>
-          <div id="hub-shop" class="shop"></div>
-        </section>
+        <div class="hubbody" id="hub-body">
+          <section class="hstep qui">
+            <h2><span class="stepnum">1</span> Qui part ?</h2>
+            <div class="row" id="hub-chars"></div>
+          </section>
+          <section class="hstep avec">
+            <h2><span class="stepnum">2</span> Avec qui ?</h2>
+            <div class="row" id="hub-pets"></div>
+          </section>
+          <section class="teamcard ${pair ? 'attelage' : ''}" id="hub-team">
+            <div class="teamhead"><span class="teamnames">${esc(cur.name)}${pet ? ' + ' + esc(pet.duoName || pet.name) : ' — seul'}</span>${pair ? `<span class="teamtag">★ ${esc(pair.name)}</span>` : ''}</div>
+            ${pair ? `<div class="muted small">${esc(pair.desc)}</div>` : ''}
+            <div class="small"><b>${esc(cur.trait.name)}</b> — ${esc(cur.trait.desc)}</div>
+            ${mode === 'none' ? `<div class="small">Seul : <b>${esc(PET_MODES.none.desc.replace(/^Aucun compagnon — /, ''))}</b></div>` : ''}
+            <div class="jauges">${jauge('PV', cur.stats.maxHp, STAT_MAX.maxHp)}${jauge('Vitesse', cur.stats.speed, STAT_MAX.speed)}${jauge('Chance', cur.stats.luck, STAT_MAX.luck)}</div>
+            ${
+              pet
+                ? `<div class="teammode"><span class="small">${esc(pet.duoName || pet.name)} ${pet.duo ? 'restent' : 'reste'} avec toi :</span> ${[
+                    'always',
+                    'call',
+                  ]
+                    .map(
+                      k =>
+                        `<button class="btn small ${mode === k ? 'primary' : 'ghost'}" data-mode="${k}" title="${esc(PET_MODES[k].desc)}">${PET_MODES[k].name}</button>`
+                    )
+                    .join('')}<span class="muted tiny modedesc">${esc(PET_MODES[mode].short || PET_MODES[mode].desc)}</span></div>`
+                : ''
+            }
+          </section>
+          <section class="hstep ou">
+            <h2><span class="stepnum">3</span> Où ?</h2>
+            <div class="row" id="hub-biomes">${biomes
+              .map(b => {
+                const ok = Meta.biomeUnlocked(b);
+                const sel = b.id === biome.id;
+                const done = (p.cleared || {})[b.id] || 0;
+                const prev = b.unlockAfter ? Content.biome(b.unlockAfter) : null;
+                if (!ok)
+                  return `<div class="card level locked" data-biome="${b.id}"><div class="lvlhead"><span class="lvlnum">Palier ${b.order}</span><span class="lvlname">${esc(b.name)}</span></div><div class="muted tiny">🔒 Finis le palier ${prev ? prev.order : b.order - 1}</div></div>`;
+                return `<div class="card level pick ${sel ? 'selected' : ''}" data-biome="${b.id}">
+              <div class="lvlhead"><span class="lvlnum">Palier ${b.order}</span><span class="lvlname">${esc(b.name)}</span></div>
+              <div class="lvlmeta"><span class="etoiles">${'★'.repeat(Math.min(5, b.order))}${'☆'.repeat(Math.max(0, 5 - b.order))}</span><span class="muted tiny">${done ? `fini ${done} fois` : 'jamais fini'}</span></div>
+              ${sel ? `<div class="muted small lvldesc">${esc(b.tagline || b.desc)}</div>` : ''}
+            </div>`;
+              })
+              .join('')}</div>
+            <div class="muted tiny pairsline">Au départ, une paire bonus ⇄ malus à choisir parmi : ${biome.levelPassives
+              .map(
+                lp =>
+                  `<span class="pairchip" title="${esc(lp.bonus.desc)} · ${esc(lp.malus.desc)}"><span class="good">${esc(lp.bonus.name)}</span> ⇄ <span class="bad">${esc(lp.malus.name)}</span></span>`
+              )
+              .join('')}</div>
+          </section>
+        </div>
+        <button class="cta big" id="hub-enter"><span class="l">▶ PARTIR — ${esc(biome.name)}, 9 salles</span><span class="d">${esc(cur.name)}${pet ? ' + ' + esc(pet.duoName || pet.name) : ', seul'} · arme et compétence ensuite</span></button>
       </div>`;
+    /* 1. qui part ? — une carte par ami : le portrait animé et le nom, rien d'autre (le détail est dans la carte d'équipe) */
     const cc = s.querySelector('#hub-chars');
-    chars.forEach((c, i) => {
+    for (const c of chars) {
       const owned = Meta.characterUnlocked(c.id);
       const sel = c.id === p.character;
       const card = el(
         'div',
-        'card char mini' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
-        `<div class="cardtitle"><span>${esc(c.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div><div class="muted tiny">${esc(c.trait.name)} · PV ${c.stats.maxHp} · vit. ${c.stats.speed}</div>${owned ? '' : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Débloquer — ◈ ${c.price}</button>`}`
+        'card char big' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
+        `<div class="portrait" ></div><div class="cardname">${esc(c.name)}</div>${owned ? (sel ? '<div class="pickmark">✓</div>' : '') : `<button class="btn small buy" ${p.coins < c.price ? 'disabled' : ''}>Débloquer — ◈ ${c.price}</button>`}`
       );
+      const pc = Sprites.portraitBody(c.sprite || 'player', 5, c.face, c.body, c.size, c.anim);
+      if (pc) card.querySelector('.portrait').appendChild(pc);
       card.onclick = e => {
         if (e.target.classList.contains('buy')) {
           if (Meta.buyCharacter(c.id)) showHub();
           return;
         }
-        if (owned) {
+        if (owned && !sel) {
           p.character = c.id;
           Meta.save();
           AudioEngine.uiClick({});
@@ -479,10 +515,59 @@ const UI = (() => {
         }
       };
       cc.appendChild(card);
+    }
+    /* 2. avec qui ? — les animaux en grand, et « Seul » comme une carte de même taille, avec son bonus dessus */
+    const pc2 = s.querySelector('#hub-pets');
+    for (const a of petsVisibles) {
+      const owned = Meta.petUnlocked(a.id);
+      const sel = mode !== 'none' && p.pet === a.id;
+      const card = el(
+        'div',
+        'card pet big' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
+        `<div class="peticonbox"></div><div class="cardtitle"><span>${esc(a.duoName || a.name)}</span></div><div class="muted tiny">${esc(a.tag || '')}</div>${owned ? (sel ? '<div class="pickmark">✓</div>' : '') : `<button class="btn small buy" ${p.coins < a.price ? 'disabled' : ''}>Débloquer — ◈ ${a.price}</button>`}`
+      );
+      const img = a.anim && a.anim.idle ? Sprites.sheetCanvas(a.anim.idle, 64) : Sprites.propCanvas(a.sprite, 64);
+      if (img) {
+        img.className = 'peticon';
+        card.querySelector('.peticonbox').appendChild(img);
+      }
+      card.onclick = e => {
+        if (e.target.classList.contains('buy')) {
+          if (Meta.buyPet(a.id)) showHub();
+          return;
+        }
+        if (!owned || sel) return;
+        p.pet = a.id;
+        if (p.petMode === 'none') p.petMode = 'always';
+        Meta.save();
+        AudioEngine.uiClick({});
+        showHub();
+      };
+      pc2.appendChild(card);
+    }
+    const seul = el(
+      'div',
+      'card pet big seul' + (mode === 'none' ? ' selected' : ''),
+      `<div class="peticonbox"><span class="seulglyph">—</span></div><div class="cardtitle"><span>Seul</span></div><div class="muted tiny">tu gardes sa part : +35 % PV, +20 % dégâts</div>${mode === 'none' ? '<div class="pickmark">✓</div>' : ''}`
+    );
+    seul.onclick = () => {
+      if (mode === 'none') return;
+      p.petMode = 'none';
+      Meta.save();
+      AudioEngine.uiClick({});
+      showHub();
+    };
+    pc2.appendChild(seul);
+    /* le mode du compagnon, dans la carte d'équipe, à côté de ce qu'il pilote */
+    s.querySelectorAll('[data-mode]').forEach(b => {
+      b.onclick = () => {
+        p.petMode = b.dataset.mode;
+        Meta.save();
+        AudioEngine.uiClick({});
+        showHub();
+      };
     });
-    const pb = s.querySelector('#hub-portrait');
-    const pc = Sprites.portraitBody(cur.sprite || 'player', 5, cur.face, cur.body, cur.size, cur.anim);
-    if (pc) pb.appendChild(pc);
+    /* 3. où ? */
     s.querySelectorAll('[data-biome]').forEach(
       c =>
         (c.onclick = () => {
@@ -491,31 +576,50 @@ const UI = (() => {
             toast("Finis d'abord le palier précédent.");
             return;
           }
+          if (p.biome === b.id) return;
           p.biome = b.id;
           Meta.save();
           AudioEngine.uiClick({});
           showHub();
         })
     );
+    s.querySelector('#hub-menu').onclick = () => showMenu();
+    s.querySelector('#hub-shop-open').onclick = () => showShop();
+    s.querySelector('#hub-enter').onclick = () => {
+      hideAll();
+      Run.start({ character: p.character, biome: biome.id });
+    };
+    const body = s.querySelector('#hub-body');
+    body.scrollTop = hubScroll;
+    body.onscroll = () => (hubScroll = body.scrollTop);
+    show('hub');
+    if (!Attract.running) Attract.start();
+    Attract.freeze(true); // figée derrière le hub : un tir ou un piège ne passe plus à travers les cartes
+  }
+
+  /* ---------- Boutique : un écran à part, entre deux parties ---------- */
+  let hubTab = 'passifs';
+  function showShop() {
+    const p = Meta.profile;
+    const s = screens.shop;
+    const tabs = ['passifs', 'armes', 'sujets'];
+    s.innerHTML = `
+      <div class="panel shoppanel">
+        <div class="shophead"><div><div class="eyebrow">Camp de base</div><h2>Boutique</h2></div><div class="hubcoins"><div class="credits">${fmt(p.coins)} crédits</div></div><button class="btn ghost" id="shop-back">Retour au camp</button></div>
+        <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${{ passifs: 'Améliorations', armes: 'Armes', sujets: 'Compétences' }[t]}</button>`).join('')}</nav>
+        <div id="hub-shop" class="shop"></div>
+      </div>`;
     s.querySelectorAll('.tab').forEach(
       t =>
         (t.onclick = () => {
           hubTab = t.dataset.tab;
           AudioEngine.uiClick({});
-          showHub();
+          showShop();
         })
     );
-    s.querySelector('#hub-menu').onclick = () => {
-      showMenu();
-    };
-    s.querySelector('#hub-enter').onclick = () => {
-      hideAll();
-      Run.start({ character: p.character, biome: biome.id });
-    };
+    s.querySelector('#shop-back').onclick = () => showHub();
     renderShop(s.querySelector('#hub-shop'));
-    show('hub');
-    if (!Attract.running) Attract.start();
-    Attract.freeze(true); // figée derrière le hub : un tir ou un piège ne passe plus à travers les cartes
+    show('shop');
   }
   function renderShop(box) {
     const p = Meta.profile;
@@ -525,15 +629,16 @@ const UI = (() => {
         const t = Meta.tierOf(m.id);
         const next = m.tiers[t];
         const maxed = !next;
+        /* une carte ne montre que le palier suivant : ce qu'on peut acheter, pas la fiche technique des quatre */
         const card = el(
           'div',
           'card meta' + (maxed ? ' maxed' : ''),
-          `<div class="cardtitle">${esc(m.name)} <span class="tier">${'●'.repeat(t)}${'○'.repeat(m.tiers.length - t)}</span></div><div class="muted small">${esc(m.desc)}</div><div class="muted tiny">${m.tiers.map((tier, i) => `<span class="${i < t ? 'good' : ''}">${i + 1}: ${esc(describeTier(tier))}</span>`).join(' · ')}</div>${maxed ? '<div class="good small">Au maximum</div>' : `<button class="btn small buy" ${p.coins < next.price ? 'disabled' : ''}>Palier ${t + 1} — ◈ ${next.price}</button>`}`
+          `<div class="cardtitle">${esc(m.name)} <span class="tier">${'●'.repeat(t)}${'○'.repeat(m.tiers.length - t)}</span></div><div class="muted small">${esc(m.desc)}</div>${maxed ? '<div class="good small">Au maximum</div>' : `<div class="small">Palier ${t + 1}/${m.tiers.length} : ${esc(describeTier(next))}</div><button class="btn small buy" ${p.coins < next.price ? 'disabled' : ''}>Acheter — ◈ ${next.price}</button>`}`
         );
         const b = card.querySelector('.buy');
         if (b)
           b.onclick = () => {
-            if (Meta.buy(m.id)) showHub();
+            if (Meta.buy(m.id)) showShop();
           };
         box.appendChild(card);
       }
@@ -543,97 +648,13 @@ const UI = (() => {
         const card = el(
           'div',
           'card weapon' + (owned ? '' : ' locked'),
-          `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(famille(w.family))}</span></div><div class="muted small">${esc(w.desc)}</div><div class="muted tiny">${weaponStats(w)}</div>${owned ? '<div class="good small">Déjà à toi</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`
+          `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(famille(w.family))}</span></div><div class="muted small">${esc(w.desc)}</div>${owned ? '<div class="good small">Déjà à toi</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`
         );
         const b = card.querySelector('.buy');
         if (b)
           b.onclick = () => {
-            if (Meta.buyWeapon(w.id)) showHub();
+            if (Meta.buyWeapon(w.id)) showShop();
           };
-        box.appendChild(card);
-      }
-    } else if (hubTab === 'animaux') {
-      box.appendChild(
-        el('div', 'muted small', "Un animal joue son tour en mesure. Un seul à la fois : celui qu'une élite lâche remplace le vôtre.")
-      );
-      /* mode : trois branches, et « personne » rend au joueur ce qu'il aurait donné à l'animal */
-      const mode = p.petMode || 'always';
-      const mb = el(
-        'div',
-        'card modes',
-        '<div class="cardtitle"><span>Comment tu l\'emmènes</span></div>' +
-          Object.keys(PET_MODES)
-            .map(k => `<button class="btn small ${mode === k ? 'primary' : 'ghost'}" data-mode="${k}">${PET_MODES[k].name}</button>`)
-            .join('') +
-          `<div class="muted small">${esc(PET_MODES[mode].desc)}</div>`
-      );
-      mb.querySelectorAll('[data-mode]').forEach(b => {
-        b.onclick = () => {
-          p.petMode = b.dataset.mode;
-          Meta.save();
-          AudioEngine.uiClick({});
-          showHub();
-        };
-      });
-      box.appendChild(mb);
-      /* équipes connues : ce que donne le bon attelage */
-      const paires = Content.pairs();
-      if (paires.length)
-        box.appendChild(
-          el(
-            'div',
-            'card',
-            '<div class="cardtitle"><span>Équipes</span></div>' +
-              paires
-                .map(pr => {
-                  const ch = Content.character(pr.char),
-                    pe = Content.pet(pr.pet);
-                  const actif = p.character === pr.char && p.pet === pr.pet && mode !== 'none';
-                  return `<div class="muted small${actif ? ' good' : ''}">${actif ? '✓ ' : ''}${esc((ch && ch.name) || pr.char)} + ${esc((pe && (pe.duoName || pe.name)) || pr.pet)} — <b>${esc(pr.name)}</b> : ${esc(pr.desc)}</div>`;
-                })
-                .join('')
-          )
-        );
-      const none = el(
-        'div',
-        'card' + (p.pet ? '' : ' selected'),
-        `<div class="cardtitle"><span>Aucun animal</span><span class="lvlstate">${p.pet ? 'Cliquer pour choisir' : '✓ Actif'}</span></div><div class="muted small">La case reste vide.</div>`
-      );
-      none.onclick = () => {
-        p.pet = null;
-        Meta.save();
-        AudioEngine.uiClick({});
-        showHub();
-      };
-      box.appendChild(none);
-      for (const a of Content.pets()) {
-        if (a.hidden) continue; // moitié d'un attelage : elle vient avec l'autre, on ne la propose pas seule
-        const owned = Meta.petUnlocked(a.id);
-        const sel = p.pet === a.id;
-        const card = el(
-          'div',
-          'card pet' + (sel ? ' selected' : '') + (owned ? '' : ' locked'),
-          `<div class="cardtitle"><span>${esc(a.duoName || a.name)}</span><span class="lvlstate">${sel ? '✓ Actif' : owned ? 'Cliquer pour choisir' : 'À débloquer'}</span></div>
-           <div class="muted small">${esc(a.desc)}</div><div class="muted tiny">${esc(a.tag || '')}${a.damage ? ' · ' + a.damage + ' dégâts' : ''}${a.hp ? ' · ' + a.hp + ' PV' : ''}</div>
-           ${owned ? '' : `<button class="btn small buy" ${p.coins < a.price ? 'disabled' : ''}>Débloquer — ◈ ${a.price}</button>`}`
-        );
-        const img = a.anim && a.anim.idle ? Sprites.sheetCanvas(a.anim.idle, 34) : Sprites.propCanvas(a.sprite, 34);
-        if (img) {
-          img.className = 'peticon';
-          card.appendChild(img);
-        }
-        card.onclick = e => {
-          if (e.target.classList.contains('buy')) {
-            if (Meta.buyPet(a.id)) showHub();
-            return;
-          }
-          if (owned) {
-            p.pet = a.id;
-            Meta.save();
-            AudioEngine.uiClick({});
-            showHub();
-          }
-        };
         box.appendChild(card);
       }
     } else if (hubTab === 'sujets') {
@@ -648,20 +669,28 @@ const UI = (() => {
             `<div class="cardtitle">${esc(sk.name)} <span class="tag cd">recharge ${sk.cooldown} s</span></div><div class="muted small">${esc(sk.desc)}</div>`
           )
         );
-    } else if (hubTab === 'fragments') {
-      for (const f of LORE.fragments) {
-        const ok = Meta.loreUnlocked(f.id);
-        const card = el(
+    }
+  }
+  /* ---------- Fragments : sortis du camp, accessibles depuis le menu ---------- */
+  function showFragments() {
+    const p = Meta.profile;
+    const s = screens.lore;
+    s.innerHTML = `<div class="panel center lore"><h2>Fragments</h2><div class="shop" id="lore-list"></div>
+      <div class="muted tiny">Parties : ${p.runs} · victoires : ${p.wins} · morts : ${p.deaths} · meilleur niveau : ${p.bestLevel}</div>
+      <div class="row"><button class="btn primary" id="lore-back">Retour</button></div></div>`;
+    const box = s.querySelector('#lore-list');
+    for (const f of LORE.fragments) {
+      const ok = Meta.loreUnlocked(f.id);
+      box.appendChild(
+        el(
           'div',
           'card lore' + (ok ? '' : ' locked'),
           `<div class="cardtitle">${ok ? esc(f.title) : 'Document scellé'}</div><div class="muted small">${ok ? esc(f.text).replace(/\n/g, '<br>') : 'Condition : ' + esc(f.cond)}</div>`
-        );
-        box.appendChild(card);
-      }
-      box.appendChild(
-        el('div', 'muted tiny', `Parties : ${p.runs} · victoires : ${p.wins} · morts : ${p.deaths} · meilleur niveau : ${p.bestLevel}`)
+        )
       );
     }
+    s.querySelector('#lore-back').onclick = () => showMenu();
+    show('lore');
   }
   function describeTier(t) {
     const parts = (t.mods || []).map(
@@ -818,7 +847,7 @@ const UI = (() => {
         <div class="panel choice">
           <div class="eyebrow">${esc(subtitle || '')}</div><h2>${esc(title)}</h2>
           <div class="cards" id="choice-cards">${choices.map((u, i) => cardHtml(u, i)).join('')}</div>
-          <div class="row small">${reroll && pl.rerollsLeft > 0 ? `<button class="btn ghost" id="choice-reroll">Re-roll (${pl.rerollsLeft}) — R</button>` : ''}<span class="muted tiny">1-${choices.length} : choisir</span></div>
+          <div class="row small">${reroll && pl.rerollsLeft > 0 ? `<button class="btn ghost" id="choice-reroll">Relancer (${pl.rerollsLeft}) — R</button>` : ''}<span class="muted tiny">1-${choices.length} : choisir</span></div>
         </div>`;
       s.querySelectorAll('[data-i]').forEach(c => (c.onclick = () => pick(choices[+c.dataset.i])));
       const rb = s.querySelector('#choice-reroll');
@@ -1405,6 +1434,8 @@ const UI = (() => {
     renderToasts,
     hudProbe,
     flashScreen,
+    showShop,
+    showFragments,
     renderFade,
     renderBackdrop,
     state,

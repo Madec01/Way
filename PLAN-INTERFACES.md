@@ -136,7 +136,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 **Taille** : 1 séance.
 **Bilan** : fait, avec les mots que je proposais (palier, amélioration, greffe, crédits en banque / en attente, partie, mort, Coffre, Ruée, camp) — CONTENT.md §43 tient le glossaire. 54 textes du contenu réécrits (8 armes, 8 compétences, 24 greffes, 3 améliorations, 10 ennemis, 4 boss, 3 pièges, 6 compagnons), les trois modes de compagnon, un défi, les chaînes de l'interface (STR, hub, boutique, prépa, fin) et trois messages du code. Les distances sont des repères humains avec une table unique. Les catégories et familles sont traduites à l'affichage, pas dans le contenu. Le test `vocabulaire.js` (6 mesures) balaie 401 textes, huit écrans rendus et 91 messages du code : il a lui-même trouvé les six derniers oublis (« run », « votre place », « Calibration maximale », « Outillage disponible », « RÉIMPRESSION », « Consignation »). Laissé de côté à dessein : les fragments de l'ancienne histoire (décision à part) et les identifiants du code. Pas encore fait, parce que c'est I-4 : les images d'armes qui remplaceront une partie du texte de la prépa.
 
-## Chantier I-3 — Le hub en trois questions
+## Chantier I-3 — Le hub en trois questions ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : « Qui part ? Avec qui ? Où ? Partir. » Un ami joue Gabriel avec ses chats en trois clics au lieu de sept, et voit le chien avant de voir un prix.
 
@@ -151,6 +151,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 **Fini quand** : le hub fait moins de 250 mots (857 aujourd'hui) ; « Gabriel avec ses chats » se fait en 3 interactions mesurées par un test `hub.js` ; les tests existants (`acces`, `premiere_partie`, `human`) passent sans changer de sélecteur ou avec leurs sélecteurs mis à jour dans le même commit.
 **Taille** : 2 séances.
+**Bilan** : fait en une séance. Le camp pose ses trois questions dans une seule zone de défilement, avec la carte d'équipe entre les compagnons et les paliers (attelage, caractère, trois jauges, mode du compagnon à côté de ce qu'il pilote), la carte « Seul » à la taille des animaux, les paliers verrouillés à moitié largeur, les paires bonus ⇄ malus en puces sous le palier, et un bouton Partir qui récapitule l'équipe. La boutique est un écran à part avec sa pastille et des cartes qui ne montrent que le palier suivant ; les fragments sont sortis du camp vers une entrée « 04 Fragments » du menu principal (mon avis, à renverser d'un mot). Mesuré par `hub.js` (14 mesures) : ~230 mots en mode test, tout déverrouillé (857 avant), « Gabriel avec ses chats » en **deux** clics (sept interactions avant), le défilement gardé d'un clic à l'autre. Tests `acces`, `amis`, `duo`, `interface`, `interface_mobile`, `vocabulaire` mis à jour dans le même commit. Pas fait : le rafraîchissement partiel du HTML (le piège connu) — `showHub()` reconstruit toujours tout, mais restaure la position de défilement, ce qui suffit à l'œil ; les cartes personnage font 150 × 172 et non 160 × 200 pour que les trois questions tiennent sans défiler en 1280 × 720. CONTENT.md §47.
 
 ## Chantier I-4 — La prépa qui montre
 

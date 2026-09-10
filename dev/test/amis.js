@@ -25,14 +25,10 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
     vide.pets.length === ROSTER.length && ROSTER.every(i => vide.pets.includes(i)),
     vide.pets.length + ' compagnon(s) : ' + vide.pets.join(', ')
   );
-  const hub = await p.evaluate(() => {
-    const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.tab === 'animaux');
-    t.click();
-    return {
-      cartes: document.querySelectorAll('#hub-shop .card').length,
-      animaux: document.querySelectorAll('#hub-shop .card.pet').length,
-    };
-  });
+  const hub = await p.evaluate(() => ({
+    cartes: document.querySelectorAll('#hub-pets .card').length,
+    animaux: document.querySelectorAll('#hub-pets .card.pet:not(.seul)').length,
+  }));
   /* Tanuki ne s'achète pas seul : il vient avec Choupi. La boutique liste donc un choix de moins que d'animaux. */
   ok(
     "la boutique liste les compagnons de l'auteur, sans l'inséparable",

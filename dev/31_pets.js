@@ -16,11 +16,17 @@ const PET_BEHAVIORS = ['strike', 'bite', 'spit', 'collect', 'guard', 'mend', 'ch
    - `none`   : personne — et le joueur garde pour lui ce qu'il aurait donné à l'animal.
    Sans la contrepartie de `none`, ce troisième choix ne serait jamais pris. */
 const PET_MODES = {
-  always: { id: 'always', name: 'Tout le temps', desc: 'Il te suit du début à la fin, à sa force normale.' },
+  always: {
+    id: 'always',
+    name: 'Tout le temps',
+    desc: 'Il te suit du début à la fin, à sa force normale.',
+    short: 'Il te suit du début à la fin.',
+  },
   call: {
     id: 'call',
     name: "À l'appel",
     desc: 'Absent, appelé par C : son arrivée repousse tout autour de toi, puis il frappe plus fort (×1,6, cadence doublée) pendant 12 s et se repose 25 s.',
+    short: 'Absent ; appelé par C, il arrive en repoussant tout et frappe fort 12 s.',
     boost: 1.6,
     dur: 12,
     cd: 25,

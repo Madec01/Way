@@ -11,11 +11,7 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
   const roster = await p.evaluate(() => ({
     chars: Content.characters().map(c => c.name),
     pets: Content.pets().map(x => x.name + (x.hidden ? ' (inséparable)' : '')),
-    boutique: (() => {
-      const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.tab === 'animaux');
-      t.click();
-      return [...document.querySelectorAll('#hub-shop .card.pet .cardtitle span:first-child')].map(e => e.textContent);
-    })(),
+    boutique: [...document.querySelectorAll('#hub-pets .card.pet:not(.seul) .cardtitle span:first-child')].map(e => e.textContent),
     equipes: Content.pairs().map(pr => pr.name),
   }));
   ok(
