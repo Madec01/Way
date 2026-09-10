@@ -245,6 +245,8 @@ Deux fils peuvent avancer en parallèle : **I-3 → I-4 → I-7** (les menus, du
 
 ## Où ça s'intercale dans le plan principal
 
+> **Mise à jour du 10 septembre 2026** : un troisième plan existe, celui du ressenti (`PLAN-RESSENTI.md`). C'est lui qui donne l'ordre d'enchaînement des trois plans (section « Où ça s'intercale ») et qui prend les chiffres flottants (H11) et les polices du monde ; I-5 garde le HUD. Le tableau ci-dessous est l'ordre d'avant ce plan.
+
 Le plan principal en est au chantier 8 (l'atelier). Ma proposition :
 
 | Quand | Quoi |
