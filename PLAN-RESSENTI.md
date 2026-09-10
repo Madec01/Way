@@ -62,7 +62,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 
 ---
 
-## Chantier F-1 — Le vocabulaire et l'impact
+## Chantier F-1 — Le vocabulaire et l'impact ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : un coup donné produit une image. C'est le chantier qui change le plus le jeu par heure passée.
 
@@ -75,6 +75,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 
 **Fini quand** : un test `ressenti.js` mesure qu'un coup pose `Time.slowUntil` (45 ms, 90 sur un critique, 70 à la mort), que les particules d'impact naissent au-dessus de `e.y − hauteur × 0,4`, que la secousse a un angle et n'est plus multipliée par le zoom (même amplitude à zoom 1 et 1,5), qu'aucun `ctx.font` du monde n'est en Segoe UI (balayage des sources), que les planches de Martin sont dessinées avec un `scale` non uniforme en marche ; le bot joue 9 salles sans erreur.
 **Taille** : 1 séance.
+**Bilan** : fait (CONTENT.md §44, test `ressenti.js`, 13 mesures). Les durées d'arrêt sont **plus courtes que prévu** : 30 ms sur un coup, 70 sur un critique, 60 à la mort (au lieu de 45 / 90 / 70), avec **un petit arrêt par 250 ms au plus** — parce que `Time.now` et la musique continuent pendant que la simulation se fige : un pistolet tenu aurait figé le jeu la moitié du temps et décalé chaque tir de sa note. Un ralenti de compétence n'est jamais écrasé par un arrêt. La secousse est directionnelle, avec rotation, en pixels d'écran (même amplitude à zoom 1 et 1,5) et à trois amplitudes ; les seize `G.shake` du code sont passés par `Feel.shake`. Les étincelles partent du corps (`Combat.bodyH`, lu dans `Sprites.corps`), dans le sens du coup, avec une étincelle de contact et un écrasement de l'ennemi ancré aux pieds ; le flash est en deux temps. Le recul de l'arme est là (2 / 3 / 6 px). Les polices du monde sont en pixel (chiffres, noms d'objets au sol, porte, étoile d'étourdissement, dalles, compte à rebours), `boot()` attend les polices ; le HUD garde sa police jusqu'à I-5. Le squash & stretch de la démarche s'applique aux planches à moitié de son amplitude (la planche de marche anime déjà les pas). `Camera.pulse` est amorti et prêt pour F-6. À regarder à la main : l'arrêt de 30 ms se sent-il avec une lame ? Sinon, monter à 45 en gardant le plafond.
 
 ## Chantier F-2 — Les chiffres et le coup reçu
 

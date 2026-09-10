@@ -126,6 +126,7 @@ class Enemy {
     this.stateT += dt;
     this.anim += dt;
     if (this.flash > 0) this.flash -= dt;
+    Feel.tick(this, dt);
     this.fireCd -= dt;
     this.contactCd -= dt;
     /* recul */
@@ -316,7 +317,7 @@ class Enemy {
       if (this.hitWall || this.stateT > (b.chargeTime || 0.9)) {
         this.setState('stunned');
         if (this.hitWall) {
-          G.shake = Math.min(8, G.shake + 4);
+          Feel.shake(4, this.chargeA, 160);
           Particles.spawn(this.x, this.y, { count: 10, color: '#aaa', size: 3 });
         }
       }
@@ -503,7 +504,8 @@ class Enemy {
       ctx.arc(this.x, this.y, this.r + 3, 0, TAU);
       ctx.stroke();
     }
-    const flash = this.flash > 0;
+    const flash = this.flash > 0.07 ? 1 : this.flash > 0 ? 0.35 : 0; // flash en deux temps
+    const sq = Feel.squashK(this); // écrasement à l'impact
     const tint =
       this.status && this.status.burn
         ? 'rgba(255,110,30,.45)'
@@ -517,6 +519,8 @@ class Enemy {
       walk: this.anim,
       flash,
       tint,
+      sx: 1 + 0.3 * sq,
+      sy: 1 - 0.22 * sq,
       scale: (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (this.beatLock ? 1 + 0.12 * Math.max(0, 1 - Beat.phase() * 3) : 1),
       fallback: () => {
         ctx.fillStyle = flash ? '#fff' : this.color;
@@ -655,7 +659,7 @@ class Enemy {
     }
     if (Time.now < this.stunUntil) {
       ctx.fillStyle = '#ffd166';
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = `bold 13px ${FONT_PIXEL}`;
       ctx.textAlign = 'center';
       ctx.fillText('✦', this.x, this.y - this.r - 14);
     }
@@ -985,7 +989,8 @@ class Boss extends Enemy {
         this.weak.window = (this.revenge && this.revenge.window) || 0.4;
         Floaters.add(this.x, this.y - this.r - 40, 'PLAQUE ARRACHÉE', '#ffd166', 20);
         Particles.spawn(this.x, this.y, { count: 20, color: '#cfd6e6', glow: true, speedMax: 260 });
-        G.shake = 8;
+        Feel.shake(9, undefined, 260);
+        Feel.stop(180);
         AudioEngine.bossPhase({});
       }
       return false;
@@ -1009,7 +1014,8 @@ class Boss extends Enemy {
       this.stunUntil = Time.now + 1;
       this.invulnPhase = Time.now + 1;
       Particles.spawn(this.x, this.y, { count: 30, color: this.color, glow: true, speedMax: 300 });
-      G.shake = 10;
+      Feel.shake(9, undefined, 300);
+      Feel.stop(180);
       AudioEngine.bossPhase({});
       Music.tapeStop();
       UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color);
@@ -1276,7 +1282,7 @@ class Boss extends Enemy {
               this.weakUntil = this.stunUntil;
             }
             Floaters.add(this.x, this.y - this.r - 20, wall ? 'SONNÉ' : 'PRISE EXPOSÉE', '#ffd166', 18);
-            G.shake = 8;
+            Feel.shake(4, undefined, 160);
           }
         }
         break;
@@ -1298,7 +1304,7 @@ class Boss extends Enemy {
             c.color || '#ffb347',
             false
           );
-          G.shake = 12;
+          Feel.shake(9, undefined, 220);
           this.endPattern();
           if (this.weak.rule === 'while_stunned') {
             this.weakActive = true;
@@ -1330,7 +1336,7 @@ class Boss extends Enemy {
             width: 3,
           });
           AudioEngine.shootPistol({ intensity: 1 });
-          G.shake = 6;
+          Feel.shake(4, undefined, 160);
           this.stunUntil = Time.now + (c.reload || 1.2);
           this.weakActive = true;
           this.weakUntil = this.stunUntil; // il recharge : ouvert
@@ -1344,7 +1350,7 @@ class Boss extends Enemy {
         if (!c.fired) {
           c.fired = 1;
           c.r = 0;
-          G.shake = 12;
+          Feel.shake(9, undefined, 220);
           AudioEngine.skillShockwave({ intensity: 1 });
         }
         const sp = (c.speed || 620) * G.difficulty.speedMul;
@@ -1419,7 +1425,7 @@ class Boss extends Enemy {
       case 'sandstorm': {
         if (!c.fired) {
           c.fired = 1;
-          G.shake = 8;
+          Feel.shake(4, undefined, 160);
           AudioEngine.trapGas({ intensity: 1 });
         }
         const sp = (c.speed || 420) * G.difficulty.speedMul;
@@ -1623,6 +1629,7 @@ class Boss extends Enemy {
     this.stateT += dt;
     this.anim += dt;
     if (this.flash > 0) this.flash -= dt;
+    Feel.tick(this, dt);
     this.contactCd -= dt;
     this.x += this.kvx * dt;
     this.y += this.kvy * dt;

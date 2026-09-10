@@ -597,6 +597,13 @@ const Sprites = (() => {
     ctx.save();
     ctx.translate(x, y - (d.foot ? oy * 0.5 : 0));
     if (opts.flip) ctx.scale(-1, 1);
+    if ((opts.sx != null && opts.sx !== 1) || (opts.sy != null && opts.sy !== 1)) {
+      /* écrasement ancré au bas du dessin */
+      const bas = dh / 2 - (d.foot ? 8 : 0);
+      ctx.translate(0, bas);
+      ctx.scale(opts.sx != null ? opts.sx : 1, opts.sy != null ? opts.sy : 1);
+      ctx.translate(0, -bas);
+    }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     if (opts.flash || opts.tint) {
       /* flash blanc ou teinte de statut limités aux pixels du sprite : canvas hors écran (sinon le rectangle entier s'éclaire) */
@@ -607,7 +614,7 @@ const Sprites = (() => {
       g.clearRect(0, 0, dw, dh);
       g.drawImage(sheet, sx + frame * sw, sy, sw, sh, 0, 0, dw, dh);
       g.globalCompositeOperation = 'source-atop';
-      g.fillStyle = opts.flash ? 'rgba(255,255,255,.75)' : opts.tint;
+      g.fillStyle = opts.flash ? `rgba(255,255,255,${opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9})` : opts.tint; // flash à deux temps : 1 puis 0,35
       g.fillRect(0, 0, dw, dh);
       ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
     } else ctx.drawImage(sheet, sx + frame * sw, sy, sw, sh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
@@ -1031,6 +1038,13 @@ const Sprites = (() => {
     ctx.imageSmoothingEnabled = false;
     ctx.translate(x, y + oy);
     if (opts.flip) ctx.scale(-1, 1);
+    /* squash & stretch et inclinaison, ancrés aux pieds : le bas du dessin ne bouge pas */
+    if (opts.rot || (opts.sx != null && opts.sx !== 1) || (opts.sy != null && opts.sy !== 1)) {
+      ctx.translate(0, dh / 2);
+      if (opts.rot) ctx.rotate(opts.rot);
+      ctx.scale(opts.sx != null ? opts.sx : 1, opts.sy != null ? opts.sy : 1);
+      ctx.translate(0, -dh / 2);
+    }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     ctx.drawImage(s.c, cx, cy, s.fw, s.fh, -dw / 2, -dh / 2, dw, dh);
     if (opts.flash) {
@@ -1174,12 +1188,18 @@ const Sprites = (() => {
       let f = Math.floor((opts.clipT || 0) * (opts.fps || cf.fps)); // `fps` : cadence imposée (le tir suit l'arme)
       if (cf.once) f = Math.min(f, inf.n - 1);
       else f %= inf.n;
-      const g2 = gait(opts.clip === 'walk' ? 0 : opts.walk || 0); // la planche de marche anime déjà : pas de démarche par-dessus
+      /* la planche de marche anime déjà les pas : pas de rebond par-dessus — mais le squash & stretch et l'inclinaison
+         de la démarche, eux, s'appliquent (à moitié) : c'est ce qui donne du poids à un personnage dessiné */
+      const g2 = gait(opts.walk || 0);
       const foot = inf.foot != null ? inf.foot : 1; // les pieds du dessin tombent sur la ligne de sol
+      const sq = opts.sx != null || opts.sy != null;
       drawSheet(ctx, clip, f, x, y + SOL * sc - (foot - 0.5) * size - (opts.clip === 'walk' ? 0 : g2.bob), size, {
         flip: opts.flip,
         alpha: opts.alpha,
         flash: opts.flash,
+        rot: g2.tilt * 0.5 * (opts.flip ? -1 : 1),
+        sx: (sq ? opts.sx || 1 : 1) * (1 + (g2.sx - 1) * 0.5),
+        sy: (sq ? opts.sy || 1 : 1) * (1 + (g2.sy - 1) * 0.5),
       });
       return true;
     }

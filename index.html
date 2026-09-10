@@ -368,7 +368,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 10:08';</script>
+<script>window.WAY_BUILD = '2026-09-10 11:35';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -596,12 +596,100 @@ const Rapport = (() => {
   return { noter, lire, texte, copier, vider };
 })();
 
+/* ---------- Le vocabulaire de l'animation (chantier F-1) ----------
+   Cinq mots, employés partout avec les mêmes valeurs : pop (outBack, 120 ms, 1 → 1,25 → 1), squash & stretch
+   (à l'impact sx +30 % / sy −22 % en 110 ms), flash (60 ms plein puis 70 ms à 35 %), hitstop (coup 30 ms,
+   critique 70, mort 60, phase de boss 180), trail (5 fantômes). Les courbes sont ici, pas dans une bibliothèque :
+   un tween externe ignorerait le pas fixe du moteur et le ralenti. */
+const Ease = {
+  outCubic: t => 1 - Math.pow(1 - t, 3),
+  outQuad: t => 1 - (1 - t) * (1 - t),
+  inQuad: t => t * t,
+  outBack: t => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2), // dépasse à 1,10 : le « pop »
+  outElastic: t => (t === 0 || t === 1 ? t : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * 2.094) + 1),
+};
+/* Polices du monde : Silkscreen pour les chiffres, les noms et les compteurs ; VT323 pour les phrases. Les deux sont
+   déjà chargées par le CSS ; boot() attend document.fonts.ready avant le premier rendu. Le HUD garde sa police
+   jusqu'au chantier I-5 (HUD_FONT dans 50_ui.js). */
+const FONT_PIXEL = '"Silkscreen", "Segoe UI", system-ui, sans-serif';
+const FONT_TEXT = '"VT323", "Segoe UI", monospace';
+const Feel = {
+  lastStop: -9,
+  /* arrêt sur image : la simulation se fige (Time.slow = 0,02) le temps demandé. Jamais par-dessus un ralenti de
+     compétence, et au plus un petit arrêt par 250 ms — une arme rapide ne doit pas figer le jeu en continu. */
+  stop(ms, force) {
+    if (Time.now < Time.slowUntil && Time.slow > 0.05) return false; // un ralenti (compétence, coup reçu) est en cours
+    if (!force && ms < 100 && Time.now - Feel.lastStop < 0.25) return false;
+    Feel.lastStop = Time.now;
+    Time.slow = 0.02;
+    Time.slowUntil = Math.max(Time.slowUntil, Time.now + ms / 1000);
+    return true;
+  },
+  /* ralenti : ne raccourcit jamais un ralenti plus fort déjà en cours */
+  slow(scale, ms) {
+    if (Time.now < Time.slowUntil && Time.slow < scale) return false;
+    Time.slow = scale;
+    Time.slowUntil = Time.now + ms / 1000;
+    return true;
+  },
+  /* secousse : trois amplitudes et pas d'autres — 1,6 (tir, coup), 4 (critique, mort, coup reçu), 9 (explosion, boss) */
+  shake(mag, angle, ms = 160) {
+    Camera.kick(mag, angle == null ? VFX_RNG.range(0, TAU) : angle, ms);
+  },
+  pop(e, amount = 0.25, ms = 120) {
+    e.popA = amount;
+    e.popT = 0;
+    e.popD = ms / 1000;
+  },
+  squash(e, angle, ms = 110) {
+    e.sqA = angle;
+    e.sqT = 0;
+    e.sqD = ms / 1000;
+  },
+  /* facteur d'un pop ou d'un écrasement en cours (0 quand il n'y en a pas) */
+  popK(e) {
+    return e.popD && e.popT < e.popD ? e.popA * (1 - Ease.outBack(Math.min(1, e.popT / e.popD))) : 0;
+  },
+  squashK(e) {
+    return e.sqD && e.sqT < e.sqD ? 1 - Ease.outCubic(e.sqT / e.sqD) : 0;
+  },
+  tick(e, dt) {
+    if (e.popD && e.popT < e.popD) e.popT += dt;
+    if (e.sqD && e.sqT < e.sqD) e.sqT += dt;
+  },
+};
+
 /* ---------- Caméra (zoom + suivi du joueur ; le HUD n'est pas affecté) ---------- */
 const Camera = {
   x: W / 2,
   y: H / 2,
   zoom: 1,
-  pulse: 0, // pulse : impulsion de zoom (salle du tempo), remise à 0 à chaque salle
+  pulse: 0, // pulse : impulsion de zoom (salle du tempo, montée de niveau…), amortie dans update, remise à 0 à chaque salle
+  k: null, // la secousse en cours : { ax, ay, mag, t, life }
+  /* Une secousse a une direction et une fraction de degré de rotation — sans rotation, ça lit comme un bug
+     d'affichage ; sans direction, un coup reçu par la gauche secoue comme une explosion. Décroissance en courbe. */
+  kick(mag, angle, ms) {
+    const k = this.k;
+    if (k && k.t < k.life && k.mag * (1 - Ease.outCubic(k.t / k.life)) > mag) return; // une plus forte est en cours
+    this.k = { ax: Math.cos(angle), ay: Math.sin(angle), mag, t: 0, life: ms / 1000 };
+  },
+  update(dt) {
+    if (this.k && this.k.t < this.k.life) this.k.t += dt;
+    this.pulse += (0 - this.pulse) * Math.min(1, 6 * dt);
+    if (Math.abs(this.pulse) < 0.0005) this.pulse = 0;
+  },
+  /* appliquée AVANT le zoom, en coordonnées d'écran : 12 px de secousse sont 12 px, pas 18 en tactile */
+  shake(ctx) {
+    const k = this.k;
+    if (!k || k.t >= k.life) return 0;
+    const d = 1 - Ease.outCubic(k.t / k.life);
+    const osc = Math.sin(k.t * 70) * d * k.mag;
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(osc * 0.0012);
+    ctx.translate(-W / 2, -H / 2);
+    ctx.translate(k.ax * osc, k.ay * osc);
+    return osc;
+  },
   snap(x, y) {
     this.x = x;
     this.y = y;
@@ -8712,6 +8800,13 @@ const Sprites = (() => {
     ctx.save();
     ctx.translate(x, y - (d.foot ? oy * 0.5 : 0));
     if (opts.flip) ctx.scale(-1, 1);
+    if ((opts.sx != null && opts.sx !== 1) || (opts.sy != null && opts.sy !== 1)) {
+      /* écrasement ancré au bas du dessin */
+      const bas = dh / 2 - (d.foot ? 8 : 0);
+      ctx.translate(0, bas);
+      ctx.scale(opts.sx != null ? opts.sx : 1, opts.sy != null ? opts.sy : 1);
+      ctx.translate(0, -bas);
+    }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     if (opts.flash || opts.tint) {
       /* flash blanc ou teinte de statut limités aux pixels du sprite : canvas hors écran (sinon le rectangle entier s'éclaire) */
@@ -8722,7 +8817,7 @@ const Sprites = (() => {
       g.clearRect(0, 0, dw, dh);
       g.drawImage(sheet, sx + frame * sw, sy, sw, sh, 0, 0, dw, dh);
       g.globalCompositeOperation = 'source-atop';
-      g.fillStyle = opts.flash ? 'rgba(255,255,255,.75)' : opts.tint;
+      g.fillStyle = opts.flash ? `rgba(255,255,255,${opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9})` : opts.tint; // flash à deux temps : 1 puis 0,35
       g.fillRect(0, 0, dw, dh);
       ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
     } else ctx.drawImage(sheet, sx + frame * sw, sy, sw, sh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0), dw, dh);
@@ -9146,6 +9241,13 @@ const Sprites = (() => {
     ctx.imageSmoothingEnabled = false;
     ctx.translate(x, y + oy);
     if (opts.flip) ctx.scale(-1, 1);
+    /* squash & stretch et inclinaison, ancrés aux pieds : le bas du dessin ne bouge pas */
+    if (opts.rot || (opts.sx != null && opts.sx !== 1) || (opts.sy != null && opts.sy !== 1)) {
+      ctx.translate(0, dh / 2);
+      if (opts.rot) ctx.rotate(opts.rot);
+      ctx.scale(opts.sx != null ? opts.sx : 1, opts.sy != null ? opts.sy : 1);
+      ctx.translate(0, -dh / 2);
+    }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     ctx.drawImage(s.c, cx, cy, s.fw, s.fh, -dw / 2, -dh / 2, dw, dh);
     if (opts.flash) {
@@ -9289,12 +9391,18 @@ const Sprites = (() => {
       let f = Math.floor((opts.clipT || 0) * (opts.fps || cf.fps)); // `fps` : cadence imposée (le tir suit l'arme)
       if (cf.once) f = Math.min(f, inf.n - 1);
       else f %= inf.n;
-      const g2 = gait(opts.clip === 'walk' ? 0 : opts.walk || 0); // la planche de marche anime déjà : pas de démarche par-dessus
+      /* la planche de marche anime déjà les pas : pas de rebond par-dessus — mais le squash & stretch et l'inclinaison
+         de la démarche, eux, s'appliquent (à moitié) : c'est ce qui donne du poids à un personnage dessiné */
+      const g2 = gait(opts.walk || 0);
       const foot = inf.foot != null ? inf.foot : 1; // les pieds du dessin tombent sur la ligne de sol
+      const sq = opts.sx != null || opts.sy != null;
       drawSheet(ctx, clip, f, x, y + SOL * sc - (foot - 0.5) * size - (opts.clip === 'walk' ? 0 : g2.bob), size, {
         flip: opts.flip,
         alpha: opts.alpha,
         flash: opts.flash,
+        rot: g2.tilt * 0.5 * (opts.flip ? -1 : 1),
+        sx: (sq ? opts.sx || 1 : 1) * (1 + (g2.sx - 1) * 0.5),
+        sy: (sq ? opts.sy || 1 : 1) * (1 + (g2.sy - 1) * 0.5),
       });
       return true;
     }
@@ -10118,7 +10226,7 @@ const Floaters = {
     ctx.textAlign = 'center';
     for (const f of this.list) {
       ctx.globalAlpha = 1 - f.t / f.life;
-      ctx.font = `bold ${f.size}px "Segoe UI", system-ui, sans-serif`;
+      ctx.font = `bold ${Math.round(f.size * 1.15)}px ${FONT_PIXEL}`; // Silkscreen est plus basse que la police système : +15 %
       ctx.fillStyle = '#000a';
       ctx.fillText(f.text, f.x + 1, f.y + 1);
       ctx.fillStyle = f.color;
@@ -10727,13 +10835,13 @@ const Pickups = {
         ctx.strokeRect(-12, -12, 24, 24);
         ctx.rotate(-Math.PI / 4);
         ctx.fillStyle = col;
-        ctx.font = 'bold 13px "Segoe UI", sans-serif';
+        ctx.font = `bold 14px ${FONT_PIXEL}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText((w ? w.family[0] : '?').toUpperCase(), 0, 1);
         ctx.restore();
         ctx.fillStyle = '#e8ecf7';
-        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.font = `14px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillText(w ? w.name : '', p.x, p.y + bob - 20);
       } else if (p.kind === 'ally') {
@@ -10748,7 +10856,7 @@ const Pickups = {
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob - 6, 2, 0, TAU);
         ctx.fill();
-        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.font = `14px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillStyle = '#9ff';
         ctx.fillText('allié', p.x, p.y + bob - 18);
@@ -10764,7 +10872,7 @@ const Pickups = {
         }
         ctx.restore();
         ctx.fillStyle = pd.color || '#9fd8ff';
-        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.font = `14px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillText(pd.name || 'Compagnon', p.x, p.y + bob - 22);
       } else if (p.kind === 'relic') {
@@ -10785,7 +10893,7 @@ const Pickups = {
         ctx.fill();
         ctx.restore();
         ctx.fillStyle = '#e8ecf7';
-        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.font = `14px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillText(rl ? rl.name : 'Relique', p.x, p.y + bob - 18);
       } else if (p.kind === 'heart') {
@@ -10900,7 +11008,7 @@ const Combat = {
     }
     d = Math.max(1, Math.round(d));
     e.hp -= d;
-    if (!info.dot) e.flash = 0.12; // les brûlures/poisons ne font pas clignoter
+    if (!info.dot) e.flash = 0.13; // deux temps : 60 ms de blanc plein, puis 70 ms à 35 % (Enemy.render lit la valeur) ; pas pour brûlure/poison
     if (!info.dot) {
       const kb = ((info.knockback || 1) * pl.stats.knockback * (e.isBoss ? 0.1 : 1) * 160) / Math.max(1, e.mass || 1);
       const a = info.vx != null ? Math.atan2(info.vy, info.vx) : angleTo(pl.x, pl.y, e.x, e.y);
@@ -10909,8 +11017,27 @@ const Combat = {
       if (!info.silent) {
         AudioEngine[info.crit ? 'hitCrit' : 'hitEnemy']({ x: (e.x - W / 2) / (W / 2) });
       }
-      Particles.spawn(e.x, e.y, { count: info.crit ? 8 : 4, color: info.crit ? '#ffd166' : e.color, size: 2, speedMax: 120 });
-      Floaters.add(e.x + VFX_RNG.range(-8, 8), e.y - e.r - 4, String(d), info.crit ? '#ffd166' : '#fff', info.crit ? 16 : 12);
+      /* l'impact se lit en lumière : étincelles blanches (dorées sur un critique) qui partent DU CORPS de l'ennemi, dans
+         le sens du coup, une étincelle de contact, un arrêt sur image, une secousse dans le sens du coup, un écrasement */
+      const hy = e.y - Combat.bodyH(e) * 0.55;
+      Particles.spawn(e.x, hy, {
+        count: info.crit ? 14 : 7,
+        angle: a,
+        spread: 0.7,
+        speedMin: 90,
+        speedMax: info.crit ? 320 : 220,
+        size: info.crit ? 3 : 2,
+        color: info.crit ? '#fff3c4' : '#ffffff',
+        life: 0.28,
+        glow: true,
+      });
+      G.room.slashes.push({ x: e.x, y: hy, a, range: 20, arc: 2.6, t: 0, life: 0.09, color: '#ffffff', spark: true });
+      Floaters.add(e.x + VFX_RNG.range(-8, 8), hy - 10, String(d), info.crit ? '#ffd166' : '#fff', info.crit ? 16 : 12);
+      if (!info.silent) {
+        Feel.stop(info.crit ? 70 : 30);
+        Feel.shake(info.crit ? 3.5 : 1.6, a, 120);
+      }
+      Feel.squash(e, a, 110);
       /* hooks onHit */
       for (const h of pl.hooks.onHit) {
         const chance = Math.min(1, (h.chance != null ? h.chance : 1) * (h.stacks || 1)); // reprendre la greffe = palier suivant
@@ -10937,6 +11064,21 @@ const Combat = {
     }
     if (e.hp <= 0) Combat.killEnemy(e, info);
   },
+  /* hauteur du corps dessiné d'un ennemi (les étincelles et les chiffres partent du corps, pas des pieds) */
+  bodyH(e) {
+    if (e.hauteur == null) {
+      let h = 0;
+      try {
+        h = Sprites.corps(e.def.sprite || (e.isBoss ? 'boss' : 'enemy_' + e.archetype), {
+          scale: e.isBoss ? 1.15 : clamp(e.r / 14, 0.6, 1.5),
+        }).hauteur;
+      } catch (x) {
+        h = 0;
+      }
+      e.hauteur = h > 8 && h < 400 ? h : e.r * 2.4;
+    }
+    return e.hauteur;
+  },
   chain(from, dmg, jumps, radius) {
     let cur = from;
     const done = new Set([from]);
@@ -10954,7 +11096,8 @@ const Combat = {
     G.room.blasts.push({ x, y, r: radius, t: 0, life: 0.45, color, fill: true });
     Particles.spawn(x, y, { count: 18, color, size: 4, speedMax: 260, glow: true, life: 0.6 });
     Particles.spawn(x, y, { count: 8, color: '#fff3c4', size: 3, speedMax: 120, glow: true, life: 0.3 });
-    G.shake = Math.min(10, G.shake + radius * 0.04);
+    Feel.shake(9, angleTo(x, y, G.player.x, G.player.y), 220);
+    Feel.stop(60);
     if (fromPlayer) {
       for (const e of G.enemies)
         if (!e.dead && dist(x, y, e.x, e.y) < radius + e.r) Combat.hitEnemy(e, dmg, { explosion: true, noCrit: true, x, y, silent: true });
@@ -10969,6 +11112,8 @@ const Combat = {
     e.dead = true;
     const pl = G.player;
     AudioEngine.enemyDie({ x: (e.x - W / 2) / (W / 2) });
+    Feel.stop(60, true); // une mort compte toujours, même juste après le coup qui l'a donnée
+    Feel.shake(4, info.vx != null ? Math.atan2(info.vy, info.vx) : angleTo(pl.x, pl.y, e.x, e.y), 160);
     Particles.spawn(e.x, e.y, { count: 12, color: e.color, size: 3, speedMax: 200, glow: true });
     G.run.stats.kills++;
     G.room.kills++;
@@ -11056,7 +11201,8 @@ const Combat = {
     AudioEngine.playerHurt({ intensity: clamp(dmg / 30, 0.3, 1) });
     Floaters.add(pl.x, pl.y - 30, '-' + dmg, '#ff5e7a', 16);
     Particles.spawn(pl.x, pl.y, { count: 8, color: '#ff5e7a', size: 3 });
-    G.shake = Math.min(12, G.shake + 4 + dmg * 0.2);
+    Feel.shake(4, angleTo(info.x != null ? info.x : pl.x - pl.facing, info.y != null ? info.y : pl.y, pl.x, pl.y), 200);
+    Feel.slow(0.35, 120);
     for (const h of pl.hooks.onDamaged) {
       if (h.effect === 'shockwave') Combat.playerShockwave(h);
       else if (h.effect === 'time_slow_on_damage') {
@@ -11216,9 +11362,17 @@ const Weapons = {
   dmgOf(pl, mul = 1) {
     return pl.weapon.damage * pl.stats.damage * mul * (pl.beatMul || 1);
   },
+  /* recul de l'arme (« gun kickback ») : 2 px pour un pistolet, 6 pour un marteau — c'est ce qui donne du poids aux armes */
+  kick(pl, aim) {
+    const w = pl.weapon;
+    pl.kickA = aim;
+    pl.kickT = 0;
+    pl.kickMag = w.family === 'hammer' ? 6 : w.type === 'melee' ? 3 : w.family === 'bow' ? 3 : 2;
+  },
   shoot(pl, aim, o) {
     const w = pl.weapon,
       st = pl.stats;
+    Weapons.kick(pl, aim);
     const n = (w.projectiles || 1) + st.projectiles;
     const spread = (w.spread || 0) + (n > 1 ? 0.12 * (n - 1) : 0);
     const spd = (w.projSpeed || 520) * st.projSpeed * (o.speedMul || 1);
@@ -11278,9 +11432,10 @@ const Weapons = {
     const arc = slam ? TAU : ((w.special && w.special.arc) || 2.1) * st.areaSize;
     const cx = slam ? pl.x + Math.cos(aim) * range * 0.6 : pl.x,
       cy = slam ? pl.y + Math.sin(aim) * range * 0.6 : pl.y;
+    Weapons.kick(pl, aim);
     G.room.slashes.push({
       x: pl.x,
-      y: pl.y,
+      y: pl.y - 12, // l'arc part de la taille, pas des pieds
       a: aim,
       range,
       arc,
@@ -11318,7 +11473,7 @@ const Weapons = {
           Particles.spawn(p.x, p.y, { count: 3, color: '#fff', size: 2 });
         }
       }
-    if (slam) G.shake = Math.min(10, G.shake + 5);
+    if (slam) Feel.shake(9, aim, 220);
     AudioEngine[w.family === 'hammer' ? 'shootHammer' : 'shootBlade']({ x: (pl.x - W / 2) / (W / 2), intensity: hits ? 1 : 0.5 });
     G.run.stats.shots++;
     pl.tir(pl.attackCd);
@@ -11563,6 +11718,9 @@ class Player {
     this.shieldUntil = 0;
     this.invulnUntil = 0;
     this.hurtFlash = 0;
+    this.kickT = 1; // recul de l'arme : actif tant que kickT < 0,09
+    this.kickA = 0;
+    this.kickMag = 0;
     this.dead = false;
     this.attackCd = 0;
     this.charge = 0;
@@ -11821,6 +11979,7 @@ class Player {
       } else if (this.overdrive.selfDps) this.hp = Math.max(1, this.hp - this.overdrive.selfDps * dt);
     }
     if (this.hurtFlash > 0) this.hurtFlash -= dt;
+    if (this.kickT < 0.09) this.kickT += dt;
     if (this.buffs.length && this.buffs.some(b => Time.now > b.until)) {
       this.buffs = this.buffs.filter(b => Time.now <= b.until);
       this.recompute();
@@ -12031,6 +12190,10 @@ class Player {
     /* blessé : un recul de trois pixels le temps du flash, en plus du blanc */
     const recul = this.hurtFlash > 0.13 ? -this.facing * 3 : 0;
     if (recul) ctx.translate(recul, 0);
+    if (this.kickT < 0.09) {
+      const kk = this.kickMag * (1 - Ease.outCubic(this.kickT / 0.09));
+      ctx.translate(-Math.cos(this.kickA) * kk, -Math.sin(this.kickA) * kk);
+    }
     Sprites.drawBody(ctx, (this.char && this.char.sprite) || 'player', this.x, this.y, {
       face: this.char && this.char.face,
       body: this.char && this.char.body,
@@ -13052,6 +13215,7 @@ class Enemy {
     this.stateT += dt;
     this.anim += dt;
     if (this.flash > 0) this.flash -= dt;
+    Feel.tick(this, dt);
     this.fireCd -= dt;
     this.contactCd -= dt;
     /* recul */
@@ -13242,7 +13406,7 @@ class Enemy {
       if (this.hitWall || this.stateT > (b.chargeTime || 0.9)) {
         this.setState('stunned');
         if (this.hitWall) {
-          G.shake = Math.min(8, G.shake + 4);
+          Feel.shake(4, this.chargeA, 160);
           Particles.spawn(this.x, this.y, { count: 10, color: '#aaa', size: 3 });
         }
       }
@@ -13429,7 +13593,8 @@ class Enemy {
       ctx.arc(this.x, this.y, this.r + 3, 0, TAU);
       ctx.stroke();
     }
-    const flash = this.flash > 0;
+    const flash = this.flash > 0.07 ? 1 : this.flash > 0 ? 0.35 : 0; // flash en deux temps
+    const sq = Feel.squashK(this); // écrasement à l'impact
     const tint =
       this.status && this.status.burn
         ? 'rgba(255,110,30,.45)'
@@ -13443,6 +13608,8 @@ class Enemy {
       walk: this.anim,
       flash,
       tint,
+      sx: 1 + 0.3 * sq,
+      sy: 1 - 0.22 * sq,
       scale: (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (this.beatLock ? 1 + 0.12 * Math.max(0, 1 - Beat.phase() * 3) : 1),
       fallback: () => {
         ctx.fillStyle = flash ? '#fff' : this.color;
@@ -13581,7 +13748,7 @@ class Enemy {
     }
     if (Time.now < this.stunUntil) {
       ctx.fillStyle = '#ffd166';
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = `bold 13px ${FONT_PIXEL}`;
       ctx.textAlign = 'center';
       ctx.fillText('✦', this.x, this.y - this.r - 14);
     }
@@ -13911,7 +14078,8 @@ class Boss extends Enemy {
         this.weak.window = (this.revenge && this.revenge.window) || 0.4;
         Floaters.add(this.x, this.y - this.r - 40, 'PLAQUE ARRACHÉE', '#ffd166', 20);
         Particles.spawn(this.x, this.y, { count: 20, color: '#cfd6e6', glow: true, speedMax: 260 });
-        G.shake = 8;
+        Feel.shake(9, undefined, 260);
+        Feel.stop(180);
         AudioEngine.bossPhase({});
       }
       return false;
@@ -13935,7 +14103,8 @@ class Boss extends Enemy {
       this.stunUntil = Time.now + 1;
       this.invulnPhase = Time.now + 1;
       Particles.spawn(this.x, this.y, { count: 30, color: this.color, glow: true, speedMax: 300 });
-      G.shake = 10;
+      Feel.shake(9, undefined, 300);
+      Feel.stop(180);
       AudioEngine.bossPhase({});
       Music.tapeStop();
       UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color);
@@ -14202,7 +14371,7 @@ class Boss extends Enemy {
               this.weakUntil = this.stunUntil;
             }
             Floaters.add(this.x, this.y - this.r - 20, wall ? 'SONNÉ' : 'PRISE EXPOSÉE', '#ffd166', 18);
-            G.shake = 8;
+            Feel.shake(4, undefined, 160);
           }
         }
         break;
@@ -14224,7 +14393,7 @@ class Boss extends Enemy {
             c.color || '#ffb347',
             false
           );
-          G.shake = 12;
+          Feel.shake(9, undefined, 220);
           this.endPattern();
           if (this.weak.rule === 'while_stunned') {
             this.weakActive = true;
@@ -14256,7 +14425,7 @@ class Boss extends Enemy {
             width: 3,
           });
           AudioEngine.shootPistol({ intensity: 1 });
-          G.shake = 6;
+          Feel.shake(4, undefined, 160);
           this.stunUntil = Time.now + (c.reload || 1.2);
           this.weakActive = true;
           this.weakUntil = this.stunUntil; // il recharge : ouvert
@@ -14270,7 +14439,7 @@ class Boss extends Enemy {
         if (!c.fired) {
           c.fired = 1;
           c.r = 0;
-          G.shake = 12;
+          Feel.shake(9, undefined, 220);
           AudioEngine.skillShockwave({ intensity: 1 });
         }
         const sp = (c.speed || 620) * G.difficulty.speedMul;
@@ -14345,7 +14514,7 @@ class Boss extends Enemy {
       case 'sandstorm': {
         if (!c.fired) {
           c.fired = 1;
-          G.shake = 8;
+          Feel.shake(4, undefined, 160);
           AudioEngine.trapGas({ intensity: 1 });
         }
         const sp = (c.speed || 420) * G.difficulty.speedMul;
@@ -14549,6 +14718,7 @@ class Boss extends Enemy {
     this.stateT += dt;
     this.anim += dt;
     if (this.flash > 0) this.flash -= dt;
+    Feel.tick(this, dt);
     this.contactCd -= dt;
     this.x += this.kvx * dt;
     this.y += this.kvy * dt;
@@ -16311,7 +16481,7 @@ const Modular = (() => {
           }
           if (st.stage === 'pulse' && m.pulses !== st.idx) {
             m.pulses = st.idx;
-            G.shake = Math.min(12, G.shake + 6);
+            Feel.shake(9, undefined, 260);
             AudioEngine.skillShockwave({ intensity: 1 });
             room.blasts.push({ x: m.zx, y: m.zy, r: 900, t: 0, life: 0.5, color: m.color || '#ff9a3c' });
             const dmg = Math.round((m.damage || 15) * G.difficulty.damageMul);
@@ -16438,7 +16608,7 @@ const Modular = (() => {
           ctx.arc(m.zx, m.zy, m.r + 60 * (1 - m.k), 0, TAU);
           ctx.stroke();
           ctx.fillStyle = '#7fff9a';
-          ctx.font = 'bold 12px "Segoe UI", sans-serif';
+          ctx.font = `bold 13px ${FONT_PIXEL}`;
           ctx.textAlign = 'center';
           ctx.shadowBlur = 0;
           ctx.fillText('ZONE SÛRE ' + Math.ceil((m.telegraph || 2) * (1 - m.k)) + ' s', m.zx, m.zy - m.r - 8);
@@ -16729,7 +16899,7 @@ const Challenge = (() => {
           c.fallen++;
           const [tx, ty] = k.split(',').map(Number);
           Particles.spawn(tileX(tx), tileY(ty), { count: 8, color: '#3a3f55', size: 4, speedMax: 90, life: 0.7 });
-          G.shake = Math.min(6, G.shake + 1.5);
+          Feel.shake(1.6, undefined, 120);
         }
       }
       c.nextT -= dt;
@@ -17172,7 +17342,7 @@ const Challenge = (() => {
         ctx.strokeRect(s.x - 20, s.y - 20, 40, 40);
         ctx.shadowBlur = 0;
         ctx.fillStyle = s.on ? '#7fff9a' : '#e8ecf7';
-        ctx.font = 'bold 18px "Segoe UI", sans-serif';
+        ctx.font = `bold 20px ${FONT_PIXEL}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(s.label, s.x, s.y + 1);
@@ -17180,7 +17350,7 @@ const Challenge = (() => {
       if (c.showT > 0 && !c.done) {
         ctx.globalAlpha = clamp(c.showT, 0, 1);
         ctx.fillStyle = '#c9a3ff';
-        ctx.font = 'bold 26px "Segoe UI", sans-serif';
+        ctx.font = `bold 28px ${FONT_PIXEL}`;
         ctx.textAlign = 'center';
         ctx.shadowColor = '#c9a3ff';
         ctx.shadowBlur = 16;
@@ -18130,7 +18300,7 @@ const Tempo = {
       ctx.shadowBlur = 24;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = `bold ${Math.round(150 - k * 40)}px "Segoe UI", system-ui, sans-serif`;
+      ctx.font = `bold ${Math.round(150 - k * 40)}px ${FONT_PIXEL}`;
       ctx.fillText(txt, ROOM_X + ROOM_W / 2, ROOM_Y + ROOM_H / 2);
       ctx.strokeStyle = Tempo.COLOR;
       ctx.lineWidth = 4;
@@ -18535,7 +18705,7 @@ const Room = {
   onBossDefeated(b) {
     G.room.bossDead = true;
     G.run.stats.bossKilled = true;
-    G.shake = 14;
+    Feel.shake(9, angleTo(b.x, b.y, G.player.x, G.player.y), 320);
     UI.banner(Content.pick('bossWin') || 'Étalon neutralisé', '#ffd166');
     AudioEngine.roomClear({});
     for (let i = 0; i < 12; i++) Pickups.spawn(b.x, b.y, 'coin', 1);
@@ -18828,7 +18998,7 @@ const Room = {
       ctx.lineWidth = 3;
       ctx.strokeRect(dx - 2, dy - TILE + 2, TILE + 4, TILE * 2 - 4);
       ctx.fillStyle = '#7fff9a';
-      ctx.font = 'bold 22px sans-serif';
+      ctx.font = `bold 24px ${FONT_PIXEL}`;
       ctx.textAlign = 'center';
       ctx.fillText('▶', dx + TILE / 2, dy + 8);
     } else {
@@ -18873,7 +19043,7 @@ const Room = {
           },
         });
         ctx.fillStyle = '#9ff';
-        ctx.font = '10px "Segoe UI", sans-serif';
+        ctx.font = `13px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillText(Math.ceil(t.until - Time.now) + ' s', t.x, t.y - 30);
       } else {
@@ -18913,7 +19083,7 @@ const Room = {
       ctx.strokeStyle = s.color;
       ctx.shadowColor = s.color;
       ctx.shadowBlur = 14;
-      ctx.lineWidth = s.slam ? 6 : 4;
+      ctx.lineWidth = s.spark ? 3 * (1 - k) + 1 : s.slam ? 8 * (1 - k) + 1 : 7 * (1 - k) + 1; // il s'affine en s'effaçant
       ctx.beginPath();
       if (s.slam) ctx.arc(s.cx, s.cy, s.range * (0.5 + 0.5 * k), 0, TAU);
       else ctx.arc(s.x, s.y, s.range * (0.7 + 0.3 * k), s.a - s.arc / 2, s.a + s.arc / 2);
@@ -19305,7 +19475,7 @@ const Run = {
     Room.update(dt);
     Particles.update(dt);
     Floaters.update(dt);
-    if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 30);
+    Camera.update(dt); // secousse et impulsion de zoom
   },
 };
 
@@ -23836,8 +24006,8 @@ function render(ctx) {
   ctx.setTransform(ctx.getTransform());
   if ((G.state === 'run' || G.attract) && G.room) {
     ctx.save();
+    Camera.shake(ctx); // avant le zoom : la secousse est en pixels d'écran
     Camera.apply(ctx);
-    if (G.shake > 0) ctx.translate(VFX_RNG.range(-G.shake, G.shake), VFX_RNG.range(-G.shake, G.shake));
     ctx.fillStyle = '#07080d';
     ctx.fillRect(-W, -H, 3 * W, 3 * H);
     Room.render(ctx);
@@ -23904,6 +24074,10 @@ async function boot() {
   Beat.load();
   if (Meta.profile.lag) Beat.lag = Meta.profile.lag; // décalage son/image calibré par l'auteur
   UI.showTitle();
+  /* les polices pixel doivent être là avant le premier rendu du canvas, sinon Silkscreen retombe en silence sur Segoe UI */
+  try {
+    await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]);
+  } catch (e) {}
   Engine.start(update, render);
   Attract.start();
   window.__autoplay = Debug.autoplay;

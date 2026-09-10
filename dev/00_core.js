@@ -223,12 +223,100 @@ const Rapport = (() => {
   return { noter, lire, texte, copier, vider };
 })();
 
+/* ---------- Le vocabulaire de l'animation (chantier F-1) ----------
+   Cinq mots, employés partout avec les mêmes valeurs : pop (outBack, 120 ms, 1 → 1,25 → 1), squash & stretch
+   (à l'impact sx +30 % / sy −22 % en 110 ms), flash (60 ms plein puis 70 ms à 35 %), hitstop (coup 30 ms,
+   critique 70, mort 60, phase de boss 180), trail (5 fantômes). Les courbes sont ici, pas dans une bibliothèque :
+   un tween externe ignorerait le pas fixe du moteur et le ralenti. */
+const Ease = {
+  outCubic: t => 1 - Math.pow(1 - t, 3),
+  outQuad: t => 1 - (1 - t) * (1 - t),
+  inQuad: t => t * t,
+  outBack: t => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2), // dépasse à 1,10 : le « pop »
+  outElastic: t => (t === 0 || t === 1 ? t : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * 2.094) + 1),
+};
+/* Polices du monde : Silkscreen pour les chiffres, les noms et les compteurs ; VT323 pour les phrases. Les deux sont
+   déjà chargées par le CSS ; boot() attend document.fonts.ready avant le premier rendu. Le HUD garde sa police
+   jusqu'au chantier I-5 (HUD_FONT dans 50_ui.js). */
+const FONT_PIXEL = '"Silkscreen", "Segoe UI", system-ui, sans-serif';
+const FONT_TEXT = '"VT323", "Segoe UI", monospace';
+const Feel = {
+  lastStop: -9,
+  /* arrêt sur image : la simulation se fige (Time.slow = 0,02) le temps demandé. Jamais par-dessus un ralenti de
+     compétence, et au plus un petit arrêt par 250 ms — une arme rapide ne doit pas figer le jeu en continu. */
+  stop(ms, force) {
+    if (Time.now < Time.slowUntil && Time.slow > 0.05) return false; // un ralenti (compétence, coup reçu) est en cours
+    if (!force && ms < 100 && Time.now - Feel.lastStop < 0.25) return false;
+    Feel.lastStop = Time.now;
+    Time.slow = 0.02;
+    Time.slowUntil = Math.max(Time.slowUntil, Time.now + ms / 1000);
+    return true;
+  },
+  /* ralenti : ne raccourcit jamais un ralenti plus fort déjà en cours */
+  slow(scale, ms) {
+    if (Time.now < Time.slowUntil && Time.slow < scale) return false;
+    Time.slow = scale;
+    Time.slowUntil = Time.now + ms / 1000;
+    return true;
+  },
+  /* secousse : trois amplitudes et pas d'autres — 1,6 (tir, coup), 4 (critique, mort, coup reçu), 9 (explosion, boss) */
+  shake(mag, angle, ms = 160) {
+    Camera.kick(mag, angle == null ? VFX_RNG.range(0, TAU) : angle, ms);
+  },
+  pop(e, amount = 0.25, ms = 120) {
+    e.popA = amount;
+    e.popT = 0;
+    e.popD = ms / 1000;
+  },
+  squash(e, angle, ms = 110) {
+    e.sqA = angle;
+    e.sqT = 0;
+    e.sqD = ms / 1000;
+  },
+  /* facteur d'un pop ou d'un écrasement en cours (0 quand il n'y en a pas) */
+  popK(e) {
+    return e.popD && e.popT < e.popD ? e.popA * (1 - Ease.outBack(Math.min(1, e.popT / e.popD))) : 0;
+  },
+  squashK(e) {
+    return e.sqD && e.sqT < e.sqD ? 1 - Ease.outCubic(e.sqT / e.sqD) : 0;
+  },
+  tick(e, dt) {
+    if (e.popD && e.popT < e.popD) e.popT += dt;
+    if (e.sqD && e.sqT < e.sqD) e.sqT += dt;
+  },
+};
+
 /* ---------- Caméra (zoom + suivi du joueur ; le HUD n'est pas affecté) ---------- */
 const Camera = {
   x: W / 2,
   y: H / 2,
   zoom: 1,
-  pulse: 0, // pulse : impulsion de zoom (salle du tempo), remise à 0 à chaque salle
+  pulse: 0, // pulse : impulsion de zoom (salle du tempo, montée de niveau…), amortie dans update, remise à 0 à chaque salle
+  k: null, // la secousse en cours : { ax, ay, mag, t, life }
+  /* Une secousse a une direction et une fraction de degré de rotation — sans rotation, ça lit comme un bug
+     d'affichage ; sans direction, un coup reçu par la gauche secoue comme une explosion. Décroissance en courbe. */
+  kick(mag, angle, ms) {
+    const k = this.k;
+    if (k && k.t < k.life && k.mag * (1 - Ease.outCubic(k.t / k.life)) > mag) return; // une plus forte est en cours
+    this.k = { ax: Math.cos(angle), ay: Math.sin(angle), mag, t: 0, life: ms / 1000 };
+  },
+  update(dt) {
+    if (this.k && this.k.t < this.k.life) this.k.t += dt;
+    this.pulse += (0 - this.pulse) * Math.min(1, 6 * dt);
+    if (Math.abs(this.pulse) < 0.0005) this.pulse = 0;
+  },
+  /* appliquée AVANT le zoom, en coordonnées d'écran : 12 px de secousse sont 12 px, pas 18 en tactile */
+  shake(ctx) {
+    const k = this.k;
+    if (!k || k.t >= k.life) return 0;
+    const d = 1 - Ease.outCubic(k.t / k.life);
+    const osc = Math.sin(k.t * 70) * d * k.mag;
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(osc * 0.0012);
+    ctx.translate(-W / 2, -H / 2);
+    ctx.translate(k.ax * osc, k.ay * osc);
+    return osc;
+  },
   snap(x, y) {
     this.x = x;
     this.y = y;

@@ -643,7 +643,7 @@ const Tempo = {
       ctx.shadowBlur = 24;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = `bold ${Math.round(150 - k * 40)}px "Segoe UI", system-ui, sans-serif`;
+      ctx.font = `bold ${Math.round(150 - k * 40)}px ${FONT_PIXEL}`;
       ctx.fillText(txt, ROOM_X + ROOM_W / 2, ROOM_Y + ROOM_H / 2);
       ctx.strokeStyle = Tempo.COLOR;
       ctx.lineWidth = 4;

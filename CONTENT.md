@@ -1293,3 +1293,23 @@ Tests : `interface.js` (18 mesures) et `interface_mobile.js` (7 mesures), voir `
 
 Test : `vocabulaire.js` — 6 mesures : 401 textes du contenu, les écrans rendus (menu, hub et ses quatre onglets, prépa, pause, montée de niveau, HUD, fin) et les 91 messages écrits dans le code passés à la liste des mots bannis ; « palier », « Ruée », « Coffre » ; aucune description au-dessus de 90 caractères.
 
+## 44. Chantier F-1 — le vocabulaire et l'impact (ressenti)
+
+Premier chantier du plan du ressenti (`PLAN-RESSENTI.md`, direction « La Voie bat »), tiré de l'audit `AUDIT-FEEL.md`. Aucune règle de jeu ne bouge.
+
+**Le vocabulaire** (`00_core.js`) : `Ease` — `outCubic`, `outQuad`, `inQuad`, `outBack` (dépasse à 1,10 : le pop), `outElastic` ; `Feel` — `stop(ms, force)` (arrêt sur image : `Time.slow = 0,02`), `slow(scale, ms)`, `shake(mag, angle, ms)`, `pop(e)`, `squash(e, angle)`, `tick(e, dt)`, `popK(e)`, `squashK(e)`. Cinq mots aux valeurs fixes : pop 120 ms 1 → 1,25 → 1 ; squash & stretch à l'impact +30 % / −22 % en 110 ms ; flash 60 ms plein puis 70 ms à 35 % ; hitstop 30 / 70 / 60 / 180 ms (coup / critique / mort / phase de boss) ; trail 5 fantômes. Pas de bibliothèque : un tween externe ignorerait le pas fixe et le ralenti du moteur.
+
+**L'arrêt sur image.** `Combat.hitEnemy` fige 30 ms (70 sur un critique), `killEnemy` 60 ms (forcé), `explosion` 60, un changement de phase de boss 180. Deux garde-fous : jamais par-dessus un ralenti en cours (compétence Dilatation, greffe Nerfs d'acier), et **un petit arrêt par 250 ms au plus** — la musique et `Time.now` continuent pendant l'arrêt, un pistolet tenu aurait figé la moitié du temps de jeu et décalé chaque tir de sa note. `Combat.hitPlayer` fait un ralenti à 35 % pendant 120 ms.
+
+**L'impact.** Les étincelles partent du corps de l'ennemi (`Combat.bodyH(e)` = `Sprites.corps(...).hauteur`, mis en cache sur l'ennemi ; repli `r × 2,4` pour un sprite « accessoire »), dans le sens du coup (7 blanches, 14 dorées sur un critique, cône de 0,7 rad), avec une étincelle de contact de 20 px pendant 90 ms (`slashes` avec `spark`) ; l'ennemi s'écrase (`sx +30 % / sy −22 %`, ancré aux pieds dans `Sprites.draw`) ; le flash blanc est à deux temps (`e.flash = 0,13` : plein au-dessus de 0,07, 35 % en dessous — `Sprites.draw` accepte un flash numérique). L'arc de mêlée part de la taille (`y − 12`) et s'affine en s'effaçant (`7 × (1 − k) + 1`). Le chiffre de dégât naît au corps aussi (sa refonte est F-2).
+
+**Le recul de l'arme** (`Weapons.kick`) : 2 px pour un pistolet, 3 pour une lame, 3 pour un arc, 6 pour une masse, en `outCubic` sur 90 ms, dessiné dans `Player.render` dans le sens opposé à la visée.
+
+**La caméra.** `Camera.kick(mag, angle, ms)` remplace `G.shake` (seize sites) : une impulsion **directionnelle** avec une fraction de degré de rotation (`osc × 0,0012`), décroissance `outCubic`, appliquée par `Camera.shake(ctx)` **avant** le zoom (12 px sont 12 px, pas 18 en tactile), amortie par `Camera.update(dt)`, qui amortit aussi `Camera.pulse` (prêt pour la montée de niveau de F-6). Trois amplitudes, jamais d'autres : 1,6 (tir, coup), 4 (critique, mort, coup reçu, charge dans un mur), 9 (explosion, slam, phase et mort de boss, pulsation modulaire).
+
+**Les polices du monde.** `FONT_PIXEL` (Silkscreen, +15 % de taille) pour les chiffres flottants, les noms d'objets au sol, la porte (`▶`), l'étoile d'étourdissement (`✦`), les dalles I II III, le compte à rebours ; `FONT_TEXT` (VT323) pour les descriptions d'objets au sol. `boot()` attend `document.fonts.ready` (1,5 s au plus) avant le premier rendu. Le HUD garde `HUD_FONT` jusqu'à I-5.
+
+**Les planches.** `drawSheet` accepte `rot`, `sx`, `sy` ancrés aux pieds ; `drawBody` applique à la planche la moitié du squash & stretch et de l'inclinaison de `gait()` — la planche de marche anime déjà les pas, elle n'a pas besoin du rebond, mais le poids se voit.
+
+Test : `ressenti.js` — 13 mesures : Ease et Feel ; 30 / 70 / 60 ms ; le plafond de 250 ms ; le ralenti de compétence intact ; étincelles au corps (aucune aux pieds), dans le sens du coup ; étincelle de contact et écrasement ; secousse dirigée et tournée, même amplitude à zoom 1 et 1,5 ; plus de `G.shake =` dans les sources ; le recul 2 / 3 / 6 ; plus de Segoe UI dans le monde ; la planche de marche de Martin dessinée avec un scale non uniforme.
+

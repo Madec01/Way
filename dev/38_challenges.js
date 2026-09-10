@@ -244,7 +244,7 @@ const Challenge = (() => {
           c.fallen++;
           const [tx, ty] = k.split(',').map(Number);
           Particles.spawn(tileX(tx), tileY(ty), { count: 8, color: '#3a3f55', size: 4, speedMax: 90, life: 0.7 });
-          G.shake = Math.min(6, G.shake + 1.5);
+          Feel.shake(1.6, undefined, 120);
         }
       }
       c.nextT -= dt;
@@ -687,7 +687,7 @@ const Challenge = (() => {
         ctx.strokeRect(s.x - 20, s.y - 20, 40, 40);
         ctx.shadowBlur = 0;
         ctx.fillStyle = s.on ? '#7fff9a' : '#e8ecf7';
-        ctx.font = 'bold 18px "Segoe UI", sans-serif';
+        ctx.font = `bold 20px ${FONT_PIXEL}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(s.label, s.x, s.y + 1);
@@ -695,7 +695,7 @@ const Challenge = (() => {
       if (c.showT > 0 && !c.done) {
         ctx.globalAlpha = clamp(c.showT, 0, 1);
         ctx.fillStyle = '#c9a3ff';
-        ctx.font = 'bold 26px "Segoe UI", sans-serif';
+        ctx.font = `bold 28px ${FONT_PIXEL}`;
         ctx.textAlign = 'center';
         ctx.shadowColor = '#c9a3ff';
         ctx.shadowBlur = 16;

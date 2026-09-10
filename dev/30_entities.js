@@ -78,7 +78,7 @@ const Floaters = {
     ctx.textAlign = 'center';
     for (const f of this.list) {
       ctx.globalAlpha = 1 - f.t / f.life;
-      ctx.font = `bold ${f.size}px "Segoe UI", system-ui, sans-serif`;
+      ctx.font = `bold ${Math.round(f.size * 1.15)}px ${FONT_PIXEL}`; // Silkscreen est plus basse que la police système : +15 %
       ctx.fillStyle = '#000a';
       ctx.fillText(f.text, f.x + 1, f.y + 1);
       ctx.fillStyle = f.color;
@@ -687,13 +687,13 @@ const Pickups = {
         ctx.strokeRect(-12, -12, 24, 24);
         ctx.rotate(-Math.PI / 4);
         ctx.fillStyle = col;
-        ctx.font = 'bold 13px "Segoe UI", sans-serif';
+        ctx.font = `bold 14px ${FONT_PIXEL}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText((w ? w.family[0] : '?').toUpperCase(), 0, 1);
         ctx.restore();
         ctx.fillStyle = '#e8ecf7';
-        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.font = `14px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillText(w ? w.name : '', p.x, p.y + bob - 20);
       } else if (p.kind === 'ally') {
@@ -708,7 +708,7 @@ const Pickups = {
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob - 6, 2, 0, TAU);
         ctx.fill();
-        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.font = `14px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillStyle = '#9ff';
         ctx.fillText('allié', p.x, p.y + bob - 18);
@@ -724,7 +724,7 @@ const Pickups = {
         }
         ctx.restore();
         ctx.fillStyle = pd.color || '#9fd8ff';
-        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.font = `14px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillText(pd.name || 'Compagnon', p.x, p.y + bob - 22);
       } else if (p.kind === 'relic') {
@@ -745,7 +745,7 @@ const Pickups = {
         ctx.fill();
         ctx.restore();
         ctx.fillStyle = '#e8ecf7';
-        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.font = `14px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillText(rl ? rl.name : 'Relique', p.x, p.y + bob - 18);
       } else if (p.kind === 'heart') {
@@ -860,7 +860,7 @@ const Combat = {
     }
     d = Math.max(1, Math.round(d));
     e.hp -= d;
-    if (!info.dot) e.flash = 0.12; // les brûlures/poisons ne font pas clignoter
+    if (!info.dot) e.flash = 0.13; // deux temps : 60 ms de blanc plein, puis 70 ms à 35 % (Enemy.render lit la valeur) ; pas pour brûlure/poison
     if (!info.dot) {
       const kb = ((info.knockback || 1) * pl.stats.knockback * (e.isBoss ? 0.1 : 1) * 160) / Math.max(1, e.mass || 1);
       const a = info.vx != null ? Math.atan2(info.vy, info.vx) : angleTo(pl.x, pl.y, e.x, e.y);
@@ -869,8 +869,27 @@ const Combat = {
       if (!info.silent) {
         AudioEngine[info.crit ? 'hitCrit' : 'hitEnemy']({ x: (e.x - W / 2) / (W / 2) });
       }
-      Particles.spawn(e.x, e.y, { count: info.crit ? 8 : 4, color: info.crit ? '#ffd166' : e.color, size: 2, speedMax: 120 });
-      Floaters.add(e.x + VFX_RNG.range(-8, 8), e.y - e.r - 4, String(d), info.crit ? '#ffd166' : '#fff', info.crit ? 16 : 12);
+      /* l'impact se lit en lumière : étincelles blanches (dorées sur un critique) qui partent DU CORPS de l'ennemi, dans
+         le sens du coup, une étincelle de contact, un arrêt sur image, une secousse dans le sens du coup, un écrasement */
+      const hy = e.y - Combat.bodyH(e) * 0.55;
+      Particles.spawn(e.x, hy, {
+        count: info.crit ? 14 : 7,
+        angle: a,
+        spread: 0.7,
+        speedMin: 90,
+        speedMax: info.crit ? 320 : 220,
+        size: info.crit ? 3 : 2,
+        color: info.crit ? '#fff3c4' : '#ffffff',
+        life: 0.28,
+        glow: true,
+      });
+      G.room.slashes.push({ x: e.x, y: hy, a, range: 20, arc: 2.6, t: 0, life: 0.09, color: '#ffffff', spark: true });
+      Floaters.add(e.x + VFX_RNG.range(-8, 8), hy - 10, String(d), info.crit ? '#ffd166' : '#fff', info.crit ? 16 : 12);
+      if (!info.silent) {
+        Feel.stop(info.crit ? 70 : 30);
+        Feel.shake(info.crit ? 3.5 : 1.6, a, 120);
+      }
+      Feel.squash(e, a, 110);
       /* hooks onHit */
       for (const h of pl.hooks.onHit) {
         const chance = Math.min(1, (h.chance != null ? h.chance : 1) * (h.stacks || 1)); // reprendre la greffe = palier suivant
@@ -897,6 +916,21 @@ const Combat = {
     }
     if (e.hp <= 0) Combat.killEnemy(e, info);
   },
+  /* hauteur du corps dessiné d'un ennemi (les étincelles et les chiffres partent du corps, pas des pieds) */
+  bodyH(e) {
+    if (e.hauteur == null) {
+      let h = 0;
+      try {
+        h = Sprites.corps(e.def.sprite || (e.isBoss ? 'boss' : 'enemy_' + e.archetype), {
+          scale: e.isBoss ? 1.15 : clamp(e.r / 14, 0.6, 1.5),
+        }).hauteur;
+      } catch (x) {
+        h = 0;
+      }
+      e.hauteur = h > 8 && h < 400 ? h : e.r * 2.4;
+    }
+    return e.hauteur;
+  },
   chain(from, dmg, jumps, radius) {
     let cur = from;
     const done = new Set([from]);
@@ -914,7 +948,8 @@ const Combat = {
     G.room.blasts.push({ x, y, r: radius, t: 0, life: 0.45, color, fill: true });
     Particles.spawn(x, y, { count: 18, color, size: 4, speedMax: 260, glow: true, life: 0.6 });
     Particles.spawn(x, y, { count: 8, color: '#fff3c4', size: 3, speedMax: 120, glow: true, life: 0.3 });
-    G.shake = Math.min(10, G.shake + radius * 0.04);
+    Feel.shake(9, angleTo(x, y, G.player.x, G.player.y), 220);
+    Feel.stop(60);
     if (fromPlayer) {
       for (const e of G.enemies)
         if (!e.dead && dist(x, y, e.x, e.y) < radius + e.r) Combat.hitEnemy(e, dmg, { explosion: true, noCrit: true, x, y, silent: true });
@@ -929,6 +964,8 @@ const Combat = {
     e.dead = true;
     const pl = G.player;
     AudioEngine.enemyDie({ x: (e.x - W / 2) / (W / 2) });
+    Feel.stop(60, true); // une mort compte toujours, même juste après le coup qui l'a donnée
+    Feel.shake(4, info.vx != null ? Math.atan2(info.vy, info.vx) : angleTo(pl.x, pl.y, e.x, e.y), 160);
     Particles.spawn(e.x, e.y, { count: 12, color: e.color, size: 3, speedMax: 200, glow: true });
     G.run.stats.kills++;
     G.room.kills++;
@@ -1016,7 +1053,8 @@ const Combat = {
     AudioEngine.playerHurt({ intensity: clamp(dmg / 30, 0.3, 1) });
     Floaters.add(pl.x, pl.y - 30, '-' + dmg, '#ff5e7a', 16);
     Particles.spawn(pl.x, pl.y, { count: 8, color: '#ff5e7a', size: 3 });
-    G.shake = Math.min(12, G.shake + 4 + dmg * 0.2);
+    Feel.shake(4, angleTo(info.x != null ? info.x : pl.x - pl.facing, info.y != null ? info.y : pl.y, pl.x, pl.y), 200);
+    Feel.slow(0.35, 120);
     for (const h of pl.hooks.onDamaged) {
       if (h.effect === 'shockwave') Combat.playerShockwave(h);
       else if (h.effect === 'time_slow_on_damage') {
@@ -1176,9 +1214,17 @@ const Weapons = {
   dmgOf(pl, mul = 1) {
     return pl.weapon.damage * pl.stats.damage * mul * (pl.beatMul || 1);
   },
+  /* recul de l'arme (« gun kickback ») : 2 px pour un pistolet, 6 pour un marteau — c'est ce qui donne du poids aux armes */
+  kick(pl, aim) {
+    const w = pl.weapon;
+    pl.kickA = aim;
+    pl.kickT = 0;
+    pl.kickMag = w.family === 'hammer' ? 6 : w.type === 'melee' ? 3 : w.family === 'bow' ? 3 : 2;
+  },
   shoot(pl, aim, o) {
     const w = pl.weapon,
       st = pl.stats;
+    Weapons.kick(pl, aim);
     const n = (w.projectiles || 1) + st.projectiles;
     const spread = (w.spread || 0) + (n > 1 ? 0.12 * (n - 1) : 0);
     const spd = (w.projSpeed || 520) * st.projSpeed * (o.speedMul || 1);
@@ -1238,9 +1284,10 @@ const Weapons = {
     const arc = slam ? TAU : ((w.special && w.special.arc) || 2.1) * st.areaSize;
     const cx = slam ? pl.x + Math.cos(aim) * range * 0.6 : pl.x,
       cy = slam ? pl.y + Math.sin(aim) * range * 0.6 : pl.y;
+    Weapons.kick(pl, aim);
     G.room.slashes.push({
       x: pl.x,
-      y: pl.y,
+      y: pl.y - 12, // l'arc part de la taille, pas des pieds
       a: aim,
       range,
       arc,
@@ -1278,7 +1325,7 @@ const Weapons = {
           Particles.spawn(p.x, p.y, { count: 3, color: '#fff', size: 2 });
         }
       }
-    if (slam) G.shake = Math.min(10, G.shake + 5);
+    if (slam) Feel.shake(9, aim, 220);
     AudioEngine[w.family === 'hammer' ? 'shootHammer' : 'shootBlade']({ x: (pl.x - W / 2) / (W / 2), intensity: hits ? 1 : 0.5 });
     G.run.stats.shots++;
     pl.tir(pl.attackCd);
@@ -1523,6 +1570,9 @@ class Player {
     this.shieldUntil = 0;
     this.invulnUntil = 0;
     this.hurtFlash = 0;
+    this.kickT = 1; // recul de l'arme : actif tant que kickT < 0,09
+    this.kickA = 0;
+    this.kickMag = 0;
     this.dead = false;
     this.attackCd = 0;
     this.charge = 0;
@@ -1781,6 +1831,7 @@ class Player {
       } else if (this.overdrive.selfDps) this.hp = Math.max(1, this.hp - this.overdrive.selfDps * dt);
     }
     if (this.hurtFlash > 0) this.hurtFlash -= dt;
+    if (this.kickT < 0.09) this.kickT += dt;
     if (this.buffs.length && this.buffs.some(b => Time.now > b.until)) {
       this.buffs = this.buffs.filter(b => Time.now <= b.until);
       this.recompute();
@@ -1991,6 +2042,10 @@ class Player {
     /* blessé : un recul de trois pixels le temps du flash, en plus du blanc */
     const recul = this.hurtFlash > 0.13 ? -this.facing * 3 : 0;
     if (recul) ctx.translate(recul, 0);
+    if (this.kickT < 0.09) {
+      const kk = this.kickMag * (1 - Ease.outCubic(this.kickT / 0.09));
+      ctx.translate(-Math.cos(this.kickA) * kk, -Math.sin(this.kickA) * kk);
+    }
     Sprites.drawBody(ctx, (this.char && this.char.sprite) || 'player', this.x, this.y, {
       face: this.char && this.char.face,
       body: this.char && this.char.body,

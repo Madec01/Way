@@ -268,7 +268,7 @@ const Room = {
   onBossDefeated(b) {
     G.room.bossDead = true;
     G.run.stats.bossKilled = true;
-    G.shake = 14;
+    Feel.shake(9, angleTo(b.x, b.y, G.player.x, G.player.y), 320);
     UI.banner(Content.pick('bossWin') || 'Étalon neutralisé', '#ffd166');
     AudioEngine.roomClear({});
     for (let i = 0; i < 12; i++) Pickups.spawn(b.x, b.y, 'coin', 1);
@@ -561,7 +561,7 @@ const Room = {
       ctx.lineWidth = 3;
       ctx.strokeRect(dx - 2, dy - TILE + 2, TILE + 4, TILE * 2 - 4);
       ctx.fillStyle = '#7fff9a';
-      ctx.font = 'bold 22px sans-serif';
+      ctx.font = `bold 24px ${FONT_PIXEL}`;
       ctx.textAlign = 'center';
       ctx.fillText('▶', dx + TILE / 2, dy + 8);
     } else {
@@ -606,7 +606,7 @@ const Room = {
           },
         });
         ctx.fillStyle = '#9ff';
-        ctx.font = '10px "Segoe UI", sans-serif';
+        ctx.font = `13px ${FONT_TEXT}`;
         ctx.textAlign = 'center';
         ctx.fillText(Math.ceil(t.until - Time.now) + ' s', t.x, t.y - 30);
       } else {
@@ -646,7 +646,7 @@ const Room = {
       ctx.strokeStyle = s.color;
       ctx.shadowColor = s.color;
       ctx.shadowBlur = 14;
-      ctx.lineWidth = s.slam ? 6 : 4;
+      ctx.lineWidth = s.spark ? 3 * (1 - k) + 1 : s.slam ? 8 * (1 - k) + 1 : 7 * (1 - k) + 1; // il s'affine en s'effaçant
       ctx.beginPath();
       if (s.slam) ctx.arc(s.cx, s.cy, s.range * (0.5 + 0.5 * k), 0, TAU);
       else ctx.arc(s.x, s.y, s.range * (0.7 + 0.3 * k), s.a - s.arc / 2, s.a + s.arc / 2);
@@ -1038,6 +1038,6 @@ const Run = {
     Room.update(dt);
     Particles.update(dt);
     Floaters.update(dt);
-    if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 30);
+    Camera.update(dt); // secousse et impulsion de zoom
   },
 };

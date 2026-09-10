@@ -195,7 +195,7 @@ const Modular = (() => {
           }
           if (st.stage === 'pulse' && m.pulses !== st.idx) {
             m.pulses = st.idx;
-            G.shake = Math.min(12, G.shake + 6);
+            Feel.shake(9, undefined, 260);
             AudioEngine.skillShockwave({ intensity: 1 });
             room.blasts.push({ x: m.zx, y: m.zy, r: 900, t: 0, life: 0.5, color: m.color || '#ff9a3c' });
             const dmg = Math.round((m.damage || 15) * G.difficulty.damageMul);
@@ -322,7 +322,7 @@ const Modular = (() => {
           ctx.arc(m.zx, m.zy, m.r + 60 * (1 - m.k), 0, TAU);
           ctx.stroke();
           ctx.fillStyle = '#7fff9a';
-          ctx.font = 'bold 12px "Segoe UI", sans-serif';
+          ctx.font = `bold 13px ${FONT_PIXEL}`;
           ctx.textAlign = 'center';
           ctx.shadowBlur = 0;
           ctx.fillText('ZONE SÛRE ' + Math.ceil((m.telegraph || 2) * (1 - m.k)) + ' s', m.zx, m.zy - m.r - 8);

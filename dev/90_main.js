@@ -21,8 +21,8 @@ function render(ctx) {
   ctx.setTransform(ctx.getTransform());
   if ((G.state === 'run' || G.attract) && G.room) {
     ctx.save();
+    Camera.shake(ctx); // avant le zoom : la secousse est en pixels d'écran
     Camera.apply(ctx);
-    if (G.shake > 0) ctx.translate(VFX_RNG.range(-G.shake, G.shake), VFX_RNG.range(-G.shake, G.shake));
     ctx.fillStyle = '#07080d';
     ctx.fillRect(-W, -H, 3 * W, 3 * H);
     Room.render(ctx);
@@ -89,6 +89,10 @@ async function boot() {
   Beat.load();
   if (Meta.profile.lag) Beat.lag = Meta.profile.lag; // décalage son/image calibré par l'auteur
   UI.showTitle();
+  /* les polices pixel doivent être là avant le premier rendu du canvas, sinon Silkscreen retombe en silence sur Segoe UI */
+  try {
+    await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]);
+  } catch (e) {}
   Engine.start(update, render);
   Attract.start();
   window.__autoplay = Debug.autoplay;
