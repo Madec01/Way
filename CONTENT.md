@@ -52,94 +52,94 @@ Notes moteur : `weapon_bow.special` porte les bonus de charge (`chargedPierceBon
 
 Le dash est une compétence : un joueur sans *Dash* ni *Saut de phase* n'a aucun déplacement d'urgence et doit compter sur les obstacles et la lecture des télégraphies. *Surrégime* est le 8e choix (préféré à decoy : plus lisible à équilibrer, et il crée un dilemme PV/DPS).
 
-## 4. Améliorations en run (61)
+## 4. Greffes (61)
 
-Répartition : Commune 18 · Rare 22 · Épique 15 · Colossale 6. Reprendre une greffe qu'on a déjà = son palier suivant (« Stacks » = nombre de paliers) : les effets à chance (brûlure, gel, poison, chaîne, butin) multiplient leur chance par le palier. Chantier 6 : 74 → 61, une seule greffe par effet, les anciens ids se résolvent par `Content.upgrade` (`UPGRADE_ALIASES`), `node dev/check-greffes.js` vérifie qu'aucune n'en domine une autre de la même rareté.
+Répartition : Commune 18 · Rare 22 · Épique 15 · Colossale 6. Reprendre une greffe qu'on a déjà = son palier suivant (« Paliers » = nombre de fois qu'on peut la prendre) : les effets à chance (brûlure, gel, poison, chaîne, butin) multiplient leur chance par le palier. Chantier 6 : 74 → 61, une seule greffe par effet, les anciens ids se résolvent par `Content.upgrade` (`UPGRADE_ALIASES`), `node dev/check-greffes.js` vérifie qu'aucune n'en domine une autre de la même rareté. Chantier I-2 : descriptions au tutoiement, sans anglicisme ni pixel, ≤ 90 caractères, catégories affichées en français (`CATEGORIES` dans 50_ui.js).
 
 ### 4.1 Communes
 
-| id | Nom | Catégorie | Famille | Stacks | Description | mods | hooks |
+| id | Nom | Catégorie | Famille | Paliers | Description | mods | hooks |
 |---|---|---|---|---|---|---|---|
-| `upg_tranchant` | Tranchant | offense | — | 5 | +10 % dégâts. | damage ×1.1 | — |
-| `upg_gachette` | Gâchette | offense | — | 4 | +8 % cadence d'attaque. | fireRate ×1.08 | — |
-| `upg_oeil_vif` | Œil vif | offense | — | 5 | +6 % chance de critique. | critChance +0.06 | — |
-| `upg_coup_critique` | Coup critique | offense | — | 3 | +40 % dégâts des critiques (×1,5 → ×1,9). | critMult +0.4 | — |
-| `upg_longue_portee` | Longue portée | offense | — | 3 | +15 % portée, projectiles 15 % plus rapides. | range ×1.15, projSpeed ×1.15 | — |
-| `upg_plaque` | Plaque | défense | — | 5 | +20 PV max. | maxHp +20 | — |
-| `upg_peau_dure` | Peau dure | défense | — | 4 | +1 armure (dégâts plats retirés par coup). | armor +1 | — |
-| `upg_cicatrisation` | Cicatrisation | défense | — | 4 | +0,8 PV/s de régénération. | regen +0.8 | — |
-| `upg_reflexes` | Réflexes | défense | — | 4 | +5 % d'esquive. | dodge +0.05 | — |
-| `upg_semelles` | Semelles | mobility | — | 4 | +10 % vitesse de déplacement. | speed ×1.1 | — |
-| `upg_recuperation` | Récupération | mobility | — | 4 | -6 % de cooldown de compétence. | cooldownReduction +0.06 | — |
-| `upg_tirelire` | Tirelire | économie | — | 4 | +20 % pièces gagnées, ramasse 30 px plus loin. | coinGain ×1.2, pickupRadius +30 | — |
-| `upg_apprentissage` | Apprentissage | économie | — | 4 | +15 % XP gagnée. | xpGain ×1.15 | — |
-| `upg_trefle` | Trèfle | économie | — | 4 | +2 chance (raretés décalées vers épique/colossal). | luck +2 | — |
-| `upg_butin` | Butin | économie | — | 3 | 15 % de chance qu'un kill lâche 1 pièce bonus. | — | onKill:coin_on_kill (chance=0.15 amount=1) |
-| `upg_etincelle` | Étincelle | spécial | — | 3 | 15 % de chance de brûler (5 dégâts/s, 2 s) — 30 % puis 45 % en la reprenant. | — | onHit:burn (chance=0.15 dps=5 duration=2) |
-| `upg_givre` | Givre | spécial | — | 3 | 12 % de chance de geler : -50 % vitesse pendant 1,2 s. | — | onHit:freeze (chance=0.12 duration=1.2 slow=0.5) |
-| `upg_toxine` | Toxine | spécial | — | 3 | 15 % de chance d'empoisonner : 3 dégâts/s, 4 s, cumulable ×3. | — | onHit:poison (chance=0.15 dps=3 duration=4 stacks=3) |
+| `upg_tranchant` | Tranchant | Attaque | — | 5 | +10 % dégâts. | damage ×1.1 | — |
+| `upg_gachette` | Gâchette | Attaque | — | 4 | +8 % cadence d'attaque. | fireRate ×1.08 | — |
+| `upg_oeil_vif` | Œil vif | Attaque | — | 5 | +6 % chance de critique. | critChance +0.06 | — |
+| `upg_coup_critique` | Coup critique | Attaque | — | 3 | +40 % dégâts des critiques (×1,5 → ×1,9). | critMult +0.4 | — |
+| `upg_longue_portee` | Longue portée | Attaque | — | 3 | +15 % portée, projectiles 15 % plus rapides. | range ×1.15, projSpeed ×1.15 | — |
+| `upg_plaque` | Plaque | Défense | — | 5 | +20 PV max. | maxHp +20 | — |
+| `upg_peau_dure` | Peau dure | Défense | — | 4 | +1 armure (dégâts plats retirés par coup). | armor +1 | — |
+| `upg_cicatrisation` | Cicatrisation | Défense | — | 4 | +0,8 PV/s de régénération. | regen +0.8 | — |
+| `upg_reflexes` | Réflexes | Défense | — | 4 | +5 % d'esquive. | dodge +0.05 | — |
+| `upg_semelles` | Semelles | Mobilité | — | 4 | +10 % vitesse de déplacement. | speed ×1.1 | — |
+| `upg_recuperation` | Récupération | Mobilité | — | 4 | −6 % de recharge de compétence. | cooldownReduction +0.06 | — |
+| `upg_tirelire` | Tirelire | Butin | — | 4 | +20 % de pièces, et tu ramasses un peu plus loin. | coinGain ×1.2, pickupRadius +30 | — |
+| `upg_apprentissage` | Apprentissage | Butin | — | 4 | +15 % XP gagnée. | xpGain ×1.15 | — |
+| `upg_trefle` | Trèfle | Butin | — | 4 | +2 chance (raretés décalées vers épique/colossal). | luck +2 | — |
+| `upg_butin` | Butin | Butin | — | 3 | 15 % de chance qu'un ennemi tué lâche une pièce en plus. | — | onKill:coin_on_kill (chance=0.15 amount=1) |
+| `upg_etincelle` | Étincelle | Spécial | — | 3 | 15 % de chance de brûler (5 dégâts/s, 2 s) — 30 % puis 45 % en la reprenant. | — | onHit:burn (chance=0.15 dps=5 duration=2) |
+| `upg_givre` | Givre | Spécial | — | 3 | 12 % de chance de geler : -50 % vitesse pendant 1,2 s. | — | onHit:freeze (chance=0.12 duration=1.2 slow=0.5) |
+| `upg_toxine` | Toxine | Spécial | — | 3 | 15 % de chance d'empoisonner : 3 dégâts/s, 4 s, cumulable ×3. | — | onHit:poison (chance=0.15 dps=3 duration=4 stacks=3) |
 
 ### 4.2 Rares
 
-| id | Nom | Catégorie | Famille | Stacks | Description | mods | hooks |
+| id | Nom | Catégorie | Famille | Paliers | Description | mods | hooks |
 |---|---|---|---|---|---|---|---|
-| `upg_frappe_lourde` | Frappe lourde | offense | — | 3 | +22 % dégâts, +15 % zone, +20 % recul, -8 % cadence. | damage ×1.22, fireRate ×0.92, areaSize ×1.15, knockback ×1.2 | — |
-| `upg_perforation` | Perforation | offense | — | 3 | +1 ennemi traversé par les tirs. | pierce +1 | — |
-| `upg_rebond` | Rebond | offense | — | 3 | +1 rebond sur les murs. | bounce +1 | — |
-| `upg_vampirisme` | Vampirisme | défense | — | 3 | 4 % des dégâts infligés rendus en PV. | lifesteal +0.04 | — |
-| `upg_epines` | Épines | défense | — | 3 | Renvoie 8 dégâts à tout ennemi qui vous touche. | thorns +8 | — |
-| `upg_isolant` | Isolant | défense | — | 2 | -40 % dégâts subis des pièges. | trapDamageMul ×0.6 | — |
-| `upg_convalescence` | Convalescence | défense | — | 2 | Au début de chaque salle : +20 % PV et 15 PV de bouclier. | — | onRoomStart:heal_on_room (fraction=0.2); onRoomStart:shield_on_room (amount=15) |
-| `upg_adrenaline` | Adrénaline | mobility | — | 2 | Chaque kill : +20 % vitesse pendant 2 s. | — | onKill:kill_speed (speedMul=1.2 duration=2) |
-| `upg_enchainement` | Enchaînement | mobility | — | 2 | Chaque kill : 20 % de chance de réduire le cooldown restant de 50 %. | — | onKill:skill_reset_on_kill (chance=0.2 fraction=0.5) |
-| `upg_chaine_eclair` | Chaîne éclair | spécial | — | 3 | 20 % de chance qu'un coup saute sur 2 ennemis (150 px) à 50 % — 40 % puis 60 % en la reprenant. | — | onHit:chain (chance=0.2 jumps=2 radius=150 damageMul=0.5) |
-| `upg_detonation` | Détonation | spécial | — | 2 | Les ennemis tués explosent : 60 % de vos dégâts dans 70 px. | — | onKill:explode (radius=70 damageMul=0.6) |
-| `upg_syn_lame_dansante` | Lame dansante | synergie | blade | 2 | Lame : +25 % cadence, chaque kill +15 % vitesse 1,5 s. | fireRate ×1.25 | onKill:kill_speed (speedMul=1.15 duration=1.5) |
-| `upg_syn_balles_chercheuses` | Balles chercheuses | synergie | pistol | 2 | Pistolet : +2 rebonds, +10 % dégâts. | bounce +2, damage ×1.1 | — |
-| `upg_syn_corde_tendue` | Corde tendue | synergie | bow | 2 | Arc : charge 40 % plus vite, +2 perforation, +30 % vitesse de flèche. | pierce +2, projSpeed ×1.3 | passive:charge_speed (mul=1.4) |
-| `upg_syn_combustion` | Combustion | synergie | flame | 2 | Flammes : brûlure garantie 8 dégâts/s 3 s, +20 % taille de cône. | areaSize ×1.2 | onHit:burn (chance=1 dps=8 duration=3) |
-| `upg_second_canon` | Double canon | offense | — | 2 | +1 projectile par tir, -12 % dégâts. | projectiles +1, damage ×0.88 | — |
-| `upg_tir_arriere` | Tir arrière | offense | — | 1 | Chaque tir envoie aussi un projectile derrière vous (50 %). | — | passive:rear_shot (damageMul=0.5) |
-| `upg_aura_brulante` | Aura brûlante | spécial | — | 2 | Les ennemis à moins de 90 px brûlent : 8 dégâts/s. | — | passive:burn_aura (radius=90 dps=8) |
-| `upg_drone` | Drone d'appoint | offense | — | 2 | Un drone vous suit et tire 2 fois/s (6 dégâts). | — | passive:drone (count=1 damage=6 fireRate=2 range=340) |
-| `upg_execution` | Exécution | offense | — | 1 | Les ennemis (hors boss) sous 15 % de PV meurent au prochain coup. | — | passive:execute (threshold=0.15) |
-| `upg_gel_profond` | Gel profond | spécial | — | 1 | Les ennemis gelés subissent +35 % de dégâts. | — | passive:frost_bonus (mul=1.35) |
-| `upg_rafale` | Rafale | mobility | — | 1 | Après une compétence : cadence +45 % pendant 3 s. | — | onSkill:fire_frenzy (fireRateMul=1.45 duration=3) |
+| `upg_frappe_lourde` | Frappe lourde | Attaque | — | 3 | +22 % dégâts, +15 % zone, +20 % recul, -8 % cadence. | damage ×1.22, fireRate ×0.92, areaSize ×1.15, knockback ×1.2 | — |
+| `upg_perforation` | Perforation | Attaque | — | 3 | +1 ennemi traversé par les tirs. | pierce +1 | — |
+| `upg_rebond` | Rebond | Attaque | — | 3 | +1 rebond sur les murs. | bounce +1 | — |
+| `upg_vampirisme` | Vampirisme | Défense | — | 3 | 4 % des dégâts infligés rendus en PV. | lifesteal +0.04 | — |
+| `upg_epines` | Épines | Défense | — | 3 | Renvoie 8 dégâts à tout ennemi qui te touche. | thorns +8 | — |
+| `upg_isolant` | Isolant | Défense | — | 2 | -40 % dégâts subis des pièges. | trapDamageMul ×0.6 | — |
+| `upg_convalescence` | Convalescence | Défense | — | 2 | Au début de chaque salle : +20 % PV et 15 PV de bouclier. | — | onRoomStart:heal_on_room (fraction=0.2); onRoomStart:shield_on_room (amount=15) |
+| `upg_adrenaline` | Adrénaline | Mobilité | — | 2 | Chaque ennemi tué : +20 % de vitesse pendant 2 s. | — | onKill:kill_speed (speedMul=1.2 duration=2) |
+| `upg_enchainement` | Enchaînement | Mobilité | — | 2 | Chaque ennemi tué : 20 % de chance de réduire la recharge restante de moitié. | — | onKill:skill_reset_on_kill (chance=0.2 fraction=0.5) |
+| `upg_chaine_eclair` | Chaîne éclair | Spécial | — | 3 | 20 % de chance de sauter sur 2 ennemis proches (50 %) ; 40 puis 60 % en la reprenant. | — | onHit:chain (chance=0.2 jumps=2 radius=150 damageMul=0.5) |
+| `upg_detonation` | Détonation | Spécial | — | 2 | Les ennemis tués explosent : 60 % de tes dégâts, à bout portant. | — | onKill:explode (radius=70 damageMul=0.6) |
+| `upg_syn_lame_dansante` | Lame dansante | Synergie | lame | 2 | Lame : +25 % de cadence, et chaque ennemi tué te donne +15 % de vitesse 1,5 s. | fireRate ×1.25 | onKill:kill_speed (speedMul=1.15 duration=1.5) |
+| `upg_syn_balles_chercheuses` | Balles chercheuses | Synergie | pistolet | 2 | Pistolet : +2 rebonds, +10 % dégâts. | bounce +2, damage ×1.1 | — |
+| `upg_syn_corde_tendue` | Corde tendue | Synergie | arc | 2 | Arc : charge 40 % plus vite, +2 perforation, +30 % vitesse de flèche. | pierce +2, projSpeed ×1.3 | passive:charge_speed (mul=1.4) |
+| `upg_syn_combustion` | Combustion | Synergie | flamme | 2 | Flammes : brûlure garantie 8 dégâts/s 3 s, +20 % taille de cône. | areaSize ×1.2 | onHit:burn (chance=1 dps=8 duration=3) |
+| `upg_second_canon` | Double canon | Attaque | — | 2 | +1 projectile par tir, -12 % dégâts. | projectiles +1, damage ×0.88 | — |
+| `upg_tir_arriere` | Tir arrière | Attaque | — | 1 | Chaque tir envoie aussi un projectile derrière toi (50 %). | — | passive:rear_shot (damageMul=0.5) |
+| `upg_aura_brulante` | Aura brûlante | Spécial | — | 2 | Les ennemis à bout portant brûlent : 8 dégâts par seconde. | — | passive:burn_aura (radius=90 dps=8) |
+| `upg_drone` | Drone d'appoint | Attaque | — | 2 | Un drone te suit et tire deux fois par seconde (6 dégâts). | — | passive:drone (count=1 damage=6 fireRate=2 range=340) |
+| `upg_execution` | Exécution | Attaque | — | 1 | Les ennemis (hors boss) sous 15 % de PV meurent au prochain coup. | — | passive:execute (threshold=0.15) |
+| `upg_gel_profond` | Gel profond | Spécial | — | 1 | Les ennemis gelés subissent +35 % de dégâts. | — | passive:frost_bonus (mul=1.35) |
+| `upg_rafale` | Rafale | Mobilité | — | 1 | Après une compétence : cadence +45 % pendant 3 s. | — | onSkill:fire_frenzy (fireRateMul=1.45 duration=3) |
 
 ### 4.3 Épiques
 
-| id | Nom | Catégorie | Famille | Stacks | Description | mods | hooks |
+| id | Nom | Catégorie | Famille | Paliers | Description | mods | hooks |
 |---|---|---|---|---|---|---|---|
-| `upg_amplificateur` | Amplificateur | mobility | — | 2 | +30 % effet des compétences, -10 % de cooldown. | skillPower ×1.3, cooldownReduction +0.1 | — |
-| `upg_double_charge` | Double charge | mobility | — | 1 | Votre compétence a 2 charges. | — | passive:double_skill |
-| `upg_crit_explosif` | Crit explosif | spécial | — | 1 | Les critiques explosent : 80 % des dégâts dans 60 px. +5 % crit. | critChance +0.05 | onHit:crit_explode (radius=60 damageMul=0.8) |
-| `upg_orbes_gardiennes` | Orbes gardiennes | défense | — | 2 | 2 orbes (10 dégâts) tournent à 70 px et bloquent les projectiles — 4 en la reprenant. | — | passive:orbit_shield (count=2 damage=10 radius=70) |
-| `upg_attraction` | Attraction | économie | — | 1 | Tous les pickups viennent à vous. Fragments d'énergie doublés. +20 % XP. | xpGain ×1.2 | passive:xp_magnet; passive:fragments_double |
-| `upg_sang_froid` | Nerfs d'acier | défense | — | 1 | Touché : ralenti 0,8 s à 40 % et +0,3 s d'invulnérabilité. +2 armure. | invulnTime +0.3, armor +2 | onDamaged:time_slow_on_damage (duration=0.8 scale=0.4) |
-| `upg_syn_onde_tellurique` | Onde tellurique | synergie | hammer | 1 | Marteau : +35 % zone, +20 % dégâts, les kills explosent (80 %, 90 px). | areaSize ×1.35, damage ×1.2 | onKill:explode (radius=90 damageMul=0.8) |
-| `upg_syn_constellation` | Constellation | synergie | orb | 1 | Orbe : +2 orbes, rayon d'orbite +20 %, +15 % dégâts. | projectiles +2, range ×1.2, damage ×1.15 | — |
-| `upg_syn_surtension` | Surtension | synergie | chain | 1 | Foudre : chaque coup saute sur 3 ennemis (200 px) à 70 %. | — | onHit:chain (chance=1 jumps=3 radius=200 damageMul=0.7) |
-| `upg_syn_triple_rappel` | Triple rappel | synergie | boomerang | 1 | Boomerang : +1 boomerang en vol, +15 % dégâts, +15 % cadence. | projectiles +1, damage ×1.15, fireRate ×1.15 | — |
-| `upg_salve` | Salve | offense | — | 1 | +2 projectiles par tir, -30 % dégâts. | projectiles +2, damage ×0.7 | — |
-| `upg_tir_guide` | Tir guidé | offense | — | 1 | Vos projectiles se dirigent vers l'ennemi le plus proche. | — | passive:homing (turn=2.5) |
-| `upg_eclats` | Éclats | offense | — | 1 | Chaque impact libère 2 éclats (40 % des dégâts). | — | onHit:split_on_hit (chance=1 count=2 damageMul=0.4) |
-| `upg_balles_explosives` | Balles explosives | spécial | — | 1 | 25 % de chance qu'un impact explose (60 px, 70 % des dégâts). | — | onHit:hit_explode (chance=0.25 radius=60 damageMul=0.7) |
-| `upg_foudre_ambiante` | Foudre ambiante | spécial | — | 2 | Toutes les 3,5 s environ, la foudre frappe l'ennemi le plus proche (26 dégâts). | — | passive:lightning_storm (every=3.5 damage=26 radius=320) |
+| `upg_amplificateur` | Amplificateur | Mobilité | — | 2 | +30 % d'effet des compétences, −10 % de recharge. | skillPower ×1.3, cooldownReduction +0.1 | — |
+| `upg_double_charge` | Double charge | Mobilité | — | 1 | Ta compétence a deux charges. | — | passive:double_skill |
+| `upg_crit_explosif` | Crit explosif | Spécial | — | 1 | Les critiques explosent : 80 % des dégâts à bout portant. +5 % de critique. | critChance +0.05 | onHit:crit_explode (radius=60 damageMul=0.8) |
+| `upg_orbes_gardiennes` | Orbes gardiennes | Défense | — | 2 | Deux orbes (10 dégâts) tournent autour de toi et bloquent les tirs ; 4 en la reprenant. | — | passive:orbit_shield (count=2 damage=10 radius=70) |
+| `upg_attraction` | Attraction | Butin | — | 1 | Tout ce qui traîne vient à toi. Fragments doublés. +20 % XP. | xpGain ×1.2 | passive:xp_magnet; passive:fragments_double |
+| `upg_sang_froid` | Nerfs d'acier | Défense | — | 1 | Touché : ralenti 0,8 s à 40 % et +0,3 s d'invulnérabilité. +2 armure. | invulnTime +0.3, armor +2 | onDamaged:time_slow_on_damage (duration=0.8 scale=0.4) |
+| `upg_syn_onde_tellurique` | Onde tellurique | Synergie | masse | 1 | Marteau : +35 % de zone, +20 % de dégâts, les ennemis tués explosent (80 %, de près). | areaSize ×1.35, damage ×1.2 | onKill:explode (radius=90 damageMul=0.8) |
+| `upg_syn_constellation` | Constellation | Synergie | orbe | 1 | Orbe : +2 orbes, rayon d'orbite +20 %, +15 % dégâts. | projectiles +2, range ×1.2, damage ×1.15 | — |
+| `upg_syn_surtension` | Surtension | Synergie | chaîne | 1 | Foudre : chaque coup saute sur 3 ennemis proches à 70 %. | — | onHit:chain (chance=1 jumps=3 radius=200 damageMul=0.7) |
+| `upg_syn_triple_rappel` | Triple rappel | Synergie | boomerang | 1 | Boomerang : +1 boomerang en vol, +15 % dégâts, +15 % cadence. | projectiles +1, damage ×1.15, fireRate ×1.15 | — |
+| `upg_salve` | Salve | Attaque | — | 1 | +2 projectiles par tir, -30 % dégâts. | projectiles +2, damage ×0.7 | — |
+| `upg_tir_guide` | Tir guidé | Attaque | — | 1 | Tes projectiles se dirigent vers l'ennemi le plus proche. | — | passive:homing (turn=2.5) |
+| `upg_eclats` | Éclats | Attaque | — | 1 | Chaque impact libère 2 éclats (40 % des dégâts). | — | onHit:split_on_hit (chance=1 count=2 damageMul=0.4) |
+| `upg_balles_explosives` | Balles explosives | Spécial | — | 1 | 25 % de chance qu'un impact explose à bout portant (70 % des dégâts). | — | onHit:hit_explode (chance=0.25 radius=60 damageMul=0.7) |
+| `upg_foudre_ambiante` | Foudre ambiante | Spécial | — | 2 | Toutes les 3,5 s environ, la foudre frappe l'ennemi le plus proche (26 dégâts). | — | passive:lightning_storm (every=3.5 damage=26 radius=320) |
 
 ### 4.4 Colossales
 
-| id | Nom | Catégorie | Famille | Stacks | Description | mods | hooks |
+| id | Nom | Catégorie | Famille | Paliers | Description | mods | hooks |
 |---|---|---|---|---|---|---|---|
-| `upg_mitraille` | Mitraille | offense | — | 1 | +3 projectiles, tirs guidés, -20 % dégâts. | projectiles +3, damage ×0.8 | passive:homing (turn=3) |
-| `upg_rappel` | Rappel | spécial | — | 1 | Vos projectiles reviennent vers vous : un second passage sur tout. | — | passive:projectiles_return |
-| `upg_sillage` | Sillage | mobility | — | 1 | Chaque dash laisse une traînée de feu 2,5 s (25 dégâts/s). +10 % vitesse. | speed ×1.1 | onDash:fire_trail (duration=2.5 dps=25) |
-| `upg_symbiose` | Symbiose | défense | — | 1 | Les pièges vous soignent au lieu de vous blesser (100 % des dégâts). | — | passive:traps_heal (fraction=1) |
-| `upg_coeur_de_verre` | Cœur de verre | offense | — | 1 | Dégâts ×2, PV max ×0,5. | — | passive:glass_cannon (damageMul=2 hpMul=0.5) |
-| `upg_resonance` | Résonance | spécial | — | 1 | Chaque compétence : onde de choc 60 dégâts (200 px) + ralenti 1,5 s à 30 %. | — | onSkill:shockwave (radius=200 damage=60 knockback=3); onSkill:bullet_time_skill (duration=1.5 scale=0.3) |
+| `upg_mitraille` | Mitraille | Attaque | — | 1 | +3 projectiles, tirs guidés, -20 % dégâts. | projectiles +3, damage ×0.8 | passive:homing (turn=3) |
+| `upg_rappel` | Rappel | Spécial | — | 1 | Tes projectiles reviennent vers toi : un second passage sur tout. | — | passive:projectiles_return |
+| `upg_sillage` | Sillage | Mobilité | — | 1 | Chaque ruée laisse une traînée de feu 2,5 s (25 dégâts par seconde). +10 % de vitesse. | speed ×1.1 | onDash:fire_trail (duration=2.5 dps=25) |
+| `upg_symbiose` | Symbiose | Défense | — | 1 | Les pièges te soignent au lieu de te blesser. | — | passive:traps_heal (fraction=1) |
+| `upg_coeur_de_verre` | Cœur de verre | Attaque | — | 1 | Dégâts ×2, PV max ×0,5. | — | passive:glass_cannon (damageMul=2 hpMul=0.5) |
+| `upg_resonance` | Résonance | Spécial | — | 1 | Chaque compétence : une onde de choc de 60 dégâts à mi-salle, et un ralenti de 1,5 s. | — | onSkill:shockwave (radius=200 damage=60 knockback=3); onSkill:bullet_time_skill (duration=1.5 scale=0.3) |
 
-## 5. Passifs méta (hub) — 16
+## 5. Améliorations du camp — 16
 
-Économie (chantier 4) : une mort rapporte 30 + 10 par salle plus 10 % par salle des crédits en attente ; une victoire du biome 1 rapporte ~150-250. Coût total pour tout maxer : 3550 crédits.
+Économie (chantier 4) : une mort rapporte 30 + 10 par salle plus 10 % par salle des crédits en attente ; une victoire du palier 1 rapporte ~150-250. Coût total pour tout maxer : 3550 crédits. En jeu elles s'appellent **améliorations** (chantier I-2 ; « calibration » ne s'affiche plus nulle part).
 
 | id | Nom | Paliers | Prix | Effet par palier |
 |---|---|---|---|---|
@@ -149,7 +149,7 @@ Répartition : Commune 18 · Rare 22 · Épique 15 · Colossale 6. Reprendre une
 | `meta_cupidite` | Cupidité | 4 | 20 / 30 / 70 / 120 | coinGain ×1.1 / coinGain ×1.1 / coinGain ×1.1 / coinGain ×1.15 |
 | `meta_etude` | Étude | 4 | 20 / 30 / 70 / 120 | xpGain ×1.08 / xpGain ×1.08 / xpGain ×1.08 / xpGain ×1.1 |
 | `meta_reactivite` | Réactivité | 4 | 20 / 50 / 90 / 150 | cooldownReduction +0.05 / cooldownReduction +0.05 / cooldownReduction +0.05 / cooldownReduction +0.05 |
-| `meta_resurrection` | Résurrection | 3 | 40 / 100 / 180 | `resurrect` (hpFraction=0.25) / `resurrect` (hpFraction=0.4) / `resurrect` (hpFraction=0.6) |
+| `meta_resurrection` | Résurrection | 3 | 40 / 100 / 180 | `resurrect` / `resurrect` / `resurrect` |
 | `meta_memoire_selective` | Mémoire sélective | 1 | 30 | `selective_memory` |
 | `meta_apercu_coffre` | Aperçu du coffre | 1 | 30 | `chest_preview` |
 | `meta_quatrieme_choix` | Quatrième choix | 1 | 40 | `fourth_choice` |
@@ -160,7 +160,7 @@ Répartition : Commune 18 · Rare 22 · Épique 15 · Colossale 6. Reprendre une
 | `meta_aimantation` | Aimantation | 3 | 20 / 30 / 70 | pickupRadius +30 / pickupRadius +30 / pickupRadius +40 |
 | `meta_precision` | Précision | 4 | 20 / 50 / 90 / 150 | critChance +0.03 / critChance +0.03 / critChance +0.03 / critChance +0.03 |
 
-Sémantique des `special` : `resurrect` = hook `second_chance` (une fois par run) ; `selective_memory` = le coffre de la salle 8 ne compte que les 3 meilleures salles pour sa qualité (`Run.chestWindow`) ; `chest_preview` = dans les salles 1 à 3, le HUD affiche la qualité de tirage que le coffre de la salle 4 réserve ; `fourth_choice` = un 4e choix à chaque montée de niveau et à chaque coffre ; `reroll` = compteur de re-rolls par run (hook `reroll_on_levelup` cumule les paliers : 1/2/3). Chantier 6 : ces trois-là n'ont plus qu'un palier — les paliers 2 et 3 vendaient des effets jamais codés ; la migration v2 → v3 rembourse qui les avait achetés.
+Sémantique des `special` : `resurrect` = hook `second_chance` (une fois par partie) ; `selective_memory` = le coffre de la salle 8 ne compte que les 3 meilleures salles pour sa qualité (`Run.chestWindow`) ; `chest_preview` = dans les salles 1 à 3, le HUD affiche la qualité de tirage que le coffre de la salle 4 réserve ; `fourth_choice` = un 4e choix à chaque montée de niveau et à chaque coffre ; `reroll` = compteur de re-rolls par partie (hook `reroll_on_levelup` cumule les paliers : 1/2/3). Chantier 6 : ces trois-là n'ont plus qu'un palier — les paliers 2 et 3 vendaient des effets jamais codés ; la migration v2 → v3 rembourse qui les avait achetés.
 
 ## 6. Biome 1 — ADMISSION
 
@@ -1265,4 +1265,31 @@ Premier chantier du plan des interfaces (`PLAN-INTERFACES.md`), tiré des deux a
 **HUD.** Réécrit autour de `panel()` et `label()`, **ancré sur `Engine.view`** : sur un téléphone, la barre de PV touche enfin le bord et le cartouche d'arme est en bas de l'écran, plus au milieu du terrain. Sortis du HUD : qualité de run et de salle, coups, prédiction de coffre, jauge de qualité, cartouche crédits, stats d'arme, bandeau des greffes, rappel des touches après la salle 3, « métronome interne » — environ 60 % des pixels de texte. Le cartouche central ne dit plus que « Salle 3/9 — Combat · 12 s », dans une boîte à la taille du texte. PV : vert, doré, puis **rouge seulement sous 30 %**, avec pulsation et vignette rouge en périphérie. « Niveau n » est dans le panneau des PV. La barre du boss est en haut au centre, à la place du cartouche, avec « PRISE EXPOSÉE » sous la barre ; son nom n'est plus aussi un bandeau. Un seul compteur de série : les pastilles sous les pieds du joueur (`Tempo.renderPlayer`) puis « TEMPO ×n » en chiffre flottant ; plus de « SÉRIE ×n » en bandeau ni de « TEMPO » en haut. Métronome en disques de 12 px sans boîte opaque. Bandeaux au tiers supérieur, toasts en bas à droite (au-dessus des boutons tactiles). Badge du compagnon aligné sur le cartouche d'arme (même bord, même largeur), avec la vie d'Uno dedans.
 
 Tests : `interface.js` (18 mesures) et `interface_mobile.js` (7 mesures), voir `dev/test/README.md`.
+
+## 43. Chantier I-2 — un seul vocabulaire
+
+**Le glossaire** (un mot par notion, partout, et le test `vocabulaire.js` le tient) :
+
+| Notion | Le mot | Jamais |
+|---|---|---|
+| le biome (Admission, La Serre…) | **palier** (« Palier 1 · ADMISSION ») | niveau |
+| le niveau d'expérience | **niveau** (« Niveau 3 ») | — |
+| ce qu'on achète au camp entre deux parties | **amélioration** | calibration, passif |
+| ce qu'on prend en partie à une montée de niveau ou dans un coffre | **greffe** | amélioration, upgrade |
+| l'argent | **crédits** ; mis à l'abri en salle 4 = **en banque** ; pas encore à l'abri = **en attente** | consigné, validé |
+| une partie | **partie** | run |
+| mourir | **mort** ; la seconde chance = **seconde vie** | réimpression |
+| le coffre de greffes | **Coffre** | Réserve de greffes |
+| la compétence d'esquive | **Ruée** | Dash |
+| le camp | **camp de base**, « Retour au camp » | hub (dans les textes ; le code garde `hub`) |
+
+**Une voix** : le jeu **tutoie**, partout — titres, descriptions d'armes, de compétences, de greffes, d'améliorations, d'ennemis, de boss, de pièges, de compagnons, modes de compagnon, phrases du camp et de la mort. Le vouvoiement n'existe plus dans un texte affiché.
+
+**Sans unité de moteur ni anglais** : plus de « px », de « DPS », de « ticks/s », de « cooldown » (→ recharge), de « dash » (→ ruée), de « pickups » (→ ce qui traîne), de « spam », de « dmg », de « kill » (→ ennemi tué). Les distances deviennent des repères humains, avec une table unique : ≤ 90 px **à bout portant**, ≤ 200 **de près**, ≤ 350 **à mi-salle**, ≤ 500 **loin**, au-delà **toute la salle** (la salle fait 1152 px de large). La recharge d'une compétence n'est dite que dans son étiquette (« recharge 9 s »), plus dans la description. Les catégories de greffes et les familles d'armes ne sortent jamais telles quelles du contenu : `CATEGORIES` et `FAMILLES` dans `50_ui.js` les traduisent (Attaque, Défense, Mobilité, Butin, Spécial, Synergie ; lame, masse, arc, pistolet, boomerang, orbe, chaîne, flamme).
+
+**Relecture** : les 8 armes, 8 compétences, 61 greffes et 16 améliorations tiennent en 90 caractères au plus ; les tableaux §4 et §5 sont régénérés depuis le contenu.
+
+**Ce qui reste volontairement** : les fragments de l'ancienne histoire (onglet Fragments, `LORE.fragments`) gardent leur vocabulaire — leur sort (supprimer ou réécrire avec l'histoire de WAY) est une décision à part, et le test les exclut. Les identifiants du code (`skill_dash`, `cooldown`, `Pickups`, `hub`) ne changent pas : le glossaire est celui des textes affichés.
+
+Test : `vocabulaire.js` — 6 mesures : 401 textes du contenu, les écrans rendus (menu, hub et ses quatre onglets, prépa, pause, montée de niveau, HUD, fin) et les 91 messages écrits dans le code passés à la liste des mots bannis ; « palier », « Ruée », « Coffre » ; aucune description au-dessus de 90 caractères.
 

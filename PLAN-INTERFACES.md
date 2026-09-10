@@ -121,7 +121,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 **Taille** : 1 séance.
 **Bilan** : les 22 points sont faits, avec les décisions prises telles que je les recommandais (Uno par défaut, le tempo comme seul compteur) — à renverser d'un mot si tu veux. Le HUD est réécrit autour de deux aides, `panel` et `label`, ancrées sur `Engine.view` et sondées (`UI.hudProbe`) : le test `interface.js` (18 mesures) vérifie que chaque texte tient dans un panneau, que tout tient dans la vue, que la boîte du cartouche suit son texte, les couleurs de PV, la vignette, le toast en bas à droite, le badge aligné, l'absence de bandeau « SÉRIE » et du nom du boss, Uno sur un profil neuf, l'écran de fin vrai et « Rejouer » ; `interface_mobile.js` (7 mesures) vérifie l'ancrage en 900 × 420, les onglets dans l'écran, les polices ≥ 12 px et le toast au-dessus des boutons tactiles. Ce qui reste du constat H15 (bandeaux qui s'empilent) attend I-6, et la bande du haut reste dense (cartouche, défi, métronome) jusqu'à I-5. Le rappel des touches ne s'affiche plus après la salle 3. Effet de bord accepté : les planchers de police (12 px) rendent le hub mobile plus grand qu'avant, donc plus long à faire défiler — c'est I-8 qui le remet en une colonne.
 
-## Chantier I-2 — Un seul vocabulaire
+## Chantier I-2 — Un seul vocabulaire ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : un mot par notion, une voix, aucune unité de moteur à l'écran.
 
@@ -134,6 +134,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 **Fini quand** : un test `vocabulaire.js` balaie tous les textes du contenu et des écrans avec la liste des mots bannis (anglicismes, « px », « DPS », « Sujet », « Salle Zéro », doublons de notion) et n'en trouve aucun ; le glossaire est dans `CONTENT.md` et `CLAUDE.md`.
 **Taille** : 1 séance.
+**Bilan** : fait, avec les mots que je proposais (palier, amélioration, greffe, crédits en banque / en attente, partie, mort, Coffre, Ruée, camp) — CONTENT.md §43 tient le glossaire. 54 textes du contenu réécrits (8 armes, 8 compétences, 24 greffes, 3 améliorations, 10 ennemis, 4 boss, 3 pièges, 6 compagnons), les trois modes de compagnon, un défi, les chaînes de l'interface (STR, hub, boutique, prépa, fin) et trois messages du code. Les distances sont des repères humains avec une table unique. Les catégories et familles sont traduites à l'affichage, pas dans le contenu. Le test `vocabulaire.js` (6 mesures) balaie 401 textes, huit écrans rendus et 91 messages du code : il a lui-même trouvé les six derniers oublis (« run », « votre place », « Calibration maximale », « Outillage disponible », « RÉIMPRESSION », « Consignation »). Laissé de côté à dessein : les fragments de l'ancienne histoire (décision à part) et les identifiants du code. Pas encore fait, parce que c'est I-4 : les images d'armes qui remplaceront une partie du texte de la prépa.
 
 ## Chantier I-3 — Le hub en trois questions
 

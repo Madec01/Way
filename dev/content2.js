@@ -192,7 +192,7 @@ CONTENT.enemies.push(
 CONTENT.bosses.push({
   id: 'boss_serriste',
   name: 'Étalon 12, dite « la Serriste »',
-  subtitle: 'Elle a fait pousser ce que vous portez.',
+  subtitle: 'Elle a fait pousser ce que tu portes.',
   desc: "La gardienne de LA SERRE, greffée jusqu'à l'os de matériel végétal. Vaporise, enracine, et charge quand on la croit lente : après une charge, ses racines mettent 1,2 s à se rétracter.",
   hp: 2600,
   speed: 130,

@@ -52,5 +52,6 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `spawncheck` | chaque salle des quatre biomes : spawns et pièges sur des tuiles libres, porte atteignable |
 | `sprites32` | une image 32×32 importée reste nette, un visage photo est réduit |
 | `touch` | la couche tactile : joystick, tir, compétence sur un écran de téléphone simulé |
+| `vocabulaire` | chantier I-2 : le contenu, les écrans rendus et les messages du code passés à la liste des mots bannis ; un mot par notion ; descriptions ≤ 90 caractères |
 | `uno` | Uno : planches, équipe avec Martin, morsure, mode « à l'appel », mode « personne » |
 | `vues` | trois images (sud, est, nord) pour quatre directions, retournement ouest |

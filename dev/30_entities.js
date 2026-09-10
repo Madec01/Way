@@ -599,7 +599,7 @@ const Pickups = {
       mobile: true,
     });
     Particles.spawn(x, y, { count: 14, color: '#9ff', glow: true });
-    UI.toast('Un Passeur détraqué vous suit 25 s.');
+    UI.toast('Un Passeur détraqué te suit 25 s.');
     AudioEngine.skillTurret({});
   },
   update(dt) {
@@ -1642,7 +1642,7 @@ class Player {
       this.invulnUntil = Time.now + 2;
       G.room.died = true;
       Combat.playerShockwave({ radius: 220, damage: 30, knockback: 4 });
-      Floaters.add(this.x, this.y - 40, 'RÉIMPRESSION', '#ffb347', 20);
+      Floaters.add(this.x, this.y - 40, 'SECONDE VIE', '#ffb347', 20);
       AudioEngine.levelUp({});
       return;
     }

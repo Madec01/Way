@@ -417,7 +417,7 @@ const UI = (() => {
       <div class="hub2">
         <header class="hubhead">
           <div class="hubid"><div class="stamp"><span>WAY</span><span class="sep">·</span><span>Ton camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
-          <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits consignés${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
+          <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits en banque${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
           <div class="hubactions"><button class="btn ghost small" id="hub-menu">Menu</button></div>
         </header>
         <section class="hubcol subject">
@@ -442,17 +442,17 @@ const UI = (() => {
               const done = (p.cleared || {})[b.id] || 0;
               const prev = b.unlockAfter ? Content.biome(b.unlockAfter) : null;
               return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
-            <div class="lvlhead"><span class="lvlnum">Niveau ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
-            <div class="lvlmeta"><span class="tag">Difficulté ${'★'.repeat(Math.min(5, b.order))}${'☆'.repeat(Math.max(0, 5 - b.order))}</span>${done ? `<span class="tag ok">Terminé ${done}×</span>` : ok ? '<span class="tag">Jamais terminé</span>' : ''}</div>
+            <div class="lvlhead"><span class="lvlnum">Palier ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
+            <div class="lvlmeta"><span class="tag">Difficulté ${'★'.repeat(Math.min(5, b.order))}${'☆'.repeat(Math.max(0, 5 - b.order))}</span>${done ? `<span class="tag ok">Fini ${done} fois</span>` : ok ? '<span class="tag">Jamais terminé</span>' : ''}</div>
             <div class="muted small lvldesc">${esc(b.tagline || b.desc)}</div>
-            ${ok ? `<div class="muted tiny">Au départ, deux de ces paires bonus/malus te sont proposées, tu en choisis une :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : terminer le niveau ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
+            ${ok ? `<div class="muted tiny">Au départ, deux de ces paires bonus/malus te sont proposées, tu en choisis une :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : finir le palier ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
           </div>`;
             })
             .join('')}</div>
-          <button class="cta" id="hub-enter"><span class="l">JOUER — Niveau ${biome.order} · ${esc(biome.name)}</span><span class="d">Ensuite : choix de l'arme et de la compétence, puis salle 1</span></button>
+          <button class="cta" id="hub-enter"><span class="l">JOUER — Palier ${biome.order} · ${esc(biome.name)}</span><span class="d">Ensuite : choix de l'arme et de la compétence, puis salle 1</span></button>
         </section>
         <section class="hubcol shopcol">
-          <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux runs : bonus permanents</div></div></div>
+          <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux parties : bonus permanents</div></div></div>
           <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${{ passifs: 'Améliorations', armes: 'Armes', animaux: 'Compagnons', sujets: 'Compétences', fragments: 'Fragments' }[t] || t}</button>`).join('')}</nav>
           <div id="hub-shop" class="shop"></div>
         </section>
@@ -488,7 +488,7 @@ const UI = (() => {
         (c.onclick = () => {
           const b = Content.biome(c.dataset.biome);
           if (!Meta.biomeUnlocked(b)) {
-            toast('Palier scellé.');
+            toast("Finis d'abord le palier précédent.");
             return;
           }
           p.biome = b.id;
@@ -528,7 +528,7 @@ const UI = (() => {
         const card = el(
           'div',
           'card meta' + (maxed ? ' maxed' : ''),
-          `<div class="cardtitle">${esc(m.name)} <span class="tier">${'●'.repeat(t)}${'○'.repeat(m.tiers.length - t)}</span></div><div class="muted small">${esc(m.desc)}</div><div class="muted tiny">${m.tiers.map((tier, i) => `<span class="${i < t ? 'good' : ''}">${i + 1}: ${esc(describeTier(tier))}</span>`).join(' · ')}</div>${maxed ? '<div class="good small">Calibration maximale</div>' : `<button class="btn small buy" ${p.coins < next.price ? 'disabled' : ''}>Palier ${t + 1} — ◈ ${next.price}</button>`}`
+          `<div class="cardtitle">${esc(m.name)} <span class="tier">${'●'.repeat(t)}${'○'.repeat(m.tiers.length - t)}</span></div><div class="muted small">${esc(m.desc)}</div><div class="muted tiny">${m.tiers.map((tier, i) => `<span class="${i < t ? 'good' : ''}">${i + 1}: ${esc(describeTier(tier))}</span>`).join(' · ')}</div>${maxed ? '<div class="good small">Au maximum</div>' : `<button class="btn small buy" ${p.coins < next.price ? 'disabled' : ''}>Palier ${t + 1} — ◈ ${next.price}</button>`}`
         );
         const b = card.querySelector('.buy');
         if (b)
@@ -543,7 +543,7 @@ const UI = (() => {
         const card = el(
           'div',
           'card weapon' + (owned ? '' : ' locked'),
-          `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div><div class="muted tiny">${weaponStats(w)}</div>${owned ? '<div class="good small">Outillage disponible</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`
+          `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(famille(w.family))}</span></div><div class="muted small">${esc(w.desc)}</div><div class="muted tiny">${weaponStats(w)}</div>${owned ? '<div class="good small">Déjà à toi</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`
         );
         const b = card.querySelector('.buy');
         if (b)
@@ -561,7 +561,7 @@ const UI = (() => {
       const mb = el(
         'div',
         'card modes',
-        '<div class="cardtitle"><span>Comment vous l\'emmenez</span></div>' +
+        '<div class="cardtitle"><span>Comment tu l\'emmènes</span></div>' +
           Object.keys(PET_MODES)
             .map(k => `<button class="btn small ${mode === k ? 'primary' : 'ghost'}" data-mode="${k}">${PET_MODES[k].name}</button>`)
             .join('') +
@@ -641,7 +641,13 @@ const UI = (() => {
         el('div', 'muted small', "Trois compétences sont tirées au sort à l'entrée du palier, tu en choisis une. Le catalogue :")
       );
       for (const sk of Content.skills())
-        box.appendChild(el('div', 'card', `<div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div>`));
+        box.appendChild(
+          el(
+            'div',
+            'card',
+            `<div class="cardtitle">${esc(sk.name)} <span class="tag cd">recharge ${sk.cooldown} s</span></div><div class="muted small">${esc(sk.desc)}</div>`
+          )
+        );
     } else if (hubTab === 'fragments') {
       for (const f of LORE.fragments) {
         const ok = Meta.loreUnlocked(f.id);
@@ -653,7 +659,7 @@ const UI = (() => {
         box.appendChild(card);
       }
       box.appendChild(
-        el('div', 'muted tiny', `Runs : ${p.runs} · victoires : ${p.wins} · réimpressions : ${p.deaths} · meilleur niveau : ${p.bestLevel}`)
+        el('div', 'muted tiny', `Parties : ${p.runs} · victoires : ${p.wins} · morts : ${p.deaths} · meilleur niveau : ${p.bestLevel}`)
       );
     }
   }
@@ -693,7 +699,7 @@ const UI = (() => {
       Content.metaPassives()
         .filter(m => Meta.tierOf(m.id) > 0)
         .map(m => `${esc(m.name)} ${Meta.tierOf(m.id)}`)
-        .join(', ') || 'aucune calibration';
+        .join(', ') || 'aucune amélioration';
     const render = () => {
       const wSel = weapons.find(w => w.id === selW);
       const sSel = r.skillChoices.find(sk => sk.id === selS);
@@ -701,16 +707,16 @@ const UI = (() => {
       const touch = Input.touch.active;
       s.innerHTML = `
         <div class="panel prep">
-          <div class="eyebrow">Avant d'entrer — niveau ${r.biome.order} · ${esc(r.biome.name)}</div>
+          <div class="eyebrow">Avant d'entrer — palier ${r.biome.order} · ${esc(r.biome.name)}</div>
           <h2>Équipe-toi pour ce niveau</h2>
           <section class="prepstep pairstep done">
             <h3><span class="stepnum">0</span> Ton départ <span class="muted tiny">— un bonus et un malus, ensemble · choisis la paire qui te va</span></h3>
             <div class="cards" id="prep-pairs">${pairs.map((pp, i) => `<div class="card pick pairpick ${i === selP ? 'selected' : ''}" data-p="${i}"><div class="prepmods"><span class="chip good"><b>+</b> ${esc(pp.bonus.name)} — ${esc(pp.bonus.desc)}</span><span class="chip bad"><b>−</b> ${esc(pp.malus.name)} — ${esc(pp.malus.desc)}</span></div>${i === selP ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
           </section>
-          <details class="prepdetails muted tiny"><summary>Trait du personnage et calibrations du hub</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Calibrations : ${metaList}</details>
+          <details class="prepdetails muted tiny"><summary>Caractère du personnage et améliorations du camp</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Calibrations : ${metaList}</details>
           <section class="prepstep weapon done">
             <h3><span class="stepnum">1</span> Ton arme <span class="muted tiny">— l'attaque principale, en continu · clic gauche${touch ? ' ou bouton TIR' : ''}</span></h3>
-            <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick weapon ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div>${w.id === selW ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+            <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick weapon ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(famille(w.family))}</span></div><div class="muted small">${esc(w.desc)}</div>${w.id === selW ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
           </section>
           <section class="prepstep skill ${selS ? 'done' : 'todo'}">
             <h3><span class="stepnum">2</span> Ta compétence <span class="muted tiny">— un pouvoir à recharge, à déclencher · clic droit, Espace ou Maj${touch ? ' ou bouton COMP.' : ''}</span></h3>
@@ -835,10 +841,32 @@ const UI = (() => {
     show('choice');
     if (G.autoplay) Debug.autoChoice();
   }
+  /* un mot par notion, en français : les catégories de greffes et les familles d'armes ne sortent jamais telles quelles du contenu */
+  const CATEGORIES = {
+    offense: 'Attaque',
+    defense: 'Défense',
+    mobility: 'Mobilité',
+    utility: 'Utilitaire',
+    economy: 'Butin',
+    special: 'Spécial',
+    synergy: 'Synergie',
+  };
+  const FAMILLES = {
+    blade: 'lame',
+    hammer: 'masse',
+    bow: 'arc',
+    pistol: 'pistolet',
+    boomerang: 'boomerang',
+    orb: 'orbe',
+    chain: 'chaîne',
+    flame: 'flamme',
+  };
+  const categorie = c => CATEGORIES[c] || c;
+  const famille = f => FAMILLES[f] || f;
   function cardHtml(u, i) {
     const r = RARITY[u.rarity];
     const ex = G.run.upgrades.find(x => x.def.id === u.id);
-    return `<div class="card upg r-${u.rarity}" data-i="${i}" style="--rc:${r.color};--rg:${r.glow}"><div class="rarity">${r.label}</div><div class="cardtitle">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div><div class="muted tiny">${u.category}${u.weaponFamily ? ' · synergie ' + u.weaponFamily : ''}${ex ? ` · possédé ×${ex.stacks}` : ''}${u.maxStacks > 1 ? ` · max ${u.maxStacks}` : ''}</div><div class="key">${i + 1}</div></div>`;
+    return `<div class="card upg r-${u.rarity}" data-i="${i}" style="--rc:${r.color};--rg:${r.glow}"><div class="rarity">${r.label}</div><div class="cardtitle">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div><div class="muted tiny">${categorie(u.category)}${u.weaponFamily ? ' · synergie ' + famille(u.weaponFamily) : ''}${ex ? ` · déjà prise ×${ex.stacks}` : ''}${u.maxStacks > 1 ? ` · ${u.maxStacks} paliers` : ''}</div><div class="key">${i + 1}</div></div>`;
   }
   function hideChoice() {
     state.choice = null;

@@ -11,7 +11,7 @@ const LORE = {
     'Le camp de base. Le chien dort, les chats surveillent la porte.',
     'Tout le monde est rentré. Pas dans le même état, mais rentré.',
     'Le magasin a du neuf. Enfin, du propre.',
-    'Les crédits consignés en salle 4 sont à toi. Le reste, tu le sais.',
+    'Les crédits mis en banque en salle 4 sont à toi. Le reste, tu le sais.',
     'Neuf salles. Une sortie. Même chose que la dernière fois, en mieux préparé.',
     "Rien n'a bougé pendant ton absence. C'est reposant.",
   ],
@@ -22,7 +22,7 @@ const LORE = {
     'Ce qui tombe se ramasse. Ce qui brille se ramasse deux fois plus vite.',
   ],
   death: [
-    'Tombé. Les crédits consignés sont gardés, le reste repart au sol.',
+    'Tombé. Les crédits en banque sont gardés, le reste repart au sol.',
     "La salle a gagné cette fois. Elle n'a pas changé : toi si.",
     "Le compagnon est rentré seul. Il t'attend au camp.",
     'Une salle de plus que la dernière fois, ou une de moins ? Regarde en bas.',

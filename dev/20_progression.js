@@ -55,7 +55,7 @@ const STAT_LABELS = {
   xpGain: "Gain d'XP",
   coinGain: 'Gain de crédits',
   luck: 'Chance',
-  cooldownReduction: 'Réduction de cooldown',
+  cooldownReduction: 'Recharge plus courte',
   pickupRadius: 'Rayon de ramassage',
   skillPower: 'Puissance de compétence',
   invulnTime: 'Invulnérabilité',

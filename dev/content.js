@@ -12,7 +12,7 @@ const CONTENT = {
     {
       id: 'weapon_blade',
       name: "Lame d'essai",
-      desc: 'Lame courte et rapide. Arc de 125° devant vous, 3,4 coups/s, recul renforcé. Sûre, sans portée. (95 DPS)',
+      desc: 'Lame rapide : un arc devant toi, 3,4 coups par seconde, bon recul. Sûre, mais au contact.',
       family: 'blade',
       type: 'melee',
       damage: 28,
@@ -33,7 +33,7 @@ const CONTENT = {
     {
       id: 'weapon_hammer',
       name: 'Masse de pression',
-      desc: 'Marteau lent : 75 dégâts en zone, 0,8 coup/s, recul énorme, étourdit 0,6 s. (60 DPS / cible)',
+      desc: 'Marteau lent : 75 dégâts en zone, 0,8 coup par seconde, recul énorme, étourdit 0,6 s.',
       family: 'hammer',
       type: 'area',
       damage: 75,
@@ -54,7 +54,7 @@ const CONTENT = {
     {
       id: 'weapon_bow',
       name: 'Arc tendeur',
-      desc: 'Tir rapide 30 dégâts, ou charge 1 s pour ×3 et perforation. (48 DPS spam, 72 DPS chargé)',
+      desc: 'Tir rapide de 30 dégâts, ou charge 1 s pour tripler et transpercer.',
       family: 'bow',
       type: 'ranged',
       damage: 30,
@@ -75,7 +75,7 @@ const CONTENT = {
     {
       id: 'weapon_pistol',
       name: 'Pistolet à ricochet',
-      desc: 'Balles rapides qui rebondissent 2 fois sur les murs et cherchent une cible proche. (56 DPS)',
+      desc: 'Balles rapides qui rebondissent deux fois sur les murs et cherchent une cible proche.',
       family: 'pistol',
       type: 'ranged',
       damage: 14,
@@ -96,7 +96,7 @@ const CONTENT = {
     {
       id: 'weapon_boomerang',
       name: 'Boomerang de rappel',
-      desc: 'Traverse tout, revient vers vous : 2 passages par lancer. 1 lancer à la fois. (62 DPS)',
+      desc: 'Traverse tout et revient vers toi : deux passages par lancer, un lancer à la fois.',
       family: 'boomerang',
       type: 'ranged',
       damage: 22,
@@ -117,7 +117,7 @@ const CONTENT = {
     {
       id: 'weapon_orb',
       name: 'Orbe orbitale',
-      desc: '2 orbes tournent autour de vous et se resserrent quand vous tirez. 12 dégâts, 4 ticks/s. (48 DPS / orbe)',
+      desc: 'Deux orbes autour de toi, qui se resserrent quand tu tires : 4 coups de 12 par seconde.',
       family: 'orb',
       type: 'orbital',
       damage: 12,
@@ -138,7 +138,7 @@ const CONTENT = {
     {
       id: 'weapon_chain',
       name: 'Arc voltaïque',
-      desc: 'Éclair instantané 24 dégâts, saute sur 2 ennemis proches à 60 %. Fort en groupe. (48 DPS solo)',
+      desc: 'Éclair instantané de 24 dégâts qui saute sur 2 ennemis proches à 60 %. Fort en groupe.',
       family: 'chain',
       type: 'ranged',
       damage: 24,
@@ -159,7 +159,7 @@ const CONTENT = {
     {
       id: 'weapon_flame',
       name: 'Brûleur court',
-      desc: 'Cône de flammes 40°, portée 170 px, 10 ticks/s de 6 dégâts + brûlure 4/s. Très court. (60 DPS)',
+      desc: 'Cône de flammes très court : 10 coups de 6 par seconde, plus une brûlure. Il faut coller.',
       family: 'flame',
       type: 'area',
       damage: 6,
@@ -185,8 +185,8 @@ const CONTENT = {
   skills: [
     {
       id: 'skill_dash',
-      name: 'Dash',
-      desc: 'Ruée de 250 px, invulnérable pendant 0,22 s. Cooldown 5 s.',
+      name: 'Ruée',
+      desc: "Une ruée d'un bond, invulnérable pendant 0,22 s.",
       cooldown: 5,
       duration: 0.22,
       effect: { kind: 'dash', distance: 250, invulnerable: true },
@@ -195,7 +195,7 @@ const CONTENT = {
     {
       id: 'skill_shield',
       name: 'Bouclier',
-      desc: 'Bouclier de 45 PV gris pendant 5 s. Cooldown 12 s.',
+      desc: 'Un bouclier de 45 PV pendant 5 s.',
       cooldown: 12,
       duration: 5,
       effect: { kind: 'shield', amount: 45 },
@@ -204,7 +204,7 @@ const CONTENT = {
     {
       id: 'skill_shockwave',
       name: 'Onde de choc',
-      desc: 'Repousse, étourdit et inflige 50 dégâts dans 210 px. Cooldown 9 s.',
+      desc: 'Repousse, étourdit et inflige 50 dégâts à tout ce qui est de près.',
       cooldown: 9,
       duration: 0.3,
       effect: { kind: 'shockwave', radius: 210, damage: 50, knockback: 3 },
@@ -213,7 +213,7 @@ const CONTENT = {
     {
       id: 'skill_slowtime',
       name: 'Dilatation',
-      desc: 'Le monde ralentit à 35 % pendant 3,5 s, pas vous. Cooldown 16 s.',
+      desc: 'Le monde ralentit à 35 % pendant 3,5 s. Pas toi.',
       cooldown: 16,
       duration: 3.5,
       effect: { kind: 'slowtime', scale: 0.35, playerScale: 1.0 },
@@ -222,7 +222,7 @@ const CONTENT = {
     {
       id: 'skill_turret',
       name: 'Tourelle',
-      desc: 'Tourelle : 14 dégâts ×3/s, portée 380 px, 10 s. Cooldown 14 s.',
+      desc: 'Une tourelle pendant 10 s : 14 dégâts trois fois par seconde, et elle tire loin.',
       cooldown: 14,
       duration: 10,
       effect: { kind: 'turret', damage: 14, fireRate: 3, range: 380, hp: 60 },
@@ -231,7 +231,7 @@ const CONTENT = {
     {
       id: 'skill_blink',
       name: 'Saut de phase',
-      desc: 'Téléportation de 280 px vers le curseur, 0,25 s invulnérable. CD 7 s.',
+      desc: 'Téléportation vers le curseur, à mi-salle au plus, 0,25 s invulnérable.',
       cooldown: 7,
       duration: 0,
       effect: { kind: 'blink', distance: 280, invulnerable: 0.25, ignoreObstacles: true },
@@ -240,7 +240,7 @@ const CONTENT = {
     {
       id: 'skill_magnet',
       name: 'Aimant',
-      desc: 'Attire tous les pickups de la salle pendant 3 s. Cooldown 10 s.',
+      desc: 'Attire tout ce qui traîne dans la salle pendant 3 s.',
       cooldown: 10,
       duration: 3,
       effect: { kind: 'magnet', radius: 1400, pullSpeed: 900 },
@@ -249,7 +249,7 @@ const CONTENT = {
     {
       id: 'skill_overdrive',
       name: 'Surrégime',
-      desc: '+60 % dégâts et cadence 6 s, mais 1,5 PV/s perdu. Cooldown 16 s.',
+      desc: '+60 % de dégâts et de cadence pendant 6 s, mais tu perds 1,5 PV par seconde.',
       cooldown: 16,
       duration: 6,
       effect: { kind: 'overdrive', damageMul: 1.6, fireRateMul: 1.6, selfDamagePerSec: 1.5 },
@@ -378,7 +378,7 @@ const CONTENT = {
     {
       id: 'upg_recuperation',
       name: 'Récupération',
-      desc: '-6 % de cooldown de compétence.',
+      desc: '−6 % de recharge de compétence.',
       rarity: 'common',
       category: 'mobility',
       weaponFamily: null,
@@ -389,7 +389,7 @@ const CONTENT = {
     {
       id: 'upg_tirelire',
       name: 'Tirelire',
-      desc: '+20 % pièces gagnées, ramasse 30 px plus loin.',
+      desc: '+20 % de pièces, et tu ramasses un peu plus loin.',
       rarity: 'common',
       category: 'economy',
       weaponFamily: null,
@@ -425,7 +425,7 @@ const CONTENT = {
     {
       id: 'upg_butin',
       name: 'Butin',
-      desc: "15 % de chance qu'un kill lâche 1 pièce bonus.",
+      desc: "15 % de chance qu'un ennemi tué lâche une pièce en plus.",
       rarity: 'common',
       category: 'economy',
       weaponFamily: null,
@@ -520,7 +520,7 @@ const CONTENT = {
     {
       id: 'upg_epines',
       name: 'Épines',
-      desc: 'Renvoie 8 dégâts à tout ennemi qui vous touche.',
+      desc: 'Renvoie 8 dégâts à tout ennemi qui te touche.',
       rarity: 'rare',
       category: 'defense',
       weaponFamily: null,
@@ -558,7 +558,7 @@ const CONTENT = {
     {
       id: 'upg_adrenaline',
       name: 'Adrénaline',
-      desc: 'Chaque kill : +20 % vitesse pendant 2 s.',
+      desc: 'Chaque ennemi tué : +20 % de vitesse pendant 2 s.',
       rarity: 'rare',
       category: 'mobility',
       weaponFamily: null,
@@ -569,7 +569,7 @@ const CONTENT = {
     {
       id: 'upg_enchainement',
       name: 'Enchaînement',
-      desc: 'Chaque kill : 20 % de chance de réduire le cooldown restant de 50 %.',
+      desc: 'Chaque ennemi tué : 20 % de chance de réduire la recharge restante de moitié.',
       rarity: 'rare',
       category: 'mobility',
       weaponFamily: null,
@@ -580,7 +580,7 @@ const CONTENT = {
     {
       id: 'upg_chaine_eclair',
       name: 'Chaîne éclair',
-      desc: "20 % de chance qu'un coup saute sur 2 ennemis (150 px) à 50 % — 40 % puis 60 % en la reprenant.",
+      desc: '20 % de chance de sauter sur 2 ennemis proches (50 %) ; 40 puis 60 % en la reprenant.',
       rarity: 'rare',
       category: 'special',
       weaponFamily: null,
@@ -591,7 +591,7 @@ const CONTENT = {
     {
       id: 'upg_detonation',
       name: 'Détonation',
-      desc: 'Les ennemis tués explosent : 60 % de vos dégâts dans 70 px.',
+      desc: 'Les ennemis tués explosent : 60 % de tes dégâts, à bout portant.',
       rarity: 'rare',
       category: 'special',
       weaponFamily: null,
@@ -603,7 +603,7 @@ const CONTENT = {
     {
       id: 'upg_syn_lame_dansante',
       name: 'Lame dansante',
-      desc: 'Lame : +25 % cadence, chaque kill +15 % vitesse 1,5 s.',
+      desc: 'Lame : +25 % de cadence, et chaque ennemi tué te donne +15 % de vitesse 1,5 s.',
       rarity: 'rare',
       category: 'synergy',
       weaponFamily: 'blade',
@@ -644,7 +644,7 @@ const CONTENT = {
     {
       id: 'upg_amplificateur',
       name: 'Amplificateur',
-      desc: '+30 % effet des compétences, -10 % de cooldown.',
+      desc: "+30 % d'effet des compétences, −10 % de recharge.",
       rarity: 'epic',
       category: 'mobility',
       weaponFamily: null,
@@ -658,7 +658,7 @@ const CONTENT = {
     {
       id: 'upg_double_charge',
       name: 'Double charge',
-      desc: 'Votre compétence a 2 charges.',
+      desc: 'Ta compétence a deux charges.',
       rarity: 'epic',
       category: 'mobility',
       weaponFamily: null,
@@ -669,7 +669,7 @@ const CONTENT = {
     {
       id: 'upg_crit_explosif',
       name: 'Crit explosif',
-      desc: 'Les critiques explosent : 80 % des dégâts dans 60 px. +5 % crit.',
+      desc: 'Les critiques explosent : 80 % des dégâts à bout portant. +5 % de critique.',
       rarity: 'epic',
       category: 'special',
       weaponFamily: null,
@@ -680,7 +680,7 @@ const CONTENT = {
     {
       id: 'upg_orbes_gardiennes',
       name: 'Orbes gardiennes',
-      desc: '2 orbes (10 dégâts) tournent à 70 px et bloquent les projectiles — 4 en la reprenant.',
+      desc: 'Deux orbes (10 dégâts) tournent autour de toi et bloquent les tirs ; 4 en la reprenant.',
       rarity: 'epic',
       category: 'defense',
       weaponFamily: null,
@@ -691,7 +691,7 @@ const CONTENT = {
     {
       id: 'upg_attraction',
       name: 'Attraction',
-      desc: "Tous les pickups viennent à vous. Fragments d'énergie doublés. +20 % XP.",
+      desc: 'Tout ce qui traîne vient à toi. Fragments doublés. +20 % XP.',
       rarity: 'epic',
       category: 'economy',
       weaponFamily: null,
@@ -717,7 +717,7 @@ const CONTENT = {
     {
       id: 'upg_syn_onde_tellurique',
       name: 'Onde tellurique',
-      desc: 'Marteau : +35 % zone, +20 % dégâts, les kills explosent (80 %, 90 px).',
+      desc: 'Marteau : +35 % de zone, +20 % de dégâts, les ennemis tués explosent (80 %, de près).',
       rarity: 'epic',
       category: 'synergy',
       weaponFamily: 'hammer',
@@ -746,7 +746,7 @@ const CONTENT = {
     {
       id: 'upg_syn_surtension',
       name: 'Surtension',
-      desc: 'Foudre : chaque coup saute sur 3 ennemis (200 px) à 70 %.',
+      desc: 'Foudre : chaque coup saute sur 3 ennemis proches à 70 %.',
       rarity: 'epic',
       category: 'synergy',
       weaponFamily: 'chain',
@@ -815,7 +815,7 @@ const CONTENT = {
     {
       id: 'upg_tir_guide',
       name: 'Tir guidé',
-      desc: "Vos projectiles se dirigent vers l'ennemi le plus proche.",
+      desc: "Tes projectiles se dirigent vers l'ennemi le plus proche.",
       rarity: 'epic',
       category: 'offense',
       weaponFamily: null,
@@ -837,7 +837,7 @@ const CONTENT = {
     {
       id: 'upg_tir_arriere',
       name: 'Tir arrière',
-      desc: 'Chaque tir envoie aussi un projectile derrière vous (50 %).',
+      desc: 'Chaque tir envoie aussi un projectile derrière toi (50 %).',
       rarity: 'rare',
       category: 'offense',
       weaponFamily: null,
@@ -848,7 +848,7 @@ const CONTENT = {
     {
       id: 'upg_balles_explosives',
       name: 'Balles explosives',
-      desc: "25 % de chance qu'un impact explose (60 px, 70 % des dégâts).",
+      desc: "25 % de chance qu'un impact explose à bout portant (70 % des dégâts).",
       rarity: 'epic',
       category: 'special',
       weaponFamily: null,
@@ -870,7 +870,7 @@ const CONTENT = {
     {
       id: 'upg_aura_brulante',
       name: 'Aura brûlante',
-      desc: 'Les ennemis à moins de 90 px brûlent : 8 dégâts/s.',
+      desc: 'Les ennemis à bout portant brûlent : 8 dégâts par seconde.',
       rarity: 'rare',
       category: 'special',
       weaponFamily: null,
@@ -881,7 +881,7 @@ const CONTENT = {
     {
       id: 'upg_drone',
       name: "Drone d'appoint",
-      desc: 'Un drone vous suit et tire 2 fois/s (6 dégâts).',
+      desc: 'Un drone te suit et tire deux fois par seconde (6 dégâts).',
       rarity: 'rare',
       category: 'offense',
       weaponFamily: null,
@@ -939,7 +939,7 @@ const CONTENT = {
     {
       id: 'upg_rappel',
       name: 'Rappel',
-      desc: 'Vos projectiles reviennent vers vous : un second passage sur tout.',
+      desc: 'Tes projectiles reviennent vers toi : un second passage sur tout.',
       rarity: 'colossal',
       category: 'special',
       weaponFamily: null,
@@ -950,7 +950,7 @@ const CONTENT = {
     {
       id: 'upg_sillage',
       name: 'Sillage',
-      desc: 'Chaque dash laisse une traînée de feu 2,5 s (25 dégâts/s). +10 % vitesse.',
+      desc: 'Chaque ruée laisse une traînée de feu 2,5 s (25 dégâts par seconde). +10 % de vitesse.',
       rarity: 'colossal',
       category: 'mobility',
       weaponFamily: null,
@@ -961,7 +961,7 @@ const CONTENT = {
     {
       id: 'upg_symbiose',
       name: 'Symbiose',
-      desc: 'Les pièges vous soignent au lieu de vous blesser (100 % des dégâts).',
+      desc: 'Les pièges te soignent au lieu de te blesser.',
       rarity: 'colossal',
       category: 'defense',
       weaponFamily: null,
@@ -983,7 +983,7 @@ const CONTENT = {
     {
       id: 'upg_resonance',
       name: 'Résonance',
-      desc: 'Chaque compétence : onde de choc 60 dégâts (200 px) + ralenti 1,5 s à 30 %.',
+      desc: 'Chaque compétence : une onde de choc de 60 dégâts à mi-salle, et un ralenti de 1,5 s.',
       rarity: 'colossal',
       category: 'special',
       weaponFamily: null,
@@ -1061,7 +1061,7 @@ const CONTENT = {
     {
       id: 'meta_reactivite',
       name: 'Réactivité',
-      desc: 'Réduction des cooldowns de compétence.',
+      desc: 'Tes compétences se rechargent plus vite.',
       tiers: [
         { price: 20, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
         { price: 50, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
@@ -1072,7 +1072,7 @@ const CONTENT = {
     {
       id: 'meta_resurrection',
       name: 'Résurrection',
-      desc: 'Une seconde vie par run.',
+      desc: 'Une seconde vie par partie.',
       tiers: [
         { price: 40, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.25 }] }, special: 'resurrect' },
         { price: 100, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.4 }] }, special: 'resurrect' },
@@ -1082,13 +1082,13 @@ const CONTENT = {
     {
       id: 'meta_memoire_selective',
       name: 'Mémoire sélective',
-      desc: 'Le coffre de la salle 8 ne retient que vos 3 meilleures salles pour sa qualité.',
+      desc: 'Le coffre de la salle 8 ne compte que tes 3 meilleures salles.',
       tiers: [{ price: 30, mods: [], hooks: {}, special: 'selective_memory' }],
     },
     {
       id: 'meta_apercu_coffre',
       name: 'Aperçu du coffre',
-      desc: 'Dans les salles 1 à 3, le HUD dit quelle qualité de tirage le coffre de la salle 4 vous réserve.',
+      desc: "Dans les salles 1 à 3, le jeu te dit quelle qualité de coffre t'attend en salle 4.",
       tiers: [{ price: 30, mods: [], hooks: {}, special: 'chest_preview' }],
     },
     {
@@ -1231,7 +1231,7 @@ const CONTENT = {
       id: 'enemy_rodeur',
       name: 'Rôdeur',
       archetype: 'rusher',
-      desc: 'Court vers vous ; à 90 px il se fige 0,35 s puis bondit. Le bond peut être esquivé de côté.',
+      desc: "Court vers toi ; de près, il se fige 0,35 s puis bondit. Le bond s'esquive de côté.",
       hp: 43,
       speed: 200,
       damage: 9,
@@ -1246,7 +1246,7 @@ const CONTENT = {
       id: 'enemy_sentinelle',
       name: 'Sentinelle',
       archetype: 'shooter',
-      desc: 'Garde 300 px de distance, vise 0,5 s (ligne pointillée) puis tire une balle lente de 11 dégâts.',
+      desc: 'Garde ses distances, vise 0,5 s (ligne pointillée) puis tire une balle lente de 11 dégâts.',
       hp: 36,
       speed: 130,
       damage: 9,
@@ -1276,7 +1276,7 @@ const CONTENT = {
       id: 'enemy_meche',
       name: 'Mèche',
       archetype: 'kamikaze',
-      desc: "Fonce sur vous ; à 60 px la mèche s'allume (0,9 s, clignote) puis explose sur 80 px. Tuez-la loin de vous.",
+      desc: "Fonce sur toi ; de près, sa mèche s'allume (0,9 s, elle clignote) puis elle explose. Tue-la loin de toi.",
       hp: 25,
       speed: 240,
       damage: 6,
@@ -1291,7 +1291,7 @@ const CONTENT = {
       id: 'enemy_incubateur',
       name: 'Incubateur',
       archetype: 'summoner',
-      desc: 'Reste à 350 px, gonfle 0,7 s puis libère une Nuée (toutes les 4 s, max 4 vivantes). Priorité de tir.',
+      desc: 'Reste loin, gonfle 0,7 s puis libère une Nuée (toutes les 4 s, 4 vivantes au plus). À abattre en premier.',
       hp: 90,
       speed: 60,
       damage: 9,
@@ -1321,7 +1321,7 @@ const CONTENT = {
       id: 'enemy_eclipse',
       name: 'Éclipse',
       archetype: 'dasher',
-      desc: 'Rôde à 260 px, se dissipe 0,45 s (silhouette) puis réapparaît et fonce sur vous. Vulnérable 0,6 s après la ruée.',
+      desc: 'Rôde à mi-salle, se dissipe 0,45 s (silhouette) puis réapparaît et fonce sur toi. Vulnérable 0,6 s après.',
       hp: 45,
       speed: 180,
       damage: 13,
@@ -1341,7 +1341,7 @@ const CONTENT = {
     {
       id: 'boss_etalon_07',
       name: 'Étalon 07, dit « le Portier »',
-      desc: "Le sujet de référence d'ADMISSION, gardé comme mètre-étalon. Vérin hydraulique au bras droit, prise de calibration à nu dans le dos. Lourd, prévisible : il faut le faire pivoter.",
+      desc: "Le gardien d'ADMISSION, gardé comme mètre-étalon. Vérin hydraulique au bras droit, prise à nu dans le dos. Lourd, prévisible : il faut le faire pivoter.",
       hp: 2600, // 3300 avant : le premier boss du jeu durait trop, et chaque seconde de plus coûtait des PV
       speed: 120,
       radius: 36,
@@ -1479,7 +1479,7 @@ const CONTENT = {
       sprite: 'sniffing-dog',
       color: '#d8b46a',
       tag: 'mord et attire les coups',
-      desc: "Il court au contact et mord à chaque temps fort. Les ennemis proches s'en prennent à lui plutôt qu'à vous.",
+      desc: "Il court au contact et mord à chaque temps fort. Les ennemis proches s'en prennent à lui plutôt qu'à toi.",
       behavior: 'bite',
       damage: 14,
       every: 4,
@@ -1498,7 +1498,7 @@ const CONTENT = {
       sprite: 'snake',
       color: '#9ade6a',
       tag: 'crache sur chaque temps',
-      desc: "Il reste dans vos jambes et crache une gerbe de venin sur chaque temps, sur l'ennemi le plus proche.",
+      desc: "Il reste dans tes jambes et crache une gerbe de venin sur chaque temps, sur l'ennemi le plus proche.",
       behavior: 'spit',
       damage: 9,
       every: 2,
@@ -1514,8 +1514,8 @@ const CONTENT = {
       name: 'Scarabée fouineur',
       sprite: 'scarab-beetle',
       color: '#c9a3ff',
-      tag: 'ramasse à votre place',
-      desc: 'Tout ce qui traîne à portée vient à vous : crédits, cœurs, fragments. Il ne se bat pas.',
+      tag: 'va chercher ce qui traîne',
+      desc: 'Tout ce qui traîne à portée vient à toi : crédits, cœurs, fragments. Il ne se bat pas.',
       behavior: 'collect',
       damage: 0,
       every: 4,
@@ -1531,7 +1531,7 @@ const CONTENT = {
       sprite: 'turtle',
       color: '#6ee7ff',
       tag: 'brise 2 tirs par temps',
-      desc: "Elle tourne autour de vous et brise les projectiles ennemis qu'elle croise — deux par temps.",
+      desc: "Elle tourne autour de toi et brise les projectiles ennemis qu'elle croise — deux par temps.",
       behavior: 'guard',
       damage: 0,
       every: 1,

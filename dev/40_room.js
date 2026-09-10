@@ -899,7 +899,7 @@ const Run = {
     const r = G.run;
     if (r.coinsPending > 0) {
       r.coinsValidated += r.coinsPending;
-      UI.toast(`Consignation : ${r.coinsPending} crédits validés`);
+      UI.toast(`En banque : ${r.coinsPending} crédits`);
       r.coinsPending = 0;
     }
     r.lastCheckpoint = G.room.index;

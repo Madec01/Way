@@ -368,7 +368,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 09:10';</script>
+<script>window.WAY_BUILD = '2026-09-10 10:08';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -489,13 +489,13 @@ const STR = {
   enter: 'Entrer',
   levelUp: 'Montée de niveau',
   pick: 'Choisir',
-  chest: 'Réserve de greffes',
+  chest: 'Coffre',
   continue: 'Continuer',
   paused: 'Pause',
   resume: 'Reprendre',
-  quit: 'Abandonner la run',
+  quit: 'Abandonner la partie',
   dead: 'Vaincu',
-  toHub: 'Retour au hub',
+  toHub: 'Retour au camp',
   victory: 'Palier terminé',
   pending: 'en attente',
   wave: 'Vague',
@@ -3020,7 +3020,7 @@ const CONTENT = {
     {
       id: 'weapon_blade',
       name: "Lame d'essai",
-      desc: 'Lame courte et rapide. Arc de 125° devant vous, 3,4 coups/s, recul renforcé. Sûre, sans portée. (95 DPS)',
+      desc: 'Lame rapide : un arc devant toi, 3,4 coups par seconde, bon recul. Sûre, mais au contact.',
       family: 'blade',
       type: 'melee',
       damage: 28,
@@ -3041,7 +3041,7 @@ const CONTENT = {
     {
       id: 'weapon_hammer',
       name: 'Masse de pression',
-      desc: 'Marteau lent : 75 dégâts en zone, 0,8 coup/s, recul énorme, étourdit 0,6 s. (60 DPS / cible)',
+      desc: 'Marteau lent : 75 dégâts en zone, 0,8 coup par seconde, recul énorme, étourdit 0,6 s.',
       family: 'hammer',
       type: 'area',
       damage: 75,
@@ -3062,7 +3062,7 @@ const CONTENT = {
     {
       id: 'weapon_bow',
       name: 'Arc tendeur',
-      desc: 'Tir rapide 30 dégâts, ou charge 1 s pour ×3 et perforation. (48 DPS spam, 72 DPS chargé)',
+      desc: 'Tir rapide de 30 dégâts, ou charge 1 s pour tripler et transpercer.',
       family: 'bow',
       type: 'ranged',
       damage: 30,
@@ -3083,7 +3083,7 @@ const CONTENT = {
     {
       id: 'weapon_pistol',
       name: 'Pistolet à ricochet',
-      desc: 'Balles rapides qui rebondissent 2 fois sur les murs et cherchent une cible proche. (56 DPS)',
+      desc: 'Balles rapides qui rebondissent deux fois sur les murs et cherchent une cible proche.',
       family: 'pistol',
       type: 'ranged',
       damage: 14,
@@ -3104,7 +3104,7 @@ const CONTENT = {
     {
       id: 'weapon_boomerang',
       name: 'Boomerang de rappel',
-      desc: 'Traverse tout, revient vers vous : 2 passages par lancer. 1 lancer à la fois. (62 DPS)',
+      desc: 'Traverse tout et revient vers toi : deux passages par lancer, un lancer à la fois.',
       family: 'boomerang',
       type: 'ranged',
       damage: 22,
@@ -3125,7 +3125,7 @@ const CONTENT = {
     {
       id: 'weapon_orb',
       name: 'Orbe orbitale',
-      desc: '2 orbes tournent autour de vous et se resserrent quand vous tirez. 12 dégâts, 4 ticks/s. (48 DPS / orbe)',
+      desc: 'Deux orbes autour de toi, qui se resserrent quand tu tires : 4 coups de 12 par seconde.',
       family: 'orb',
       type: 'orbital',
       damage: 12,
@@ -3146,7 +3146,7 @@ const CONTENT = {
     {
       id: 'weapon_chain',
       name: 'Arc voltaïque',
-      desc: 'Éclair instantané 24 dégâts, saute sur 2 ennemis proches à 60 %. Fort en groupe. (48 DPS solo)',
+      desc: 'Éclair instantané de 24 dégâts qui saute sur 2 ennemis proches à 60 %. Fort en groupe.',
       family: 'chain',
       type: 'ranged',
       damage: 24,
@@ -3167,7 +3167,7 @@ const CONTENT = {
     {
       id: 'weapon_flame',
       name: 'Brûleur court',
-      desc: 'Cône de flammes 40°, portée 170 px, 10 ticks/s de 6 dégâts + brûlure 4/s. Très court. (60 DPS)',
+      desc: 'Cône de flammes très court : 10 coups de 6 par seconde, plus une brûlure. Il faut coller.',
       family: 'flame',
       type: 'area',
       damage: 6,
@@ -3193,8 +3193,8 @@ const CONTENT = {
   skills: [
     {
       id: 'skill_dash',
-      name: 'Dash',
-      desc: 'Ruée de 250 px, invulnérable pendant 0,22 s. Cooldown 5 s.',
+      name: 'Ruée',
+      desc: "Une ruée d'un bond, invulnérable pendant 0,22 s.",
       cooldown: 5,
       duration: 0.22,
       effect: { kind: 'dash', distance: 250, invulnerable: true },
@@ -3203,7 +3203,7 @@ const CONTENT = {
     {
       id: 'skill_shield',
       name: 'Bouclier',
-      desc: 'Bouclier de 45 PV gris pendant 5 s. Cooldown 12 s.',
+      desc: 'Un bouclier de 45 PV pendant 5 s.',
       cooldown: 12,
       duration: 5,
       effect: { kind: 'shield', amount: 45 },
@@ -3212,7 +3212,7 @@ const CONTENT = {
     {
       id: 'skill_shockwave',
       name: 'Onde de choc',
-      desc: 'Repousse, étourdit et inflige 50 dégâts dans 210 px. Cooldown 9 s.',
+      desc: 'Repousse, étourdit et inflige 50 dégâts à tout ce qui est de près.',
       cooldown: 9,
       duration: 0.3,
       effect: { kind: 'shockwave', radius: 210, damage: 50, knockback: 3 },
@@ -3221,7 +3221,7 @@ const CONTENT = {
     {
       id: 'skill_slowtime',
       name: 'Dilatation',
-      desc: 'Le monde ralentit à 35 % pendant 3,5 s, pas vous. Cooldown 16 s.',
+      desc: 'Le monde ralentit à 35 % pendant 3,5 s. Pas toi.',
       cooldown: 16,
       duration: 3.5,
       effect: { kind: 'slowtime', scale: 0.35, playerScale: 1.0 },
@@ -3230,7 +3230,7 @@ const CONTENT = {
     {
       id: 'skill_turret',
       name: 'Tourelle',
-      desc: 'Tourelle : 14 dégâts ×3/s, portée 380 px, 10 s. Cooldown 14 s.',
+      desc: 'Une tourelle pendant 10 s : 14 dégâts trois fois par seconde, et elle tire loin.',
       cooldown: 14,
       duration: 10,
       effect: { kind: 'turret', damage: 14, fireRate: 3, range: 380, hp: 60 },
@@ -3239,7 +3239,7 @@ const CONTENT = {
     {
       id: 'skill_blink',
       name: 'Saut de phase',
-      desc: 'Téléportation de 280 px vers le curseur, 0,25 s invulnérable. CD 7 s.',
+      desc: 'Téléportation vers le curseur, à mi-salle au plus, 0,25 s invulnérable.',
       cooldown: 7,
       duration: 0,
       effect: { kind: 'blink', distance: 280, invulnerable: 0.25, ignoreObstacles: true },
@@ -3248,7 +3248,7 @@ const CONTENT = {
     {
       id: 'skill_magnet',
       name: 'Aimant',
-      desc: 'Attire tous les pickups de la salle pendant 3 s. Cooldown 10 s.',
+      desc: 'Attire tout ce qui traîne dans la salle pendant 3 s.',
       cooldown: 10,
       duration: 3,
       effect: { kind: 'magnet', radius: 1400, pullSpeed: 900 },
@@ -3257,7 +3257,7 @@ const CONTENT = {
     {
       id: 'skill_overdrive',
       name: 'Surrégime',
-      desc: '+60 % dégâts et cadence 6 s, mais 1,5 PV/s perdu. Cooldown 16 s.',
+      desc: '+60 % de dégâts et de cadence pendant 6 s, mais tu perds 1,5 PV par seconde.',
       cooldown: 16,
       duration: 6,
       effect: { kind: 'overdrive', damageMul: 1.6, fireRateMul: 1.6, selfDamagePerSec: 1.5 },
@@ -3386,7 +3386,7 @@ const CONTENT = {
     {
       id: 'upg_recuperation',
       name: 'Récupération',
-      desc: '-6 % de cooldown de compétence.',
+      desc: '−6 % de recharge de compétence.',
       rarity: 'common',
       category: 'mobility',
       weaponFamily: null,
@@ -3397,7 +3397,7 @@ const CONTENT = {
     {
       id: 'upg_tirelire',
       name: 'Tirelire',
-      desc: '+20 % pièces gagnées, ramasse 30 px plus loin.',
+      desc: '+20 % de pièces, et tu ramasses un peu plus loin.',
       rarity: 'common',
       category: 'economy',
       weaponFamily: null,
@@ -3433,7 +3433,7 @@ const CONTENT = {
     {
       id: 'upg_butin',
       name: 'Butin',
-      desc: "15 % de chance qu'un kill lâche 1 pièce bonus.",
+      desc: "15 % de chance qu'un ennemi tué lâche une pièce en plus.",
       rarity: 'common',
       category: 'economy',
       weaponFamily: null,
@@ -3528,7 +3528,7 @@ const CONTENT = {
     {
       id: 'upg_epines',
       name: 'Épines',
-      desc: 'Renvoie 8 dégâts à tout ennemi qui vous touche.',
+      desc: 'Renvoie 8 dégâts à tout ennemi qui te touche.',
       rarity: 'rare',
       category: 'defense',
       weaponFamily: null,
@@ -3566,7 +3566,7 @@ const CONTENT = {
     {
       id: 'upg_adrenaline',
       name: 'Adrénaline',
-      desc: 'Chaque kill : +20 % vitesse pendant 2 s.',
+      desc: 'Chaque ennemi tué : +20 % de vitesse pendant 2 s.',
       rarity: 'rare',
       category: 'mobility',
       weaponFamily: null,
@@ -3577,7 +3577,7 @@ const CONTENT = {
     {
       id: 'upg_enchainement',
       name: 'Enchaînement',
-      desc: 'Chaque kill : 20 % de chance de réduire le cooldown restant de 50 %.',
+      desc: 'Chaque ennemi tué : 20 % de chance de réduire la recharge restante de moitié.',
       rarity: 'rare',
       category: 'mobility',
       weaponFamily: null,
@@ -3588,7 +3588,7 @@ const CONTENT = {
     {
       id: 'upg_chaine_eclair',
       name: 'Chaîne éclair',
-      desc: "20 % de chance qu'un coup saute sur 2 ennemis (150 px) à 50 % — 40 % puis 60 % en la reprenant.",
+      desc: '20 % de chance de sauter sur 2 ennemis proches (50 %) ; 40 puis 60 % en la reprenant.',
       rarity: 'rare',
       category: 'special',
       weaponFamily: null,
@@ -3599,7 +3599,7 @@ const CONTENT = {
     {
       id: 'upg_detonation',
       name: 'Détonation',
-      desc: 'Les ennemis tués explosent : 60 % de vos dégâts dans 70 px.',
+      desc: 'Les ennemis tués explosent : 60 % de tes dégâts, à bout portant.',
       rarity: 'rare',
       category: 'special',
       weaponFamily: null,
@@ -3611,7 +3611,7 @@ const CONTENT = {
     {
       id: 'upg_syn_lame_dansante',
       name: 'Lame dansante',
-      desc: 'Lame : +25 % cadence, chaque kill +15 % vitesse 1,5 s.',
+      desc: 'Lame : +25 % de cadence, et chaque ennemi tué te donne +15 % de vitesse 1,5 s.',
       rarity: 'rare',
       category: 'synergy',
       weaponFamily: 'blade',
@@ -3652,7 +3652,7 @@ const CONTENT = {
     {
       id: 'upg_amplificateur',
       name: 'Amplificateur',
-      desc: '+30 % effet des compétences, -10 % de cooldown.',
+      desc: "+30 % d'effet des compétences, −10 % de recharge.",
       rarity: 'epic',
       category: 'mobility',
       weaponFamily: null,
@@ -3666,7 +3666,7 @@ const CONTENT = {
     {
       id: 'upg_double_charge',
       name: 'Double charge',
-      desc: 'Votre compétence a 2 charges.',
+      desc: 'Ta compétence a deux charges.',
       rarity: 'epic',
       category: 'mobility',
       weaponFamily: null,
@@ -3677,7 +3677,7 @@ const CONTENT = {
     {
       id: 'upg_crit_explosif',
       name: 'Crit explosif',
-      desc: 'Les critiques explosent : 80 % des dégâts dans 60 px. +5 % crit.',
+      desc: 'Les critiques explosent : 80 % des dégâts à bout portant. +5 % de critique.',
       rarity: 'epic',
       category: 'special',
       weaponFamily: null,
@@ -3688,7 +3688,7 @@ const CONTENT = {
     {
       id: 'upg_orbes_gardiennes',
       name: 'Orbes gardiennes',
-      desc: '2 orbes (10 dégâts) tournent à 70 px et bloquent les projectiles — 4 en la reprenant.',
+      desc: 'Deux orbes (10 dégâts) tournent autour de toi et bloquent les tirs ; 4 en la reprenant.',
       rarity: 'epic',
       category: 'defense',
       weaponFamily: null,
@@ -3699,7 +3699,7 @@ const CONTENT = {
     {
       id: 'upg_attraction',
       name: 'Attraction',
-      desc: "Tous les pickups viennent à vous. Fragments d'énergie doublés. +20 % XP.",
+      desc: 'Tout ce qui traîne vient à toi. Fragments doublés. +20 % XP.',
       rarity: 'epic',
       category: 'economy',
       weaponFamily: null,
@@ -3725,7 +3725,7 @@ const CONTENT = {
     {
       id: 'upg_syn_onde_tellurique',
       name: 'Onde tellurique',
-      desc: 'Marteau : +35 % zone, +20 % dégâts, les kills explosent (80 %, 90 px).',
+      desc: 'Marteau : +35 % de zone, +20 % de dégâts, les ennemis tués explosent (80 %, de près).',
       rarity: 'epic',
       category: 'synergy',
       weaponFamily: 'hammer',
@@ -3754,7 +3754,7 @@ const CONTENT = {
     {
       id: 'upg_syn_surtension',
       name: 'Surtension',
-      desc: 'Foudre : chaque coup saute sur 3 ennemis (200 px) à 70 %.',
+      desc: 'Foudre : chaque coup saute sur 3 ennemis proches à 70 %.',
       rarity: 'epic',
       category: 'synergy',
       weaponFamily: 'chain',
@@ -3823,7 +3823,7 @@ const CONTENT = {
     {
       id: 'upg_tir_guide',
       name: 'Tir guidé',
-      desc: "Vos projectiles se dirigent vers l'ennemi le plus proche.",
+      desc: "Tes projectiles se dirigent vers l'ennemi le plus proche.",
       rarity: 'epic',
       category: 'offense',
       weaponFamily: null,
@@ -3845,7 +3845,7 @@ const CONTENT = {
     {
       id: 'upg_tir_arriere',
       name: 'Tir arrière',
-      desc: 'Chaque tir envoie aussi un projectile derrière vous (50 %).',
+      desc: 'Chaque tir envoie aussi un projectile derrière toi (50 %).',
       rarity: 'rare',
       category: 'offense',
       weaponFamily: null,
@@ -3856,7 +3856,7 @@ const CONTENT = {
     {
       id: 'upg_balles_explosives',
       name: 'Balles explosives',
-      desc: "25 % de chance qu'un impact explose (60 px, 70 % des dégâts).",
+      desc: "25 % de chance qu'un impact explose à bout portant (70 % des dégâts).",
       rarity: 'epic',
       category: 'special',
       weaponFamily: null,
@@ -3878,7 +3878,7 @@ const CONTENT = {
     {
       id: 'upg_aura_brulante',
       name: 'Aura brûlante',
-      desc: 'Les ennemis à moins de 90 px brûlent : 8 dégâts/s.',
+      desc: 'Les ennemis à bout portant brûlent : 8 dégâts par seconde.',
       rarity: 'rare',
       category: 'special',
       weaponFamily: null,
@@ -3889,7 +3889,7 @@ const CONTENT = {
     {
       id: 'upg_drone',
       name: "Drone d'appoint",
-      desc: 'Un drone vous suit et tire 2 fois/s (6 dégâts).',
+      desc: 'Un drone te suit et tire deux fois par seconde (6 dégâts).',
       rarity: 'rare',
       category: 'offense',
       weaponFamily: null,
@@ -3947,7 +3947,7 @@ const CONTENT = {
     {
       id: 'upg_rappel',
       name: 'Rappel',
-      desc: 'Vos projectiles reviennent vers vous : un second passage sur tout.',
+      desc: 'Tes projectiles reviennent vers toi : un second passage sur tout.',
       rarity: 'colossal',
       category: 'special',
       weaponFamily: null,
@@ -3958,7 +3958,7 @@ const CONTENT = {
     {
       id: 'upg_sillage',
       name: 'Sillage',
-      desc: 'Chaque dash laisse une traînée de feu 2,5 s (25 dégâts/s). +10 % vitesse.',
+      desc: 'Chaque ruée laisse une traînée de feu 2,5 s (25 dégâts par seconde). +10 % de vitesse.',
       rarity: 'colossal',
       category: 'mobility',
       weaponFamily: null,
@@ -3969,7 +3969,7 @@ const CONTENT = {
     {
       id: 'upg_symbiose',
       name: 'Symbiose',
-      desc: 'Les pièges vous soignent au lieu de vous blesser (100 % des dégâts).',
+      desc: 'Les pièges te soignent au lieu de te blesser.',
       rarity: 'colossal',
       category: 'defense',
       weaponFamily: null,
@@ -3991,7 +3991,7 @@ const CONTENT = {
     {
       id: 'upg_resonance',
       name: 'Résonance',
-      desc: 'Chaque compétence : onde de choc 60 dégâts (200 px) + ralenti 1,5 s à 30 %.',
+      desc: 'Chaque compétence : une onde de choc de 60 dégâts à mi-salle, et un ralenti de 1,5 s.',
       rarity: 'colossal',
       category: 'special',
       weaponFamily: null,
@@ -4069,7 +4069,7 @@ const CONTENT = {
     {
       id: 'meta_reactivite',
       name: 'Réactivité',
-      desc: 'Réduction des cooldowns de compétence.',
+      desc: 'Tes compétences se rechargent plus vite.',
       tiers: [
         { price: 20, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
         { price: 50, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
@@ -4080,7 +4080,7 @@ const CONTENT = {
     {
       id: 'meta_resurrection',
       name: 'Résurrection',
-      desc: 'Une seconde vie par run.',
+      desc: 'Une seconde vie par partie.',
       tiers: [
         { price: 40, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.25 }] }, special: 'resurrect' },
         { price: 100, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.4 }] }, special: 'resurrect' },
@@ -4090,13 +4090,13 @@ const CONTENT = {
     {
       id: 'meta_memoire_selective',
       name: 'Mémoire sélective',
-      desc: 'Le coffre de la salle 8 ne retient que vos 3 meilleures salles pour sa qualité.',
+      desc: 'Le coffre de la salle 8 ne compte que tes 3 meilleures salles.',
       tiers: [{ price: 30, mods: [], hooks: {}, special: 'selective_memory' }],
     },
     {
       id: 'meta_apercu_coffre',
       name: 'Aperçu du coffre',
-      desc: 'Dans les salles 1 à 3, le HUD dit quelle qualité de tirage le coffre de la salle 4 vous réserve.',
+      desc: "Dans les salles 1 à 3, le jeu te dit quelle qualité de coffre t'attend en salle 4.",
       tiers: [{ price: 30, mods: [], hooks: {}, special: 'chest_preview' }],
     },
     {
@@ -4239,7 +4239,7 @@ const CONTENT = {
       id: 'enemy_rodeur',
       name: 'Rôdeur',
       archetype: 'rusher',
-      desc: 'Court vers vous ; à 90 px il se fige 0,35 s puis bondit. Le bond peut être esquivé de côté.',
+      desc: "Court vers toi ; de près, il se fige 0,35 s puis bondit. Le bond s'esquive de côté.",
       hp: 43,
       speed: 200,
       damage: 9,
@@ -4254,7 +4254,7 @@ const CONTENT = {
       id: 'enemy_sentinelle',
       name: 'Sentinelle',
       archetype: 'shooter',
-      desc: 'Garde 300 px de distance, vise 0,5 s (ligne pointillée) puis tire une balle lente de 11 dégâts.',
+      desc: 'Garde ses distances, vise 0,5 s (ligne pointillée) puis tire une balle lente de 11 dégâts.',
       hp: 36,
       speed: 130,
       damage: 9,
@@ -4284,7 +4284,7 @@ const CONTENT = {
       id: 'enemy_meche',
       name: 'Mèche',
       archetype: 'kamikaze',
-      desc: "Fonce sur vous ; à 60 px la mèche s'allume (0,9 s, clignote) puis explose sur 80 px. Tuez-la loin de vous.",
+      desc: "Fonce sur toi ; de près, sa mèche s'allume (0,9 s, elle clignote) puis elle explose. Tue-la loin de toi.",
       hp: 25,
       speed: 240,
       damage: 6,
@@ -4299,7 +4299,7 @@ const CONTENT = {
       id: 'enemy_incubateur',
       name: 'Incubateur',
       archetype: 'summoner',
-      desc: 'Reste à 350 px, gonfle 0,7 s puis libère une Nuée (toutes les 4 s, max 4 vivantes). Priorité de tir.',
+      desc: 'Reste loin, gonfle 0,7 s puis libère une Nuée (toutes les 4 s, 4 vivantes au plus). À abattre en premier.',
       hp: 90,
       speed: 60,
       damage: 9,
@@ -4329,7 +4329,7 @@ const CONTENT = {
       id: 'enemy_eclipse',
       name: 'Éclipse',
       archetype: 'dasher',
-      desc: 'Rôde à 260 px, se dissipe 0,45 s (silhouette) puis réapparaît et fonce sur vous. Vulnérable 0,6 s après la ruée.',
+      desc: 'Rôde à mi-salle, se dissipe 0,45 s (silhouette) puis réapparaît et fonce sur toi. Vulnérable 0,6 s après.',
       hp: 45,
       speed: 180,
       damage: 13,
@@ -4349,7 +4349,7 @@ const CONTENT = {
     {
       id: 'boss_etalon_07',
       name: 'Étalon 07, dit « le Portier »',
-      desc: "Le sujet de référence d'ADMISSION, gardé comme mètre-étalon. Vérin hydraulique au bras droit, prise de calibration à nu dans le dos. Lourd, prévisible : il faut le faire pivoter.",
+      desc: "Le gardien d'ADMISSION, gardé comme mètre-étalon. Vérin hydraulique au bras droit, prise à nu dans le dos. Lourd, prévisible : il faut le faire pivoter.",
       hp: 2600, // 3300 avant : le premier boss du jeu durait trop, et chaque seconde de plus coûtait des PV
       speed: 120,
       radius: 36,
@@ -4487,7 +4487,7 @@ const CONTENT = {
       sprite: 'sniffing-dog',
       color: '#d8b46a',
       tag: 'mord et attire les coups',
-      desc: "Il court au contact et mord à chaque temps fort. Les ennemis proches s'en prennent à lui plutôt qu'à vous.",
+      desc: "Il court au contact et mord à chaque temps fort. Les ennemis proches s'en prennent à lui plutôt qu'à toi.",
       behavior: 'bite',
       damage: 14,
       every: 4,
@@ -4506,7 +4506,7 @@ const CONTENT = {
       sprite: 'snake',
       color: '#9ade6a',
       tag: 'crache sur chaque temps',
-      desc: "Il reste dans vos jambes et crache une gerbe de venin sur chaque temps, sur l'ennemi le plus proche.",
+      desc: "Il reste dans tes jambes et crache une gerbe de venin sur chaque temps, sur l'ennemi le plus proche.",
       behavior: 'spit',
       damage: 9,
       every: 2,
@@ -4522,8 +4522,8 @@ const CONTENT = {
       name: 'Scarabée fouineur',
       sprite: 'scarab-beetle',
       color: '#c9a3ff',
-      tag: 'ramasse à votre place',
-      desc: 'Tout ce qui traîne à portée vient à vous : crédits, cœurs, fragments. Il ne se bat pas.',
+      tag: 'va chercher ce qui traîne',
+      desc: 'Tout ce qui traîne à portée vient à toi : crédits, cœurs, fragments. Il ne se bat pas.',
       behavior: 'collect',
       damage: 0,
       every: 4,
@@ -4539,7 +4539,7 @@ const CONTENT = {
       sprite: 'turtle',
       color: '#6ee7ff',
       tag: 'brise 2 tirs par temps',
-      desc: "Elle tourne autour de vous et brise les projectiles ennemis qu'elle croise — deux par temps.",
+      desc: "Elle tourne autour de toi et brise les projectiles ennemis qu'elle croise — deux par temps.",
       behavior: 'guard',
       damage: 0,
       every: 1,
@@ -5300,7 +5300,7 @@ CONTENT.enemies.push(
 CONTENT.bosses.push({
   id: 'boss_serriste',
   name: 'Étalon 12, dite « la Serriste »',
-  subtitle: 'Elle a fait pousser ce que vous portez.',
+  subtitle: 'Elle a fait pousser ce que tu portes.',
   desc: "La gardienne de LA SERRE, greffée jusqu'à l'os de matériel végétal. Vaporise, enracine, et charge quand on la croit lente : après une charge, ses racines mettent 1,2 s à se rétracter.",
   hp: 2600,
   speed: 130,
@@ -5926,7 +5926,7 @@ CONTENT.enemies.push(
     id: 'enemy_baril',
     name: 'Baril de poudre',
     archetype: 'kamikaze',
-    desc: 'Roule vers vous et explose. Explose aussi quand on le tue.',
+    desc: 'Roule vers toi et explose. Explose aussi quand on le tue.',
     hp: 26,
     speed: 250,
     damage: 6,
@@ -5974,7 +5974,7 @@ CONTENT.enemies.push(
     id: 'enemy_crotale',
     name: 'Crotale',
     archetype: 'dasher',
-    desc: "Sonne, puis fond sur vous d'un coup. Longue pause après.",
+    desc: "Sonne, puis fond sur toi d'un coup. Longue pause après.",
     hp: 60,
     speed: 180,
     damage: 15,
@@ -6017,7 +6017,7 @@ CONTENT.traps.push(
     id: 'trap_embuscade',
     name: 'Tireur embusqué',
     kind: 'turret_fixed',
-    desc: 'Depuis le mur : 0,7 s de visée puis 1 balle vers vous toutes les 2,2 s.',
+    desc: 'Depuis le mur : 0,7 s de visée puis une balle vers toi toutes les 2,2 s.',
     damage: 11,
     telegraph: 0.7,
     period: 2.2,
@@ -6077,7 +6077,7 @@ CONTENT.traps.push(
     id: 'trap_revolver',
     name: 'Revolver',
     kind: 'emitter',
-    desc: 'Trois coups dans votre direction, tirés coup sur coup en une demi-mesure.',
+    desc: 'Trois coups dans ta direction, tirés coup sur coup en une demi-mesure.',
     damage: 9,
     telegraph: 0.7,
     period: 3.0,
@@ -6114,8 +6114,8 @@ CONTENT.traps.push(
 CONTENT.bosses.push({
   id: 'boss_marshal',
   name: 'Étalon 19, dit « le Marshal »',
-  subtitle: 'Il a nettoyé la concession. Il ne reste que vous.',
-  desc: 'Le gardien de la mine. Six coups dans le barillet, une charge de bête et de la dynamite plein les poches. Quand il recharge, il est à vous.',
+  subtitle: 'Il a nettoyé la concession. Il ne reste que toi.',
+  desc: 'Le gardien de la mine. Six coups dans le barillet, une charge de bête et de la dynamite plein les poches. Quand il recharge, il est à toi.',
   hp: 3000,
   speed: 135,
   radius: 36,
@@ -6756,7 +6756,7 @@ CONTENT.enemies.push(
     id: 'enemy_derviche',
     name: 'Derviche',
     archetype: 'rusher',
-    desc: 'Tourne sur lui-même puis fond sur vous, lames tendues. Enchaîne vite.',
+    desc: 'Tourne sur lui-même puis fond sur toi, lames tendues. Enchaîne vite.',
     hp: 62,
     speed: 250,
     damage: 14,
@@ -6823,7 +6823,7 @@ CONTENT.enemies.push(
     id: 'enemy_jarre',
     name: 'Jarre de naphte',
     archetype: 'kamikaze',
-    desc: "Roule vers vous et s'ouvre en nappe de feu. Éclate aussi quand on la brise.",
+    desc: "Roule vers toi et s'ouvre en nappe de feu. Éclate aussi quand on la brise.",
     hp: 30,
     speed: 260,
     damage: 7,
@@ -6871,7 +6871,7 @@ CONTENT.enemies.push(
     id: 'enemy_djinn',
     name: 'Djinn de poussière',
     archetype: 'dasher',
-    desc: 'Se dissout, réapparaît dans votre dos et vous traverse. Longue pause après.',
+    desc: 'Se dissout, réapparaît dans ton dos et te traverse. Longue pause après.',
     hp: 70,
     speed: 190,
     damage: 17,
@@ -6914,7 +6914,7 @@ CONTENT.traps.push(
     id: 'trap_meurtriere',
     name: 'Meurtrière',
     kind: 'turret_fixed',
-    desc: 'Depuis le mur : 0,7 s de visée puis une flèche vers vous toutes les 2 s.',
+    desc: 'Depuis le mur : 0,7 s de visée puis une flèche vers toi toutes les 2 s.',
     damage: 12,
     telegraph: 0.7,
     period: 2.0,
@@ -7011,7 +7011,7 @@ CONTENT.traps.push(
 CONTENT.bosses.push({
   id: 'boss_vizir',
   name: 'Étalon 27, dit « le Vizir »',
-  subtitle: 'Il vous a vu entrer. Les trois autres aussi.',
+  subtitle: "Il t'a vu entrer. Les trois autres aussi.",
   desc: "Le maître du sérail. Il ne court pas : il se déplace en laissant des doubles, appelle le sable et regarde. Quand le mirage retombe, il n'en reste qu'un — c'est là qu'il faut frapper.",
   hp: 3200,
   speed: 128,
@@ -7842,7 +7842,7 @@ CONTENT.pets.push(
     name: 'Uno',
     color: '#e08a4a',
     tag: 'mord et attire les coups',
-    desc: "Le chien de Martin. Il court au contact, mord sur le temps fort, et les ennemis proches s'en prennent à lui plutôt qu'à vous.",
+    desc: "Le chien de Martin. Il court au contact, mord sur le temps fort, et les ennemis proches s'en prennent à lui plutôt qu'à toi.",
     anim: { idle: 'pet_uno_idle', walk: 'pet_uno_walk', attack: 'pet_uno_attack', hurt: 'pet_uno_hurt' },
     sprite: 'pet_uno_idle',
     behavior: 'bite',
@@ -7863,7 +7863,7 @@ CONTENT.pets.push(
     name: 'Choupi',
     duoName: 'Choupi & Tanuki',
     color: '#f0c46a',
-    tag: 'ramasse à votre place · et Tanuki charge',
+    tag: 'va chercher ce qui traîne · et Tanuki charge',
     desc: 'Un des deux chats de Gabriel. Choupi court chercher ce qui traîne et le rapporte, pendant que Tanuki traverse la salle en boule sur le temps fort. Inséparables.',
     behavior: 'collect',
     damage: 0,
@@ -7903,7 +7903,7 @@ CONTENT.pets.push(
     name: 'ORI',
     color: '#c9a3ff',
     tag: 'désigne une cible',
-    desc: "Le chat de Jean. Il ne frappe pas : il désigne. L'ennemi marqué encaisse 30 % de plus de tout le monde, et chacun de vos coups dessus est critique.",
+    desc: "Le chat de Jean. Il ne frappe pas : il désigne. L'ennemi marqué encaisse 30 % de plus de tout le monde, et chacun de tes coups dessus est critique.",
     behavior: 'mark',
     fly: true,
     damage: 0,
@@ -7964,7 +7964,7 @@ const LORE = {
     'Le camp de base. Le chien dort, les chats surveillent la porte.',
     'Tout le monde est rentré. Pas dans le même état, mais rentré.',
     'Le magasin a du neuf. Enfin, du propre.',
-    'Les crédits consignés en salle 4 sont à toi. Le reste, tu le sais.',
+    'Les crédits mis en banque en salle 4 sont à toi. Le reste, tu le sais.',
     'Neuf salles. Une sortie. Même chose que la dernière fois, en mieux préparé.',
     "Rien n'a bougé pendant ton absence. C'est reposant.",
   ],
@@ -7975,7 +7975,7 @@ const LORE = {
     'Ce qui tombe se ramasse. Ce qui brille se ramasse deux fois plus vite.',
   ],
   death: [
-    'Tombé. Les crédits consignés sont gardés, le reste repart au sol.',
+    'Tombé. Les crédits en banque sont gardés, le reste repart au sol.',
     "La salle a gagné cette fois. Elle n'a pas changé : toi si.",
     "Le compagnon est rentré seul. Il t'attend au camp.",
     'Une salle de plus que la dernière fois, ou une de moins ? Regarde en bas.',
@@ -9815,7 +9815,7 @@ const STAT_LABELS = {
   xpGain: "Gain d'XP",
   coinGain: 'Gain de crédits',
   luck: 'Chance',
-  cooldownReduction: 'Réduction de cooldown',
+  cooldownReduction: 'Recharge plus courte',
   pickupRadius: 'Rayon de ramassage',
   skillPower: 'Puissance de compétence',
   invulnTime: 'Invulnérabilité',
@@ -10639,7 +10639,7 @@ const Pickups = {
       mobile: true,
     });
     Particles.spawn(x, y, { count: 14, color: '#9ff', glow: true });
-    UI.toast('Un Passeur détraqué vous suit 25 s.');
+    UI.toast('Un Passeur détraqué te suit 25 s.');
     AudioEngine.skillTurret({});
   },
   update(dt) {
@@ -11682,7 +11682,7 @@ class Player {
       this.invulnUntil = Time.now + 2;
       G.room.died = true;
       Combat.playerShockwave({ radius: 220, damage: 30, knockback: 4 });
-      Floaters.add(this.x, this.y - 40, 'RÉIMPRESSION', '#ffb347', 20);
+      Floaters.add(this.x, this.y - 40, 'SECONDE VIE', '#ffb347', 20);
       AudioEngine.levelUp({});
       return;
     }
@@ -12201,11 +12201,11 @@ const PET_BEHAVIORS = ['strike', 'bite', 'spit', 'collect', 'guard', 'mend', 'ch
    - `none`   : personne — et le joueur garde pour lui ce qu'il aurait donné à l'animal.
    Sans la contrepartie de `none`, ce troisième choix ne serait jamais pris. */
 const PET_MODES = {
-  always: { id: 'always', name: 'Tout le temps', desc: 'Il vous suit du début à la fin, à sa force normale.' },
+  always: { id: 'always', name: 'Tout le temps', desc: 'Il te suit du début à la fin, à sa force normale.' },
   call: {
     id: 'call',
     name: "À l'appel",
-    desc: 'Absent, appelé par C : son arrivée repousse tout autour de vous, puis il frappe plus fort (×1,6, cadence doublée) pendant 12 s et se repose 25 s.',
+    desc: 'Absent, appelé par C : son arrivée repousse tout autour de toi, puis il frappe plus fort (×1,6, cadence doublée) pendant 12 s et se repose 25 s.',
     boost: 1.6,
     dur: 12,
     cd: 25,
@@ -12214,7 +12214,7 @@ const PET_MODES = {
   none: {
     id: 'none',
     name: 'Personne',
-    desc: 'Aucun compagnon — vous gardez sa part : +35 % de PV max et +20 % de dégâts.',
+    desc: 'Aucun compagnon — tu gardes sa part : +35 % de PV max et +20 % de dégâts.',
     mods: [
       { stat: 'maxHp', mul: 1.35 },
       { stat: 'damage', mul: 1.2 },
@@ -16513,7 +16513,7 @@ const CHALLENGE_DEFS = {
   },
   lights: {
     name: 'Lumières coupées',
-    desc: "Noir complet : des projecteurs balaient la salle en musique, à vous de suivre la lumière. Les ennemis se trahissent par leurs yeux. Tuer dans la lumière : +50 % d'XP. XP +25 %.",
+    desc: "Noir complet : des projecteurs balaient la salle en musique, à toi de suivre la lumière. Les ennemis se trahissent par leurs yeux. Tuer dans la lumière : +50 % d'XP. XP +25 %.",
     rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'],
     color: '#9fd8ff',
   },
@@ -19166,7 +19166,7 @@ const Run = {
     const r = G.run;
     if (r.coinsPending > 0) {
       r.coinsValidated += r.coinsPending;
-      UI.toast(`Consignation : ${r.coinsPending} crédits validés`);
+      UI.toast(`En banque : ${r.coinsPending} crédits`);
       r.coinsPending = 0;
     }
     r.lastCheckpoint = G.room.index;
@@ -19731,7 +19731,7 @@ const UI = (() => {
       <div class="hub2">
         <header class="hubhead">
           <div class="hubid"><div class="stamp"><span>WAY</span><span class="sep">·</span><span>Ton camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
-          <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits consignés${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
+          <div class="hubcoins"><div class="big">◈ ${fmt(p.coins)}</div><div class="muted tiny">crédits en banque${G.mode === 'test' ? ' · <span class="tag test">MODE TEST</span>' : ''}</div></div>
           <div class="hubactions"><button class="btn ghost small" id="hub-menu">Menu</button></div>
         </header>
         <section class="hubcol subject">
@@ -19756,17 +19756,17 @@ const UI = (() => {
               const done = (p.cleared || {})[b.id] || 0;
               const prev = b.unlockAfter ? Content.biome(b.unlockAfter) : null;
               return `<div class="card level ${sel ? 'selected' : ''} ${ok ? 'pick' : 'locked'}" data-biome="${b.id}">
-            <div class="lvlhead"><span class="lvlnum">Niveau ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
-            <div class="lvlmeta"><span class="tag">Difficulté ${'★'.repeat(Math.min(5, b.order))}${'☆'.repeat(Math.max(0, 5 - b.order))}</span>${done ? `<span class="tag ok">Terminé ${done}×</span>` : ok ? '<span class="tag">Jamais terminé</span>' : ''}</div>
+            <div class="lvlhead"><span class="lvlnum">Palier ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
+            <div class="lvlmeta"><span class="tag">Difficulté ${'★'.repeat(Math.min(5, b.order))}${'☆'.repeat(Math.max(0, 5 - b.order))}</span>${done ? `<span class="tag ok">Fini ${done} fois</span>` : ok ? '<span class="tag">Jamais terminé</span>' : ''}</div>
             <div class="muted small lvldesc">${esc(b.tagline || b.desc)}</div>
-            ${ok ? `<div class="muted tiny">Au départ, deux de ces paires bonus/malus te sont proposées, tu en choisis une :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : terminer le niveau ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
+            ${ok ? `<div class="muted tiny">Au départ, deux de ces paires bonus/malus te sont proposées, tu en choisis une :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : finir le palier ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
           </div>`;
             })
             .join('')}</div>
-          <button class="cta" id="hub-enter"><span class="l">JOUER — Niveau ${biome.order} · ${esc(biome.name)}</span><span class="d">Ensuite : choix de l'arme et de la compétence, puis salle 1</span></button>
+          <button class="cta" id="hub-enter"><span class="l">JOUER — Palier ${biome.order} · ${esc(biome.name)}</span><span class="d">Ensuite : choix de l'arme et de la compétence, puis salle 1</span></button>
         </section>
         <section class="hubcol shopcol">
-          <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux runs : bonus permanents</div></div></div>
+          <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux parties : bonus permanents</div></div></div>
           <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${{ passifs: 'Améliorations', armes: 'Armes', animaux: 'Compagnons', sujets: 'Compétences', fragments: 'Fragments' }[t] || t}</button>`).join('')}</nav>
           <div id="hub-shop" class="shop"></div>
         </section>
@@ -19802,7 +19802,7 @@ const UI = (() => {
         (c.onclick = () => {
           const b = Content.biome(c.dataset.biome);
           if (!Meta.biomeUnlocked(b)) {
-            toast('Palier scellé.');
+            toast("Finis d'abord le palier précédent.");
             return;
           }
           p.biome = b.id;
@@ -19842,7 +19842,7 @@ const UI = (() => {
         const card = el(
           'div',
           'card meta' + (maxed ? ' maxed' : ''),
-          `<div class="cardtitle">${esc(m.name)} <span class="tier">${'●'.repeat(t)}${'○'.repeat(m.tiers.length - t)}</span></div><div class="muted small">${esc(m.desc)}</div><div class="muted tiny">${m.tiers.map((tier, i) => `<span class="${i < t ? 'good' : ''}">${i + 1}: ${esc(describeTier(tier))}</span>`).join(' · ')}</div>${maxed ? '<div class="good small">Calibration maximale</div>' : `<button class="btn small buy" ${p.coins < next.price ? 'disabled' : ''}>Palier ${t + 1} — ◈ ${next.price}</button>`}`
+          `<div class="cardtitle">${esc(m.name)} <span class="tier">${'●'.repeat(t)}${'○'.repeat(m.tiers.length - t)}</span></div><div class="muted small">${esc(m.desc)}</div><div class="muted tiny">${m.tiers.map((tier, i) => `<span class="${i < t ? 'good' : ''}">${i + 1}: ${esc(describeTier(tier))}</span>`).join(' · ')}</div>${maxed ? '<div class="good small">Au maximum</div>' : `<button class="btn small buy" ${p.coins < next.price ? 'disabled' : ''}>Palier ${t + 1} — ◈ ${next.price}</button>`}`
         );
         const b = card.querySelector('.buy');
         if (b)
@@ -19857,7 +19857,7 @@ const UI = (() => {
         const card = el(
           'div',
           'card weapon' + (owned ? '' : ' locked'),
-          `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div><div class="muted tiny">${weaponStats(w)}</div>${owned ? '<div class="good small">Outillage disponible</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`
+          `<div class="cardtitle">${esc(w.name)} <span class="tag">${esc(famille(w.family))}</span></div><div class="muted small">${esc(w.desc)}</div><div class="muted tiny">${weaponStats(w)}</div>${owned ? '<div class="good small">Déjà à toi</div>' : `<button class="btn small buy" ${p.coins < w.price ? 'disabled' : ''}>Racheter — ◈ ${w.price}</button>`}`
         );
         const b = card.querySelector('.buy');
         if (b)
@@ -19875,7 +19875,7 @@ const UI = (() => {
       const mb = el(
         'div',
         'card modes',
-        '<div class="cardtitle"><span>Comment vous l\'emmenez</span></div>' +
+        '<div class="cardtitle"><span>Comment tu l\'emmènes</span></div>' +
           Object.keys(PET_MODES)
             .map(k => `<button class="btn small ${mode === k ? 'primary' : 'ghost'}" data-mode="${k}">${PET_MODES[k].name}</button>`)
             .join('') +
@@ -19955,7 +19955,13 @@ const UI = (() => {
         el('div', 'muted small', "Trois compétences sont tirées au sort à l'entrée du palier, tu en choisis une. Le catalogue :")
       );
       for (const sk of Content.skills())
-        box.appendChild(el('div', 'card', `<div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div>`));
+        box.appendChild(
+          el(
+            'div',
+            'card',
+            `<div class="cardtitle">${esc(sk.name)} <span class="tag cd">recharge ${sk.cooldown} s</span></div><div class="muted small">${esc(sk.desc)}</div>`
+          )
+        );
     } else if (hubTab === 'fragments') {
       for (const f of LORE.fragments) {
         const ok = Meta.loreUnlocked(f.id);
@@ -19967,7 +19973,7 @@ const UI = (() => {
         box.appendChild(card);
       }
       box.appendChild(
-        el('div', 'muted tiny', `Runs : ${p.runs} · victoires : ${p.wins} · réimpressions : ${p.deaths} · meilleur niveau : ${p.bestLevel}`)
+        el('div', 'muted tiny', `Parties : ${p.runs} · victoires : ${p.wins} · morts : ${p.deaths} · meilleur niveau : ${p.bestLevel}`)
       );
     }
   }
@@ -20007,7 +20013,7 @@ const UI = (() => {
       Content.metaPassives()
         .filter(m => Meta.tierOf(m.id) > 0)
         .map(m => `${esc(m.name)} ${Meta.tierOf(m.id)}`)
-        .join(', ') || 'aucune calibration';
+        .join(', ') || 'aucune amélioration';
     const render = () => {
       const wSel = weapons.find(w => w.id === selW);
       const sSel = r.skillChoices.find(sk => sk.id === selS);
@@ -20015,16 +20021,16 @@ const UI = (() => {
       const touch = Input.touch.active;
       s.innerHTML = `
         <div class="panel prep">
-          <div class="eyebrow">Avant d'entrer — niveau ${r.biome.order} · ${esc(r.biome.name)}</div>
+          <div class="eyebrow">Avant d'entrer — palier ${r.biome.order} · ${esc(r.biome.name)}</div>
           <h2>Équipe-toi pour ce niveau</h2>
           <section class="prepstep pairstep done">
             <h3><span class="stepnum">0</span> Ton départ <span class="muted tiny">— un bonus et un malus, ensemble · choisis la paire qui te va</span></h3>
             <div class="cards" id="prep-pairs">${pairs.map((pp, i) => `<div class="card pick pairpick ${i === selP ? 'selected' : ''}" data-p="${i}"><div class="prepmods"><span class="chip good"><b>+</b> ${esc(pp.bonus.name)} — ${esc(pp.bonus.desc)}</span><span class="chip bad"><b>−</b> ${esc(pp.malus.name)} — ${esc(pp.malus.desc)}</span></div>${i === selP ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
           </section>
-          <details class="prepdetails muted tiny"><summary>Trait du personnage et calibrations du hub</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Calibrations : ${metaList}</details>
+          <details class="prepdetails muted tiny"><summary>Caractère du personnage et améliorations du camp</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Calibrations : ${metaList}</details>
           <section class="prepstep weapon done">
             <h3><span class="stepnum">1</span> Ton arme <span class="muted tiny">— l'attaque principale, en continu · clic gauche${touch ? ' ou bouton TIR' : ''}</span></h3>
-            <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick weapon ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(w.family)}</span></div><div class="muted small">${esc(w.desc)}</div>${w.id === selW ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+            <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick weapon ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(famille(w.family))}</span></div><div class="muted small">${esc(w.desc)}</div>${w.id === selW ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
           </section>
           <section class="prepstep skill ${selS ? 'done' : 'todo'}">
             <h3><span class="stepnum">2</span> Ta compétence <span class="muted tiny">— un pouvoir à recharge, à déclencher · clic droit, Espace ou Maj${touch ? ' ou bouton COMP.' : ''}</span></h3>
@@ -20149,10 +20155,32 @@ const UI = (() => {
     show('choice');
     if (G.autoplay) Debug.autoChoice();
   }
+  /* un mot par notion, en français : les catégories de greffes et les familles d'armes ne sortent jamais telles quelles du contenu */
+  const CATEGORIES = {
+    offense: 'Attaque',
+    defense: 'Défense',
+    mobility: 'Mobilité',
+    utility: 'Utilitaire',
+    economy: 'Butin',
+    special: 'Spécial',
+    synergy: 'Synergie',
+  };
+  const FAMILLES = {
+    blade: 'lame',
+    hammer: 'masse',
+    bow: 'arc',
+    pistol: 'pistolet',
+    boomerang: 'boomerang',
+    orb: 'orbe',
+    chain: 'chaîne',
+    flame: 'flamme',
+  };
+  const categorie = c => CATEGORIES[c] || c;
+  const famille = f => FAMILLES[f] || f;
   function cardHtml(u, i) {
     const r = RARITY[u.rarity];
     const ex = G.run.upgrades.find(x => x.def.id === u.id);
-    return `<div class="card upg r-${u.rarity}" data-i="${i}" style="--rc:${r.color};--rg:${r.glow}"><div class="rarity">${r.label}</div><div class="cardtitle">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div><div class="muted tiny">${u.category}${u.weaponFamily ? ' · synergie ' + u.weaponFamily : ''}${ex ? ` · possédé ×${ex.stacks}` : ''}${u.maxStacks > 1 ? ` · max ${u.maxStacks}` : ''}</div><div class="key">${i + 1}</div></div>`;
+    return `<div class="card upg r-${u.rarity}" data-i="${i}" style="--rc:${r.color};--rg:${r.glow}"><div class="rarity">${r.label}</div><div class="cardtitle">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div><div class="muted tiny">${categorie(u.category)}${u.weaponFamily ? ' · synergie ' + famille(u.weaponFamily) : ''}${ex ? ` · déjà prise ×${ex.stacks}` : ''}${u.maxStacks > 1 ? ` · ${u.maxStacks} paliers` : ''}</div><div class="key">${i + 1}</div></div>`;
   }
   function hideChoice() {
     state.choice = null;

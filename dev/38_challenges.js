@@ -28,7 +28,7 @@ const CHALLENGE_DEFS = {
   },
   lights: {
     name: 'Lumières coupées',
-    desc: "Noir complet : des projecteurs balaient la salle en musique, à vous de suivre la lumière. Les ennemis se trahissent par leurs yeux. Tuer dans la lumière : +50 % d'XP. XP +25 %.",
+    desc: "Noir complet : des projecteurs balaient la salle en musique, à toi de suivre la lumière. Les ennemis se trahissent par leurs yeux. Tuer dans la lumière : +50 % d'XP. XP +25 %.",
     rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'],
     color: '#9fd8ff',
   },
