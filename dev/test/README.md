@@ -43,6 +43,8 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `etape0` | le socle rythmique : horloge musicale, pièges cadencés, tourniquet |
 | `gabriel` | Gabriel et Jean : planches, cases vides de fin, clips, pieds sur la ligne de sol |
 | `habits` | plus de palier de tenue : habillé dès la salle 1, même corps après 9 greffes |
+| `interface` | chantier I-1 : onglets dans le cadre, textes obsolètes partis, attraction figée, Uno par défaut, HUD sondé (textes dans leurs panneaux, tout dans la vue), PV vert/doré/rouge + vignette, un seul compteur de série, boss en haut sans bandeau, toasts en bas à droite, badge aligné, écran de fin vrai et « Rejouer » |
+| `interface_mobile` | le même HUD en 900 × 420 tactile : ancré aux bords de la vue, onglets dans l'écran, polices ≥ 12 px, toast au-dessus des boutons |
 | `human` | une partie au clavier et à la souris en mode Normal : bouger, tirer, compétence, pause, mort, crédits, achat |
 | `levels` | le bot joue 4 armes sur 9 salles (mode test) — équilibrage, pas de plantage |
 | `martin` | Martin : cinq clips, boucle de marche, mort figée, retournement, pieds |

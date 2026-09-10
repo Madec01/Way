@@ -20,7 +20,7 @@ const Meta = (() => {
     characters: [],
     skills: [],
     pets: [],
-    pet: null,
+    pet: 'pet_uno', // un profil neuf part avec le chien : le premier ami qui ouvre le jeu doit le voir
     petMode: 'always',
     lore: [],
     cleared: {},

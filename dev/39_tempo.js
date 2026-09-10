@@ -423,7 +423,6 @@ const Tempo = {
         life: 0.7,
         size: 3,
       });
-      UI.banner('SÉRIE ×' + tp.combo, Tempo.COLOR);
       AudioEngine.tempoTick({ intensity: 1 });
       if (tp.combo >= 10) Music.tapeStop();
     }
@@ -697,11 +696,11 @@ const Tempo = {
         spd = n > 8 ? 14 : 22,
         gap = 10;
       const w = n * spd + (n / 4 - 1) * gap;
-      const x0 = W / 2 - w / 2,
-        yb = 70;
+      const V = Engine.view;
+      const x0 = -V.ox + V.w / 2 - w / 2,
+        yb = -V.oy + 70;
       ctx.fillStyle = 'rgba(8,10,18,.7)';
-      ctx.fillRect(x0 - 12, yb - 14, w + 24, tp.combo > 0 ? 46 : 28);
-      if (tp.combo > 0 && tp.combo < Tempo.MIN_STREAK) Tempo.renderStreak(ctx, W / 2, yb + 22, tp);
+      ctx.fillRect(x0 - 12, yb - 14, w + 24, 28);
       for (let i = 0; i < n; i++) {
         const x = x0 + i * spd + Math.floor(i / 4) * gap + spd / 2;
         const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? '#ff3b5c' : '#7fff9a';
@@ -715,43 +714,33 @@ const Tempo = {
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = '#fff';
       ctx.fillRect(x0 + pp.p * spd + Math.floor(pp.p / 4) * gap - 1, yb - 11, 2, 22);
-      if (tp.combo >= Tempo.MIN_STREAK) {
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = Tempo.COLOR;
-        ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
-        ctx.fillText(`TEMPO ×${tp.combo}`, W / 2, yb + 22);
-      }
       ctx.restore();
       return;
     }
-    const cx = W / 2,
-      y = 66,
-      sp = 30; // sous le cartouche « Salle 7/9 » du HUD
-    ctx.fillStyle = 'rgba(8,10,18,.7)';
-    ctx.fillRect(cx - 88, y - 14, 176, tp.combo > 0 ? 46 : 28);
-    if (tp.combo > 0 && tp.combo < Tempo.MIN_STREAK) Tempo.renderStreak(ctx, cx, y + 22, tp);
+    /* le métronome : quatre disques de 12 px, le temps fort plus gros, sans boîte opaque — c'est le cœur du jeu,
+       pas un détail. Le compteur de série, lui, est près du joueur (renderPlayer) et non ici. */
+    const V = Engine.view;
+    const cx = -V.ox + V.w / 2,
+      y = -V.oy + 66,
+      sp = 34; // sous le cartouche « Salle 7/9 » du HUD
     for (let i = 0; i < 4; i++) {
       const x = cx - 1.5 * sp + i * sp;
       const on = i === bib && tp.phase !== 'wait';
-      ctx.globalAlpha = on ? 1 : 0.35;
+      const rr = (i === 0 ? 7 : 6) + (on ? (1 - ph) * 4 : 0);
+      ctx.globalAlpha = on ? 1 : 0.4;
       ctx.fillStyle = i === 0 ? Tempo.COLOR : '#e8ecf7';
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = on ? 14 : 0;
       ctx.beginPath();
-      ctx.arc(x, y, on ? 6 + (1 - ph) * 4 : 4, 0, TAU);
+      ctx.arc(x, y, rr, 0, TAU);
       ctx.fill();
     }
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = '#fff';
-    ctx.fillRect(cx - 1.5 * sp + (bib + ph) * sp - 1, y - 11, 2, 22);
-    if (tp.combo >= Tempo.MIN_STREAK) {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = Tempo.COLOR;
-      ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
-      ctx.fillText(`TEMPO ×${tp.combo}`, cx, y + 22);
-    }
+    ctx.fillRect(cx - 1.5 * sp + (bib + ph) * sp - 1, y - 12, 2, 24);
     /* pièges : avertissement puis mise en place, sous la barre de mesure (jamais en bandeau, pour ne pas couvrir « Vague N ») */
-    const ty = y + (tp.combo > 0 ? 40 : 24);
+    const ty = y + 26;
     if (tp.pendingGroup != null) {
       const kk = Math.max(0, 1 - ph * 2);
       ctx.textAlign = 'center';
@@ -774,14 +763,14 @@ const Tempo = {
       ctx.fillText('Piège en place : ' + tp.lastName, cx, ty);
       ctx.globalAlpha = 1;
     }
-    if (Beat.info.internal) {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#9aa4c4';
-      ctx.font = '10px "Segoe UI", system-ui, sans-serif';
-      ctx.globalAlpha = 0.8;
-      ctx.fillText('métronome interne', cx, y + (tp.combo > 0 ? 38 : 24));
-    }
     ctx.restore();
+  },
+  /* près du joueur, en coordonnées du monde (appelé par Room.render) : la série qui se construit, quatre pastilles
+     sous ses pieds ; dès quatre notes, c'est le chiffre flottant « TEMPO ×n » qui prend le relais */
+  renderPlayer(ctx, room) {
+    const tp = room.tempo;
+    const pl = G.player;
+    if (!tp || !tp.started || !pl || tp.combo <= 0 || tp.combo >= Tempo.MIN_STREAK) return;
+    Tempo.renderStreak(ctx, pl.x, pl.y + Sprites.SOL + 10, tp);
   },
 };

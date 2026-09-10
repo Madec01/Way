@@ -79,11 +79,10 @@ test(async ({ page: p, ok, entrer, run, sansPause }) => {
     /* une pièce à 200 px du joueur, 234 du chat : hors de sa portée d'aimant (140), dans son rayon de recherche (260) */
     Pickups.spawn(pl.x + 200, pl.y, 'coin', 1, { vx: 0, vy: 0 });
     const d0 = Math.hypot(ch.x - pl.x - 200, ch.y - pl.y);
-    await new Promise(r => setTimeout(r, 350));
-    const d1 = Pickups.list.length ? Math.hypot(ch.x - Pickups.list[0].x, ch.y - Pickups.list[0].y) : 0;
-    const enCourse = !!ch.fetching;
-    /* l'anneau de portée se dessine tant qu'il court : on compte ses appels à ellipse en le rendant à part */
-    let ellipses = 0;
+    /* il part chercher : on guette le moment où il est en course (il est vite à portée d'aimant, 140 px, puis la pièce file) */
+    let enCourse = false,
+      d1 = d0,
+      ellipses = 0;
     const c = document.createElement('canvas');
     const ctx = c.getContext('2d');
     const orig = ctx.ellipse.bind(ctx);
@@ -91,7 +90,14 @@ test(async ({ page: p, ok, entrer, run, sansPause }) => {
       ellipses++;
       return orig(...a);
     };
-    ch.render(ctx);
+    for (let i = 0; i < 12 && !enCourse; i++) {
+      await new Promise(r => setTimeout(r, 40));
+      if (ch.fetching) {
+        enCourse = true;
+        d1 = Pickups.list.length ? Math.hypot(ch.x - Pickups.list[0].x, ch.y - Pickups.list[0].y) : 0;
+        ch.render(ctx); // l'anneau de portée se dessine tant qu'il court : on compte ses ellipses (anneau + ombre)
+      }
+    }
     await new Promise(r => setTimeout(r, 1500));
     const ramasse = Pickups.list.length === 0;
     return { d0: Math.round(d0), d1: Math.round(d1), enCourse, ellipses, ramasse };

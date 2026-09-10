@@ -6,6 +6,7 @@
 
 'use strict';
 const Attract = (() => {
+  let frozen = false; // figée (derrière le hub) : rien ne bouge, l'image reste
   let running = false,
     spawnT = 0,
     weaponT = 0,
@@ -149,8 +150,11 @@ const Attract = (() => {
       Room.spawnAt({ enemy: def.id, count: 1, x: -1, y: -1, elite: VFX_RNG() < 0.15 });
     }
   }
+  function freeze(v) {
+    frozen = !!v;
+  }
   function update(dt) {
-    if (!running || !G.run || !G.run.attract) return;
+    if (!running || frozen || !G.run || !G.run.attract) return;
     spawnT -= dt;
     if (spawnT <= 0) {
       spawn();
@@ -188,8 +192,12 @@ const Attract = (() => {
     start,
     stop,
     update,
+    freeze,
     get running() {
       return running;
+    },
+    get frozen() {
+      return frozen;
     },
   };
 })();

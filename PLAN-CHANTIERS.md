@@ -4,6 +4,8 @@ Ce plan répond au diagnostic (`DIAGNOSTIC.md`). Les 66 modifications y sont reg
 
 La taille est donnée en **séances** — une séance, c'est une session de travail avec moi, vérifiée par la batterie de tests et livrée. Total : **18 à 22 séances**. Les six premiers chantiers, soit 8 séances, rendent le jeu montrable aux amis ; le reste le rend bon.
 
+> **En pause depuis le 10 septembre 2026** : les chantiers **8 à 11** reprennent après le plan des interfaces (`PLAN-INTERFACES.md`, I-1 → I-7). L'auteur a demandé qu'on le lui rappelle — c'est écrit ici et dans l'autre plan.
+
 ## Trois décisions à prendre avant
 
 Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.

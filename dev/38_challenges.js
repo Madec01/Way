@@ -899,9 +899,10 @@ const Challenge = (() => {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    const V = Engine.view;
     const w = 340,
-      x = W / 2 - w / 2,
-      y = 52;
+      x = -V.ox + V.w / 2 - w / 2,
+      y = -V.oy + 52;
     ctx.fillStyle = 'rgba(8,10,18,.75)';
     UI.roundRect(ctx, x, y, w, 30, 8);
     ctx.fill();
@@ -910,7 +911,11 @@ const Challenge = (() => {
     ctx.stroke();
     ctx.fillStyle = c.def.color;
     ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(`${c.def.name.toUpperCase()}${c.done ? ' — ' + (room.challengeOk ? 'réussi' : 'terminé') : ' · ' + c.hud}`, W / 2, y + 15);
+    ctx.fillText(
+      `${c.def.name.toUpperCase()}${c.done ? ' — ' + (room.challengeOk ? 'réussi' : 'terminé') : ' · ' + c.hud}`,
+      x + w / 2,
+      y + 15
+    );
     ctx.restore();
   }
   function dangerAt(x, y, room) {

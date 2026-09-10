@@ -664,36 +664,39 @@ const Pets = {
   },
   /* mode « à l'appel » : jauge de présence ou de repos, avec la touche à presser */
   renderCall(ctx, p) {
-    const x = 16,
-      y = H - 108;
+    const V = Engine.view;
+    const x = -V.ox + 18,
+      y = -V.oy + V.h - 98; // même bord gauche et même largeur que le cartouche d'arme, juste au-dessus
     const m = PET_MODES.call;
     const pret = p.away && p.cdT <= 0;
     ctx.save();
     ctx.fillStyle = 'rgba(8,10,18,.72)';
-    UI.roundRect(ctx, x, y, 168, 30, 8);
+    UI.roundRect(ctx, x, y, 420, 30, 8);
     ctx.fill();
-    if (!Pets.icon(ctx, p, x + 18, y + 15, 24, p.away ? 0.35 : 1)) {
+    if (!Pets.icon(ctx, p, x + 22, y + 15, 24, p.away ? 0.35 : 1)) {
       ctx.globalAlpha = p.away ? 0.35 : 1;
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(x + 18, y + 15, 7, 0, TAU);
+      ctx.arc(x + 22, y + 15, 7, 0, TAU);
       ctx.fill();
       ctx.globalAlpha = 1;
     }
     ctx.fillStyle = pret ? '#7fff9a' : '#e8ecf7';
-    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(Pets.title(p.def), x + 36, y + 14);
-    ctx.fillStyle = '#8a93ad';
-    ctx.font = '10px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(Pets.title(p.def), x + 40, y + 15);
+    ctx.fillStyle = pret ? '#7fff9a' : '#9aa4c4';
+    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
     ctx.fillText(
       pret ? 'C : appeler' : p.away ? 'repos ' + Math.ceil(p.cdT) + ' s' : 'présent ' + Math.ceil(p.callT) + ' s',
-      x + 36,
-      y + 25
+      x + 175,
+      y + 15
     );
     const k = p.away ? (p.cdT > 0 ? 1 - p.cdT / m.cd : 1) : p.callT / m.dur;
+    ctx.fillStyle = '#12203a';
+    ctx.fillRect(x + 340, y + 12, 70, 6);
     ctx.fillStyle = pret ? '#7fff9a' : p.away ? '#6ee7ff' : '#ffd166';
-    ctx.fillRect(x + 36, y + 27, 120 * clamp(k, 0, 1), 2);
+    ctx.fillRect(x + 340, y + 12, 70 * clamp(k, 0, 1), 6);
     ctx.restore();
   },
   /* badge du compagnon, au-dessus de la ligne arme/compétence */
@@ -702,25 +705,33 @@ const Pets = {
     if (!p) return;
     if (p.mode === 'call') return Pets.renderCall(ctx, p);
     const nom = Pets.title(p.def);
-    const x = 16,
-      y = H - 108;
+    const V = Engine.view;
+    const x = -V.ox + 18,
+      y = -V.oy + V.h - 98; // même bord gauche et même largeur que le cartouche d'arme, juste au-dessus
     ctx.save();
     ctx.fillStyle = 'rgba(8,10,18,.72)';
-    UI.roundRect(ctx, x, y, 168, 30, 8);
+    UI.roundRect(ctx, x, y, 420, 30, 8);
     ctx.fill();
-    if (!Pets.icon(ctx, p, x + 18, y + 15, 24, p.down ? 0.4 : 1)) {
+    if (!Pets.icon(ctx, p, x + 22, y + 15, 24, p.down ? 0.4 : 1)) {
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(x + 18, y + 15, 7, 0, TAU);
+      ctx.arc(x + 22, y + 15, 7, 0, TAU);
       ctx.fill();
     }
     ctx.fillStyle = p.down ? '#8a93ad' : '#e8ecf7';
-    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(nom, x + 36, y + 14);
-    ctx.fillStyle = '#8a93ad';
-    ctx.font = '10px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(p.down ? 'sonné — ' + Math.ceil(p.downT) + ' s' : p.def.tag || '', x + 36, y + 25);
+    ctx.fillText(nom, x + 40, y + 15);
+    ctx.fillStyle = '#9aa4c4';
+    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(p.down ? 'sonné — ' + Math.ceil(p.downT) + ' s' : p.def.tag || '', x + 175, y + 15);
+    /* la vie d'un compagnon qui en a : dans le badge, plus seulement au-dessus de sa tête */
+    if (p.maxHp) {
+      ctx.fillStyle = '#12203a';
+      ctx.fillRect(x + 340, y + 12, 70, 6);
+      ctx.fillStyle = p.down ? '#8a93ad' : '#7fff9a';
+      ctx.fillRect(x + 340, y + 12, 70 * clamp(p.hp / p.maxHp, 0, 1), 6);
+    }
     ctx.restore();
   },
 };

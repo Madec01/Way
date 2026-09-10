@@ -8,6 +8,8 @@ La taille est donnée en **séances** — une séance, c'est une session de trav
 
 Ce plan ne remplace pas le plan de chantiers (`PLAN-CHANTIERS.md`) : il s'y intercale. La fin du document dit où.
 
+> **Décision du 10 septembre 2026** : l'interface passe en premier, parce que c'est ce qui se voit le plus. Les chantiers **8 à 11** du plan principal (atelier, biomes, téléphone, dette) sont **en pause** et reprennent après I-7 — à rappeler à l'auteur à chaque fin de chantier d'interface.
+
 ## Les constats des deux audits
 
 Chaque ligne est un point d'un des deux rapports, réduit à ce qu'il faut corriger. Les notes par écran y sont : hub-compagnon 2/10, boutique 3/10, tactile 2/10, cartouche central du HUD 2/10, messages 2/10, moyenne **4,5/10** pour les menus et **4/10** pour le HUD.
@@ -90,7 +92,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 ---
 
-## Chantier I-1 — Ce qui est cassé ou faux
+## Chantier I-1 — Ce qui est cassé ou faux ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : plus rien d'inatteignable, de faux ou de débordant. Que des suppressions, des corrections de coordonnées et des chaînes ; aucune logique de jeu ne bouge.
 
@@ -117,6 +119,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 **Fini quand** : un test `interface.js` mesure sur capture que les cinq onglets sont dans le cadre, qu'aucun texte du HUD ne sort de sa boîte, que le HUD tient dans `Engine.view` en 900 × 420, et qu'aucune police calculée n'est sous 12 px ; la batterie reste verte.
 **Taille** : 1 séance.
+**Bilan** : les 22 points sont faits, avec les décisions prises telles que je les recommandais (Uno par défaut, le tempo comme seul compteur) — à renverser d'un mot si tu veux. Le HUD est réécrit autour de deux aides, `panel` et `label`, ancrées sur `Engine.view` et sondées (`UI.hudProbe`) : le test `interface.js` (18 mesures) vérifie que chaque texte tient dans un panneau, que tout tient dans la vue, que la boîte du cartouche suit son texte, les couleurs de PV, la vignette, le toast en bas à droite, le badge aligné, l'absence de bandeau « SÉRIE » et du nom du boss, Uno sur un profil neuf, l'écran de fin vrai et « Rejouer » ; `interface_mobile.js` (7 mesures) vérifie l'ancrage en 900 × 420, les onglets dans l'écran, les polices ≥ 12 px et le toast au-dessus des boutons tactiles. Ce qui reste du constat H15 (bandeaux qui s'empilent) attend I-6, et la bande du haut reste dense (cartouche, défi, métronome) jusqu'à I-5. Le rappel des touches ne s'affiche plus après la salle 3. Effet de bord accepté : les planchers de police (12 px) rendent le hub mobile plus grand qu'avant, donc plus long à faire défiler — c'est I-8 qui le remet en une colonne.
 
 ## Chantier I-2 — Un seul vocabulaire
 

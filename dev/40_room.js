@@ -263,8 +263,7 @@ const Room = {
     const b = new Boss(def, x || ROOM_X + ROOM_W * 0.72, y || ROOM_Y + ROOM_H / 2, { revenge });
     G.enemies.push(b);
     G.room.boss = b;
-    UI.banner(b.name, '#ff3b5c', revenge ? 'Il a chargé vos données de consignation.' : def.subtitle || '');
-    AudioEngine.bossRoar({});
+    AudioEngine.bossRoar({}); // pas de bandeau : la barre de vie en haut de l'écran porte déjà son nom
   },
   onBossDefeated(b) {
     G.room.bossDead = true;
@@ -546,6 +545,7 @@ const Room = {
     if (r.challenge) Challenge.renderFloor(ctx, r);
     if (r.tempo) Tempo.renderFloor(ctx, r);
     Tempo.renderScore(ctx, r); // partition au sol : les tuiles qui vont être frappées s'annoncent, dans toutes les salles
+    if (r.tempo) Tempo.renderPlayer(ctx, r); // la série qui se construit, sous les pieds du joueur
     for (const o of r.obstacles) if (!o.dyn && !o.terrain) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */

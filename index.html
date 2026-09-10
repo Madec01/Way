@@ -16,15 +16,15 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 #c{position:fixed;display:block;background:#07080d;image-rendering:pixelated;image-rendering:crisp-edges}
 #ui{position:fixed;pointer-events:none;overflow:hidden}
 #ui.active{pointer-events:auto}
-#ui .screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(24px*var(--ui-scale));font-size:calc(14px*var(--ui-scale));overflow:auto;background:rgba(4,5,9,.55);backdrop-filter:blur(3px)}
+#ui .screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(24px*var(--ui-scale));font-size:max(13px,calc(14px*var(--ui-scale)));overflow:auto;background:rgba(4,5,9,.55);backdrop-filter:blur(3px)}
 #ui .screen[hidden]{display:none}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.4em 1.6em;box-shadow:0 0 40px rgba(110,231,255,.08),inset 0 0 0 1px rgba(255,255,255,.03);backdrop-filter:blur(10px)}
 .panel.center{max-width:56em;text-align:center}
-.eyebrow{font-size:.78em;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);opacity:.85}
+.eyebrow{font-size:max(12px,.78em);letter-spacing:.2em;text-transform:uppercase;color:var(--accent);opacity:.85}
 h1.title{font-size:3.4em;margin:.1em 0 .2em;letter-spacing:.08em;text-shadow:0 0 24px rgba(110,231,255,.5)}
 h2{margin:.2em 0 .4em;font-size:1.6em}
 h3{margin:.8em 0 .4em;font-size:1em;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
-.muted{color:var(--muted)} .small{font-size:.9em} .tiny{font-size:.78em} .good{color:var(--good)} .bad{color:var(--danger)}
+.muted{color:var(--muted)} .small{font-size:max(12px,.9em)} .tiny{font-size:max(12px,.78em)} .good{color:var(--good)} .bad{color:var(--danger)}
 .synopsis{max-width:40em;margin:0 auto 1.2em;line-height:1.45}
 .row{display:flex;gap:.8em;justify-content:center;align-items:center;flex-wrap:wrap;margin:.8em 0}
 .row.small{gap:.5em;margin:.4em 0}
@@ -33,9 +33,9 @@ h3{margin:.8em 0 .4em;font-size:1em;color:var(--accent);letter-spacing:.08em;tex
 .btn[disabled]{opacity:.4;cursor:not-allowed}
 .btn.primary{background:rgba(110,231,255,.18);border-color:var(--accent)}
 .btn.big{font-size:1.15em;padding:.7em 1.6em}
-.btn.small{font-size:.8em;padding:.35em .7em}
+.btn.small{font-size:max(12px,.8em);padding:.35em .7em}
 .btn.ghost{background:transparent}
-.tag{display:inline-block;font-size:.7em;padding:.1em .5em;border:1px solid var(--line);border-radius:6px;color:var(--muted);vertical-align:middle;letter-spacing:.05em;text-transform:uppercase}
+.tag{display:inline-block;font-size:max(11px,.7em);padding:.1em .5em;border:1px solid var(--line);border-radius:6px;color:var(--muted);vertical-align:middle;letter-spacing:.05em;text-transform:uppercase}
 .tag.test{color:var(--gold);border-color:var(--gold)}
 .cards{display:flex;gap:.8em;flex-wrap:wrap;justify-content:center}
 .cards.vertical{flex-direction:column}
@@ -48,13 +48,13 @@ h3{margin:.8em 0 .4em;font-size:1em;color:var(--accent);letter-spacing:.08em;tex
 .cardtitle{font-weight:700;margin-bottom:.25em;display:flex;justify-content:space-between;align-items:center;gap:.5em}
 .card .desc{margin:.3em 0;line-height:1.35}
 .card.upg{min-width:16em;max-width:18em;border-color:var(--rc);box-shadow:0 0 22px var(--rg),inset 0 0 0 1px rgba(255,255,255,.03)}
-.card.upg .rarity{font-size:.72em;letter-spacing:.2em;text-transform:uppercase;color:var(--rc);font-weight:700}
-.card.upg .key{position:absolute;top:.5em;right:.6em;font-size:.75em;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:0 .4em}
+.card.upg .rarity{font-size:max(11px,.72em);letter-spacing:.2em;text-transform:uppercase;color:var(--rc);font-weight:700}
+.card.upg .key{position:absolute;top:.5em;right:.6em;font-size:max(12px,.75em);color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:0 .4em}
 .card.r-colossal{animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{0%,100%{box-shadow:0 0 22px var(--rg)}50%{box-shadow:0 0 38px var(--rg)}}
-.trait{margin:.4em 0;font-size:.85em;line-height:1.35}
-.pill{display:inline-block;font-size:.78em;padding:.15em .5em;border:1px solid var(--rc);color:var(--rc);border-radius:8px;margin:.15em}
-.pair{display:flex;gap:1em;justify-content:space-between;font-size:.85em;margin:.15em 0}
+.trait{margin:.4em 0;font-size:max(12px,.85em);line-height:1.35}
+.pill{display:inline-block;font-size:max(12px,.78em);padding:.15em .5em;border:1px solid var(--rc);color:var(--rc);border-radius:8px;margin:.15em}
+.pair{display:flex;gap:1em;justify-content:space-between;font-size:max(12px,.85em);margin:.15em 0}
 .pair.big{font-size:1em;justify-content:flex-start;align-items:baseline}
 .pairs{margin-top:.5em}
 .hub{display:grid;grid-template-columns:24em 1fr;grid-template-rows:auto 1fr;gap:1em;width:100%;height:100%;max-width:90em}
@@ -62,12 +62,12 @@ h3{margin:.8em 0 .4em;font-size:1em;color:var(--accent);letter-spacing:.08em;tex
 .coins{font-size:1.3em;color:var(--gold);font-weight:700}
 .hub .col{overflow:auto;display:flex;flex-direction:column;gap:.4em}
 .hub .col.left .card{max-width:none;min-width:0}
-.tabs{display:flex;gap:.4em;margin-bottom:.6em}
+.tabs{display:flex;flex-wrap:wrap;gap:.4em;margin-bottom:.6em}
 .tab{font:inherit;background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:.35em .9em;cursor:pointer}
 .tab.on{color:var(--text);background:rgba(110,231,255,.14);border-color:var(--accent)}
 .shop{display:flex;flex-wrap:wrap;gap:.6em;align-content:flex-start}
 .shop .card{min-width:15em;max-width:19em;flex:1 1 15em}
-.tier{font-size:.8em;color:var(--gold);letter-spacing:.1em}
+.tier{font-size:max(12px,.8em);color:var(--gold);letter-spacing:.1em}
 .prep{max-width:80em;max-height:100%;overflow:auto}
 .prep .passives{margin:.4em 0 .6em}
 .choice{max-width:80em}
@@ -101,8 +101,10 @@ h3{margin:.8em 0 .4em;font-size:1em;color:var(--accent);letter-spacing:.08em;tex
 #touch .tbtn.skill{right:calc(160px*var(--ui-scale));bottom:calc(70px*var(--ui-scale));width:calc(86px*var(--ui-scale));height:calc(86px*var(--ui-scale));border-color:rgba(127,255,154,.6)}
 #touch .tbtn.act{right:calc(70px*var(--ui-scale));bottom:calc(180px*var(--ui-scale));width:calc(62px*var(--ui-scale));height:calc(62px*var(--ui-scale))}
 #touch .tbtn.pause{right:calc(16px*var(--ui-scale));top:calc(56px*var(--ui-scale));width:calc(44px*var(--ui-scale));height:calc(44px*var(--ui-scale));font-size:calc(13px*var(--ui-scale))}
-body.touch #ui .screen{font-size:calc(15px*var(--ui-scale))}
+body.touch #ui .screen{font-size:max(13px,calc(15px*var(--ui-scale)))}
 body.touch .btn{padding:.7em 1.3em}
+body.touch .tab,body.touch .btn.small,body.touch .card.mini{min-height:44px}
+.prepstep .cards{justify-content:flex-start}
 #ui .screen{touch-action:pan-y}
 #ui .screen .panel{touch-action:pan-y;max-height:100%;overflow:auto}
 body.touch #ui .screen{padding:calc(10px*var(--ui-scale));align-items:flex-start}
@@ -116,7 +118,7 @@ body.touch .prep .passives .tiny{display:none}
 @font-face{font-family:"Pixelify Sans";src:url("assets/fonts/PixelifySans-Regular.ttf") format("truetype");font-display:swap}
 @font-face{font-family:"VT323";src:url("assets/fonts/VT323-Regular.ttf") format("truetype");font-display:swap}
 #ui #screen-menu,#ui #screen-hub{background:transparent;backdrop-filter:none;padding:0;align-items:stretch;justify-content:stretch}
-.stamp{display:inline-flex;gap:.6em;align-items:center;font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:.85em;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);opacity:.85;border:1px solid rgba(110,231,255,.35);padding:.3em .8em;border-radius:4px;background:rgba(8,10,18,.55)}
+.stamp{display:inline-flex;gap:.6em;align-items:center;font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:max(12px,.85em);letter-spacing:.22em;text-transform:uppercase;color:var(--accent);opacity:.85;border:1px solid rgba(110,231,255,.35);padding:.3em .8em;border-radius:4px;background:rgba(8,10,18,.55)}
 .stamp .sep{opacity:.5}
 /* ---- menu ---- */
 .menuscreen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;box-sizing:border-box;padding:calc(20px*var(--ui-scale)) calc(48px*var(--ui-scale)) calc(12px*var(--ui-scale))}
@@ -145,9 +147,9 @@ body.touch .prep .passives .tiny{display:none}
 .menunav{display:flex;flex-direction:column;gap:calc(7px*var(--ui-scale));align-self:center;width:100%;max-width:calc(520px*var(--ui-scale));margin-top:calc(10px*var(--ui-scale))}
 .mbtn{display:grid;grid-template-columns:2.6em 1fr;grid-template-rows:auto auto;column-gap:.6em;align-items:center;text-align:left;font:inherit;color:var(--text);background:linear-gradient(90deg,rgba(16,20,34,.72),rgba(16,20,34,.35));border:1px solid rgba(110,231,255,.18);border-left:3px solid rgba(110,231,255,.35);border-radius:6px;padding:.55em 1em;cursor:pointer;position:relative;overflow:hidden;transition:transform .18s,border-color .15s,background .2s,opacity .3s;opacity:0;transform:translateY(12px)}
 .mbtn.on{opacity:1;transform:none}
-.mbtn .k{grid-row:1/3;font-family:"Silkscreen",monospace;font-size:.85em;color:var(--accent);opacity:.8}
+.mbtn .k{grid-row:1/3;font-family:"Silkscreen",monospace;font-size:max(12px,.85em);color:var(--accent);opacity:.8}
 .mbtn .l{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.35em;letter-spacing:.06em}
-.mbtn .d{font-size:.78em;color:var(--muted)}
+.mbtn .d{font-size:max(12px,.78em);color:var(--muted)}
 .mbtn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,rgba(110,231,255,.28),rgba(110,231,255,0));transition:width .25s}
 .mbtn.on:hover,.mbtn.on:focus{outline:none;transform:scale(1.028);border-color:var(--accent);border-left-color:#fff;box-shadow:0 0 22px rgba(110,231,255,.25)}
 /* halo de projecteur sur le bouton actif */
@@ -188,7 +190,7 @@ body.touch .prep .passives .tiny{display:none}
 .intercom{font-family:"VT323",monospace;font-size:1.35em;color:#dfe6ff}
 .hubcoins{text-align:right}.hubcoins .big{font-family:"Silkscreen",monospace;font-size:1.5em;color:var(--gold);text-shadow:0 0 14px rgba(255,209,102,.5)}
 .hubactions{display:flex;gap:.4em}
-.hubcol{background:rgba(8,10,18,.62);border:1px solid var(--line);border-radius:12px;padding:.9em 1em;overflow:auto;backdrop-filter:blur(6px);display:flex;flex-direction:column;gap:.5em;animation:fadeUp .6s .1s both}
+.hubcol{background:rgba(8,10,18,.93);border:1px solid var(--line);border-radius:12px;padding:.9em 1em;overflow:auto;backdrop-filter:blur(6px);display:flex;flex-direction:column;gap:.5em;animation:fadeUp .6s .1s both}
 .hubcol.center{animation-delay:.2s}.hubcol.shopcol{animation-delay:.3s}
 .hubcol h3{margin:.4em 0 .2em}
 .portraitbox{display:flex;gap:.8em;align-items:center}
@@ -200,7 +202,7 @@ body.touch .prep .passives .tiny{display:none}
 .card.level.selected{border-color:#ffb347;box-shadow:0 0 24px rgba(255,179,71,.3)}
 .cta{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:.2em;font:inherit;color:#0b0d14;background:linear-gradient(90deg,#ffd166,#ffb347);border:0;border-radius:10px;padding:.8em 1.2em;cursor:pointer;text-align:left;box-shadow:0 0 26px rgba(255,179,71,.35);transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
 .cta .l{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.35em;letter-spacing:.05em}
-.cta .d{font-size:.8em;opacity:.8}
+.cta .d{font-size:max(12px,.8em);opacity:.8}
 .cta::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:sheen 3s 1s infinite}
 @keyframes sheen{0%{left:-60%}40%,100%{left:120%}}
 .cta:hover{transform:translateY(-2px);box-shadow:0 0 36px rgba(255,179,71,.55)}
@@ -231,9 +233,9 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 /* ---- hub : choix du niveau ---- */
 .lvlhint{margin:0 0 .5em}
 .lvlhead{display:flex;gap:.6em;align-items:baseline}
-.lvlnum{font-family:"Silkscreen",monospace;font-size:.75em;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lvlnum{font-family:"Silkscreen",monospace;font-size:max(11px,.75em);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
 .lvlname{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.35em;letter-spacing:.04em}
-.lvlstate{margin-left:auto;font-size:.8em;color:var(--muted);white-space:nowrap}
+.lvlstate{margin-left:auto;font-size:max(12px,.8em);color:var(--muted);white-space:nowrap}
 .card.level.selected .lvlstate{color:#ffb347;font-weight:700}
 .card.level.pick:not(.selected):hover .lvlstate{color:var(--accent)}
 .lvlmeta{display:flex;gap:.4em;flex-wrap:wrap;margin:.3em 0 .4em}
@@ -242,7 +244,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 /* ---- préparation : deux étapes ---- */
 .prepmods{display:flex;flex-wrap:wrap;gap:.4em;margin:.4em 0}
 .chip{display:inline-block;padding:.3em .7em;border-radius:8px;border:1px solid var(--line);font-size:.9em;line-height:1.3}
-.chip b{margin-right:.4em;letter-spacing:.05em;text-transform:uppercase;font-size:.8em}
+.chip b{margin-right:.4em;letter-spacing:.05em;text-transform:uppercase;font-size:max(11px,.8em)}
 .chip.good{border-color:rgba(127,255,154,.5);color:#7fff9a}
 .chip.bad{border-color:rgba(255,94,122,.5);color:#ff5e7a}
 .prepdetails{margin:.3em 0 .6em}.prepdetails summary{cursor:pointer;color:var(--accent)}
@@ -253,11 +255,11 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 .stepnum{display:inline-flex;width:1.7em;height:1.7em;border-radius:50%;background:var(--accent);color:#0b0d14;align-items:center;justify-content:center;font-weight:700;font-family:"Silkscreen",monospace;font-size:.9em}
 .prepstep.skill .stepnum{background:#c9a3ff}
 .prepstep.pairstep{border-left-color:#7fff9a}.prepstep.pairstep h3{color:#7fff9a}.prepstep.pairstep .stepnum{background:#7fff9a}
-.pairpick{min-width:16em;max-width:24em;align-self:stretch}.pairpick .prepmods{flex-direction:column;gap:.3em;margin:0}.pairpick .chip{font-size:.85em}
+.pairpick{min-width:16em;max-width:24em;align-self:stretch}.pairpick .prepmods{flex-direction:column;gap:.3em;margin:0}.pairpick .chip{font-size:max(12px,.85em)}
 .card.weapon{border-color:rgba(110,231,255,.35)}
 .card.skill{border-color:rgba(201,163,255,.4);background:rgba(20,12,34,.7)}
 .card.skill .tag.cd{color:#c9a3ff;border-color:rgba(201,163,255,.5);text-transform:none}
-.pickmark{margin-top:.4em;color:#ffb347;font-weight:700;font-size:.85em}
+.pickmark{margin-top:.4em;color:#ffb347;font-weight:700;font-size:max(12px,.85em)}
 .prepsummary{margin:.4em 0;font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.25em;letter-spacing:.03em;text-align:center}
 .prep .card{min-width:12em;max-width:17em;padding:.55em .8em;font-size:.95em}
 .prep .prepstep{padding:.2em .8em .5em;margin:.4em 0}.prep .prepstep h3{margin:.3em 0 .35em}
@@ -272,7 +274,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 .colnum.shop{background:var(--accent)}
 .coltitle{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.5em;letter-spacing:.06em;text-transform:uppercase;line-height:1}
 .hubcol.subject .coltitle{color:#7fff9a}.hubcol.center .coltitle{color:#ffb347}.hubcol.shopcol .coltitle{color:var(--accent)}
-.colsub{font-size:.8em;color:var(--muted)}
+.colsub{font-size:max(12px,.8em);color:var(--muted)}
 .hubcol.subject h3{color:#7fff9a}.hubcol.center h3{color:#ffb347}
 .card.char.selected{border-color:#7fff9a;box-shadow:0 0 20px rgba(127,255,154,.3)}
 .card.char.selected .lvlstate{color:#7fff9a;font-weight:700}
@@ -366,7 +368,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 08:17';</script>
+<script>window.WAY_BUILD = '2026-09-10 09:10';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -12847,36 +12849,39 @@ const Pets = {
   },
   /* mode « à l'appel » : jauge de présence ou de repos, avec la touche à presser */
   renderCall(ctx, p) {
-    const x = 16,
-      y = H - 108;
+    const V = Engine.view;
+    const x = -V.ox + 18,
+      y = -V.oy + V.h - 98; // même bord gauche et même largeur que le cartouche d'arme, juste au-dessus
     const m = PET_MODES.call;
     const pret = p.away && p.cdT <= 0;
     ctx.save();
     ctx.fillStyle = 'rgba(8,10,18,.72)';
-    UI.roundRect(ctx, x, y, 168, 30, 8);
+    UI.roundRect(ctx, x, y, 420, 30, 8);
     ctx.fill();
-    if (!Pets.icon(ctx, p, x + 18, y + 15, 24, p.away ? 0.35 : 1)) {
+    if (!Pets.icon(ctx, p, x + 22, y + 15, 24, p.away ? 0.35 : 1)) {
       ctx.globalAlpha = p.away ? 0.35 : 1;
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(x + 18, y + 15, 7, 0, TAU);
+      ctx.arc(x + 22, y + 15, 7, 0, TAU);
       ctx.fill();
       ctx.globalAlpha = 1;
     }
     ctx.fillStyle = pret ? '#7fff9a' : '#e8ecf7';
-    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(Pets.title(p.def), x + 36, y + 14);
-    ctx.fillStyle = '#8a93ad';
-    ctx.font = '10px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(Pets.title(p.def), x + 40, y + 15);
+    ctx.fillStyle = pret ? '#7fff9a' : '#9aa4c4';
+    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
     ctx.fillText(
       pret ? 'C : appeler' : p.away ? 'repos ' + Math.ceil(p.cdT) + ' s' : 'présent ' + Math.ceil(p.callT) + ' s',
-      x + 36,
-      y + 25
+      x + 175,
+      y + 15
     );
     const k = p.away ? (p.cdT > 0 ? 1 - p.cdT / m.cd : 1) : p.callT / m.dur;
+    ctx.fillStyle = '#12203a';
+    ctx.fillRect(x + 340, y + 12, 70, 6);
     ctx.fillStyle = pret ? '#7fff9a' : p.away ? '#6ee7ff' : '#ffd166';
-    ctx.fillRect(x + 36, y + 27, 120 * clamp(k, 0, 1), 2);
+    ctx.fillRect(x + 340, y + 12, 70 * clamp(k, 0, 1), 6);
     ctx.restore();
   },
   /* badge du compagnon, au-dessus de la ligne arme/compétence */
@@ -12885,25 +12890,33 @@ const Pets = {
     if (!p) return;
     if (p.mode === 'call') return Pets.renderCall(ctx, p);
     const nom = Pets.title(p.def);
-    const x = 16,
-      y = H - 108;
+    const V = Engine.view;
+    const x = -V.ox + 18,
+      y = -V.oy + V.h - 98; // même bord gauche et même largeur que le cartouche d'arme, juste au-dessus
     ctx.save();
     ctx.fillStyle = 'rgba(8,10,18,.72)';
-    UI.roundRect(ctx, x, y, 168, 30, 8);
+    UI.roundRect(ctx, x, y, 420, 30, 8);
     ctx.fill();
-    if (!Pets.icon(ctx, p, x + 18, y + 15, 24, p.down ? 0.4 : 1)) {
+    if (!Pets.icon(ctx, p, x + 22, y + 15, 24, p.down ? 0.4 : 1)) {
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(x + 18, y + 15, 7, 0, TAU);
+      ctx.arc(x + 22, y + 15, 7, 0, TAU);
       ctx.fill();
     }
     ctx.fillStyle = p.down ? '#8a93ad' : '#e8ecf7';
-    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(nom, x + 36, y + 14);
-    ctx.fillStyle = '#8a93ad';
-    ctx.font = '10px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(p.down ? 'sonné — ' + Math.ceil(p.downT) + ' s' : p.def.tag || '', x + 36, y + 25);
+    ctx.fillText(nom, x + 40, y + 15);
+    ctx.fillStyle = '#9aa4c4';
+    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(p.down ? 'sonné — ' + Math.ceil(p.downT) + ' s' : p.def.tag || '', x + 175, y + 15);
+    /* la vie d'un compagnon qui en a : dans le badge, plus seulement au-dessus de sa tête */
+    if (p.maxHp) {
+      ctx.fillStyle = '#12203a';
+      ctx.fillRect(x + 340, y + 12, 70, 6);
+      ctx.fillStyle = p.down ? '#8a93ad' : '#7fff9a';
+      ctx.fillRect(x + 340, y + 12, 70 * clamp(p.hp / p.maxHp, 0, 1), 6);
+    }
     ctx.restore();
   },
 };
@@ -17371,9 +17384,10 @@ const Challenge = (() => {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    const V = Engine.view;
     const w = 340,
-      x = W / 2 - w / 2,
-      y = 52;
+      x = -V.ox + V.w / 2 - w / 2,
+      y = -V.oy + 52;
     ctx.fillStyle = 'rgba(8,10,18,.75)';
     UI.roundRect(ctx, x, y, w, 30, 8);
     ctx.fill();
@@ -17382,7 +17396,11 @@ const Challenge = (() => {
     ctx.stroke();
     ctx.fillStyle = c.def.color;
     ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(`${c.def.name.toUpperCase()}${c.done ? ' — ' + (room.challengeOk ? 'réussi' : 'terminé') : ' · ' + c.hud}`, W / 2, y + 15);
+    ctx.fillText(
+      `${c.def.name.toUpperCase()}${c.done ? ' — ' + (room.challengeOk ? 'réussi' : 'terminé') : ' · ' + c.hud}`,
+      x + w / 2,
+      y + 15
+    );
     ctx.restore();
   }
   function dangerAt(x, y, room) {
@@ -17892,7 +17910,6 @@ const Tempo = {
         life: 0.7,
         size: 3,
       });
-      UI.banner('SÉRIE ×' + tp.combo, Tempo.COLOR);
       AudioEngine.tempoTick({ intensity: 1 });
       if (tp.combo >= 10) Music.tapeStop();
     }
@@ -18166,11 +18183,11 @@ const Tempo = {
         spd = n > 8 ? 14 : 22,
         gap = 10;
       const w = n * spd + (n / 4 - 1) * gap;
-      const x0 = W / 2 - w / 2,
-        yb = 70;
+      const V = Engine.view;
+      const x0 = -V.ox + V.w / 2 - w / 2,
+        yb = -V.oy + 70;
       ctx.fillStyle = 'rgba(8,10,18,.7)';
-      ctx.fillRect(x0 - 12, yb - 14, w + 24, tp.combo > 0 ? 46 : 28);
-      if (tp.combo > 0 && tp.combo < Tempo.MIN_STREAK) Tempo.renderStreak(ctx, W / 2, yb + 22, tp);
+      ctx.fillRect(x0 - 12, yb - 14, w + 24, 28);
       for (let i = 0; i < n; i++) {
         const x = x0 + i * spd + Math.floor(i / 4) * gap + spd / 2;
         const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? '#ff3b5c' : '#7fff9a';
@@ -18184,43 +18201,33 @@ const Tempo = {
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = '#fff';
       ctx.fillRect(x0 + pp.p * spd + Math.floor(pp.p / 4) * gap - 1, yb - 11, 2, 22);
-      if (tp.combo >= Tempo.MIN_STREAK) {
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = Tempo.COLOR;
-        ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
-        ctx.fillText(`TEMPO ×${tp.combo}`, W / 2, yb + 22);
-      }
       ctx.restore();
       return;
     }
-    const cx = W / 2,
-      y = 66,
-      sp = 30; // sous le cartouche « Salle 7/9 » du HUD
-    ctx.fillStyle = 'rgba(8,10,18,.7)';
-    ctx.fillRect(cx - 88, y - 14, 176, tp.combo > 0 ? 46 : 28);
-    if (tp.combo > 0 && tp.combo < Tempo.MIN_STREAK) Tempo.renderStreak(ctx, cx, y + 22, tp);
+    /* le métronome : quatre disques de 12 px, le temps fort plus gros, sans boîte opaque — c'est le cœur du jeu,
+       pas un détail. Le compteur de série, lui, est près du joueur (renderPlayer) et non ici. */
+    const V = Engine.view;
+    const cx = -V.ox + V.w / 2,
+      y = -V.oy + 66,
+      sp = 34; // sous le cartouche « Salle 7/9 » du HUD
     for (let i = 0; i < 4; i++) {
       const x = cx - 1.5 * sp + i * sp;
       const on = i === bib && tp.phase !== 'wait';
-      ctx.globalAlpha = on ? 1 : 0.35;
+      const rr = (i === 0 ? 7 : 6) + (on ? (1 - ph) * 4 : 0);
+      ctx.globalAlpha = on ? 1 : 0.4;
       ctx.fillStyle = i === 0 ? Tempo.COLOR : '#e8ecf7';
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = on ? 14 : 0;
       ctx.beginPath();
-      ctx.arc(x, y, on ? 6 + (1 - ph) * 4 : 4, 0, TAU);
+      ctx.arc(x, y, rr, 0, TAU);
       ctx.fill();
     }
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = '#fff';
-    ctx.fillRect(cx - 1.5 * sp + (bib + ph) * sp - 1, y - 11, 2, 22);
-    if (tp.combo >= Tempo.MIN_STREAK) {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = Tempo.COLOR;
-      ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
-      ctx.fillText(`TEMPO ×${tp.combo}`, cx, y + 22);
-    }
+    ctx.fillRect(cx - 1.5 * sp + (bib + ph) * sp - 1, y - 12, 2, 24);
     /* pièges : avertissement puis mise en place, sous la barre de mesure (jamais en bandeau, pour ne pas couvrir « Vague N ») */
-    const ty = y + (tp.combo > 0 ? 40 : 24);
+    const ty = y + 26;
     if (tp.pendingGroup != null) {
       const kk = Math.max(0, 1 - ph * 2);
       ctx.textAlign = 'center';
@@ -18243,15 +18250,15 @@ const Tempo = {
       ctx.fillText('Piège en place : ' + tp.lastName, cx, ty);
       ctx.globalAlpha = 1;
     }
-    if (Beat.info.internal) {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#9aa4c4';
-      ctx.font = '10px "Segoe UI", system-ui, sans-serif';
-      ctx.globalAlpha = 0.8;
-      ctx.fillText('métronome interne', cx, y + (tp.combo > 0 ? 38 : 24));
-    }
     ctx.restore();
+  },
+  /* près du joueur, en coordonnées du monde (appelé par Room.render) : la série qui se construit, quatre pastilles
+     sous ses pieds ; dès quatre notes, c'est le chiffre flottant « TEMPO ×n » qui prend le relais */
+  renderPlayer(ctx, room) {
+    const tp = room.tempo;
+    const pl = G.player;
+    if (!tp || !tp.started || !pl || tp.combo <= 0 || tp.combo >= Tempo.MIN_STREAK) return;
+    Tempo.renderStreak(ctx, pl.x, pl.y + Sprites.SOL + 10, tp);
   },
 };
 
@@ -18523,8 +18530,7 @@ const Room = {
     const b = new Boss(def, x || ROOM_X + ROOM_W * 0.72, y || ROOM_Y + ROOM_H / 2, { revenge });
     G.enemies.push(b);
     G.room.boss = b;
-    UI.banner(b.name, '#ff3b5c', revenge ? 'Il a chargé vos données de consignation.' : def.subtitle || '');
-    AudioEngine.bossRoar({});
+    AudioEngine.bossRoar({}); // pas de bandeau : la barre de vie en haut de l'écran porte déjà son nom
   },
   onBossDefeated(b) {
     G.room.bossDead = true;
@@ -18806,6 +18812,7 @@ const Room = {
     if (r.challenge) Challenge.renderFloor(ctx, r);
     if (r.tempo) Tempo.renderFloor(ctx, r);
     Tempo.renderScore(ctx, r); // partition au sol : les tuiles qui vont être frappées s'annoncent, dans toutes les salles
+    if (r.tempo) Tempo.renderPlayer(ctx, r); // la série qui se construit, sous les pieds du joueur
     for (const o of r.obstacles) if (!o.dyn && !o.terrain) Sprites.drawBlock(ctx, o);
     if (r.modular.length) Modular.render(ctx, r);
     /* porte */
@@ -19449,7 +19456,7 @@ const UI = (() => {
     const hint = Input.touch.active
       ? 'Joystick à gauche · TIR / COMP. / E à droite'
       : 'ZQSD · souris · clic gauche : attaque · clic droit / Espace : compétence · E : interagir · Échap : pause';
-    return `<div class="menufoot"><div class="hint">${hint}</div><div class="save">Sauvegarde : ${p.runs} run(s) · ${p.wins} case(s) 9 cochée(s) · ◈ ${fmt(p.coins)}</div></div>`;
+    return `<div class="menufoot"><div class="hint">${hint}</div><div class="save">${p.runs} ${p.runs > 1 ? 'parties' : 'partie'} · ${p.wins} ${p.wins > 1 ? 'victoires' : 'victoire'} · ◈ ${fmt(p.coins)}</div></div>`;
   }
 
   /* Écran-titre : le titre, la musique, rien d'autre. Un clic (ou une touche) fait basculer sur le menu au temps fort suivant. */
@@ -19467,7 +19474,7 @@ const UI = (() => {
     const p = Meta.profile;
     s.innerHTML = `
       <div class="menuscreen splash">
-        <div class="stamp"><span>Way</span><span class="sep">·</span><span>Roguelite à salles</span><span class="sep">·</span><span>Phase 2</span></div>
+        <div class="stamp"><span>Way</span><span class="sep">·</span><span>Roguelite à salles</span></div>
         <div class="titlebox">
           <div class="titlepulse">
             <h1 class="bigtitle" data-text="WAY"><span class="accent">W</span><span>AY</span></h1>
@@ -19481,6 +19488,7 @@ const UI = (() => {
     show('menu');
     Music.play('menu');
     if (!Attract.running) Attract.start();
+    Attract.freeze(false);
   }
   /* Passage écran-titre → menu : flash et souffle sur le temps fort, le titre monte et rétrécit. */
   function enterMenu() {
@@ -19506,7 +19514,7 @@ const UI = (() => {
     const p = Meta.profile;
     s.innerHTML = `
       <div class="menuscreen main">
-        <div class="stamp"><span>Way</span><span class="sep">·</span><span>Roguelite à salles</span><span class="sep">·</span><span>Phase 2</span></div>
+        <div class="stamp"><span>Way</span><span class="sep">·</span><span>Roguelite à salles</span></div>
         <div class="titlebox">
           <div class="titlepulse">
             <h1 class="bigtitle" data-text="WAY"><span class="accent">W</span><span>AY</span></h1>
@@ -19569,6 +19577,7 @@ const UI = (() => {
     show('menu');
     Music.play('menu');
     if (!Attract.running) Attract.start();
+    Attract.freeze(false);
     setTimeout(() => {
       const b = s.querySelector('#btn-normal');
       if (b && !Input.touch.active) b.focus({ preventScroll: true });
@@ -19729,12 +19738,11 @@ const UI = (() => {
           <div class="colhead"><span class="colnum">1</span><div><div class="coltitle">Personnage</div><div class="colsub">Qui tu envoies dans les salles</div></div></div>
           <div class="portraitbox"><div class="portrait" id="hub-portrait"></div><div><div class="subjname">${esc(cur.name)}</div><div class="muted small">${esc(cur.desc)}</div></div></div>
           <div class="trait"><b>${esc(cur.trait.name)}</b><br><span class="muted small">${esc(cur.trait.desc)}</span></div>
-          <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck} · ${meta} calibration(s)</div>
+          <div class="stats muted tiny">PV ${cur.stats.maxHp} · vitesse ${cur.stats.speed} · chance ${cur.stats.luck}</div>
           <div class="muted tiny">Compagnon : ${p.pet && Content.pet(p.pet) && (p.petMode || 'always') !== 'none' ? esc(Content.pet(p.pet).duoName || Content.pet(p.pet).name) + ' · ' + esc(PET_MODES[p.petMode || 'always'].name.toLowerCase()) : 'aucun'}${(() => {
             const pr = p.pet ? Content.pairOf(p.character, p.pet) : null;
             return pr && (p.petMode || 'always') !== 'none' ? ' · <span class="good">' + esc(pr.name) + '</span>' : '';
           })()}</div>
-          <div class="muted tiny">Tenue : aucune. « Vous êtes venu comme ça ? » Elle viendra avec les greffes : 3 pour des vêtements, 6 pour l'armure, 9 pour le casque.</div>
           <h3>Changer de personnage</h3>
           <div class="cards vertical" id="hub-chars"></div>
         </section>
@@ -19759,7 +19767,7 @@ const UI = (() => {
         </section>
         <section class="hubcol shopcol">
           <div class="colhead"><span class="colnum shop">◈</span><div><div class="coltitle">Boutique</div><div class="colsub">Dépense tes crédits entre deux runs : bonus permanents</div></div></div>
-          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${{ passifs: 'Améliorations', armes: 'Armes', animaux: 'Compagnons', sujets: 'Personnages', fragments: 'Fragments' }[t] || t}</button>`).join('')}</nav>
+          <nav class="tabs">${tabs.map(t => `<button class="tab ${hubTab === t ? 'on' : ''}" data-tab="${t}">${{ passifs: 'Améliorations', armes: 'Armes', animaux: 'Compagnons', sujets: 'Compétences', fragments: 'Fragments' }[t] || t}</button>`).join('')}</nav>
           <div id="hub-shop" class="shop"></div>
         </section>
       </div>`;
@@ -19821,6 +19829,7 @@ const UI = (() => {
     renderShop(s.querySelector('#hub-shop'));
     show('hub');
     if (!Attract.running) Attract.start();
+    Attract.freeze(true); // figée derrière le hub : un tir ou un piège ne passe plus à travers les cartes
   }
   function renderShop(box) {
     const p = Meta.profile;
@@ -19942,7 +19951,9 @@ const UI = (() => {
         box.appendChild(card);
       }
     } else if (hubTab === 'sujets') {
-      box.appendChild(el('div', 'muted small', "Les compétences actives sont proposées deux par deux à l'entrée du palier. Catalogue :"));
+      box.appendChild(
+        el('div', 'muted small', "Trois compétences sont tirées au sort à l'entrée du palier, tu en choisis une. Le catalogue :")
+      );
       for (const sk of Content.skills())
         box.appendChild(el('div', 'card', `<div class="cardtitle">${esc(sk.name)}</div><div class="muted small">${esc(sk.desc)}</div>`));
     } else if (hubTab === 'fragments') {
@@ -20164,7 +20175,7 @@ const UI = (() => {
       <div class="muted small">${esc(pl.weapon.name)} · ${esc(pl.skill.name)} · niveau ${G.run.level}</div>
       <div class="upglist">${G.run.upgrades.map(u => `<span class="pill" style="--rc:${RARITY[u.def.rarity].color}">${esc(u.def.name)}${u.stacks > 1 ? ' ×' + u.stacks : ''}</span>`).join('') || '<span class="muted tiny">aucune greffe</span>'}</div>
       <div class="sliders">
-        <label>Master <input type="range" min="0" max="1" step="0.05" value="${v.master}" data-v="master"></label>
+        <label>Général <input type="range" min="0" max="1" step="0.05" value="${v.master}" data-v="master"></label>
         <label>Effets <input type="range" min="0" max="1" step="0.05" value="${v.sfx}" data-v="sfx"></label>
         <label>Musique <input type="range" min="0" max="1" step="0.05" value="${v.music}" data-v="music"></label>
         ${Input.touch.active ? `<label>Tir automatique (tactile) <input type="checkbox" id="pause-autofire" ${Input.touch.autoFire ? 'checked' : ''}></label>` : ''}
@@ -20214,27 +20225,36 @@ const UI = (() => {
   /* ---------- Fin de run ---------- */
   function showEnd({ victory, kept, pending, validated, total, bonus }) {
     const s = screens.end;
-    const st = G.run.stats;
+    const r = G.run;
+    const st = r.stats;
+    /* « Rejouer » relance la même équipe, la même arme et la même compétence sur le même palier, sans passer par le hub */
+    const encore = { character: r.char.id, biome: r.biome.id, weapon: r.weapon, skill: r.skill };
+    const equipe = r.char.name + (G.pet ? ' + ' + G.pet.name : '');
     s.innerHTML = `<div class="panel center end">
       <div class="eyebrow">${victory ? 'Neuf salles, une sortie' : 'Fin de la partie'}</div>
       <h2 class="${victory ? 'good' : 'bad'}">${victory ? STR.victory : STR.dead}</h2>
       <p class="muted">${esc(victory ? "Le palier suivant t'attend au camp de base." : Content.pick('death'))}</p>
       <div class="grid2">
-        <div>Crédits consignés (salle 4)</div><div>◈ ${fmt(validated)}</div>
-        <div>${victory ? 'Crédits en attente validés' : `Crédits en attente conservés (${Math.round(clamp(0.1 * (st.deathRoom - G.run.lastCheckpoint), 0, 1) * 100)} % de ${fmt(pending)})`}</div><div>◈ ${fmt(kept)}</div>
+        <div>Crédits en banque (salle 4)</div><div>◈ ${fmt(validated)}</div>
+        <div>${victory ? 'Crédits en attente validés' : `Butin ramené — prime de mort + une part des ${fmt(pending)} crédits en attente`}</div><div>◈ ${fmt(kept)}</div>
         ${bonus ? `<div>Prime de fin de palier</div><div>◈ ${fmt(bonus)}</div>` : ''}
         <div><b>Total</b></div><div><b>◈ ${fmt(total)}</b></div>
         <div>Niveau atteint</div><div>${st.levelReached}</div>
         <div>Ennemis neutralisés</div><div>${st.kills}</div>
-        <div>Dégâts subis / coups</div><div>${fmt(st.damageTaken)} / ${st.hitsTaken}</div>
-        <div>Salles</div><div class="small">${st.roomTimes.map(r => `S${r.room} ${r.time}s ${r.hits} coup(s) q${Math.round(r.score * 100)}`).join(' · ') || '—'}</div>
+        <div>Dégâts subis / coups</div><div>${fmt(Math.min(st.damageTaken, 9999))} / ${st.hitsTaken}</div>
       </div>
-      <div class="row"><button class="btn primary big" id="end-hub">${STR.toHub}</button><button class="btn ghost" id="end-report">Copier le rapport</button></div></div>`;
+      <div class="row"><button class="btn primary big" id="end-again">Rejouer — ${esc(equipe)}, ${esc(r.biome.name)}</button><button class="btn ghost" id="end-hub">${STR.toHub}</button><button class="btn ghost" id="end-report">Copier le rapport</button></div></div>`;
     s.querySelector('#end-report').onclick = () =>
       Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));
     s.querySelector('#end-hub').onclick = () => {
       hideAll();
       Run.toHub();
+    };
+    s.querySelector('#end-again').onclick = () => {
+      hideAll();
+      G.paused = false;
+      Run.start(encore);
+      AudioEngine.uiConfirm({});
     };
     show('end');
     if (G.autoplay) Debug.autoEnd();
@@ -20298,109 +20318,133 @@ const UI = (() => {
   }
 
   /* ---------- HUD ---------- */
+  /* Tout le HUD est ancré sur Engine.view (la vue réelle, plus large ou plus haute que 1280 × 720 selon l'écran),
+     jamais sur W et H : sinon, sur un téléphone, la barre de PV flotte à 90 px du bord et l'arme se retrouve au
+     milieu du terrain. Sonde de mise en page : quand G.debug.hudProbe est vrai, chaque panneau et chaque texte
+     sont notés — interface.js vérifie qu'un texte tient dans un panneau et que tout tient dans la vue. */
+  const hudProbe = { rects: [], texts: [], flags: {} };
+  const HUD_FONT = '"Segoe UI", system-ui, sans-serif';
+  function panel(ctx, x, y, w, h, r = 8, fill = 'rgba(8,10,18,.75)') {
+    ctx.fillStyle = fill;
+    roundRect(ctx, x, y, w, h, r);
+    ctx.fill();
+    if (G.debug.hudProbe) hudProbe.rects.push({ x, y, w, h });
+  }
+  function label(ctx, t, x, y, o = {}) {
+    ctx.font = `${o.weight ? o.weight + ' ' : ''}${o.size || 12}px ${HUD_FONT}`;
+    ctx.fillStyle = o.color || '#e8ecf7';
+    ctx.textAlign = o.align || 'left';
+    ctx.fillText(t, x, y);
+    if (G.debug.hudProbe) {
+      const w = ctx.measureText(t).width;
+      const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+      hudProbe.texts.push({ t, x: x0, y, w, h: o.size || 12, free: !!o.free });
+    }
+  }
   function renderHud(ctx) {
     const pl = G.player,
       r = G.run,
       rm = G.room;
     if (!pl || !r || !rm || !pl.weapon || !pl.skill) return;
+    const V = Engine.view;
+    const L = -V.ox,
+      T = -V.oy,
+      R = -V.ox + V.w,
+      B = -V.oy + V.h,
+      CX = L + V.w / 2;
+    if (G.debug.hudProbe) {
+      hudProbe.rects.length = 0;
+      hudProbe.texts.length = 0;
+      hudProbe.flags = {};
+    }
     ctx.save();
     ctx.textBaseline = 'middle';
-    /* PV */
-    const bx = 24,
-      by = 14,
+    /* PV bas : le danger se lit en périphérie, sans quitter le personnage des yeux */
+    const hpk = clamp(pl.hp / pl.stats.maxHp, 0, 1);
+    if (hpk < 0.3 && pl.hp > 0) {
+      const k = 1 - hpk / 0.3;
+      const g = ctx.createRadialGradient(CX, T + V.h / 2, Math.min(V.w, V.h) * 0.35, CX, T + V.h / 2, Math.max(V.w, V.h) * 0.72);
+      g.addColorStop(0, 'rgba(255,40,60,0)');
+      g.addColorStop(1, `rgba(255,40,60,${(0.08 + 0.2 * k).toFixed(3)})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(L, T, V.w, V.h);
+      hudProbe.flags.vignette = true;
+    }
+    /* PV + XP + niveau, dans un seul panneau */
+    const bx = L + 24,
+      by = T + 14,
       bw = 260,
       bh = 18;
-    ctx.fillStyle = 'rgba(8,10,18,.75)';
-    roundRect(ctx, bx - 6, by - 6, bw + 12, bh + 30, 8);
-    ctx.fill();
+    panel(ctx, bx - 6, by - 6, bw + 12, bh + 40);
     ctx.fillStyle = '#2b1a24';
     ctx.fillRect(bx, by, bw, bh);
-    const hpk = clamp(pl.hp / pl.stats.maxHp, 0, 1);
-    ctx.fillStyle = hpk > 0.5 ? '#ff5e7a' : hpk > 0.25 ? '#ff8c42' : '#ff3b3b';
+    /* vert tant que ça va, doré quand ça baisse, rouge — la couleur d'alerte — seulement sous 30 %, et il pulse */
+    const hpCol = hpk > 0.6 ? '#7fff9a' : hpk > 0.3 ? '#ffd166' : '#ff3b3b';
+    ctx.globalAlpha = hpk <= 0.3 ? 0.7 + 0.3 * Math.sin(Time.now * 6) : 1;
+    ctx.fillStyle = hpCol;
     ctx.fillRect(bx, by, bw * hpk, bh);
+    ctx.globalAlpha = 1;
+    hudProbe.flags.hpColor = hpCol;
     if (pl.shield > 0) {
       ctx.fillStyle = 'rgba(140,255,255,.7)';
-      ctx.fillRect(bx, by + bh - 5, bw * clamp(pl.shield / pl.stats.maxHp, 0, 1), 5);
+      ctx.fillRect(bx, by - 4, bw * clamp(pl.shield / pl.stats.maxHp, 0, 1), 3);
     }
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(
+    label(
+      ctx,
       `${STR.hp} ${Math.ceil(pl.hp)} / ${pl.stats.maxHp}${pl.shield > 0 ? '  +' + Math.ceil(pl.shield) : ''}`,
       bx + 6,
-      by + bh / 2
+      by + bh / 2,
+      {
+        weight: 'bold',
+        color: '#fff',
+      }
     );
-    /* XP */
     ctx.fillStyle = '#12203a';
     ctx.fillRect(bx, by + bh + 4, bw, 8);
     ctx.fillStyle = '#6ee7ff';
     ctx.fillRect(bx, by + bh + 4, bw * clamp(r.xp / r.xpNext, 0, 1), 8);
-    ctx.fillStyle = '#9aa4c4';
-    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(`${STR.level} ${r.level}`, bx + bw + 8, by + bh + 8);
-    /* salle + temps + qualité */
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(8,10,18,.75)';
-    roundRect(ctx, W / 2 - 200, 8, 400, 36, 8);
-    ctx.fill();
-    ctx.fillStyle = '#e8ecf7';
-    ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(rm.label, W / 2, 20);
-    const q = Run.qualityAvg();
-    const qs = Room.score();
-    const preview =
-      Meta.chestPreview() && rm.index < 4
-        ? ' · coffre : ' + Progression.chestOptions(Run.qualityAvg(), r.scores.some(s => s.died) || rm.died).label
-        : '';
-    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
-    ctx.fillStyle = '#9aa4c4';
-    ctx.fillText(
-      `${Math.floor(rm.time)} s · ${STR.quality} run ${Math.round(q * 100)} % · salle ${Math.round(qs * 100)} % · ${rm.hits} coup(s)${rm.combo > 1 ? ' · combo ' + rm.combo : ''}${preview}`,
-      W / 2,
-      36
-    );
-    /* jauge qualité */
-    ctx.fillStyle = '#1a2036';
-    ctx.fillRect(W / 2 - 180, 42, 360, 3);
-    ctx.fillStyle = q >= 0.999 ? '#ffb347' : q >= 0.8 ? '#b46bff' : q >= 0.5 ? '#4fb3ff' : '#cfd6e6';
-    ctx.fillRect(W / 2 - 180, 42, 360 * q, 3);
-    /* crédits */
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(8,10,18,.75)';
-    roundRect(ctx, W - 250, 8, 226, 36, 8);
-    ctx.fill();
-    ctx.fillStyle = '#ffd166';
-    ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(`◈ ${fmt(r.coinsValidated)} consignés`, W - 34, 20);
-    ctx.fillStyle = '#9aa4c4';
-    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(
-      `+ ${fmt(r.coinsPending)} ${STR.pending} (${Math.round(clamp(0.1 * (rm.index - r.lastCheckpoint), 0, 1) * 100)} % si perte)`,
-      W - 34,
-      36
-    );
-    /* arme + compétence */
-    const sy = H - 40;
-    ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(8,10,18,.75)';
-    roundRect(ctx, 18, sy - 22, 420, 44, 8);
-    ctx.fill();
+    label(ctx, `${STR.level} ${r.level}`, bx, by + bh + 22, { size: 11, color: '#9aa4c4' });
+    /* haut-centre : la salle et le temps — ou la barre du boss, au même endroit, là où le joueur regarde */
+    const boss = rm.boss;
+    if (boss && !boss.dead) {
+      const w2 = 480,
+        x2 = CX - w2 / 2,
+        y2 = T + 8;
+      panel(ctx, x2 - 8, y2, w2 + 16, 46, 8, 'rgba(8,10,18,.8)');
+      label(ctx, boss.name + ' — phase ' + (boss.phaseIdx + 1), CX, y2 + 11, {
+        align: 'center',
+        weight: 'bold',
+        size: 13,
+        color: '#ff3b5c',
+      });
+      ctx.fillStyle = '#2b1a24';
+      ctx.fillRect(x2, y2 + 22, w2, 12);
+      ctx.fillStyle = '#ff3b5c';
+      ctx.fillRect(x2, y2 + 22, w2 * clamp(boss.hp / boss.maxHp, 0, 1), 12);
+      if (boss.weakActive)
+        label(ctx, 'PRISE EXPOSÉE ×' + boss.weakMul, CX, y2 + 40, { align: 'center', weight: 'bold', size: 11, color: '#ffd166' });
+      hudProbe.flags.bossY = y2;
+    } else {
+      const t = `${rm.label} · ${Math.floor(rm.time)} s`;
+      ctx.font = `bold 14px ${HUD_FONT}`;
+      const w = ctx.measureText(t).width + 28; // la boîte suit le texte, jamais l'inverse
+      panel(ctx, CX - w / 2, T + 8, w, 26);
+      label(ctx, t, CX, T + 21, { align: 'center', weight: 'bold', size: 14 });
+    }
+    /* arme + compétence (bas gauche) */
+    const sy = B - 40,
+      wx = L + 18;
+    panel(ctx, wx, sy - 22, 420, 44);
     ctx.fillStyle = WEAPON_COLORS[pl.weapon.family] || '#fff';
     ctx.beginPath();
-    ctx.arc(40, sy, 10, 0, TAU);
+    ctx.arc(wx + 22, sy, 10, 0, TAU);
     ctx.fill();
-    ctx.fillStyle = pl.trialWeapon ? '#ffd166' : '#e8ecf7';
-    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(pl.weapon.name + (pl.trialWeapon ? ' (essai)' : ''), 58, sy - 7);
-    ctx.fillStyle = '#9aa4c4';
-    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(
-      `${Math.round(pl.weapon.damage * pl.stats.damage)} dmg · ${(pl.weapon.fireRate * pl.stats.fireRate).toFixed(1)}/s · crit ${Math.round(pl.stats.critChance * 100)} %`,
-      58,
-      sy + 9
-    );
-    /* compétence : cercle de cooldown */
-    const cx = 270,
+    label(ctx, pl.weapon.name + (pl.trialWeapon ? ' (essai)' : ''), wx + 40, sy, {
+      weight: 'bold',
+      size: 13,
+      color: pl.trialWeapon ? '#ffd166' : '#e8ecf7',
+    });
+    const cx = wx + 252,
       cd = Skills.cooldownOf(pl);
     const ready = pl.skillCharges > 0;
     const k = ready ? 1 : 1 - clamp(pl.skillCd / Math.max(0.01, cd), 0, 1);
@@ -20413,97 +20457,42 @@ const UI = (() => {
     ctx.moveTo(cx, sy);
     ctx.arc(cx, sy, 14, -Math.PI / 2, -Math.PI / 2 + TAU * k);
     ctx.fill();
-    ctx.fillStyle = '#e8ecf7';
-    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(pl.skill.name + (pl.skillMaxCharges > 1 ? ` ×${pl.skillCharges}` : ''), cx + 22, sy - 7);
-    ctx.fillStyle = '#9aa4c4';
-    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(
-      ready ? STR.ready + (Input.touch.active ? ' · bouton COMP.' : ' · clic droit / Espace / Maj') : `${pl.skillCd.toFixed(1)} s`,
-      cx + 22,
-      sy + 9
-    );
-    /* greffes */
-    ctx.textAlign = 'right';
-    let gx = W - 24;
-    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
-    for (const u of r.upgrades.slice(-8).reverse()) {
-      const t = u.def.name + (u.stacks > 1 ? ' ×' + u.stacks : '');
-      const w = ctx.measureText(t).width + 12;
-      ctx.fillStyle = 'rgba(8,10,18,.7)';
-      roundRect(ctx, gx - w, sy - 10, w, 20, 6);
-      ctx.fill();
-      ctx.strokeStyle = RARITY[u.def.rarity].color;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = RARITY[u.def.rarity].color;
-      ctx.fillText(t, gx - 6, sy);
-      gx -= w + 6;
-      if (gx < 520) break;
-    }
-    /* boss */
-    const boss = rm.boss;
-    if (boss && !boss.dead) {
-      const bw2 = 520,
-        bx2 = W / 2 - bw2 / 2,
-        by2 = H - 88;
-      ctx.fillStyle = 'rgba(8,10,18,.8)';
-      roundRect(ctx, bx2 - 8, by2 - 22, bw2 + 16, 44, 8);
-      ctx.fill();
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#ff3b5c';
-      ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
-      ctx.fillText(boss.name + ' — phase ' + (boss.phaseIdx + 1), W / 2, by2 - 10);
-      ctx.fillStyle = '#2b1a24';
-      ctx.fillRect(bx2, by2 + 2, bw2, 12);
-      ctx.fillStyle = '#ff3b5c';
-      ctx.fillRect(bx2, by2 + 2, bw2 * clamp(boss.hp / boss.maxHp, 0, 1), 12);
-      if (boss.weakActive) {
-        ctx.fillStyle = '#ffd166';
-        ctx.font = 'bold 11px "Segoe UI", system-ui, sans-serif';
-        ctx.fillText('PRISE EXPOSÉE ×' + boss.weakMul, W / 2, by2 + 8);
-      }
-    }
-    /* bannières */
-    /* les bandeaux s'empilent : deux annonces simultanées (vague, piège) ne se chevauchent plus */
+    label(ctx, pl.skill.name + (pl.skillMaxCharges > 1 ? ` ×${pl.skillCharges}` : ''), cx + 22, sy - 7, { weight: 'bold', size: 13 });
+    /* le rappel des touches n'est utile que le temps d'apprendre : les trois premières salles */
+    const aide = rm.index <= 3 ? (Input.touch.active ? ' · bouton COMP.' : ' · clic droit ou Espace') : '';
+    label(ctx, ready ? STR.ready + aide : `${pl.skillCd.toFixed(1)} s`, cx + 22, sy + 9, { size: 11, color: '#9aa4c4' });
+    /* bannières : le tiers supérieur, au-dessus de la zone de combat, jamais entre le joueur et les ennemis */
     banners.forEach((b, bi) => {
-      const k = b.t / b.life;
-      const dy = bi * 62;
-      const a = k < 0.15 ? k / 0.15 : k > 0.75 ? (1 - k) / 0.25 : 1;
+      const kk = b.t / b.life;
+      const y0 = T + V.h * 0.18 + bi * 62;
+      const a = kk < 0.15 ? kk / 0.15 : kk > 0.75 ? (1 - kk) / 0.25 : 1;
       ctx.globalAlpha = a;
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 30px "Segoe UI", system-ui, sans-serif';
       ctx.shadowColor = b.color;
       ctx.shadowBlur = 24;
-      ctx.fillStyle = b.color;
-      ctx.fillText(b.text, W / 2, dy + H * 0.3 - (1 - a) * 10);
-      if (b.sub) {
-        ctx.font = '14px "Segoe UI", system-ui, sans-serif';
-        ctx.fillStyle = '#e8ecf7';
-        ctx.fillText(b.sub, W / 2, dy + H * 0.3 + 28);
-      }
+      label(ctx, b.text, CX, y0 - (1 - a) * 10, { align: 'center', weight: 'bold', size: 30, color: b.color, free: true });
+      if (b.sub) label(ctx, b.sub, CX, y0 + 28, { align: 'center', size: 14, free: true });
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
     });
     ctx.restore();
   }
+  /* toasts : en bas à droite, empilés vers le haut — au-dessus des boutons tactiles sur un téléphone */
   function renderToasts(ctx) {
+    const V = Engine.view;
+    const R = -V.ox + V.w - 24,
+      B = -V.oy + V.h;
     ctx.save();
-    ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '13px "Segoe UI", system-ui, sans-serif';
+    ctx.font = `13px ${HUD_FONT}`;
     toasts.forEach((t, i) => {
       const a = Math.min(1, t.t * 3, (t.life - t.t) * 2);
       ctx.globalAlpha = clamp(a, 0, 1);
       const w = ctx.measureText(t.text).width + 24;
-      const y = H - 110 - i * 30;
-      ctx.fillStyle = 'rgba(8,10,18,.85)';
-      roundRect(ctx, W / 2 - w / 2, y - 12, w, 24, 8);
-      ctx.fill();
+      const y = B - (Input.touch.active ? 270 : 70) - i * 30; // au-dessus des boutons tactiles (tir, compétence, action)
+      panel(ctx, R - w, y - 12, w, 24, 8, 'rgba(8,10,18,.85)');
       ctx.strokeStyle = '#6ee7ff88';
       ctx.stroke();
-      ctx.fillStyle = '#e8ecf7';
-      ctx.fillText(t.text, W / 2, y);
+      label(ctx, t.text, R - 12, y, { align: 'right', size: 13 });
     });
     ctx.restore();
   }
@@ -20662,6 +20651,7 @@ const UI = (() => {
     update,
     renderHud,
     renderToasts,
+    hudProbe,
     renderFade,
     renderBackdrop,
     state,
@@ -20850,6 +20840,7 @@ const Touch = (() => {
 
 'use strict';
 const Attract = (() => {
+  let frozen = false; // figée (derrière le hub) : rien ne bouge, l'image reste
   let running = false,
     spawnT = 0,
     weaponT = 0,
@@ -20993,8 +20984,11 @@ const Attract = (() => {
       Room.spawnAt({ enemy: def.id, count: 1, x: -1, y: -1, elite: VFX_RNG() < 0.15 });
     }
   }
+  function freeze(v) {
+    frozen = !!v;
+  }
   function update(dt) {
-    if (!running || !G.run || !G.run.attract) return;
+    if (!running || frozen || !G.run || !G.run.attract) return;
     spawnT -= dt;
     if (spawnT <= 0) {
       spawn();
@@ -21032,8 +21026,12 @@ const Attract = (() => {
     start,
     stop,
     update,
+    freeze,
     get running() {
       return running;
+    },
+    get frozen() {
+      return frozen;
     },
   };
 })();
@@ -21063,7 +21061,7 @@ const Meta = (() => {
     characters: [],
     skills: [],
     pets: [],
-    pet: null,
+    pet: 'pet_uno', // un profil neuf part avec le chien : le premier ami qui ouvre le jeu doit le voir
     petMode: 'always',
     lore: [],
     cleared: {},
