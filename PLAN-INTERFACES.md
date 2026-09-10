@@ -153,7 +153,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 **Taille** : 2 séances.
 **Bilan** : fait en une séance. Le camp pose ses trois questions dans une seule zone de défilement, avec la carte d'équipe entre les compagnons et les paliers (attelage, caractère, trois jauges, mode du compagnon à côté de ce qu'il pilote), la carte « Seul » à la taille des animaux, les paliers verrouillés à moitié largeur, les paires bonus ⇄ malus en puces sous le palier, et un bouton Partir qui récapitule l'équipe. La boutique est un écran à part avec sa pastille et des cartes qui ne montrent que le palier suivant ; les fragments sont sortis du camp vers une entrée « 04 Fragments » du menu principal (mon avis, à renverser d'un mot). Mesuré par `hub.js` (14 mesures) : ~230 mots en mode test, tout déverrouillé (857 avant), « Gabriel avec ses chats » en **deux** clics (sept interactions avant), le défilement gardé d'un clic à l'autre. Tests `acces`, `amis`, `duo`, `interface`, `interface_mobile`, `vocabulaire` mis à jour dans le même commit. Pas fait : le rafraîchissement partiel du HTML (le piège connu) — `showHub()` reconstruit toujours tout, mais restaure la position de défilement, ce qui suffit à l'œil ; les cartes personnage font 150 × 172 et non 160 × 200 pour que les trois questions tiennent sans défiler en 1280 × 720. CONTENT.md §47.
 
-## Chantier I-4 — La prépa qui montre
+## Chantier I-4 — La prépa qui montre ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : choisir une arme en la voyant, comparer huit armes d'un coup d'œil, savoir que les compétences sont tirées au sort.
 
@@ -166,6 +166,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 **Fini quand** : chaque arme a une image et trois jauges ; un test `prepa.js` vérifie que le panneau de détail suit la sélection, que la mention du tirage est là, et que le bouton d'entrée porte toujours le récapitulatif.
 **Taille** : 1 séance.
+**Bilan** : fait en une séance. La planche d'icônes existe : 25 SVG de game-icons.net dans `assets/sprites/icons/` (28 Ko), passés par le même chemin que les accessoires de décor (rastérisés en pixel art à 24 px, teintés), servis par `Sprites.icon(id, taille)` — armes en cyan, compétences en mauve, les cinq catégories de greffes et quatre notions (coffre, vie, recharge, niveau) prêtes pour I-5 et I-7. Pas de PNG 512 × 512 assemblée au build : les SVG font le même poids et le chemin existait déjà. La prépa : cartes 190 × 150 avec l'icône et trois jauges, grille calée à gauche, un seul panneau de détail qui suit le survol et revient à l'arme choisie, « 3 tirées au sort sur 8 » dans le titre, cartes de compétence 300 × 110 avec l'icône, le ⇄ des paires en lignes (l'étape 0 fait moitié moins haut), MODE TEST en pied, récapitulatif dans l'en-tête et sur le bouton. Les chiffres se disent en mots (« 24 dégâts par coup · 2 coups par seconde · portée : à mi-salle · traverse tout »). Mesuré par `prepa.js` (10 mesures). Pas fait : le panneau de détail reste sous la grille d'armes sur téléphone aussi (pas déplacé au-dessus du bouton) — il suit l'arme, c'est là qu'on le cherche. CONTENT.md §48.
 
 ## Chantier I-5 — Le HUD refait
 

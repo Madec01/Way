@@ -1371,3 +1371,20 @@ Chiffres : le camp tient en **moins de 250 mots** (857 avant, 296 au premier jet
 
 Test : `hub.js` — 14 mesures (les trois questions, les mots, une seule zone de défilement, portraits et sprites, les verrouillés à moitié largeur sur un profil neuf, le texte de Partir, Gabriel + chats en deux clics, la carte d'équipe, Seul, le défilement gardé, l'écran boutique et sa pastille, un seul palier par carte, les fragments depuis le menu).
 
+## 48. Chantier I-4 — la prépa qui montre
+
+**La planche d'icônes** : 25 SVG de game-icons.net dans `assets/sprites/icons/` (28 Ko), chargés par le même chemin que les accessoires de décor (`PROP_DEFS` avec `d: 'icons'`, rastérisés à 24 px, teintés à la rastérisation). `Sprites.ICONS` dit quelle icône porte quelle notion ; `Sprites.icon(id, taille)` rend un canvas `.icon` prêt à poser dans un écran (null tant que la planche n'est pas chargée : un écran doit tenir sans).
+
+| Notion | Icône | Teinte |
+|---|---|---|
+| armes : Lame d'essai, Masse de pression, Arc tendeur, Pistolet à ricochet, Boomerang de rappel, Orbe orbitale, Arc voltaïque, Brûleur court | gladius, thor-hammer, high-shot, ricochet, boomerang, orbital, lightning-arc, flamethrower | cyan `#8fdcff` |
+| compétences : Ruée, Bouclier, Onde de choc, Dilatation, Tourelle, Saut de phase, Aimant, Surrégime | sprint, checked-shield, sonic-boom, time-trap, sentry-gun, teleport, magnet, overdrive | mauve `#c9a3ff` |
+| catégories de greffes : Attaque, Défense, Mobilité, Butin, Spécial | crossed-swords, shield, wingfoot, two-coins, sparkles | corail, bleu, vert, or, mauve |
+| notions : coffre, vie, recharge, niveau | locked-chest, hearts, hourglass, upgrade | or, vert, mauve, cyan |
+
+**La prépa** (`showPrep`, `.prep2`) : l'en-tête porte le récapitulatif (« Lame d'essai + une compétence ») ; l'étape 0 garde ses deux paires, en lignes, avec le `⇄` entre le bonus et le malus et l'effet écrit ; l'étape 1 est une grille de cartes 190 × 150 calée à gauche, une par arme, avec l'icône 64 px, le nom, la famille et **trois jauges** (dégâts par coup / cadence / portée, sur le maximum du catalogue `WMAX` = 75 / 10 / 720, une valeur non nulle fait au moins 6 %) ; sous la grille, **un seul panneau de détail** `#prep-detail` qui décrit l'arme survolée, sinon la choisie (description, puis `weaponStats` en mots : « 24 dégâts par coup · 2 coups par seconde · portée : à mi-salle · traverse tout ») ; l'étape 2 dit « 3 tirées au sort sur 8 » dans son titre, cartes 300 × 110 avec l'icône et la recharge ; le bandeau MODE TEST est en pied d'écran. Sous 900 px : cartes d'arme `minmax(140px, 1fr)`, compétences en une colonne.
+
+Les distances passent par `portee(px)` (50_ui.js) : ≤ 80 au contact, ≤ 200 de près, ≤ 450 à mi-salle, ≤ 650 loin, au-delà toute la salle.
+
+Test : `prepa.js` — 10 mesures (icône et trois jauges par arme, cartes de 190 px calées à gauche, un seul panneau qui suit le clic puis le survol puis revient, le titre du tirage et les icônes des compétences, le ⇄ des paires, MODE TEST sous le bouton, ni DPS ni px, le récapitulatif du bouton, la grille sous 900 px).
+

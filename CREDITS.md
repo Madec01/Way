@@ -20,3 +20,6 @@ Tous les assets tiers sont libres de droit. Détails, liens et coordonnées d'ut
 
 ## Accessoires de décor (biomes 1 à 4)
 Icônes **game-icons.net** (Lorc, Delapouite, Skoll et contributeurs), licence **CC BY 3.0** — https://game-icons.net — récupérées via `@iconify-json/game-icons`, recolorées et rastérisées en pixel art dans `assets/sprites/lab/` (biome 1), `greenhouse/` (biome 2), `western/` (biome 3) et `orient/` (biome 4).
+
+## Planche d'icônes (armes, compétences, catégories)
+Icônes **game-icons.net** (Lorc, Delapouite, Skoll, sbed, Caro Asercion), licence **CC BY 3.0** — https://game-icons.net — récupérées depuis le dépôt `game-icons/icons`, teintées et rastérisées en pixel art dans `assets/sprites/icons/` (`Sprites.icon(id, taille)`) : gladius, thor-hammer, high-shot, ricochet, boomerang, orbital, lightning-arc, flamethrower, sprint, checked-shield, sonic-boom, time-trap, sentry-gun, teleport, magnet, overdrive, crossed-swords, shield, wingfoot, two-coins, sparkles, locked-chest, hearts, hourglass, upgrade.

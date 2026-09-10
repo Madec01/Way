@@ -52,6 +52,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `martin` | Martin : cinq clips, boucle de marche, mort figée, retournement, pieds |
 | `palette` | chantier F-3 : plus de rouge en dur hors de PAL, télégraphies en PAL.alert, barre ennemie en blanc cassé, cœurs verts, ennemis en rouges sourds, couleurs des animaux, dégât d'Uno en orange, PV hachurés sous 25 % |
 | `pets` | les neuf comportements du moteur des compagnons, un par un |
+| `prepa` | chantier I-4 : la planche d'icônes sur chaque arme et compétence, trois jauges par arme, un seul panneau de détail qui suit le clic et le survol, « 3 tirées au sort sur 8 », le ⇄ des paires, MODE TEST en pied, le récapitulatif du bouton, la grille sous 900 px |
 | `ressenti` | chantier F-1 : Ease et Feel, arrêt sur image (30 / 70 / 60 ms, plafonné, jamais sur un ralenti), étincelles au corps dans le sens du coup, étincelle de contact, écrasement, secousse directionnelle indépendante du zoom, plus de `G.shake`, recul de l'arme, polices pixel dans le monde, squash & stretch des planches |
 | `spawncheck` | chaque salle des quatre biomes : spawns et pièges sur des tuiles libres, porte atteignable |
 | `sprites32` | une image 32×32 importée reste nette, un visage photo est réduit |

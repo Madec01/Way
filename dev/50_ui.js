@@ -408,8 +408,9 @@ const UI = (() => {
      reconstruit à chaque choix mais garde sa position de défilement. */
   let hubScroll = 0;
   const STAT_MAX = { maxHp: 150, speed: 320, luck: 6 };
-  function jauge(label, v, max) {
-    return `<div class="jauge"><span class="jl">${label}</span><span class="jb"><i style="width:${Math.round(clamp(v / max, 0, 1) * 100)}%"></i></span><span class="jv">${v}</span></div>`;
+  function jauge(label, v, max, txt) {
+    const w = Math.max(v > 0 ? 6 : 0, Math.round(clamp(v / max, 0, 1) * 100)); // une valeur non nulle se voit toujours
+    return `<div class="jauge"><span class="jl">${label}</span><span class="jb"><i style="width:${w}%"></i></span>${txt === '' ? '' : `<span class="jv">${txt != null ? txt : v}</span>`}</div>`;
   }
   function showHub() {
     G.state = 'hub';
@@ -710,8 +711,23 @@ const UI = (() => {
     for (const h in t.hooks || {}) for (const e of t.hooks[h]) if (!t.special) parts.push(e.effect);
     return parts.join(', ') || '—';
   }
+  /* une distance du moteur en repère humain (chantier I-2 : jamais de px à l'écran) */
+  function portee(px) {
+    return px <= 80 ? 'au contact' : px <= 200 ? 'de près' : px <= 450 ? 'à mi-salle' : px <= 650 ? 'loin' : 'toute la salle';
+  }
+  const fmt1 = n => String(Math.round(n * 10) / 10).replace('.', ',');
+  const WMAX = { damage: 75, fireRate: 10, range: 720 }; // le haut de chaque jauge d'arme : le maximum du catalogue
   function weaponStats(w) {
-    return `dégâts ${w.damage} · cadence ${w.fireRate}/s · portée ${w.range}${w.pierce ? ' · perforation ' + w.pierce : ''}${w.bounce ? ' · rebonds ' + w.bounce : ''}${w.projectiles > 1 ? ' · ×' + w.projectiles : ''}`;
+    const parts = [
+      `${w.damage} dégâts par coup`,
+      `${fmt1(w.fireRate)} coup${w.fireRate >= 2 ? 's' : ''} par seconde`,
+      `portée : ${portee(w.range)}`,
+    ];
+    if (w.pierce >= 99) parts.push('traverse tout');
+    else if (w.pierce) parts.push(`perce ${w.pierce} ennemi${w.pierce > 1 ? 's' : ''}`);
+    if (w.bounce) parts.push(`${w.bounce} rebond${w.bounce > 1 ? 's' : ''}`);
+    if (w.projectiles > 1) parts.push(`${w.projectiles} projectiles`);
+    return parts.join(' · ');
   }
 
   /* ---------- Préparation (salle 1) ---------- */
@@ -734,40 +750,51 @@ const UI = (() => {
       const sSel = r.skillChoices.find(sk => sk.id === selS);
       const pairs = r.pairChoices || [];
       const touch = Input.touch.active;
+      const testrow =
+        G.mode === 'test'
+          ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Commencer à la salle <select id="prep-room">${[
+              1, 2, 3, 4, 5, 6, 7, 8, 9,
+            ]
+              .map(i => {
+                const d = r.rooms.find(x => x.index === i);
+                const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : '';
+                return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`;
+              })
+              .join(
+                ''
+              )}</select></label><label class="muted small">avec le personnage au niveau <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>`
+          : '';
+      const nSkills = Content.skills().length;
       s.innerHTML = `
-        <div class="panel prep">
-          <div class="eyebrow">Avant d'entrer — palier ${r.biome.order} · ${esc(r.biome.name)}</div>
-          <h2>Équipe-toi pour ce niveau</h2>
+        <div class="panel prep prep2">
+          <div class="prephead"><div><div class="eyebrow">Avant d'entrer — palier ${r.biome.order} · ${esc(r.biome.name)}</div><h2>Équipe-toi</h2></div>
+          <div class="prepsummary">${wSel ? esc(wSel.name) : '…'} <span class="muted">+</span> ${sSel ? esc(sSel.name) : '<span class="bad">une compétence</span>'}</div></div>
           <section class="prepstep pairstep done">
             <h3><span class="stepnum">0</span> Ton départ <span class="muted tiny">— un bonus et un malus, ensemble · choisis la paire qui te va</span></h3>
-            <div class="cards" id="prep-pairs">${pairs.map((pp, i) => `<div class="card pick pairpick ${i === selP ? 'selected' : ''}" data-p="${i}"><div class="prepmods"><span class="chip good"><b>+</b> ${esc(pp.bonus.name)} — ${esc(pp.bonus.desc)}</span><span class="chip bad"><b>−</b> ${esc(pp.malus.name)} — ${esc(pp.malus.desc)}</span></div>${i === selP ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+            <div class="cards" id="prep-pairs">${pairs.map((pp, i) => `<div class="card pick pairpick ${i === selP ? 'selected' : ''}" data-p="${i}"><div class="prepmods"><span class="chip good"><b>+</b> ${esc(pp.bonus.name)} — ${esc(pp.bonus.desc)}</span><span class="swap">⇄</span><span class="chip bad"><b>−</b> ${esc(pp.malus.name)} — ${esc(pp.malus.desc)}</span></div>${i === selP ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
           </section>
-          <details class="prepdetails muted tiny"><summary>Caractère du personnage et améliorations du camp</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Calibrations : ${metaList}</details>
+          <details class="prepdetails muted tiny"><summary>Caractère du personnage et améliorations du camp</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Améliorations : ${metaList}</details>
           <section class="prepstep weapon done">
-            <h3><span class="stepnum">1</span> Ton arme <span class="muted tiny">— l'attaque principale, en continu · clic gauche${touch ? ' ou bouton TIR' : ''}</span></h3>
-            <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick weapon ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(famille(w.family))}</span></div><div class="muted small">${esc(w.desc)}</div>${w.id === selW ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+            <h3><span class="stepnum">1</span> Ton arme <span class="muted tiny">— ${weapons.length} à toi · l'attaque principale, en continu · clic gauche${touch ? ' ou bouton TIR' : ''}</span></h3>
+            <div class="grid weapons" id="prep-weapons">${weapons
+              .map(
+                w =>
+                  `<div class="card pick weapon wcard ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="iconbox"></div><div class="cardtitle"><span>${esc(w.name)}</span><span class="tag">${esc(famille(w.family))}</span></div><div class="jauges mini">${jauge('Dégâts', w.damage, WMAX.damage, '')}${jauge('Cadence', w.fireRate, WMAX.fireRate, '')}${jauge('Portée', w.range, WMAX.range, '')}</div>${w.id === selW ? '<div class="pickmark">✓</div>' : ''}</div>`
+              )
+              .join('')}</div>
+            <div class="detail" id="prep-detail"></div>
           </section>
           <section class="prepstep skill ${selS ? 'done' : 'todo'}">
-            <h3><span class="stepnum">2</span> Ta compétence <span class="muted tiny">— un pouvoir à recharge, à déclencher · clic droit, Espace ou Maj${touch ? ' ou bouton COMP.' : ''}</span></h3>
-            <div class="cards" id="prep-skills">${r.skillChoices.map(sk => `<div class="card pick skill ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="cardtitle">${esc(sk.name)} <span class="tag cd">recharge ${sk.cooldown} s</span></div><div class="muted small">${esc(sk.desc)}</div>${sk.id === selS ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+            <h3><span class="stepnum">2</span> Ta compétence <span class="muted tiny">— ${r.skillChoices.length} tirées au sort sur ${nSkills} · un pouvoir à recharge · clic droit, Espace ou Maj${touch ? ' ou bouton COMP.' : ''}</span></h3>
+            <div class="grid skills" id="prep-skills">${r.skillChoices
+              .map(
+                sk =>
+                  `<div class="card pick skill scard ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="iconbox"></div><div class="stext"><div class="cardtitle"><span>${esc(sk.name)}</span><span class="tag cd">recharge ${sk.cooldown} s</span></div><div class="muted small">${esc(sk.desc)}</div>${sk.id === selS ? '<div class="pickmark">✓ Choisie</div>' : ''}</div></div>`
+              )
+              .join('')}</div>
           </section>
-          <div class="prepsummary">${wSel ? esc(wSel.name) : '…'} <span class="muted">+</span> ${sSel ? esc(sSel.name) : '<span class="bad">choisis une compétence ci-dessus</span>'}</div>
-          ${
-            G.mode === 'test'
-              ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Commencer à la salle <select id="prep-room">${[
-                  1, 2, 3, 4, 5, 6, 7, 8, 9,
-                ]
-                  .map(i => {
-                    const d = r.rooms.find(x => x.index === i);
-                    const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : '';
-                    return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`;
-                  })
-                  .join(
-                    ''
-                  )}</select></label><label class="muted small">avec le personnage au niveau <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>`
-              : ''
-          }
           <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${selS ? `Entrer en salle 1 avec ${esc(wSel.name)} et ${esc(sSel.name)}` : 'Choisis une compétence pour entrer'}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
+          ${testrow}
         </div>`;
       const pr = s.querySelector('#prep-room'),
         plv = s.querySelector('#prep-level');
@@ -781,14 +808,32 @@ const UI = (() => {
           selL = +plv.value;
           state.testLevel = selL;
         };
-      s.querySelectorAll('[data-w]').forEach(
-        c =>
-          (c.onclick = () => {
-            selW = c.dataset.w;
-            AudioEngine.uiClick({});
-            render();
-          })
-      );
+      /* les icônes de la planche, et le panneau de détail unique : il décrit l'arme survolée, sinon la choisie */
+      for (const c of s.querySelectorAll('[data-w]')) {
+        const ic = Sprites.icon(c.dataset.w, 64);
+        if (ic) c.querySelector('.iconbox').appendChild(ic);
+      }
+      for (const c of s.querySelectorAll('[data-s]')) {
+        const ic = Sprites.icon(c.dataset.s, 56);
+        if (ic) c.querySelector('.iconbox').appendChild(ic);
+      }
+      const detail = s.querySelector('#prep-detail');
+      const showDetail = w => {
+        detail.innerHTML = `<div class="iconbox"></div><div class="dtext"><div class="cardtitle"><span>${esc(w.name)}</span><span class="tag">${esc(famille(w.family))}</span></div><div class="small">${esc(w.desc)}</div><div class="muted tiny">${esc(weaponStats(w))}</div></div>`;
+        detail.dataset.w = w.id;
+        const ic = Sprites.icon(w.id, 48);
+        if (ic) detail.querySelector('.iconbox').appendChild(ic);
+      };
+      showDetail(wSel);
+      s.querySelectorAll('[data-w]').forEach(c => {
+        c.onclick = () => {
+          selW = c.dataset.w;
+          AudioEngine.uiClick({});
+          render();
+        };
+        c.onmouseenter = () => showDetail(weapons.find(w => w.id === c.dataset.w));
+        c.onmouseleave = () => showDetail(weapons.find(w => w.id === selW));
+      });
       s.querySelectorAll('[data-s]').forEach(
         c =>
           (c.onclick = () => {

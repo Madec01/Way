@@ -242,7 +242,69 @@ const Sprites = (() => {
     incense: { d: 'orient', color: '#c9a3ff', px: 18 },
     'snake-jar': { d: 'orient', color: '#8a5a3a', px: 20 },
     turban: { d: 'orient', color: '#e8dcc0', px: 18 },
+    /* la planche d'icônes (chantier I-4, assets/sprites/icons/) : armes en cyan, compétences en mauve, catégories de
+       greffes à leur couleur, quelques notions (coffre, vie, recharge, niveau). Rastérisées à 24 px comme les accessoires,
+       teintées à la rastérisation : un écran les prend par Sprites.icon(id, taille). */
+    gladius: { d: 'icons', color: '#8fdcff', px: 24 },
+    'thor-hammer': { d: 'icons', color: '#8fdcff', px: 24 },
+    'high-shot': { d: 'icons', color: '#8fdcff', px: 24 },
+    ricochet: { d: 'icons', color: '#8fdcff', px: 24 },
+    boomerang: { d: 'icons', color: '#8fdcff', px: 24 },
+    orbital: { d: 'icons', color: '#8fdcff', px: 24 },
+    'lightning-arc': { d: 'icons', color: '#8fdcff', px: 24 },
+    flamethrower: { d: 'icons', color: '#8fdcff', px: 24 },
+    sprint: { d: 'icons', color: '#c9a3ff', px: 24 },
+    'checked-shield': { d: 'icons', color: '#c9a3ff', px: 24 },
+    'sonic-boom': { d: 'icons', color: '#c9a3ff', px: 24 },
+    'time-trap': { d: 'icons', color: '#c9a3ff', px: 24 },
+    'sentry-gun': { d: 'icons', color: '#c9a3ff', px: 24 },
+    teleport: { d: 'icons', color: '#c9a3ff', px: 24 },
+    magnet: { d: 'icons', color: '#c9a3ff', px: 24 },
+    overdrive: { d: 'icons', color: '#c9a3ff', px: 24 },
+    'crossed-swords': { d: 'icons', color: '#ff8a6a', px: 24 },
+    shield: { d: 'icons', color: '#7fd8ff', px: 24 },
+    wingfoot: { d: 'icons', color: '#7fff9a', px: 24 },
+    'two-coins': { d: 'icons', color: '#ffd166', px: 24 },
+    sparkles: { d: 'icons', color: '#c9a3ff', px: 24 },
+    'locked-chest': { d: 'icons', color: '#ffd166', px: 24 },
+    hearts: { d: 'icons', color: '#7fff9a', px: 24 },
+    hourglass: { d: 'icons', color: '#c9a3ff', px: 24 },
+    upgrade: { d: 'icons', color: '#6ee7ff', px: 24 },
   };
+  /* quelle icône pour quelle notion du jeu : un id d'arme, de compétence, une catégorie de greffe ou un mot */
+  const ICONS = {
+    weapon_blade: 'gladius',
+    weapon_hammer: 'thor-hammer',
+    weapon_bow: 'high-shot',
+    weapon_pistol: 'ricochet',
+    weapon_boomerang: 'boomerang',
+    weapon_orb: 'orbital',
+    weapon_chain: 'lightning-arc',
+    weapon_flame: 'flamethrower',
+    skill_dash: 'sprint',
+    skill_shield: 'checked-shield',
+    skill_shockwave: 'sonic-boom',
+    skill_slowtime: 'time-trap',
+    skill_turret: 'sentry-gun',
+    skill_blink: 'teleport',
+    skill_magnet: 'magnet',
+    skill_overdrive: 'overdrive',
+    offense: 'crossed-swords',
+    defense: 'shield',
+    mobility: 'wingfoot',
+    economy: 'two-coins',
+    special: 'sparkles',
+    coffre: 'locked-chest',
+    vie: 'hearts',
+    recharge: 'hourglass',
+    niveau: 'upgrade',
+  };
+  /* l'icône d'une notion, en canvas prêt à poser dans un écran (null tant que la planche n'est pas chargée) */
+  function icon(id, size) {
+    const c = propCanvas(ICONS[id] || id, size || 32);
+    if (c) c.className = 'icon';
+    return c;
+  }
   const props = {};
   /* Icône SVG → sprite pixel art. Trois passes, sinon le rendu fait « icône de menu agrandie » :
      1. rastérisation ×4 puis seuil d'alpha → bords nets (le lissage du navigateur, agrandi ensuite, donnait une frange floue) ;
@@ -1315,6 +1377,8 @@ const Sprites = (() => {
     loadFriends,
     propNames,
     propCanvas,
+    icon,
+    ICONS,
     pickDir,
     dirFrom,
     gait,

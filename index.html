@@ -431,6 +431,43 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
   .hub3 .row{padding-left:0}
 }
 
+/* ---------- Chantier I-4 : la prépa qui montre ---------- */
+.prephead{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;flex-wrap:wrap}
+.prep2 .prepsummary{margin:0;text-align:right}
+.prep2 .grid{display:grid;gap:.6em;justify-content:flex-start}
+.prep2 .grid.weapons{grid-template-columns:repeat(auto-fill,calc(190px*var(--ui-scale)))}
+.prep2 .grid.skills{grid-template-columns:repeat(auto-fill,calc(300px*var(--ui-scale)))}
+.prep2 .card.wcard{min-width:0;max-width:none;width:auto;min-height:calc(150px*var(--ui-scale));padding:.5em .6em .6em;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.3em}
+.prep2 .wcard .cardtitle{flex-direction:column;gap:.15em;margin:0;align-items:center}
+.prep2 .wcard .cardtitle span:first-child{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.05em;line-height:1.1}
+.prep2 .card.scard{min-width:0;max-width:none;width:auto;min-height:calc(110px*var(--ui-scale));display:flex;gap:.7em;align-items:center;padding:.5em .8em;text-align:left}
+.prep2 .scard .stext{flex:1;min-width:0}
+.prep2 .scard .cardtitle span:first-child{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.1em}
+.iconbox{display:flex;align-items:center;justify-content:center;width:calc(64px*var(--ui-scale));height:calc(64px*var(--ui-scale));flex:none}
+.iconbox canvas{image-rendering:pixelated;max-width:100%;max-height:100%}
+.prep2 .scard .iconbox{width:calc(56px*var(--ui-scale));height:calc(56px*var(--ui-scale))}
+.jauges.mini{flex-direction:column;gap:.15em;width:100%;align-items:stretch}
+.jauges.mini .jauge{font-size:max(12px,.78em);gap:.4em}
+.jauges.mini .jl{min-width:4.2em;text-align:left}
+.jauges.mini .jb{flex:1;width:auto}
+.prep2 .wcard .pickmark{position:absolute;top:.3em;right:.5em;margin:0}
+.prep2 .detail{display:flex;gap:.8em;align-items:center;margin:.6em 0 0;padding:.5em .9em;border:1px solid rgba(110,231,255,.35);border-radius:10px;background:rgba(10,13,24,.6);min-height:calc(64px*var(--ui-scale))}
+.prep2 .detail .iconbox{width:calc(48px*var(--ui-scale));height:calc(48px*var(--ui-scale))}
+.prep2 .detail .dtext{flex:1;min-width:0}.prep2 .detail .cardtitle{justify-content:flex-start;margin-bottom:.1em}
+.prep2 #prep-pairs{flex-direction:column;gap:.5em}
+.prep2 .pairpick{max-width:none;min-width:0;display:flex;align-items:center;gap:.8em;padding:.45em .8em}
+.prep2 .pairpick .prepmods{flex-direction:row;align-items:center;gap:.6em;flex:1;flex-wrap:wrap}
+.prep2 .pairpick .prepmods .chip{flex:1 1 18em}
+.prep2 .pairpick .pickmark{margin:0;white-space:nowrap}
+.pairpick .swap{color:var(--muted);font-size:1.2em;line-height:1;text-align:center}
+.prep2 .testrow{margin:.8em 0 0;border-top:1px dashed var(--line);padding-top:.5em;justify-content:center;opacity:.85}
+@media (max-width:900px){
+  .prep2 .grid.weapons{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .prep2 .grid.skills{grid-template-columns:1fr}
+  .prep2 .card.wcard{min-height:0}
+  .prep2 .prepsummary{text-align:left}
+}
+
 </style>
 </head>
 <body>
@@ -439,7 +476,7 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 13:54';</script>
+<script>window.WAY_BUILD = '2026-09-10 14:14';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -8533,7 +8570,69 @@ const Sprites = (() => {
     incense: { d: 'orient', color: '#c9a3ff', px: 18 },
     'snake-jar': { d: 'orient', color: '#8a5a3a', px: 20 },
     turban: { d: 'orient', color: '#e8dcc0', px: 18 },
+    /* la planche d'icônes (chantier I-4, assets/sprites/icons/) : armes en cyan, compétences en mauve, catégories de
+       greffes à leur couleur, quelques notions (coffre, vie, recharge, niveau). Rastérisées à 24 px comme les accessoires,
+       teintées à la rastérisation : un écran les prend par Sprites.icon(id, taille). */
+    gladius: { d: 'icons', color: '#8fdcff', px: 24 },
+    'thor-hammer': { d: 'icons', color: '#8fdcff', px: 24 },
+    'high-shot': { d: 'icons', color: '#8fdcff', px: 24 },
+    ricochet: { d: 'icons', color: '#8fdcff', px: 24 },
+    boomerang: { d: 'icons', color: '#8fdcff', px: 24 },
+    orbital: { d: 'icons', color: '#8fdcff', px: 24 },
+    'lightning-arc': { d: 'icons', color: '#8fdcff', px: 24 },
+    flamethrower: { d: 'icons', color: '#8fdcff', px: 24 },
+    sprint: { d: 'icons', color: '#c9a3ff', px: 24 },
+    'checked-shield': { d: 'icons', color: '#c9a3ff', px: 24 },
+    'sonic-boom': { d: 'icons', color: '#c9a3ff', px: 24 },
+    'time-trap': { d: 'icons', color: '#c9a3ff', px: 24 },
+    'sentry-gun': { d: 'icons', color: '#c9a3ff', px: 24 },
+    teleport: { d: 'icons', color: '#c9a3ff', px: 24 },
+    magnet: { d: 'icons', color: '#c9a3ff', px: 24 },
+    overdrive: { d: 'icons', color: '#c9a3ff', px: 24 },
+    'crossed-swords': { d: 'icons', color: '#ff8a6a', px: 24 },
+    shield: { d: 'icons', color: '#7fd8ff', px: 24 },
+    wingfoot: { d: 'icons', color: '#7fff9a', px: 24 },
+    'two-coins': { d: 'icons', color: '#ffd166', px: 24 },
+    sparkles: { d: 'icons', color: '#c9a3ff', px: 24 },
+    'locked-chest': { d: 'icons', color: '#ffd166', px: 24 },
+    hearts: { d: 'icons', color: '#7fff9a', px: 24 },
+    hourglass: { d: 'icons', color: '#c9a3ff', px: 24 },
+    upgrade: { d: 'icons', color: '#6ee7ff', px: 24 },
   };
+  /* quelle icône pour quelle notion du jeu : un id d'arme, de compétence, une catégorie de greffe ou un mot */
+  const ICONS = {
+    weapon_blade: 'gladius',
+    weapon_hammer: 'thor-hammer',
+    weapon_bow: 'high-shot',
+    weapon_pistol: 'ricochet',
+    weapon_boomerang: 'boomerang',
+    weapon_orb: 'orbital',
+    weapon_chain: 'lightning-arc',
+    weapon_flame: 'flamethrower',
+    skill_dash: 'sprint',
+    skill_shield: 'checked-shield',
+    skill_shockwave: 'sonic-boom',
+    skill_slowtime: 'time-trap',
+    skill_turret: 'sentry-gun',
+    skill_blink: 'teleport',
+    skill_magnet: 'magnet',
+    skill_overdrive: 'overdrive',
+    offense: 'crossed-swords',
+    defense: 'shield',
+    mobility: 'wingfoot',
+    economy: 'two-coins',
+    special: 'sparkles',
+    coffre: 'locked-chest',
+    vie: 'hearts',
+    recharge: 'hourglass',
+    niveau: 'upgrade',
+  };
+  /* l'icône d'une notion, en canvas prêt à poser dans un écran (null tant que la planche n'est pas chargée) */
+  function icon(id, size) {
+    const c = propCanvas(ICONS[id] || id, size || 32);
+    if (c) c.className = 'icon';
+    return c;
+  }
   const props = {};
   /* Icône SVG → sprite pixel art. Trois passes, sinon le rendu fait « icône de menu agrandie » :
      1. rastérisation ×4 puis seuil d'alpha → bords nets (le lissage du navigateur, agrandi ensuite, donnait une frange floue) ;
@@ -9606,6 +9705,8 @@ const Sprites = (() => {
     loadFriends,
     propNames,
     propCanvas,
+    icon,
+    ICONS,
     pickDir,
     dirFrom,
     gait,
@@ -20059,8 +20160,9 @@ const UI = (() => {
      reconstruit à chaque choix mais garde sa position de défilement. */
   let hubScroll = 0;
   const STAT_MAX = { maxHp: 150, speed: 320, luck: 6 };
-  function jauge(label, v, max) {
-    return `<div class="jauge"><span class="jl">${label}</span><span class="jb"><i style="width:${Math.round(clamp(v / max, 0, 1) * 100)}%"></i></span><span class="jv">${v}</span></div>`;
+  function jauge(label, v, max, txt) {
+    const w = Math.max(v > 0 ? 6 : 0, Math.round(clamp(v / max, 0, 1) * 100)); // une valeur non nulle se voit toujours
+    return `<div class="jauge"><span class="jl">${label}</span><span class="jb"><i style="width:${w}%"></i></span>${txt === '' ? '' : `<span class="jv">${txt != null ? txt : v}</span>`}</div>`;
   }
   function showHub() {
     G.state = 'hub';
@@ -20361,8 +20463,23 @@ const UI = (() => {
     for (const h in t.hooks || {}) for (const e of t.hooks[h]) if (!t.special) parts.push(e.effect);
     return parts.join(', ') || '—';
   }
+  /* une distance du moteur en repère humain (chantier I-2 : jamais de px à l'écran) */
+  function portee(px) {
+    return px <= 80 ? 'au contact' : px <= 200 ? 'de près' : px <= 450 ? 'à mi-salle' : px <= 650 ? 'loin' : 'toute la salle';
+  }
+  const fmt1 = n => String(Math.round(n * 10) / 10).replace('.', ',');
+  const WMAX = { damage: 75, fireRate: 10, range: 720 }; // le haut de chaque jauge d'arme : le maximum du catalogue
   function weaponStats(w) {
-    return `dégâts ${w.damage} · cadence ${w.fireRate}/s · portée ${w.range}${w.pierce ? ' · perforation ' + w.pierce : ''}${w.bounce ? ' · rebonds ' + w.bounce : ''}${w.projectiles > 1 ? ' · ×' + w.projectiles : ''}`;
+    const parts = [
+      `${w.damage} dégâts par coup`,
+      `${fmt1(w.fireRate)} coup${w.fireRate >= 2 ? 's' : ''} par seconde`,
+      `portée : ${portee(w.range)}`,
+    ];
+    if (w.pierce >= 99) parts.push('traverse tout');
+    else if (w.pierce) parts.push(`perce ${w.pierce} ennemi${w.pierce > 1 ? 's' : ''}`);
+    if (w.bounce) parts.push(`${w.bounce} rebond${w.bounce > 1 ? 's' : ''}`);
+    if (w.projectiles > 1) parts.push(`${w.projectiles} projectiles`);
+    return parts.join(' · ');
   }
 
   /* ---------- Préparation (salle 1) ---------- */
@@ -20385,40 +20502,51 @@ const UI = (() => {
       const sSel = r.skillChoices.find(sk => sk.id === selS);
       const pairs = r.pairChoices || [];
       const touch = Input.touch.active;
+      const testrow =
+        G.mode === 'test'
+          ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Commencer à la salle <select id="prep-room">${[
+              1, 2, 3, 4, 5, 6, 7, 8, 9,
+            ]
+              .map(i => {
+                const d = r.rooms.find(x => x.index === i);
+                const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : '';
+                return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`;
+              })
+              .join(
+                ''
+              )}</select></label><label class="muted small">avec le personnage au niveau <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>`
+          : '';
+      const nSkills = Content.skills().length;
       s.innerHTML = `
-        <div class="panel prep">
-          <div class="eyebrow">Avant d'entrer — palier ${r.biome.order} · ${esc(r.biome.name)}</div>
-          <h2>Équipe-toi pour ce niveau</h2>
+        <div class="panel prep prep2">
+          <div class="prephead"><div><div class="eyebrow">Avant d'entrer — palier ${r.biome.order} · ${esc(r.biome.name)}</div><h2>Équipe-toi</h2></div>
+          <div class="prepsummary">${wSel ? esc(wSel.name) : '…'} <span class="muted">+</span> ${sSel ? esc(sSel.name) : '<span class="bad">une compétence</span>'}</div></div>
           <section class="prepstep pairstep done">
             <h3><span class="stepnum">0</span> Ton départ <span class="muted tiny">— un bonus et un malus, ensemble · choisis la paire qui te va</span></h3>
-            <div class="cards" id="prep-pairs">${pairs.map((pp, i) => `<div class="card pick pairpick ${i === selP ? 'selected' : ''}" data-p="${i}"><div class="prepmods"><span class="chip good"><b>+</b> ${esc(pp.bonus.name)} — ${esc(pp.bonus.desc)}</span><span class="chip bad"><b>−</b> ${esc(pp.malus.name)} — ${esc(pp.malus.desc)}</span></div>${i === selP ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+            <div class="cards" id="prep-pairs">${pairs.map((pp, i) => `<div class="card pick pairpick ${i === selP ? 'selected' : ''}" data-p="${i}"><div class="prepmods"><span class="chip good"><b>+</b> ${esc(pp.bonus.name)} — ${esc(pp.bonus.desc)}</span><span class="swap">⇄</span><span class="chip bad"><b>−</b> ${esc(pp.malus.name)} — ${esc(pp.malus.desc)}</span></div>${i === selP ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
           </section>
-          <details class="prepdetails muted tiny"><summary>Caractère du personnage et améliorations du camp</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Calibrations : ${metaList}</details>
+          <details class="prepdetails muted tiny"><summary>Caractère du personnage et améliorations du camp</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Améliorations : ${metaList}</details>
           <section class="prepstep weapon done">
-            <h3><span class="stepnum">1</span> Ton arme <span class="muted tiny">— l'attaque principale, en continu · clic gauche${touch ? ' ou bouton TIR' : ''}</span></h3>
-            <div class="cards" id="prep-weapons">${weapons.map(w => `<div class="card pick weapon ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="cardtitle">${esc(w.name)} <span class="tag">${esc(famille(w.family))}</span></div><div class="muted small">${esc(w.desc)}</div>${w.id === selW ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+            <h3><span class="stepnum">1</span> Ton arme <span class="muted tiny">— ${weapons.length} à toi · l'attaque principale, en continu · clic gauche${touch ? ' ou bouton TIR' : ''}</span></h3>
+            <div class="grid weapons" id="prep-weapons">${weapons
+              .map(
+                w =>
+                  `<div class="card pick weapon wcard ${w.id === selW ? 'selected' : ''}" data-w="${w.id}"><div class="iconbox"></div><div class="cardtitle"><span>${esc(w.name)}</span><span class="tag">${esc(famille(w.family))}</span></div><div class="jauges mini">${jauge('Dégâts', w.damage, WMAX.damage, '')}${jauge('Cadence', w.fireRate, WMAX.fireRate, '')}${jauge('Portée', w.range, WMAX.range, '')}</div>${w.id === selW ? '<div class="pickmark">✓</div>' : ''}</div>`
+              )
+              .join('')}</div>
+            <div class="detail" id="prep-detail"></div>
           </section>
           <section class="prepstep skill ${selS ? 'done' : 'todo'}">
-            <h3><span class="stepnum">2</span> Ta compétence <span class="muted tiny">— un pouvoir à recharge, à déclencher · clic droit, Espace ou Maj${touch ? ' ou bouton COMP.' : ''}</span></h3>
-            <div class="cards" id="prep-skills">${r.skillChoices.map(sk => `<div class="card pick skill ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="cardtitle">${esc(sk.name)} <span class="tag cd">recharge ${sk.cooldown} s</span></div><div class="muted small">${esc(sk.desc)}</div>${sk.id === selS ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+            <h3><span class="stepnum">2</span> Ta compétence <span class="muted tiny">— ${r.skillChoices.length} tirées au sort sur ${nSkills} · un pouvoir à recharge · clic droit, Espace ou Maj${touch ? ' ou bouton COMP.' : ''}</span></h3>
+            <div class="grid skills" id="prep-skills">${r.skillChoices
+              .map(
+                sk =>
+                  `<div class="card pick skill scard ${sk.id === selS ? 'selected' : ''}" data-s="${sk.id}"><div class="iconbox"></div><div class="stext"><div class="cardtitle"><span>${esc(sk.name)}</span><span class="tag cd">recharge ${sk.cooldown} s</span></div><div class="muted small">${esc(sk.desc)}</div>${sk.id === selS ? '<div class="pickmark">✓ Choisie</div>' : ''}</div></div>`
+              )
+              .join('')}</div>
           </section>
-          <div class="prepsummary">${wSel ? esc(wSel.name) : '…'} <span class="muted">+</span> ${sSel ? esc(sSel.name) : '<span class="bad">choisis une compétence ci-dessus</span>'}</div>
-          ${
-            G.mode === 'test'
-              ? `<div class="row testrow"><span class="tag test">MODE TEST</span><label class="muted small">Commencer à la salle <select id="prep-room">${[
-                  1, 2, 3, 4, 5, 6, 7, 8, 9,
-                ]
-                  .map(i => {
-                    const d = r.rooms.find(x => x.index === i);
-                    const lb = d && ROOM_TYPES[d.type] ? ROOM_TYPES[d.type].label : '';
-                    return `<option value="${i}" ${i === selR ? 'selected' : ''}>${i} — ${esc(lb)}</option>`;
-                  })
-                  .join(
-                    ''
-                  )}</select></label><label class="muted small">avec le personnage au niveau <select id="prep-level">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map(i => `<option value="${i}" ${i === selL ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>`
-              : ''
-          }
           <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${selS ? `Entrer en salle 1 avec ${esc(wSel.name)} et ${esc(sSel.name)}` : 'Choisis une compétence pour entrer'}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
+          ${testrow}
         </div>`;
       const pr = s.querySelector('#prep-room'),
         plv = s.querySelector('#prep-level');
@@ -20432,14 +20560,32 @@ const UI = (() => {
           selL = +plv.value;
           state.testLevel = selL;
         };
-      s.querySelectorAll('[data-w]').forEach(
-        c =>
-          (c.onclick = () => {
-            selW = c.dataset.w;
-            AudioEngine.uiClick({});
-            render();
-          })
-      );
+      /* les icônes de la planche, et le panneau de détail unique : il décrit l'arme survolée, sinon la choisie */
+      for (const c of s.querySelectorAll('[data-w]')) {
+        const ic = Sprites.icon(c.dataset.w, 64);
+        if (ic) c.querySelector('.iconbox').appendChild(ic);
+      }
+      for (const c of s.querySelectorAll('[data-s]')) {
+        const ic = Sprites.icon(c.dataset.s, 56);
+        if (ic) c.querySelector('.iconbox').appendChild(ic);
+      }
+      const detail = s.querySelector('#prep-detail');
+      const showDetail = w => {
+        detail.innerHTML = `<div class="iconbox"></div><div class="dtext"><div class="cardtitle"><span>${esc(w.name)}</span><span class="tag">${esc(famille(w.family))}</span></div><div class="small">${esc(w.desc)}</div><div class="muted tiny">${esc(weaponStats(w))}</div></div>`;
+        detail.dataset.w = w.id;
+        const ic = Sprites.icon(w.id, 48);
+        if (ic) detail.querySelector('.iconbox').appendChild(ic);
+      };
+      showDetail(wSel);
+      s.querySelectorAll('[data-w]').forEach(c => {
+        c.onclick = () => {
+          selW = c.dataset.w;
+          AudioEngine.uiClick({});
+          render();
+        };
+        c.onmouseenter = () => showDetail(weapons.find(w => w.id === c.dataset.w));
+        c.onmouseleave = () => showDetail(weapons.find(w => w.id === selW));
+      });
       s.querySelectorAll('[data-s]').forEach(
         c =>
           (c.onclick = () => {

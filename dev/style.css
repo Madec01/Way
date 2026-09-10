@@ -418,3 +418,40 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
   .peticonbox{height:calc(56px*var(--ui-scale))}
   .hub3 .row{padding-left:0}
 }
+
+/* ---------- Chantier I-4 : la prépa qui montre ---------- */
+.prephead{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;flex-wrap:wrap}
+.prep2 .prepsummary{margin:0;text-align:right}
+.prep2 .grid{display:grid;gap:.6em;justify-content:flex-start}
+.prep2 .grid.weapons{grid-template-columns:repeat(auto-fill,calc(190px*var(--ui-scale)))}
+.prep2 .grid.skills{grid-template-columns:repeat(auto-fill,calc(300px*var(--ui-scale)))}
+.prep2 .card.wcard{min-width:0;max-width:none;width:auto;min-height:calc(150px*var(--ui-scale));padding:.5em .6em .6em;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.3em}
+.prep2 .wcard .cardtitle{flex-direction:column;gap:.15em;margin:0;align-items:center}
+.prep2 .wcard .cardtitle span:first-child{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.05em;line-height:1.1}
+.prep2 .card.scard{min-width:0;max-width:none;width:auto;min-height:calc(110px*var(--ui-scale));display:flex;gap:.7em;align-items:center;padding:.5em .8em;text-align:left}
+.prep2 .scard .stext{flex:1;min-width:0}
+.prep2 .scard .cardtitle span:first-child{font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.1em}
+.iconbox{display:flex;align-items:center;justify-content:center;width:calc(64px*var(--ui-scale));height:calc(64px*var(--ui-scale));flex:none}
+.iconbox canvas{image-rendering:pixelated;max-width:100%;max-height:100%}
+.prep2 .scard .iconbox{width:calc(56px*var(--ui-scale));height:calc(56px*var(--ui-scale))}
+.jauges.mini{flex-direction:column;gap:.15em;width:100%;align-items:stretch}
+.jauges.mini .jauge{font-size:max(12px,.78em);gap:.4em}
+.jauges.mini .jl{min-width:4.2em;text-align:left}
+.jauges.mini .jb{flex:1;width:auto}
+.prep2 .wcard .pickmark{position:absolute;top:.3em;right:.5em;margin:0}
+.prep2 .detail{display:flex;gap:.8em;align-items:center;margin:.6em 0 0;padding:.5em .9em;border:1px solid rgba(110,231,255,.35);border-radius:10px;background:rgba(10,13,24,.6);min-height:calc(64px*var(--ui-scale))}
+.prep2 .detail .iconbox{width:calc(48px*var(--ui-scale));height:calc(48px*var(--ui-scale))}
+.prep2 .detail .dtext{flex:1;min-width:0}.prep2 .detail .cardtitle{justify-content:flex-start;margin-bottom:.1em}
+.prep2 #prep-pairs{flex-direction:column;gap:.5em}
+.prep2 .pairpick{max-width:none;min-width:0;display:flex;align-items:center;gap:.8em;padding:.45em .8em}
+.prep2 .pairpick .prepmods{flex-direction:row;align-items:center;gap:.6em;flex:1;flex-wrap:wrap}
+.prep2 .pairpick .prepmods .chip{flex:1 1 18em}
+.prep2 .pairpick .pickmark{margin:0;white-space:nowrap}
+.pairpick .swap{color:var(--muted);font-size:1.2em;line-height:1;text-align:center}
+.prep2 .testrow{margin:.8em 0 0;border-top:1px dashed var(--line);padding-top:.5em;justify-content:center;opacity:.85}
+@media (max-width:900px){
+  .prep2 .grid.weapons{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .prep2 .grid.skills{grid-template-columns:1fr}
+  .prep2 .card.wcard{min-height:0}
+  .prep2 .prepsummary{text-align:left}
+}
