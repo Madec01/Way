@@ -444,7 +444,7 @@ const UI = (() => {
             <div class="lvlhead"><span class="lvlnum">Niveau ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
             <div class="lvlmeta"><span class="tag">Difficulté ${'★'.repeat(Math.min(5, b.order))}${'☆'.repeat(Math.max(0, 5 - b.order))}</span>${done ? `<span class="tag ok">Terminé ${done}×</span>` : ok ? '<span class="tag">Jamais terminé</span>' : ''}</div>
             <div class="muted small lvldesc">${esc(b.tagline || b.desc)}</div>
-            ${ok ? `<div class="muted tiny">Au départ, un bonus et un malus sont tirés au sort parmi ces paires :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : terminer le niveau ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
+            ${ok ? `<div class="muted tiny">Au départ, deux de ces paires bonus/malus te sont proposées, tu en choisis une :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : terminer le niveau ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
           </div>`;
             })
             .join('')}</div>
@@ -679,10 +679,10 @@ const UI = (() => {
   function showPrep() {
     const r = G.run;
     const s = screens.prep;
-    const lp = r.levelPassive;
     const weapons = Content.weapons().filter(w => Meta.weaponUnlocked(w.id));
     let selW = r.char.startWeapon && Meta.weaponUnlocked(r.char.startWeapon) ? r.char.startWeapon : weapons[0].id;
     let selS = null;
+    let selP = 0; // paire bonus/malus : la première par défaut
     let selR = state.testRoom || 1,
       selL = state.testLevel || 1; // mode Test : salle et niveau de départ (mémorisés pour la session)
     const metaList =
@@ -693,12 +693,16 @@ const UI = (() => {
     const render = () => {
       const wSel = weapons.find(w => w.id === selW);
       const sSel = r.skillChoices.find(sk => sk.id === selS);
+      const pairs = r.pairChoices || [];
       const touch = Input.touch.active;
       s.innerHTML = `
         <div class="panel prep">
           <div class="eyebrow">Avant d'entrer — niveau ${r.biome.order} · ${esc(r.biome.name)}</div>
           <h2>Équipe-toi pour ce niveau</h2>
-          <div class="prepmods"><span class="chip good"><b>Bonus de départ</b> ${esc(lp.bonus.name)} — ${esc(lp.bonus.desc)}</span><span class="chip bad"><b>Malus de départ</b> ${esc(lp.malus.name)} — ${esc(lp.malus.desc)}</span></div>
+          <section class="prepstep pairstep done">
+            <h3><span class="stepnum">0</span> Ton départ <span class="muted tiny">— un bonus et un malus, ensemble · choisis la paire qui te va</span></h3>
+            <div class="cards" id="prep-pairs">${pairs.map((pp, i) => `<div class="card pick pairpick ${i === selP ? 'selected' : ''}" data-p="${i}"><div class="prepmods"><span class="chip good"><b>+</b> ${esc(pp.bonus.name)} — ${esc(pp.bonus.desc)}</span><span class="chip bad"><b>−</b> ${esc(pp.malus.name)} — ${esc(pp.malus.desc)}</span></div>${i === selP ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+          </section>
           <details class="prepdetails muted tiny"><summary>Trait du personnage et calibrations du hub</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Calibrations : ${metaList}</details>
           <section class="prepstep weapon done">
             <h3><span class="stepnum">1</span> Ton arme <span class="muted tiny">— l'attaque principale, en continu · clic gauche${touch ? ' ou bouton TIR' : ''}</span></h3>
@@ -754,6 +758,15 @@ const UI = (() => {
             render();
           })
       );
+      s.querySelectorAll('[data-p]').forEach(
+        c =>
+          (c.onclick = () => {
+            selP = +c.dataset.p;
+            Run.setPair(selP);
+            AudioEngine.uiClick({});
+            render();
+          })
+      );
       s.querySelector('#prep-go').onclick = () => go();
       s.querySelector('#prep-abort').onclick = () => {
         Run.toHub();
@@ -761,6 +774,7 @@ const UI = (() => {
     };
     const go = () => {
       if (!selS) return;
+      Run.setPair(selP);
       Run.equip(selW, selS);
       hideAll();
       G.paused = false;

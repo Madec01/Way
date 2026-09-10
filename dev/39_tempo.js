@@ -152,7 +152,12 @@ const Beat = (() => {
 })();
 
 const Tempo = {
-  WINDOW: 0.1, // fenêtre « en rythme » (s) de part et d'autre du temps
+  get WINDOW() {
+    return BALANCE.tempo.window;
+  }, // fenêtre « en rythme » (s) de part et d'autre du temps
+  get MIN_STREAK() {
+    return BALANCE.tempo.minStreak;
+  }, // le bonus commence à cette longueur de série : avant, la série se construit sans rien donner
   COLOR: '#ffd166',
   /* bandeau d'accueil : dit ce qui va se passer, pour ne pas confondre avec une salle de boss */
   intro(room) {
@@ -382,14 +387,29 @@ const Tempo = {
     const r = G.room;
     if (!r || !r.tempo || !r.tempo.started || G.attract) return 1;
     const tp = r.tempo;
-    if (Beat.distToBeat(1) > Tempo.WINDOW) return 1;
+    if (Beat.distToBeat(1) > Tempo.WINDOW) {
+      /* fausse note : une action hors du temps casse la série. Tenir le bouton ne construit donc jamais de série,
+         il faut frapper sur le temps — c'est ce qui en fait un geste, pas un hasard de cadence. */
+      if (tp.combo >= Tempo.MIN_STREAK) Floaters.add(pl.x, pl.y - pl.r - 26, 'fausse note', '#9aa4c4', 12);
+      tp.combo = 0;
+      tp.lastMul = 1;
+      return 1;
+    }
     const idx = Math.round(Beat.t / Beat.beatLen());
     if (tp.lastIdx === idx) return tp.lastMul;
     tp.lastIdx = idx;
     tp.combo++;
     tp.best = Math.max(tp.best, tp.combo);
-    tp.onBeat++;
     tp.lastAction = Beat.t;
+    /* la série se construit d'abord (jauge au HUD), le bonus ne vient qu'à partir de MIN_STREAK : un tir tombé
+       par hasard sur le temps ne rapporte rien, quatre d'affilée sont un geste */
+    if (tp.combo < Tempo.MIN_STREAK) {
+      tp.lastMul = 1;
+      AudioEngine.tempoNote({ intensity: 0.35, hz: Beat.noteHz(tp.combo - 1) });
+      tp.flashes.push({ t: 0 });
+      return 1;
+    }
+    tp.onBeat++;
     const mul = 1.25 + Math.min(0.25, tp.combo * 0.025);
     tp.lastMul = mul;
     Floaters.add(pl.x, pl.y - pl.r - 26, 'TEMPO ×' + tp.combo, Tempo.COLOR, 15);
@@ -635,6 +655,25 @@ const Tempo = {
     }
     ctx.restore();
   },
+  /* jauge de série : MIN_STREAK pastilles qui se remplissent une à une, avant que « TEMPO ×n » ne prenne la place */
+  renderStreak(ctx, cx, y, tp) {
+    const n = Tempo.MIN_STREAK,
+      sp = 14;
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const x = cx - ((n - 1) * sp) / 2 + i * sp;
+      const on = i < tp.combo;
+      ctx.globalAlpha = on ? 0.95 : 0.3;
+      ctx.strokeStyle = Tempo.COLOR;
+      ctx.fillStyle = Tempo.COLOR;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, TAU);
+      if (on) ctx.fill();
+      else ctx.stroke();
+    }
+    ctx.restore();
+  },
   /* HUD (coordonnées écran) : barre de mesure en haut au centre + combo */
   renderHud(ctx, room) {
     const tp = room.tempo;
@@ -662,6 +701,7 @@ const Tempo = {
         yb = 70;
       ctx.fillStyle = 'rgba(8,10,18,.7)';
       ctx.fillRect(x0 - 12, yb - 14, w + 24, tp.combo > 0 ? 46 : 28);
+      if (tp.combo > 0 && tp.combo < Tempo.MIN_STREAK) Tempo.renderStreak(ctx, W / 2, yb + 22, tp);
       for (let i = 0; i < n; i++) {
         const x = x0 + i * spd + Math.floor(i / 4) * gap + spd / 2;
         const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? '#ff3b5c' : '#7fff9a';
@@ -675,7 +715,7 @@ const Tempo = {
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = '#fff';
       ctx.fillRect(x0 + pp.p * spd + Math.floor(pp.p / 4) * gap - 1, yb - 11, 2, 22);
-      if (tp.combo > 0) {
+      if (tp.combo >= Tempo.MIN_STREAK) {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = Tempo.COLOR;
@@ -690,6 +730,7 @@ const Tempo = {
       sp = 30; // sous le cartouche « Salle 7/9 » du HUD
     ctx.fillStyle = 'rgba(8,10,18,.7)';
     ctx.fillRect(cx - 88, y - 14, 176, tp.combo > 0 ? 46 : 28);
+    if (tp.combo > 0 && tp.combo < Tempo.MIN_STREAK) Tempo.renderStreak(ctx, cx, y + 22, tp);
     for (let i = 0; i < 4; i++) {
       const x = cx - 1.5 * sp + i * sp;
       const on = i === bib && tp.phase !== 'wait';
@@ -702,7 +743,7 @@ const Tempo = {
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = '#fff';
     ctx.fillRect(cx - 1.5 * sp + (bib + ph) * sp - 1, y - 11, 2, 22);
-    if (tp.combo > 0) {
+    if (tp.combo >= Tempo.MIN_STREAK) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = Tempo.COLOR;

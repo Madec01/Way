@@ -550,3 +550,17 @@ Banc : `MODE=always|call|none node normal.js` — bot, Normal, profil neuf, Mart
 La dernière ligne est mesurée sur 16 parties (graines 41-48). « Tout le temps » et « à l'appel » se valent (l'écart de mini-boss tient à 8 parties : sans Uno pour encaisser le Portier, le bot y meurt un peu plus). « Personne » reste en dessous : Uno prend 200 à 600 dégâts par partie à la place du bot, qui n'esquive pas. La cible du plan (les trois modes à ±15 % de dégâts) n'est pas atteinte pour le solo, et je ne pousse pas plus loin : au-delà de +35 %/+20 %, un joueur qui esquive n'aurait plus aucune raison de prendre un animal. À trancher après le retour des amis.
 
 Reliques : sur 600 ennemis ordinaires tués en salle 1, 12 reliques (2 %), et une sur le mini-boss à chaque fois (`compagnons.js`).
+
+## 13. Chantier 6 — le tempo du bot (10 septembre 2026)
+
+`choix.js` enveloppe `Tempo.playerAction` pendant une partie du bot (mode test, pistolet, graine 41, 9 salles, ×40) et compte, dans les salles à tempo (salle 7 et salles de boss), les tirs bonifiés sur le total.
+
+| | fenêtre | bonus dès | fausse note | tirs bonifiés du bot |
+|---|---|---|---|---|
+| avant (DIAGNOSTIC) | ±100 ms | la 1re note | non | 38-53 % |
+| après | ±50 ms | la 4e note | oui, série à zéro | **0/301 (0 %)** |
+
+Le bot tient le bouton : chaque tir hors fenêtre casse la série avant qu'elle n'atteigne 4. Un joueur qui tape sur le temps n'est pas concerné — c'est à vérifier à la main (salle 7, pistolet : taper sur les temps, voir la jauge se remplir puis « TEMPO ×4 »).
+
+Greffes : `node dev/check-greffes.js` → 61 greffes (18 communes, 22 rares, 15 épiques, 6 colossales), 0 dominance dans la même rareté (8 avec l'ancien contenu si l'on comptait toutes raretés confondues, 0 après la fusion à rareté égale).
+

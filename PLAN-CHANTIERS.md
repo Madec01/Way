@@ -111,7 +111,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Taille** : 1 séance.
 **Bilan** : tout est livré (CONTENT.md §40, test `compagnons.js`, 17 mesures). « Personne » a fini à **+35 % PV / +20 % dégâts** après deux mesures : à +25/+15 le bot gagnait 1 partie sur 8 contre 3 avec Uno ; à +35/+20, 3 sur 16 et le mini-boss une fois sur deux (TEST-REPORT §12). **La cible « ±15 % entre les trois modes » n'est pas atteinte pour le solo** et je ne pousse pas plus loin : Uno encaisse 200 à 600 dégâts par partie à la place d'un bot qui n'esquive pas, alors qu'un joueur qui esquive tire bien plus de la part gardée — au-delà, plus personne ne prendrait d'animal. « Tout le temps » et « à l'appel » se valent (3/8 et 4/8), et l'onde d'arrivée fait de l'appel un vrai bouton de secours. ORI : 20 coups sur 20 critiques sur la cible marquée (cible ≥ 90 % tenue). Choupi : mesuré sur une pièce hors de portée, pas sur « 80 % des orbes d'une salle » — le bot ramasse déjà presque tout lui-même, la mesure n'aurait rien dit ; à regarder à la main. Reliques : 2 % sur les ordinaires, une sûre sur le mini-boss ; pas de cœur garanti par salle de combat en plus de celui du chantier 4 (déjà devant chaque porte). Les `snap()` restent : ils placent le compagnon après la porte, ils ne nettoient pas — c'est `Run.reset()` qui nettoie. Les trois caractères (Bonne constitution, Pied sûr, Sang-froid) sont posés sur Martin, Gabriel et Jean **à titre provisoire** : à réattribuer avec les amis.
 
-## Chantier 6 — Choisir plutôt que subir
+## Chantier 6 — Choisir plutôt que subir ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : le joueur décide de sa run.
 
@@ -122,6 +122,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
 **Fini quand** : le bot, qui ne vise pas le tempo, tombe à < 15 % de tirs bonifiés ; aucune greffe n'en domine strictement une autre (script de vérification sur `mods`) ; les paliers vendus ont tous un `effect` codé.
 **Taille** : 1 séance.
+**Bilan** : les trois cibles sont tenues (CONTENT.md §41, test `choix.js`, 17 mesures). Tempo : ±50 ms, bonus dès la 4e note, et une règle de plus que prévu — **une action hors du temps casse la série** — sans elle, un pistolet au bouton tenu tombait sur chaque fenêtre et construisait la série tout seul ; le bot passe de 38-53 % à **0 %** de tirs bonifiés. Prépa : 3 compétences, 2 paires bonus/malus au choix (étape 0 « Ton départ »). Greffes : 74 → **61** (pas 45 : les 8 synergies d'arme et les 6 colossales sont chacune uniques, et fondre plus loin aurait retiré des choix, pas des doublons), une par effet, 13 anciens ids résolus par alias, `dev/check-greffes.js` à 0 dominance dans la même rareté ; la chance d'un effet suit maintenant ses paliers. Calibrations : Mémoire sélective, Aperçu du coffre et Quatrième choix à un palier, fiches honnêtes, sauvegarde v3 qui rembourse. À regarder à la main : la fausse note est-elle trop sévère avec une lame (tenir le bouton = jamais de série) ? Si oui, tolérer une note hors temps par mesure plutôt qu'élargir la fenêtre.
 
 ## Chantier 7 — Se comparer entre amis
 

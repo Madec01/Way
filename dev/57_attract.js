@@ -23,7 +23,7 @@ const Attract = (() => {
     'weapon_orb',
     'weapon_hammer',
   ];
-  const SHOW_UPGRADES = ['upg_balles_incendiaires', 'upg_balles_electriques', 'upg_satellite', 'upg_detonation', 'upg_tir_guide'];
+  const SHOW_UPGRADES = ['upg_etincelle', 'upg_chaine_eclair', 'upg_orbes_gardiennes', 'upg_detonation', 'upg_tir_guide'];
   function pool() {
     const out = [];
     for (const b of Content.biomes()) for (const id of b.enemyPool) out.push(id);

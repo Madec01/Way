@@ -27,7 +27,7 @@ test(async ({ page, ok, entrer, url }) => {
     nouvelleCle: !!localStorage.getItem('way_save') || true,
   }));
   ok("l'ancienne clé de sauvegarde est relue", lu.coins === 123 && lu.runs === 7, `${lu.coins} crédits, ${lu.runs} parties`);
-  ok('la version est montée à 2', lu.v === 2, 'v' + lu.v);
+  ok('la version est montée à 3', lu.v === 3, 'v' + lu.v);
   ok(
     'un volume incomplet garde ses autres réglages',
     lu.volume.master === 0.5 && lu.volume.sfx === 0.9 && lu.volume.music === 0.6,
@@ -50,7 +50,7 @@ test(async ({ page, ok, entrer, url }) => {
   const lu2 = await page.evaluate(() => ({ coins: Meta.profile.coins, v: Meta.profile.v, cle: !!localStorage.getItem('way_save') }));
   ok(
     "la sauvegarde s'écrit sous la nouvelle clé et se relit",
-    lu2.cle && lu2.coins === 124 && lu2.v === 2,
+    lu2.cle && lu2.coins === 124 && lu2.v === 3,
     `${lu2.coins} crédits, v${lu2.v}`
   );
 

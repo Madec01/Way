@@ -873,7 +873,7 @@ const Combat = {
       Floaters.add(e.x + VFX_RNG.range(-8, 8), e.y - e.r - 4, String(d), info.crit ? '#ffd166' : '#fff', info.crit ? 16 : 12);
       /* hooks onHit */
       for (const h of pl.hooks.onHit) {
-        const chance = h.chance != null ? h.chance : 1;
+        const chance = Math.min(1, (h.chance != null ? h.chance : 1) * (h.stacks || 1)); // reprendre la greffe = palier suivant
         if (h.effect === 'burn' && RNG.chance(chance)) applyStatus(e, 'burn', h);
         else if (h.effect === 'freeze' && RNG.chance(chance)) applyStatus(e, 'freeze', h);
         else if (h.effect === 'poison' && RNG.chance(chance)) applyStatus(e, 'poison', h);
@@ -949,11 +949,12 @@ const Combat = {
       if (h.effect === 'explode')
         Combat.explosion(e.x, e.y, (h.radius || 80) * pl.stats.areaSize, Math.round(e.maxHp * (h.damageMul || 0.3)) + 5, '#ff8c42', true);
       else if (h.effect === 'heal_on_kill') pl.heal(h.amount * (h.stacks || 1));
-      else if (h.effect === 'coin_on_kill' && RNG.chance(h.chance || 0.2)) Pickups.spawn(e.x, e.y, 'coin', h.amount || 1);
+      else if (h.effect === 'coin_on_kill' && RNG.chance((h.chance || 0.2) * (h.stacks || 1)))
+        Pickups.spawn(e.x, e.y, 'coin', h.amount || 1);
       else if (h.effect === 'kill_speed') {
         pl.killSpeedUntil = Time.now + (h.duration || 2);
         pl.killSpeedMul = h.speedMul || 1.3;
-      } else if (h.effect === 'skill_reset_on_kill' && RNG.chance(h.chance || 0.2)) {
+      } else if (h.effect === 'skill_reset_on_kill' && RNG.chance((h.chance || 0.2) * (h.stacks || 1))) {
         pl.skillCd = Math.max(0, pl.skillCd - Skills.cooldownOf(pl) * (h.fraction || 0.5));
         if (pl.skillCd <= 0 && pl.skillCharges < pl.skillMaxCharges) {
           pl.skillCharges++;

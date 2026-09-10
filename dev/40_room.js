@@ -712,14 +712,17 @@ const Run = {
     const charDef = Content.character(character);
     const biomeDef = Content.biome(biome);
     const rooms = Content.roomsOf(biomeDef.id);
-    const pair = RNG.pick(
-      biomeDef.levelPassives || [{ bonus: { name: '—', desc: '', mods: [] }, malus: { name: '—', desc: '', mods: [] } }]
-    );
+    /* deux paires bonus/malus tirées : le joueur choisit la sienne en prépa (Run.setPair), la première par défaut */
+    const pairChoices = RNG.shuffle(
+      (biomeDef.levelPassives || [{ bonus: { name: '—', desc: '', mods: [] }, malus: { name: '—', desc: '', mods: [] } }]).slice()
+    ).slice(0, 2);
+    const pair = pairChoices[0];
     G.run = {
       biome: biomeDef,
       char: charDef,
       rooms,
       roomIndex: 0,
+      pairChoices,
       levelPassive: { bonus: Object.assign({ id: 'lp_bonus' }, pair.bonus), malus: Object.assign({ id: 'lp_malus' }, pair.malus) },
       level: 1,
       xp: 0,
@@ -762,7 +765,7 @@ const Run = {
     if (weapon && skill) {
       Run.equip(startW, skill);
     }
-    G.run.skillChoices = RNG.shuffle(Content.skillsAvailable().slice()).slice(0, 2);
+    G.run.skillChoices = RNG.shuffle(Content.skillsAvailable().slice()).slice(0, 3);
     applyDifficulty();
     /* compagnon choisi au hub : il entre avec le joueur (celui trouvé sur une élite le remplacera) */
     const petId = Meta.profile.pet;
@@ -800,6 +803,14 @@ const Run = {
       r.stats.levelReached = r.level;
     }
     if (r.pendingLevelUps > 0 && !G.overlay) Run.levelUp();
+  },
+  /* la paire bonus/malus choisie en prépa (index dans G.run.pairChoices) */
+  setPair(i) {
+    const r = G.run;
+    const pair = r.pairChoices && r.pairChoices[i];
+    if (!pair) return;
+    r.levelPassive = { bonus: Object.assign({ id: 'lp_bonus' }, pair.bonus), malus: Object.assign({ id: 'lp_malus' }, pair.malus) };
+    if (G.player) G.player.recompute();
   },
   upgradePool() {
     const pl = G.player;

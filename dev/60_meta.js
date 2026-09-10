@@ -10,7 +10,7 @@
    `sfx` et `music`, et un profil d'une autre version repartait à zéro sans un mot. */
 const SAVE_KEY = 'way_save';
 const SAVE_KEYS_ANCIENNES = ['sujet_neuf_save_v1'];
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const Meta = (() => {
   const fresh = () => ({
     v: SAVE_VERSION,
@@ -49,6 +49,22 @@ const Meta = (() => {
   /* une fonction par saut de version : v → v + 1. Ajouter ici, jamais modifier une entrée existante. */
   const MIGRATIONS = {
     1: d => d, // v1 → v2 : mêmes champs ; `zoom` et `lag` arrivent avec leurs défauts par la fusion
+    /* v2 → v3 (chantier 6) : Mémoire sélective, Aperçu du coffre et Quatrième choix n'ont plus qu'un palier — les
+       paliers 2 et 3 ne faisaient rien. Qui les avait payés est remboursé au prix d'alors. */
+    2: d => {
+      const anciens = { meta_memoire_selective: [80, 150], meta_apercu_coffre: [70, 130], meta_quatrieme_choix: [100, 170] };
+      if (!estObjet(d.metaTiers)) return d;
+      let rembourse = 0;
+      for (const id in anciens) {
+        const t = +d.metaTiers[id] || 0;
+        if (t > 1) {
+          for (let i = 1; i < t && i - 1 < anciens[id].length; i++) rembourse += anciens[id][i - 1];
+          d.metaTiers[id] = 1;
+        }
+      }
+      if (rembourse) d.coins = (+d.coins || 0) + rembourse;
+      return d;
+    },
   };
   function migrate(d) {
     let v = +d.v || 1;

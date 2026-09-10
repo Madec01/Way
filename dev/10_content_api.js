@@ -68,6 +68,23 @@ const LORE = {
   ],
 };
 
+/* Chantier 6 : les greffes en double ont été fondues dans une seule (CONTENT.md §41). Un ancien id (dans une vieille
+   sauvegarde, un test, une liste d'exemples) se résout vers la greffe qui l'a absorbée. */
+const UPGRADE_ALIASES = {
+  upg_munitions: 'upg_tranchant',
+  upg_calibrage: 'upg_longue_portee',
+  upg_aimant_de_poche: 'upg_tirelire',
+  upg_projectiles_lourds: 'upg_frappe_lourde',
+  upg_balles_incendiaires: 'upg_etincelle',
+  upg_balles_givrantes: 'upg_givre',
+  upg_balles_electriques: 'upg_chaine_eclair',
+  upg_conducteur: 'upg_chaine_eclair',
+  upg_double_canon: 'upg_second_canon',
+  upg_satellite: 'upg_orbes_gardiennes',
+  upg_ceinture: 'upg_orbes_gardiennes',
+  upg_noyau: 'upg_orbes_gardiennes',
+  upg_tempete: 'upg_foudre_ambiante',
+};
 const Content = (() => {
   /* index par id, construit à la demande. `invalidate` est indispensable dès qu'on ajoute du contenu à chaud
      (atelier « Amis ») : sans lui, un personnage créé en cours de partie reste introuvable et l'appel retombe
@@ -114,7 +131,8 @@ const Content = (() => {
     skill: id => get('skills', id),
     skillsAvailable: () => CONTENT.skills.filter(s => Meta.skillUnlocked(s.id)),
     upgrades: () => CONTENT.upgrades,
-    upgrade: id => get('upgrades', id),
+    upgrade: id => get('upgrades', UPGRADE_ALIASES[id] || id),
+    upgradeAlias: id => UPGRADE_ALIASES[id] || id,
     metaPassives: () => CONTENT.metaPassives,
     metaPassive: id => get('metaPassives', id),
     biomes: () => CONTENT.biomes.slice().sort((a, b) => a.order - b.order),

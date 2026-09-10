@@ -252,6 +252,8 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 .prepstep.todo{box-shadow:0 0 22px rgba(201,163,255,.25)}
 .stepnum{display:inline-flex;width:1.7em;height:1.7em;border-radius:50%;background:var(--accent);color:#0b0d14;align-items:center;justify-content:center;font-weight:700;font-family:"Silkscreen",monospace;font-size:.9em}
 .prepstep.skill .stepnum{background:#c9a3ff}
+.prepstep.pairstep{border-left-color:#7fff9a}.prepstep.pairstep h3{color:#7fff9a}.prepstep.pairstep .stepnum{background:#7fff9a}
+.pairpick{min-width:16em;max-width:24em;align-self:stretch}.pairpick .prepmods{flex-direction:column;gap:.3em;margin:0}.pairpick .chip{font-size:.85em}
 .card.weapon{border-color:rgba(110,231,255,.35)}
 .card.skill{border-color:rgba(201,163,255,.4);background:rgba(20,12,34,.7)}
 .card.skill .tag.cd{color:#c9a3ff;border-color:rgba(201,163,255,.5);text-transform:none}
@@ -364,7 +366,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 07:39';</script>
+<script>window.WAY_BUILD = '2026-09-10 08:17';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -920,6 +922,8 @@ const BALANCE = {
   heartOnClear: 30,
   heartDropChance: 0.05,
   heartOnBossPhase: 30, // second souffle au changement de phase d'un boss (0 = jamais)
+  /* tempo : fenêtre « en rythme » (s) de part et d'autre du temps, et longueur de série à partir de laquelle le bonus s'applique */
+  tempo: { window: 0.05, minStreak: 4 },
   /* reliques hors élites : chance qu'un ennemi ordinaire en lâche une (2 objets max par salle), et relique sûre sur le mini-boss */
   relicDropChance: 0.02,
   relicOnBoss: true,
@@ -3311,23 +3315,15 @@ const CONTENT = {
     {
       id: 'upg_longue_portee',
       name: 'Longue portée',
-      desc: '+15 % portée.',
+      desc: '+15 % portée, projectiles 15 % plus rapides.',
       rarity: 'common',
       category: 'offense',
       weaponFamily: null,
       maxStacks: 3,
-      mods: [{ stat: 'range', mul: 1.15 }],
-      hooks: {},
-    },
-    {
-      id: 'upg_calibrage',
-      name: 'Calibrage',
-      desc: '+20 % vitesse des projectiles.',
-      rarity: 'common',
-      category: 'offense',
-      weaponFamily: null,
-      maxStacks: 3,
-      mods: [{ stat: 'projSpeed', mul: 1.2 }],
+      mods: [
+        { stat: 'range', mul: 1.15 },
+        { stat: 'projSpeed', mul: 1.15 },
+      ],
       hooks: {},
     },
     {
@@ -3386,17 +3382,6 @@ const CONTENT = {
       hooks: {},
     },
     {
-      id: 'upg_aimant_de_poche',
-      name: 'Aimant de poche',
-      desc: "+40 px de rayon d'aimantation des pickups.",
-      rarity: 'common',
-      category: 'mobility',
-      weaponFamily: null,
-      maxStacks: 3,
-      mods: [{ stat: 'pickupRadius', add: 40 }],
-      hooks: {},
-    },
-    {
       id: 'upg_recuperation',
       name: 'Récupération',
       desc: '-6 % de cooldown de compétence.',
@@ -3410,12 +3395,15 @@ const CONTENT = {
     {
       id: 'upg_tirelire',
       name: 'Tirelire',
-      desc: '+20 % pièces gagnées.',
+      desc: '+20 % pièces gagnées, ramasse 30 px plus loin.',
       rarity: 'common',
       category: 'economy',
       weaponFamily: null,
       maxStacks: 4,
-      mods: [{ stat: 'coinGain', mul: 1.2 }],
+      mods: [
+        { stat: 'coinGain', mul: 1.2 },
+        { stat: 'pickupRadius', add: 30 },
+      ],
       hooks: {},
     },
     {
@@ -3454,7 +3442,7 @@ const CONTENT = {
     {
       id: 'upg_etincelle',
       name: 'Étincelle',
-      desc: '15 % de chance de brûler : 5 dégâts/s pendant 2 s.',
+      desc: '15 % de chance de brûler (5 dégâts/s, 2 s) — 30 % puis 45 % en la reprenant.',
       rarity: 'common',
       category: 'special',
       weaponFamily: null,
@@ -3489,7 +3477,7 @@ const CONTENT = {
     {
       id: 'upg_frappe_lourde',
       name: 'Frappe lourde',
-      desc: '+22 % dégâts, -8 % cadence.',
+      desc: '+22 % dégâts, +15 % zone, +20 % recul, -8 % cadence.',
       rarity: 'rare',
       category: 'offense',
       weaponFamily: null,
@@ -3497,20 +3485,8 @@ const CONTENT = {
       mods: [
         { stat: 'damage', mul: 1.22 },
         { stat: 'fireRate', mul: 0.92 },
-      ],
-      hooks: {},
-    },
-    {
-      id: 'upg_double_canon',
-      name: 'Double canon',
-      desc: '+1 projectile, -25 % dégâts.',
-      rarity: 'rare',
-      category: 'offense',
-      weaponFamily: null,
-      maxStacks: 2,
-      mods: [
-        { stat: 'projectiles', add: 1 },
-        { stat: 'damage', mul: 0.75 },
+        { stat: 'areaSize', mul: 1.15 },
+        { stat: 'knockback', mul: 1.2 },
       ],
       hooks: {},
     },
@@ -3610,7 +3586,7 @@ const CONTENT = {
     {
       id: 'upg_chaine_eclair',
       name: 'Chaîne éclair',
-      desc: "20 % de chance qu'un coup saute sur 2 ennemis (150 px) à 50 %.",
+      desc: "20 % de chance qu'un coup saute sur 2 ennemis (150 px) à 50 % — 40 % puis 60 % en la reprenant.",
       rarity: 'rare',
       category: 'special',
       weaponFamily: null,
@@ -3710,11 +3686,11 @@ const CONTENT = {
     {
       id: 'upg_orbes_gardiennes',
       name: 'Orbes gardiennes',
-      desc: '2 orbes (10 dégâts) tournent à 70 px et bloquent les projectiles.',
+      desc: '2 orbes (10 dégâts) tournent à 70 px et bloquent les projectiles — 4 en la reprenant.',
       rarity: 'epic',
       category: 'defense',
       weaponFamily: null,
-      maxStacks: 1,
+      maxStacks: 2,
       mods: [],
       hooks: { passive: [{ effect: 'orbit_shield', count: 2, damage: 10, radius: 70 }] },
     },
@@ -3731,7 +3707,7 @@ const CONTENT = {
     },
     {
       id: 'upg_sang_froid',
-      name: 'Sang-froid',
+      name: "Nerfs d'acier",
       desc: "Touché : ralenti 0,8 s à 40 % et +0,3 s d'invulnérabilité. +2 armure.",
       rarity: 'epic',
       category: 'defense',
@@ -3815,41 +3791,8 @@ const CONTENT = {
     // ---- COLOSSALES (5) ----
     /* --- Greffes offensives supplémentaires (retour joueur : plus de projectiles, d'orbes, de balles à effet) --- */
     {
-      id: 'upg_balles_incendiaires',
-      name: 'Balles incendiaires',
-      desc: "35 % de chance d'enflammer : 8 dégâts/s pendant 2,5 s.",
-      rarity: 'rare',
-      category: 'special',
-      weaponFamily: null,
-      maxStacks: 2,
-      mods: [],
-      hooks: { onHit: [{ effect: 'burn', chance: 0.35, dps: 8, duration: 2.5 }] },
-    },
-    {
-      id: 'upg_balles_electriques',
-      name: 'Balles électriques',
-      desc: "30 % de chance d'électriser : saute sur 2 ennemis (60 % des dégâts).",
-      rarity: 'rare',
-      category: 'special',
-      weaponFamily: null,
-      maxStacks: 2,
-      mods: [],
-      hooks: { onHit: [{ effect: 'chain', chance: 0.3, jumps: 2, radius: 170, damageMul: 0.6 }] },
-    },
-    {
-      id: 'upg_balles_givrantes',
-      name: 'Balles givrantes',
-      desc: '30 % de chance de geler 1,5 s (vitesse -60 %).',
-      rarity: 'rare',
-      category: 'special',
-      weaponFamily: null,
-      maxStacks: 2,
-      mods: [],
-      hooks: { onHit: [{ effect: 'freeze', chance: 0.3, duration: 1.5, slow: 0.6 }] },
-    },
-    {
       id: 'upg_second_canon',
-      name: 'Second canon',
+      name: 'Double canon',
       desc: '+1 projectile par tir, -12 % dégâts.',
       rarity: 'rare',
       category: 'offense',
@@ -3874,28 +3817,6 @@ const CONTENT = {
         { stat: 'damage', mul: 0.7 },
       ],
       hooks: {},
-    },
-    {
-      id: 'upg_satellite',
-      name: 'Satellite',
-      desc: 'Un orbe tourne autour de vous : 10 dégâts au contact, bloque les tirs.',
-      rarity: 'rare',
-      category: 'offense',
-      weaponFamily: null,
-      maxStacks: 2,
-      mods: [],
-      hooks: { passive: [{ effect: 'orbit_shield', count: 1, damage: 10, radius: 64 }] },
-    },
-    {
-      id: 'upg_ceinture',
-      name: "Ceinture d'astéroïdes",
-      desc: '+3 orbes en orbite, 15 dégâts au contact.',
-      rarity: 'epic',
-      category: 'offense',
-      weaponFamily: null,
-      maxStacks: 1,
-      mods: [],
-      hooks: { passive: [{ effect: 'orbit_shield', count: 3, damage: 15, radius: 80 }] },
     },
     {
       id: 'upg_tir_guide',
@@ -4008,56 +3929,6 @@ const CONTENT = {
       hooks: { onSkill: [{ effect: 'fire_frenzy', fireRateMul: 1.45, duration: 3 }] },
     },
     {
-      id: 'upg_projectiles_lourds',
-      name: 'Projectiles lourds',
-      desc: "+15 % zone d'effet et recul.",
-      rarity: 'common',
-      category: 'offense',
-      weaponFamily: null,
-      maxStacks: 3,
-      mods: [
-        { stat: 'areaSize', mul: 1.15 },
-        { stat: 'knockback', mul: 1.2 },
-      ],
-      hooks: {},
-    },
-    {
-      id: 'upg_munitions',
-      name: 'Munitions',
-      desc: '+6 % dégâts, +5 % cadence.',
-      rarity: 'common',
-      category: 'offense',
-      weaponFamily: null,
-      maxStacks: 3,
-      mods: [
-        { stat: 'damage', mul: 1.06 },
-        { stat: 'fireRate', mul: 1.05 },
-      ],
-      hooks: {},
-    },
-    {
-      id: 'upg_conducteur',
-      name: 'Conducteur',
-      desc: 'Les coups critiques électrisent toujours (3 sauts).',
-      rarity: 'epic',
-      category: 'special',
-      weaponFamily: null,
-      maxStacks: 1,
-      mods: [{ stat: 'critChance', add: 0.05 }],
-      hooks: { onHit: [{ effect: 'chain', chance: 0.45, jumps: 3, radius: 190, damageMul: 0.7 }] },
-    },
-    {
-      id: 'upg_tempete',
-      name: 'Tempête',
-      desc: 'Toutes les 2,2 s environ, la foudre frappe (48 dégâts) et saute sur 3 ennemis.',
-      rarity: 'colossal',
-      category: 'special',
-      weaponFamily: null,
-      maxStacks: 1,
-      mods: [],
-      hooks: { passive: [{ effect: 'lightning_storm', every: 2.2, damage: 48, radius: 380, jumps: 3 }] },
-    },
-    {
       id: 'upg_mitraille',
       name: 'Mitraille',
       desc: '+3 projectiles, tirs guidés, -20 % dégâts.',
@@ -4070,22 +3941,6 @@ const CONTENT = {
         { stat: 'damage', mul: 0.8 },
       ],
       hooks: { passive: [{ effect: 'homing', turn: 3 }] },
-    },
-    {
-      id: 'upg_noyau',
-      name: 'Noyau',
-      desc: '5 orbes en orbite (22 dégâts) et une aura brûlante de 120 px.',
-      rarity: 'colossal',
-      category: 'offense',
-      weaponFamily: null,
-      maxStacks: 1,
-      mods: [],
-      hooks: {
-        passive: [
-          { effect: 'orbit_shield', count: 5, damage: 22, radius: 96 },
-          { effect: 'burn_aura', radius: 120, dps: 16 },
-        ],
-      },
     },
     {
       id: 'upg_rappel',
@@ -4233,32 +4088,20 @@ const CONTENT = {
     {
       id: 'meta_memoire_selective',
       name: 'Mémoire sélective',
-      desc: 'Commencer la run avec une amélioration de la run précédente.',
-      tiers: [
-        { price: 30, mods: [], hooks: {}, special: 'selective_memory' },
-        { price: 80, mods: [], hooks: {}, special: 'selective_memory' },
-        { price: 150, mods: [], hooks: {}, special: 'selective_memory' },
-      ],
+      desc: 'Le coffre de la salle 8 ne retient que vos 3 meilleures salles pour sa qualité.',
+      tiers: [{ price: 30, mods: [], hooks: {}, special: 'selective_memory' }],
     },
     {
       id: 'meta_apercu_coffre',
       name: 'Aperçu du coffre',
-      desc: 'Voir le contenu du prochain coffre.',
-      tiers: [
-        { price: 30, mods: [], hooks: {}, special: 'chest_preview' },
-        { price: 70, mods: [], hooks: {}, special: 'chest_preview' },
-        { price: 130, mods: [], hooks: {}, special: 'chest_preview' },
-      ],
+      desc: 'Dans les salles 1 à 3, le HUD dit quelle qualité de tirage le coffre de la salle 4 vous réserve.',
+      tiers: [{ price: 30, mods: [], hooks: {}, special: 'chest_preview' }],
     },
     {
       id: 'meta_quatrieme_choix',
       name: 'Quatrième choix',
-      desc: 'Un 4e choix au level-up.',
-      tiers: [
-        { price: 40, mods: [], hooks: {}, special: 'fourth_choice' },
-        { price: 100, mods: [], hooks: {}, special: 'fourth_choice' },
-        { price: 170, mods: [], hooks: {}, special: 'fourth_choice' },
-      ],
+      desc: 'Un 4e choix à chaque montée de niveau et à chaque coffre.',
+      tiers: [{ price: 40, mods: [], hooks: {}, special: 'fourth_choice' }],
     },
     {
       id: 'meta_reroll',
@@ -8176,6 +8019,23 @@ const LORE = {
   ],
 };
 
+/* Chantier 6 : les greffes en double ont été fondues dans une seule (CONTENT.md §41). Un ancien id (dans une vieille
+   sauvegarde, un test, une liste d'exemples) se résout vers la greffe qui l'a absorbée. */
+const UPGRADE_ALIASES = {
+  upg_munitions: 'upg_tranchant',
+  upg_calibrage: 'upg_longue_portee',
+  upg_aimant_de_poche: 'upg_tirelire',
+  upg_projectiles_lourds: 'upg_frappe_lourde',
+  upg_balles_incendiaires: 'upg_etincelle',
+  upg_balles_givrantes: 'upg_givre',
+  upg_balles_electriques: 'upg_chaine_eclair',
+  upg_conducteur: 'upg_chaine_eclair',
+  upg_double_canon: 'upg_second_canon',
+  upg_satellite: 'upg_orbes_gardiennes',
+  upg_ceinture: 'upg_orbes_gardiennes',
+  upg_noyau: 'upg_orbes_gardiennes',
+  upg_tempete: 'upg_foudre_ambiante',
+};
 const Content = (() => {
   /* index par id, construit à la demande. `invalidate` est indispensable dès qu'on ajoute du contenu à chaud
      (atelier « Amis ») : sans lui, un personnage créé en cours de partie reste introuvable et l'appel retombe
@@ -8222,7 +8082,8 @@ const Content = (() => {
     skill: id => get('skills', id),
     skillsAvailable: () => CONTENT.skills.filter(s => Meta.skillUnlocked(s.id)),
     upgrades: () => CONTENT.upgrades,
-    upgrade: id => get('upgrades', id),
+    upgrade: id => get('upgrades', UPGRADE_ALIASES[id] || id),
+    upgradeAlias: id => UPGRADE_ALIASES[id] || id,
     metaPassives: () => CONTENT.metaPassives,
     metaPassive: id => get('metaPassives', id),
     biomes: () => CONTENT.biomes.slice().sort((a, b) => a.order - b.order),
@@ -11050,7 +10911,7 @@ const Combat = {
       Floaters.add(e.x + VFX_RNG.range(-8, 8), e.y - e.r - 4, String(d), info.crit ? '#ffd166' : '#fff', info.crit ? 16 : 12);
       /* hooks onHit */
       for (const h of pl.hooks.onHit) {
-        const chance = h.chance != null ? h.chance : 1;
+        const chance = Math.min(1, (h.chance != null ? h.chance : 1) * (h.stacks || 1)); // reprendre la greffe = palier suivant
         if (h.effect === 'burn' && RNG.chance(chance)) applyStatus(e, 'burn', h);
         else if (h.effect === 'freeze' && RNG.chance(chance)) applyStatus(e, 'freeze', h);
         else if (h.effect === 'poison' && RNG.chance(chance)) applyStatus(e, 'poison', h);
@@ -11126,11 +10987,12 @@ const Combat = {
       if (h.effect === 'explode')
         Combat.explosion(e.x, e.y, (h.radius || 80) * pl.stats.areaSize, Math.round(e.maxHp * (h.damageMul || 0.3)) + 5, '#ff8c42', true);
       else if (h.effect === 'heal_on_kill') pl.heal(h.amount * (h.stacks || 1));
-      else if (h.effect === 'coin_on_kill' && RNG.chance(h.chance || 0.2)) Pickups.spawn(e.x, e.y, 'coin', h.amount || 1);
+      else if (h.effect === 'coin_on_kill' && RNG.chance((h.chance || 0.2) * (h.stacks || 1)))
+        Pickups.spawn(e.x, e.y, 'coin', h.amount || 1);
       else if (h.effect === 'kill_speed') {
         pl.killSpeedUntil = Time.now + (h.duration || 2);
         pl.killSpeedMul = h.speedMul || 1.3;
-      } else if (h.effect === 'skill_reset_on_kill' && RNG.chance(h.chance || 0.2)) {
+      } else if (h.effect === 'skill_reset_on_kill' && RNG.chance((h.chance || 0.2) * (h.stacks || 1))) {
         pl.skillCd = Math.max(0, pl.skillCd - Skills.cooldownOf(pl) * (h.fraction || 0.5));
         if (pl.skillCd <= 0 && pl.skillCharges < pl.skillMaxCharges) {
           pl.skillCharges++;
@@ -17759,7 +17621,12 @@ const Beat = (() => {
 })();
 
 const Tempo = {
-  WINDOW: 0.1, // fenêtre « en rythme » (s) de part et d'autre du temps
+  get WINDOW() {
+    return BALANCE.tempo.window;
+  }, // fenêtre « en rythme » (s) de part et d'autre du temps
+  get MIN_STREAK() {
+    return BALANCE.tempo.minStreak;
+  }, // le bonus commence à cette longueur de série : avant, la série se construit sans rien donner
   COLOR: '#ffd166',
   /* bandeau d'accueil : dit ce qui va se passer, pour ne pas confondre avec une salle de boss */
   intro(room) {
@@ -17989,14 +17856,29 @@ const Tempo = {
     const r = G.room;
     if (!r || !r.tempo || !r.tempo.started || G.attract) return 1;
     const tp = r.tempo;
-    if (Beat.distToBeat(1) > Tempo.WINDOW) return 1;
+    if (Beat.distToBeat(1) > Tempo.WINDOW) {
+      /* fausse note : une action hors du temps casse la série. Tenir le bouton ne construit donc jamais de série,
+         il faut frapper sur le temps — c'est ce qui en fait un geste, pas un hasard de cadence. */
+      if (tp.combo >= Tempo.MIN_STREAK) Floaters.add(pl.x, pl.y - pl.r - 26, 'fausse note', '#9aa4c4', 12);
+      tp.combo = 0;
+      tp.lastMul = 1;
+      return 1;
+    }
     const idx = Math.round(Beat.t / Beat.beatLen());
     if (tp.lastIdx === idx) return tp.lastMul;
     tp.lastIdx = idx;
     tp.combo++;
     tp.best = Math.max(tp.best, tp.combo);
-    tp.onBeat++;
     tp.lastAction = Beat.t;
+    /* la série se construit d'abord (jauge au HUD), le bonus ne vient qu'à partir de MIN_STREAK : un tir tombé
+       par hasard sur le temps ne rapporte rien, quatre d'affilée sont un geste */
+    if (tp.combo < Tempo.MIN_STREAK) {
+      tp.lastMul = 1;
+      AudioEngine.tempoNote({ intensity: 0.35, hz: Beat.noteHz(tp.combo - 1) });
+      tp.flashes.push({ t: 0 });
+      return 1;
+    }
+    tp.onBeat++;
     const mul = 1.25 + Math.min(0.25, tp.combo * 0.025);
     tp.lastMul = mul;
     Floaters.add(pl.x, pl.y - pl.r - 26, 'TEMPO ×' + tp.combo, Tempo.COLOR, 15);
@@ -18242,6 +18124,25 @@ const Tempo = {
     }
     ctx.restore();
   },
+  /* jauge de série : MIN_STREAK pastilles qui se remplissent une à une, avant que « TEMPO ×n » ne prenne la place */
+  renderStreak(ctx, cx, y, tp) {
+    const n = Tempo.MIN_STREAK,
+      sp = 14;
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const x = cx - ((n - 1) * sp) / 2 + i * sp;
+      const on = i < tp.combo;
+      ctx.globalAlpha = on ? 0.95 : 0.3;
+      ctx.strokeStyle = Tempo.COLOR;
+      ctx.fillStyle = Tempo.COLOR;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, TAU);
+      if (on) ctx.fill();
+      else ctx.stroke();
+    }
+    ctx.restore();
+  },
   /* HUD (coordonnées écran) : barre de mesure en haut au centre + combo */
   renderHud(ctx, room) {
     const tp = room.tempo;
@@ -18269,6 +18170,7 @@ const Tempo = {
         yb = 70;
       ctx.fillStyle = 'rgba(8,10,18,.7)';
       ctx.fillRect(x0 - 12, yb - 14, w + 24, tp.combo > 0 ? 46 : 28);
+      if (tp.combo > 0 && tp.combo < Tempo.MIN_STREAK) Tempo.renderStreak(ctx, W / 2, yb + 22, tp);
       for (let i = 0; i < n; i++) {
         const x = x0 + i * spd + Math.floor(i / 4) * gap + spd / 2;
         const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? '#ff3b5c' : '#7fff9a';
@@ -18282,7 +18184,7 @@ const Tempo = {
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = '#fff';
       ctx.fillRect(x0 + pp.p * spd + Math.floor(pp.p / 4) * gap - 1, yb - 11, 2, 22);
-      if (tp.combo > 0) {
+      if (tp.combo >= Tempo.MIN_STREAK) {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = Tempo.COLOR;
@@ -18297,6 +18199,7 @@ const Tempo = {
       sp = 30; // sous le cartouche « Salle 7/9 » du HUD
     ctx.fillStyle = 'rgba(8,10,18,.7)';
     ctx.fillRect(cx - 88, y - 14, 176, tp.combo > 0 ? 46 : 28);
+    if (tp.combo > 0 && tp.combo < Tempo.MIN_STREAK) Tempo.renderStreak(ctx, cx, y + 22, tp);
     for (let i = 0; i < 4; i++) {
       const x = cx - 1.5 * sp + i * sp;
       const on = i === bib && tp.phase !== 'wait';
@@ -18309,7 +18212,7 @@ const Tempo = {
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = '#fff';
     ctx.fillRect(cx - 1.5 * sp + (bib + ph) * sp - 1, y - 11, 2, 22);
-    if (tp.combo > 0) {
+    if (tp.combo >= Tempo.MIN_STREAK) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = Tempo.COLOR;
@@ -19069,14 +18972,17 @@ const Run = {
     const charDef = Content.character(character);
     const biomeDef = Content.biome(biome);
     const rooms = Content.roomsOf(biomeDef.id);
-    const pair = RNG.pick(
-      biomeDef.levelPassives || [{ bonus: { name: '—', desc: '', mods: [] }, malus: { name: '—', desc: '', mods: [] } }]
-    );
+    /* deux paires bonus/malus tirées : le joueur choisit la sienne en prépa (Run.setPair), la première par défaut */
+    const pairChoices = RNG.shuffle(
+      (biomeDef.levelPassives || [{ bonus: { name: '—', desc: '', mods: [] }, malus: { name: '—', desc: '', mods: [] } }]).slice()
+    ).slice(0, 2);
+    const pair = pairChoices[0];
     G.run = {
       biome: biomeDef,
       char: charDef,
       rooms,
       roomIndex: 0,
+      pairChoices,
       levelPassive: { bonus: Object.assign({ id: 'lp_bonus' }, pair.bonus), malus: Object.assign({ id: 'lp_malus' }, pair.malus) },
       level: 1,
       xp: 0,
@@ -19119,7 +19025,7 @@ const Run = {
     if (weapon && skill) {
       Run.equip(startW, skill);
     }
-    G.run.skillChoices = RNG.shuffle(Content.skillsAvailable().slice()).slice(0, 2);
+    G.run.skillChoices = RNG.shuffle(Content.skillsAvailable().slice()).slice(0, 3);
     applyDifficulty();
     /* compagnon choisi au hub : il entre avec le joueur (celui trouvé sur une élite le remplacera) */
     const petId = Meta.profile.pet;
@@ -19157,6 +19063,14 @@ const Run = {
       r.stats.levelReached = r.level;
     }
     if (r.pendingLevelUps > 0 && !G.overlay) Run.levelUp();
+  },
+  /* la paire bonus/malus choisie en prépa (index dans G.run.pairChoices) */
+  setPair(i) {
+    const r = G.run;
+    const pair = r.pairChoices && r.pairChoices[i];
+    if (!pair) return;
+    r.levelPassive = { bonus: Object.assign({ id: 'lp_bonus' }, pair.bonus), malus: Object.assign({ id: 'lp_malus' }, pair.malus) };
+    if (G.player) G.player.recompute();
   },
   upgradePool() {
     const pl = G.player;
@@ -19837,7 +19751,7 @@ const UI = (() => {
             <div class="lvlhead"><span class="lvlnum">Niveau ${b.order}</span><span class="lvlname">${esc(b.name)}</span><span class="lvlstate">${!ok ? '🔒 Verrouillé' : sel ? '✓ Sélectionné' : 'Cliquer pour choisir'}</span></div>
             <div class="lvlmeta"><span class="tag">Difficulté ${'★'.repeat(Math.min(5, b.order))}${'☆'.repeat(Math.max(0, 5 - b.order))}</span>${done ? `<span class="tag ok">Terminé ${done}×</span>` : ok ? '<span class="tag">Jamais terminé</span>' : ''}</div>
             <div class="muted small lvldesc">${esc(b.tagline || b.desc)}</div>
-            ${ok ? `<div class="muted tiny">Au départ, un bonus et un malus sont tirés au sort parmi ces paires :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : terminer le niveau ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
+            ${ok ? `<div class="muted tiny">Au départ, deux de ces paires bonus/malus te sont proposées, tu en choisis une :</div><div class="pairs">${b.levelPassives.map(lp => `<div class="pair"><span class="good">+ ${esc(lp.bonus.name)}</span><span class="bad">− ${esc(lp.malus.name)}</span></div>`).join('')}</div>` : `<div class="bad small">Pour débloquer : terminer le niveau ${prev ? prev.order + ' (' + esc(prev.name) + ')' : 'précédent'} jusqu'à la salle 9.</div>`}
           </div>`;
             })
             .join('')}</div>
@@ -20072,10 +19986,10 @@ const UI = (() => {
   function showPrep() {
     const r = G.run;
     const s = screens.prep;
-    const lp = r.levelPassive;
     const weapons = Content.weapons().filter(w => Meta.weaponUnlocked(w.id));
     let selW = r.char.startWeapon && Meta.weaponUnlocked(r.char.startWeapon) ? r.char.startWeapon : weapons[0].id;
     let selS = null;
+    let selP = 0; // paire bonus/malus : la première par défaut
     let selR = state.testRoom || 1,
       selL = state.testLevel || 1; // mode Test : salle et niveau de départ (mémorisés pour la session)
     const metaList =
@@ -20086,12 +20000,16 @@ const UI = (() => {
     const render = () => {
       const wSel = weapons.find(w => w.id === selW);
       const sSel = r.skillChoices.find(sk => sk.id === selS);
+      const pairs = r.pairChoices || [];
       const touch = Input.touch.active;
       s.innerHTML = `
         <div class="panel prep">
           <div class="eyebrow">Avant d'entrer — niveau ${r.biome.order} · ${esc(r.biome.name)}</div>
           <h2>Équipe-toi pour ce niveau</h2>
-          <div class="prepmods"><span class="chip good"><b>Bonus de départ</b> ${esc(lp.bonus.name)} — ${esc(lp.bonus.desc)}</span><span class="chip bad"><b>Malus de départ</b> ${esc(lp.malus.name)} — ${esc(lp.malus.desc)}</span></div>
+          <section class="prepstep pairstep done">
+            <h3><span class="stepnum">0</span> Ton départ <span class="muted tiny">— un bonus et un malus, ensemble · choisis la paire qui te va</span></h3>
+            <div class="cards" id="prep-pairs">${pairs.map((pp, i) => `<div class="card pick pairpick ${i === selP ? 'selected' : ''}" data-p="${i}"><div class="prepmods"><span class="chip good"><b>+</b> ${esc(pp.bonus.name)} — ${esc(pp.bonus.desc)}</span><span class="chip bad"><b>−</b> ${esc(pp.malus.name)} — ${esc(pp.malus.desc)}</span></div>${i === selP ? '<div class="pickmark">✓ Choisie</div>' : ''}</div>`).join('')}</div>
+          </section>
           <details class="prepdetails muted tiny"><summary>Trait du personnage et calibrations du hub</summary><b>${esc(r.char.trait.name)}</b> — ${esc(r.char.trait.desc)}<br>Calibrations : ${metaList}</details>
           <section class="prepstep weapon done">
             <h3><span class="stepnum">1</span> Ton arme <span class="muted tiny">— l'attaque principale, en continu · clic gauche${touch ? ' ou bouton TIR' : ''}</span></h3>
@@ -20147,6 +20065,15 @@ const UI = (() => {
             render();
           })
       );
+      s.querySelectorAll('[data-p]').forEach(
+        c =>
+          (c.onclick = () => {
+            selP = +c.dataset.p;
+            Run.setPair(selP);
+            AudioEngine.uiClick({});
+            render();
+          })
+      );
       s.querySelector('#prep-go').onclick = () => go();
       s.querySelector('#prep-abort').onclick = () => {
         Run.toHub();
@@ -20154,6 +20081,7 @@ const UI = (() => {
     };
     const go = () => {
       if (!selS) return;
+      Run.setPair(selP);
       Run.equip(selW, selS);
       hideAll();
       G.paused = false;
@@ -20939,7 +20867,7 @@ const Attract = (() => {
     'weapon_orb',
     'weapon_hammer',
   ];
-  const SHOW_UPGRADES = ['upg_balles_incendiaires', 'upg_balles_electriques', 'upg_satellite', 'upg_detonation', 'upg_tir_guide'];
+  const SHOW_UPGRADES = ['upg_etincelle', 'upg_chaine_eclair', 'upg_orbes_gardiennes', 'upg_detonation', 'upg_tir_guide'];
   function pool() {
     const out = [];
     for (const b of Content.biomes()) for (const id of b.enemyPool) out.push(id);
@@ -21125,7 +21053,7 @@ const Attract = (() => {
    `sfx` et `music`, et un profil d'une autre version repartait à zéro sans un mot. */
 const SAVE_KEY = 'way_save';
 const SAVE_KEYS_ANCIENNES = ['sujet_neuf_save_v1'];
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const Meta = (() => {
   const fresh = () => ({
     v: SAVE_VERSION,
@@ -21164,6 +21092,22 @@ const Meta = (() => {
   /* une fonction par saut de version : v → v + 1. Ajouter ici, jamais modifier une entrée existante. */
   const MIGRATIONS = {
     1: d => d, // v1 → v2 : mêmes champs ; `zoom` et `lag` arrivent avec leurs défauts par la fusion
+    /* v2 → v3 (chantier 6) : Mémoire sélective, Aperçu du coffre et Quatrième choix n'ont plus qu'un palier — les
+       paliers 2 et 3 ne faisaient rien. Qui les avait payés est remboursé au prix d'alors. */
+    2: d => {
+      const anciens = { meta_memoire_selective: [80, 150], meta_apercu_coffre: [70, 130], meta_quatrieme_choix: [100, 170] };
+      if (!estObjet(d.metaTiers)) return d;
+      let rembourse = 0;
+      for (const id in anciens) {
+        const t = +d.metaTiers[id] || 0;
+        if (t > 1) {
+          for (let i = 1; i < t && i - 1 < anciens[id].length; i++) rembourse += anciens[id][i - 1];
+          d.metaTiers[id] = 1;
+        }
+      }
+      if (rembourse) d.coins = (+d.coins || 0) + rembourse;
+      return d;
+    },
   };
   function migrate(d) {
     let v = +d.v || 1;

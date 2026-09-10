@@ -170,7 +170,7 @@ Salle 4 (coffre) = checkpoint : tout ce qui est en attente est validé. Fin de n
 
 ## 8. Sauvegarde (`Meta.profile`, localStorage)
 
-Clé **`way_save`** (anciennement `sujet_neuf_save_v1`, encore relue). Version courante **2**. Une sauvegarde se lit en quatre temps (`Meta.load`) : trouver le blob (clé actuelle, sinon les anciennes) ; s'il va être transformé ou déplacé, en garder une copie sous `way_save_secours_v<N>` (jamais écrasée) ; le faire monter de version par `MIGRATIONS[v]` (une fonction par saut, on n'en modifie jamais une existante) ; le **fusionner** dans un profil neuf, objet par objet — un `volume: { master }` garde `sfx` et `music` par défaut, un champ inconnu est conservé. Une version **plus récente** que le jeu est lue telle quelle et n'est pas rabaissée.
+Clé **`way_save`** (anciennement `sujet_neuf_save_v1`, encore relue). Version courante **3**. Une sauvegarde se lit en quatre temps (`Meta.load`) : trouver le blob (clé actuelle, sinon les anciennes) ; s'il va être transformé ou déplacé, en garder une copie sous `way_save_secours_v<N>` (jamais écrasée) ; le faire monter de version par `MIGRATIONS[v]` (une fonction par saut, on n'en modifie jamais une existante) ; le **fusionner** dans un profil neuf, objet par objet — un `volume: { master }` garde `sfx` et `music` par défaut, un champ inconnu est conservé. Une version **plus récente** que le jeu est lue telle quelle et n'est pas rabaissée.
 
 | champ | v | sens |
 |---|---|---|
@@ -183,5 +183,7 @@ Clé **`way_save`** (anciennement `sujet_neuf_save_v1`, encore relue). Version c
 | `volume` | 1 | `{ master, sfx, music }` 0..1 |
 | `zoom` | 2 | zoom caméra choisi ; 0 = automatique |
 | `lag` | 2 | décalage son/image calibré dans l'atelier, en secondes |
+
+Migrations : v1 → v2 sans changement de champ ; v2 → v3 (chantier 6) ramène `metaTiers` de `meta_memoire_selective`, `meta_apercu_coffre` et `meta_quatrieme_choix` à 1 au plus et rembourse dans `coins` les paliers 2 et 3 payés (80 + 150, 70 + 130, 100 + 170).
 
 Autres clés du navigateur : `way_amis_v1` (l'établi Amis), `way.props.custom` (images importées), `way_journal` (les 20 dernières erreurs, voir `Rapport`).

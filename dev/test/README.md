@@ -37,6 +37,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `amis` | l'établi Amis : créer un animal et un copain, export de `content5.js`, rechargement |
 | `arme` | l'arme part de la main, à 45 % du corps, pour chaque type de corps |
 | `chats` | Choupi, Tanuki et ORI : planches, tailles, ligne de sol, clips, équipes |
+| `choix` | chantier 6 : tempo ±50 ms, série de 4, fausse note, bot à < 15 % ; 3 compétences et 2 paires en prépa ; 61 greffes sans dominance (`dev/check-greffes.js`), paliers à chance ; calibrations à un palier, migration v3 |
 | `compagnons` | chantier 5 : « Personne » à +25 % PV / +15 % dégâts, l'onde d'arrivée d'« À l'appel », Choupi qui court chercher, ORI qui rend critique, les trois caractères, reliques hors élites, `Run.reset` |
 | `duo` | l'attelage inséparable, les trois équipes, les modes de compagnon |
 | `etape0` | le socle rythmique : horloge musicale, pièges cadencés, tourniquet |

@@ -30,6 +30,8 @@ const BALANCE = {
   heartOnClear: 30,
   heartDropChance: 0.05,
   heartOnBossPhase: 30, // second souffle au changement de phase d'un boss (0 = jamais)
+  /* tempo : fenêtre « en rythme » (s) de part et d'autre du temps, et longueur de série à partir de laquelle le bonus s'applique */
+  tempo: { window: 0.05, minStreak: 4 },
   /* reliques hors élites : chance qu'un ennemi ordinaire en lâche une (2 objets max par salle), et relique sûre sur le mini-boss */
   relicDropChance: 0.02,
   relicOnBoss: true,
