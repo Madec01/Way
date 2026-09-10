@@ -26,7 +26,13 @@ function applyDifficulty() {
   const d = G.debug.difficulty;
   const b = (G.run && G.run.biome && G.run.biome.difficulty) || {};
   const idx = (G.run && G.run.roomIndex) || 1;
-  const ramp = 1 + (b.rampPerRoom != null ? b.rampPerRoom : BALANCE.rampPerRoom) * Math.max(0, idx - 1); // salle 1 → ×1, salle 9 → ×1.48 par défaut
+  /* Une salle de boss n'est pas rampée : un boss est réglé à la main pour SA salle, et la rampe (×1,24 en salle 5,
+     ×1,48 en salle 9) s'ajoutait par-dessus — elle annulait toute baisse de ses dégâts et gonflait la revanche
+     de salle 9 à 12 500 PV au biome 4. */
+  const defs = G.run && G.run.biome ? Content.roomsOf(G.run.biome.id) : [];
+  const def = defs[idx - 1];
+  const salleDeBoss = !!(def && /BOSS|REVENGE/.test(def.type || ''));
+  const ramp = salleDeBoss ? 1 : 1 + (b.rampPerRoom != null ? b.rampPerRoom : BALANCE.rampPerRoom) * Math.max(0, idx - 1); // salle 1 → ×1, salle 9 → ×1.48 par défaut
   G.difficulty = {
     hpMul: d * (b.hpMul || 1) * ramp,
     damageMul: d * (b.damageMul || 1) * ramp,
@@ -499,6 +505,10 @@ const Room = {
     UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
     Music.calm();
     for (const p of Pickups.list) p.magnet = true;
+    /* Un cœur à chaque salle vidée, devant la porte : la seule source de soin régulière d'une run. Sans lui,
+       on arrivait au mini-boss avec 40 PV et aucun moyen d'en regagner — c'est là que mouraient 13 parties sur 16. */
+    if (BALANCE.heartOnClear && r.index > 0)
+      Pickups.spawn(ROOM_X + 22 * TILE + TILE / 2, ROOM_Y + 6 * TILE + TILE / 2, 'heart', BALANCE.heartOnClear);
   },
   /* score de la salle courante */
   score() {

@@ -26,7 +26,7 @@ Un modificateur : `{stat, add?, mul?}`. `add` s'additionne, `mul` se multiplie (
 | `range` | 1.0 | multiplicateur portée |
 | `areaSize` | 1.0 | multiplicateur taille de zone / mêlée |
 | `knockback` | 1.0 | multiplicateur recul |
-| `armor` | 0 | dégâts plats retirés par coup (min 1 dégât) |
+| `armor` | 0 | réduction en % : 1 point = 4 %, plafonnée à 50 % (`BALANCE.armor`) ; min 1 dégât |
 | `regen` | 0 | PV / s |
 | `dodge` | 0 | 0..1, chance d'esquiver un coup |
 | `lifesteal` | 0 | fraction des dégâts infligés rendue en PV |

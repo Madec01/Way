@@ -522,3 +522,16 @@ Aucune erreur JS, aucune salle bloquée, le bot franchit le col, traverse la riv
 **Attention à ne pas surinterpréter ces balayages : `__autoplay` n'est pas déterministe d'une exécution à l'autre.** Preuve mesurée dans cette session : le même build, à la même graine 900 sur le biome 4, a donné `5 / 3 / 5 / 2` puis `5 / 2 / 5 / 2`. `Attract.start` resème le RNG avec `Date.now()` et `VFX_RNG` est semé au temps. Un balayage isolé ne peut donc pas prouver une non-régression — la non-régression du jalon 0 a été établie **par lecture des chemins de code** (tout le terrain est derrière `if (room.grid)`, absent des salles sans plan), le balayage ne servant qu'à confirmer l'absence d'erreur et de blocage.
 
 **Régressions** : clavier/souris 8/8, progression des pièges de la salle du tempo inchangée, phrase rythmique du Vizir intacte (cimeterres au temps 5, mirage au 8, tempête sur le temps fort de la dernière mesure).
+
+## 11. Chantier 4 — le Normal gagnable (10 septembre 2026)
+
+Banc : `dev/test/bench/normal.js` — bot, mode Normal, profil neuf, Martin + Uno, difficulté 1, biome 1, 8 armes × 4 graines (41-44), échelle de temps ×40.
+
+| | victoires | mini-boss tué | salle médiane | pire salle | Uno KO / partie |
+|---|---|---|---|---|---|
+| avant | 0/32 (0 %) | 2/32 (6 %) | 3 | 206 s | 3,5 |
+| après | **13/32 (41 %)** | **22/32 (69 %)** | 7 | 113 s | 1,1 |
+
+Par arme (après) : chaîne 4/4, boomerang 3/4, lame 2/4, arc 2/4, pistolet 2/4, marteau 0/4, orbe 0/4, brûleur 0/4. Salle de mort : 5 (×7), 6 et 7 (×4 chacune), 3 (×3), 9 (×1).
+
+Les onze réglages et leur effet mesuré un par un sont dans CONTENT.md §39. Le réglage décisif : les salles de boss ne sont plus rampées (mini-boss 38 % → 81 % sur 16 parties). Le point ouvert : la salle 6 (modulaire), où le bot marche dans le sol électrifié ; l'orbe et le brûleur, qui n'en sortent pas.

@@ -49,7 +49,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'slam', stunTime: 0.6, windup: 0.25 },
       unlocked: false,
-      price: 150,
+      price: 50,
     },
     {
       id: 'weapon_bow',
@@ -70,7 +70,7 @@ const CONTENT = {
       charge: { min: 0.25, max: 1.0, damageMul: 3.0 },
       special: { kind: null, chargedPierceBonus: 2, chargedProjSpeedMul: 1.4 },
       unlocked: false,
-      price: 200,
+      price: 70,
     },
     {
       id: 'weapon_pistol',
@@ -112,7 +112,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'return', passes: 2, maxInFlight: 1, returnSpeedMul: 1.15 },
       unlocked: false,
-      price: 220,
+      price: 70,
     },
     {
       id: 'weapon_orb',
@@ -133,7 +133,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'orbit', radius: 65, angularSpeed: 5.8, tickRate: 4, blocksProjectiles: false },
       unlocked: false,
-      price: 250,
+      price: 80,
     },
     {
       id: 'weapon_chain',
@@ -154,7 +154,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'chain', jumps: 2, radius: 160, damageMul: 0.6 },
       unlocked: false,
-      price: 300,
+      price: 100,
     },
     {
       id: 'weapon_flame',
@@ -175,7 +175,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'cone', angle: 0.7, burnDps: 4, burnDuration: 2.0 },
       unlocked: false,
-      price: 280,
+      price: 90,
     },
   ],
 
@@ -1156,10 +1156,10 @@ const CONTENT = {
       name: 'Vitalité',
       desc: 'PV de départ.',
       tiers: [
-        { price: 60, mods: [{ stat: 'maxHp', add: 10 }], hooks: {}, special: null },
-        { price: 140, mods: [{ stat: 'maxHp', add: 10 }], hooks: {}, special: null },
-        { price: 260, mods: [{ stat: 'maxHp', add: 15 }], hooks: {}, special: null },
-        { price: 450, mods: [{ stat: 'maxHp', add: 15 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'maxHp', add: 10 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'maxHp', add: 10 }], hooks: {}, special: null },
+        { price: 90, mods: [{ stat: 'maxHp', add: 15 }], hooks: {}, special: null },
+        { price: 150, mods: [{ stat: 'maxHp', add: 15 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1167,11 +1167,11 @@ const CONTENT = {
       name: 'Puissance',
       desc: 'Dégâts de base.',
       tiers: [
-        { price: 80, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
-        { price: 160, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
-        { price: 260, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
-        { price: 400, mods: [{ stat: 'damage', mul: 1.05 }], hooks: {}, special: null },
-        { price: 600, mods: [{ stat: 'damage', mul: 1.05 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
+        { price: 90, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
+        { price: 130, mods: [{ stat: 'damage', mul: 1.05 }], hooks: {}, special: null },
+        { price: 200, mods: [{ stat: 'damage', mul: 1.05 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1179,10 +1179,10 @@ const CONTENT = {
       name: 'Chance',
       desc: 'Décale les raretés vers épique et colossal.',
       tiers: [
-        { price: 50, mods: [{ stat: 'luck', add: 2 }], hooks: {}, special: null },
-        { price: 120, mods: [{ stat: 'luck', add: 2 }], hooks: {}, special: null },
-        { price: 240, mods: [{ stat: 'luck', add: 3 }], hooks: {}, special: null },
-        { price: 400, mods: [{ stat: 'luck', add: 3 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'luck', add: 2 }], hooks: {}, special: null },
+        { price: 40, mods: [{ stat: 'luck', add: 2 }], hooks: {}, special: null },
+        { price: 80, mods: [{ stat: 'luck', add: 3 }], hooks: {}, special: null },
+        { price: 130, mods: [{ stat: 'luck', add: 3 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1190,10 +1190,10 @@ const CONTENT = {
       name: 'Cupidité',
       desc: 'Argent gagné.',
       tiers: [
-        { price: 40, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
-        { price: 100, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
-        { price: 200, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
-        { price: 350, mods: [{ stat: 'coinGain', mul: 1.15 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
+        { price: 70, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
+        { price: 120, mods: [{ stat: 'coinGain', mul: 1.15 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1201,10 +1201,10 @@ const CONTENT = {
       name: 'Étude',
       desc: 'XP gagnée.',
       tiers: [
-        { price: 40, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
-        { price: 100, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
-        { price: 200, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
-        { price: 350, mods: [{ stat: 'xpGain', mul: 1.1 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
+        { price: 70, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
+        { price: 120, mods: [{ stat: 'xpGain', mul: 1.1 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1212,10 +1212,10 @@ const CONTENT = {
       name: 'Réactivité',
       desc: 'Réduction des cooldowns de compétence.',
       tiers: [
-        { price: 70, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
+        { price: 90, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
         { price: 150, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
-        { price: 280, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
-        { price: 450, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1223,9 +1223,9 @@ const CONTENT = {
       name: 'Résurrection',
       desc: 'Une seconde vie par run.',
       tiers: [
-        { price: 120, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.25 }] }, special: 'resurrect' },
-        { price: 300, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.4 }] }, special: 'resurrect' },
-        { price: 550, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.6 }] }, special: 'resurrect' },
+        { price: 40, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.25 }] }, special: 'resurrect' },
+        { price: 100, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.4 }] }, special: 'resurrect' },
+        { price: 180, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.6 }] }, special: 'resurrect' },
       ],
     },
     {
@@ -1233,9 +1233,9 @@ const CONTENT = {
       name: 'Mémoire sélective',
       desc: 'Commencer la run avec une amélioration de la run précédente.',
       tiers: [
-        { price: 100, mods: [], hooks: {}, special: 'selective_memory' },
-        { price: 250, mods: [], hooks: {}, special: 'selective_memory' },
-        { price: 450, mods: [], hooks: {}, special: 'selective_memory' },
+        { price: 30, mods: [], hooks: {}, special: 'selective_memory' },
+        { price: 80, mods: [], hooks: {}, special: 'selective_memory' },
+        { price: 150, mods: [], hooks: {}, special: 'selective_memory' },
       ],
     },
     {
@@ -1243,9 +1243,9 @@ const CONTENT = {
       name: 'Aperçu du coffre',
       desc: 'Voir le contenu du prochain coffre.',
       tiers: [
-        { price: 80, mods: [], hooks: {}, special: 'chest_preview' },
-        { price: 200, mods: [], hooks: {}, special: 'chest_preview' },
-        { price: 380, mods: [], hooks: {}, special: 'chest_preview' },
+        { price: 30, mods: [], hooks: {}, special: 'chest_preview' },
+        { price: 70, mods: [], hooks: {}, special: 'chest_preview' },
+        { price: 130, mods: [], hooks: {}, special: 'chest_preview' },
       ],
     },
     {
@@ -1253,9 +1253,9 @@ const CONTENT = {
       name: 'Quatrième choix',
       desc: 'Un 4e choix au level-up.',
       tiers: [
-        { price: 120, mods: [], hooks: {}, special: 'fourth_choice' },
-        { price: 300, mods: [], hooks: {}, special: 'fourth_choice' },
-        { price: 500, mods: [], hooks: {}, special: 'fourth_choice' },
+        { price: 40, mods: [], hooks: {}, special: 'fourth_choice' },
+        { price: 100, mods: [], hooks: {}, special: 'fourth_choice' },
+        { price: 170, mods: [], hooks: {}, special: 'fourth_choice' },
       ],
     },
     {
@@ -1263,9 +1263,9 @@ const CONTENT = {
       name: 'Re-roll',
       desc: 'Relancer les choix de level-up.',
       tiers: [
-        { price: 90, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
-        { price: 220, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
-        { price: 420, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
+        { price: 30, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
+        { price: 70, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
+        { price: 140, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
       ],
     },
     {
@@ -1273,9 +1273,9 @@ const CONTENT = {
       name: 'Célérité',
       desc: 'Vitesse de déplacement.',
       tiers: [
-        { price: 60, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
-        { price: 150, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
-        { price: 300, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
+        { price: 100, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1283,9 +1283,9 @@ const CONTENT = {
       name: 'Carapace',
       desc: 'Armure de base.',
       tiers: [
-        { price: 80, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
-        { price: 200, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
-        { price: 380, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
+        { price: 70, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
+        { price: 130, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1293,9 +1293,9 @@ const CONTENT = {
       name: 'Isolation',
       desc: 'Dégâts des pièges subis.',
       tiers: [
-        { price: 70, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
-        { price: 170, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
-        { price: 320, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
+        { price: 60, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
+        { price: 110, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1303,9 +1303,9 @@ const CONTENT = {
       name: 'Aimantation',
       desc: 'Rayon de ramassage.',
       tiers: [
-        { price: 40, mods: [{ stat: 'pickupRadius', add: 30 }], hooks: {}, special: null },
-        { price: 100, mods: [{ stat: 'pickupRadius', add: 30 }], hooks: {}, special: null },
-        { price: 220, mods: [{ stat: 'pickupRadius', add: 40 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'pickupRadius', add: 30 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'pickupRadius', add: 30 }], hooks: {}, special: null },
+        { price: 70, mods: [{ stat: 'pickupRadius', add: 40 }], hooks: {}, special: null },
       ],
     },
     {
@@ -1313,10 +1313,10 @@ const CONTENT = {
       name: 'Précision',
       desc: 'Chance de critique de base.',
       tiers: [
-        { price: 70, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
+        { price: 90, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
         { price: 150, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
-        { price: 280, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
-        { price: 450, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
       ],
     },
   ],
@@ -1378,7 +1378,9 @@ const CONTENT = {
         'trap_rayon',
       ],
       miniboss: 'boss_etalon_07',
-      difficulty: { hpMul: 1, damageMul: 1, speedMul: 1 },
+      /* Le premier palier apprend le jeu : PV et dégâts sous la référence, montée par salle plus douce (0,06 contre
+         0,09 ailleurs). Mesuré avant : 0 victoire sur 32 parties de bot, mort en salle 3 ou 5. */
+      difficulty: { hpMul: 0.85, damageMul: 0.75, speedMul: 1, rampPerRoom: 0.06 },
     },
   ],
 
@@ -1501,7 +1503,7 @@ const CONTENT = {
       id: 'boss_etalon_07',
       name: 'Étalon 07, dit « le Portier »',
       desc: "Le sujet de référence d'ADMISSION, gardé comme mètre-étalon. Vérin hydraulique au bras droit, prise de calibration à nu dans le dos. Lourd, prévisible : il faut le faire pivoter.",
-      hp: 3300,
+      hp: 2600, // 3300 avant : le premier boss du jeu durait trop, et chaque seconde de plus coûtait des PV
       speed: 120,
       radius: 36,
       damage: 22,
@@ -1512,16 +1514,19 @@ const CONTENT = {
         {
           hpBelow: 1.0,
           patterns: [
-            { kind: 'ring', telegraph: 0.8, duration: 0.3, cooldown: 2.3, count: 12, projSpeed: 260, projDamage: 22, projSize: 8 },
-            { kind: 'charge', telegraph: 0.9, duration: 0.8, cooldown: 3.4, speed: 620, damage: 34, stopOnWall: true, stunTime: 1.5 },
-            { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 4.0, radius: 140, damage: 32, knockback: 3.0 },
+            /* Premier boss du jeu : ses quatre attaques se chevauchaient (recharges 2,3 / 3,4 / 4 / 5,5 s) et
+               chacune coûtait un quart des PV. Recharges +30 %, dégâts −20 % : il reste lourd et prévisible,
+               il laisse le temps de le lire. Mesuré avant : 7 parties de bot sur 16 meurent ici. */
+            { kind: 'ring', telegraph: 0.8, duration: 0.3, cooldown: 3.0, count: 12, projSpeed: 260, projDamage: 18, projSize: 8 },
+            { kind: 'charge', telegraph: 0.9, duration: 0.8, cooldown: 4.4, speed: 620, damage: 28, stopOnWall: true, stunTime: 1.5 },
+            { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 5.2, radius: 140, damage: 26, knockback: 3.0 },
             {
               kind: 'quake',
               telegraph: 1.1,
               duration: 2.0,
-              cooldown: 5.5,
+              cooldown: 7.0,
               speed: 580,
-              damage: 26,
+              damage: 22,
               range: 900,
               color: '#9fd8ff',
               label: 'ONDE DE CHOC',

@@ -251,9 +251,12 @@ const Progression = (() => {
   }
 
   /* --- Argent : règle validée. checkpoint = index de la dernière salle checkpoint (0 au départ). --- */
+  /* Ce qu'une mort garde : une prime fixe plus une par salle atteinte (BALANCE.deathBonus), et 10 % des crédits
+     en attente par salle depuis la dernière consignation. La prime fait qu'une mort en salle 3 vaut ~70 crédits,
+     pas 18 : une progression que l'on sent d'une partie à l'autre. */
   function coinsKeptOnDeath(pending, roomIndex, lastCheckpoint) {
     const frac = clamp(0.1 * (roomIndex - lastCheckpoint), 0, 1);
-    return Math.floor(pending * frac);
+    return BALANCE.deathBonus.base + BALANCE.deathBonus.perRoom * Math.max(0, roomIndex) + Math.floor(pending * frac);
   }
 
   return {

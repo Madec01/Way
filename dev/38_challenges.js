@@ -82,6 +82,7 @@ const Challenge = (() => {
       c.r = 3 * TILE;
       c.reinforceT = 5;
       c.reinforceEvery = 6;
+      c.reinforcements = 0; // vagues de renfort envoyées (plafonnées par BALANCE.reinforcementWaves)
     } else if (id === 'collapse') {
       c.holes = new Set();
       c.warn = new Map();
@@ -212,9 +213,15 @@ const Challenge = (() => {
       const inside = dist(pl.x, pl.y, z.x, z.y) < c.r;
       c.gauge = clamp(c.gauge + (inside ? dt / 6 : -dt / 12), 0, 1);
       c.reinforceT -= dt;
-      if (c.reinforceT <= 0) {
+      if (c.reinforceT <= 0 && c.reinforcements < BALANCE.reinforcementWaves) {
         c.reinforceT = c.reinforceEvery;
+        c.reinforcements++;
         spawnReinforcement(3 + Math.floor(RNG() * 2), true);
+      }
+      /* plus de renforts et plus personne : la porte s'ouvre, les zones restent non capturées (pas de prime) */
+      if (c.reinforcements >= BALANCE.reinforcementWaves && Room.alive() === 0 && room.waves.every(w => w.done)) {
+        c.done = true;
+        UI.banner("Zones abandonnées — la porte s'ouvre", '#ffb347');
       }
       if (c.gauge >= 1) {
         c.zi++;

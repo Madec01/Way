@@ -81,7 +81,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Taille** : 2 séances.
 **Bilan** : fait en une séance (CONTENT.md §38). `Sprites.corps` et `SOL = 25` pour tous ; `corps.js` mesure 23 fois au pixel (trois personnages, sprite entier, visage collé, planche du jeu, quatre animaux, compagnon à image, ordre de dessin, regard, un geste par tir, dash). La cadence du geste est vérifiée sur l'arme de départ, pas encore sur les 8 : à compléter au chantier 4 quand on touchera aux armes.
 
-## Chantier 4 — Le Normal gagnable
+## Chantier 4 — Le Normal gagnable ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : un joueur moyen gagne le biome 1 une fois sur trois. Tout se mesure au bot (`levels.js`, 8 armes × 4 graines) avant et après chaque réglage.
 
@@ -95,6 +95,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
 **Fini quand** : bot Normal biome 1, profil neuf, 8 armes × 4 graines : **≥ 25 % de victoires et ≥ 60 % de mini-boss tués** (le bot est plus faible qu'un humain : 25 % bot ≈ 35-40 % humain) ; aucune run bot au-dessus de 60 s dans une salle ; TEST-REPORT §11 écrit avec les chiffres.
 **Taille** : 2 séances.
+**Bilan** : onze réglages mesurés un à un (CONTENT.md §39), tous dans `05_balance.js` ou le contenu. Avant : 0 victoire sur 32, mini-boss 6 %. Après (32 parties) : 13 victoires (41 %), mini-boss tué 22 (69 %), salle médiane 7, pire salle 113 s — cibles atteintes. La pire salle reste au-dessus de 60 s dans les salles modulaires (salle 6) : le bot y marche dans le sol électrifié — à traiter au chantier 9 avec ces salles. Biomes 3-4 : seule l'exemption de rampe des boss les touche ; à mesurer au chantier 9. Uno : 3,5 → 0,8 KO par partie.
 
 ## Chantier 5 — Des compagnons qui comptent
 

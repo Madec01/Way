@@ -1169,3 +1169,27 @@ Tests : `mort.js` (la chute dessinée, l'écran de fin retardé, le clip « rama
 **Ménage.** Le corps dessiné en pixels et `BODY_PALETTES` (atteints seulement sans tileset), `Sprites.portrait()` (zéro appelant), `hold` sur `death`, `walkFrame` : supprimés. `gait` respire sur `Time.now` (figé en pause). Les vignettes (`sheetCanvas`) sont à un multiple entier de la case ou à sa moitié exacte, jamais ×0,71. `readSheet` devine la case de chaque planche et **refuse** une planche d'une autre case au lieu de la découper de travers.
 
 Test : `corps.js` — 23 mesures : les trois personnages, un sprite entier, un visage collé, la planche du jeu, les quatre animaux et un compagnon à image posent tous les pieds à y+25 ; le descripteur dit la bonne hauteur ; l'ordre de dessin ; le regard ; un geste par tir ; le dash animé.
+
+## 39. Chantier 4 — le Normal gagnable
+
+**La mesure.** `dev/test/bench/normal.js` fait jouer le bot en mode Normal, profil neuf, Martin + Uno, 8 armes × 4 graines, et sort victoires, mini-boss tué, salle médiane, pire salle, et ce qu'Uno encaisse. Ce n'est pas un test : c'est la mesure qu'on refait avant et après chaque réglage. Le bot est plus faible qu'un humain (il esquive les télégraphes et les tirs, mais marche dans les sols électrifiés) : 25 % de victoires bot ≈ 35-40 % humain.
+
+**Avant** : 0 victoire sur 32, mini-boss tué 6 %, salle médiane 3, pire salle 206 s, Uno KO 3,5 fois par partie.
+
+**Les réglages, dans l'ordre où ils ont été mesurés** (tout est dans `05_balance.js` ou dans le contenu, rien dans le moteur) :
+
+1. **Armure en pourcentage** — 1 point = 4 %, plafonné à 50 % (`BALANCE.armor`). En retrait fixe, trois greffes ramenaient tout coup du biome 1 à 1 point.
+2. **L'arc tire à pleine charge si on tient** — un débutant (et le bot) qui garde le bouton enfoncé ne tirait jamais : mort en salle 1.
+3. **Renforts des zones à capturer plafonnés à 3 vagues** (`BALANCE.reinforcementWaves`) ; ensuite la porte s'ouvre, zones abandonnées, pas de prime. Le bot restait 378 s en salle 2.
+4. **Coffre** : épique garanti dès 0,7 de qualité (0,85 avant), colossal à 0,97 (0,999 : pour le bot seulement).
+5. **Prime de mort** 30 + 10 par salle (`BALANCE.deathBonus`), en plus des 10 % par salle des crédits en attente ; **prix des calibrations et des armes divisés par 3**. Mourir en salle 3 rapportait 18 à 42 crédits pour un total de 12 670.
+6. **Uno** : 150 PV (90), sonné 5 s (6), se soigne de 8 PV/s après 4 s sans coup, et tout compagnon encaisse 70 % des dégâts de contact (`BALANCE.petRegen`). Ressenti par l'auteur : « sa vie baisse trop vite » — mesuré : KO 3,5 fois par partie → 0,8.
+7. **Courbe du biome 1** : PV ×0,85, dégâts ×0,75, rampe par salle 0,06 (0,09 ailleurs) — dans la définition du biome, pas dans le moteur.
+8. **Un cœur (30 PV) devant la porte à chaque salle vidée** (`BALANCE.heartOnClear`), et 5 % de cœurs sur les ennemis (3 %). C'était la seule chose qui manquait pour arriver au mini-boss autrement qu'à 40 PV : sans Neuf, plus personne n'avait de soin par salle.
+9. **Le Portier** : 2600 PV (3300), recharges de ses quatre attaques +30 %, dégâts −20 %. Elles se chevauchaient et chacune coûtait un quart des PV.
+10. **Second souffle** : un cœur tombe au changement de phase d'un boss (`BALANCE.heartOnBossPhase`).
+11. **Les salles de boss ne sont pas rampées** : la rampe (×1,24 en salle 5, ×1,48 en salle 9) s'ajoutait à un boss réglé à la main pour sa salle — elle annulait toute baisse de ses dégâts, et gonflait la revanche du biome 4 à 12 500 PV. C'est le réglage qui a fait passer le mini-boss de 38 % à 81 %.
+
+**Après** (32 parties, 8 armes × 4 graines) : **13 victoires (41 %), mini-boss tué 22 (69 %)**, salle médiane 7, pire salle 113 s, Uno KO 1,1 fois. Par arme : chaîne 4/4, boomerang 3/4, lame, arc et pistolet 2/4, marteau, orbe et brûleur 0/4 — l'orbe et le brûleur ne dépassent pas la salle 6 : c'est un écart entre armes, pas de courbe, à traiter avec les greffes au chantier 6. Le mur suivant est la salle 6 (modulaire) : le bot y marche dans le sol électrifié et l'arc y tourne parfois en rond ; un humain lit un sol qui clignote — à revoir au chantier 9 avec les salles modulaires.
+
+**Biomes 3 et 4** : non retouchés au-delà de la rampe des salles de boss, faute de mesure ; à mesurer (`BIOME=biome_3 PROFIL=test node normal.js`) au chantier 9.

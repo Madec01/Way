@@ -364,7 +364,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 06:14';</script>
+<script>window.WAY_BUILD = '2026-09-10 07:02';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -900,8 +900,26 @@ const BALANCE = {
   rarity: { common: 72, rare: 22.6, epic: 5, colossal: 0.4 },
   /* +1 chance retire luckShift % au commun, réparti epicShare / (1-epicShare) entre épique et colossal ; plafonné à luckMax */
   luck: { shift: 0.45, epicShare: 0.72, max: 20 },
-  /* planchers de coffre selon le score moyen de la fenêtre */
-  chest: { colossalAt: 0.999, epicAt: 0.85, rareAt: 0.6, shiftEpicCommonMul: 0.5, shiftEpicEpicMul: 1.8, shiftEpicColossalMul: 1.2 },
+  /* planchers de coffre selon le score moyen de la fenêtre. Un joueur moyen tourne autour de 0,7 : c'est là que
+     l'épique devient garanti — à 0,85 il ne le voyait jamais, et le colossal à 0,999 n'existait que pour le bot. */
+  chest: { colossalAt: 0.97, epicAt: 0.7, rareAt: 0.45, shiftEpicCommonMul: 0.5, shiftEpicEpicMul: 1.8, shiftEpicColossalMul: 1.2 },
+  /* armure : un pourcentage, pas un retrait fixe. 1 point = 4 %, plafonné à 50 %. En retrait fixe, trois greffes
+     (9 points) ramenaient tout coup du biome 1 (5 à 13 dégâts) à 1 : le palier n'existait plus. */
+  armor: { perPoint: 0.04, max: 0.5 },
+  /* ce qu'une mort rapporte, en plus de la part des crédits en attente : une prime fixe, plus par salle atteinte.
+     Mourir en salle 3 rapportait 18 à 42 crédits pour des prix à 400 : 300 runs d'une minute. */
+  deathBonus: { base: 30, perRoom: 10 },
+  /* renforts des défis qui tiennent la porte (zones à capturer) : au-delà, la porte s'ouvre et la récompense est
+     perdue. Sans plafond, le bot est resté 378 s en salle 2. */
+  reinforcementWaves: 3,
+  /* compagnon : il se soigne quand on le laisse tranquille — sinon un chien qui attire les coups est sonné
+     trois fois par salle et ne sert plus qu'à ça */
+  petRegen: { delay: 4, perSec: 8, contactMul: 0.7 },
+  /* soin : un cœur de cette valeur tombe devant la porte à chaque salle vidée (0 = jamais), et la chance qu'un
+     ennemi en lâche un */
+  heartOnClear: 30,
+  heartDropChance: 0.05,
+  heartOnBossPhase: 30, // second souffle au changement de phase d'un boss (0 = jamais)
   /* montée de difficulté à l'intérieur d'un palier : multiplicateur (1 + rampPerRoom·(salle-1)) sur PV et dégâts des ennemis/pièges */
   rampPerRoom: 0.09,
   /* foudre ambiante : intervalle réel = every × [jitterMin, jitterMax] */
@@ -3030,7 +3048,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'slam', stunTime: 0.6, windup: 0.25 },
       unlocked: false,
-      price: 150,
+      price: 50,
     },
     {
       id: 'weapon_bow',
@@ -3051,7 +3069,7 @@ const CONTENT = {
       charge: { min: 0.25, max: 1.0, damageMul: 3.0 },
       special: { kind: null, chargedPierceBonus: 2, chargedProjSpeedMul: 1.4 },
       unlocked: false,
-      price: 200,
+      price: 70,
     },
     {
       id: 'weapon_pistol',
@@ -3093,7 +3111,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'return', passes: 2, maxInFlight: 1, returnSpeedMul: 1.15 },
       unlocked: false,
-      price: 220,
+      price: 70,
     },
     {
       id: 'weapon_orb',
@@ -3114,7 +3132,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'orbit', radius: 65, angularSpeed: 5.8, tickRate: 4, blocksProjectiles: false },
       unlocked: false,
-      price: 250,
+      price: 80,
     },
     {
       id: 'weapon_chain',
@@ -3135,7 +3153,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'chain', jumps: 2, radius: 160, damageMul: 0.6 },
       unlocked: false,
-      price: 300,
+      price: 100,
     },
     {
       id: 'weapon_flame',
@@ -3156,7 +3174,7 @@ const CONTENT = {
       charge: null,
       special: { kind: 'cone', angle: 0.7, burnDps: 4, burnDuration: 2.0 },
       unlocked: false,
-      price: 280,
+      price: 90,
     },
   ],
 
@@ -4137,10 +4155,10 @@ const CONTENT = {
       name: 'Vitalité',
       desc: 'PV de départ.',
       tiers: [
-        { price: 60, mods: [{ stat: 'maxHp', add: 10 }], hooks: {}, special: null },
-        { price: 140, mods: [{ stat: 'maxHp', add: 10 }], hooks: {}, special: null },
-        { price: 260, mods: [{ stat: 'maxHp', add: 15 }], hooks: {}, special: null },
-        { price: 450, mods: [{ stat: 'maxHp', add: 15 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'maxHp', add: 10 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'maxHp', add: 10 }], hooks: {}, special: null },
+        { price: 90, mods: [{ stat: 'maxHp', add: 15 }], hooks: {}, special: null },
+        { price: 150, mods: [{ stat: 'maxHp', add: 15 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4148,11 +4166,11 @@ const CONTENT = {
       name: 'Puissance',
       desc: 'Dégâts de base.',
       tiers: [
-        { price: 80, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
-        { price: 160, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
-        { price: 260, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
-        { price: 400, mods: [{ stat: 'damage', mul: 1.05 }], hooks: {}, special: null },
-        { price: 600, mods: [{ stat: 'damage', mul: 1.05 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
+        { price: 90, mods: [{ stat: 'damage', mul: 1.04 }], hooks: {}, special: null },
+        { price: 130, mods: [{ stat: 'damage', mul: 1.05 }], hooks: {}, special: null },
+        { price: 200, mods: [{ stat: 'damage', mul: 1.05 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4160,10 +4178,10 @@ const CONTENT = {
       name: 'Chance',
       desc: 'Décale les raretés vers épique et colossal.',
       tiers: [
-        { price: 50, mods: [{ stat: 'luck', add: 2 }], hooks: {}, special: null },
-        { price: 120, mods: [{ stat: 'luck', add: 2 }], hooks: {}, special: null },
-        { price: 240, mods: [{ stat: 'luck', add: 3 }], hooks: {}, special: null },
-        { price: 400, mods: [{ stat: 'luck', add: 3 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'luck', add: 2 }], hooks: {}, special: null },
+        { price: 40, mods: [{ stat: 'luck', add: 2 }], hooks: {}, special: null },
+        { price: 80, mods: [{ stat: 'luck', add: 3 }], hooks: {}, special: null },
+        { price: 130, mods: [{ stat: 'luck', add: 3 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4171,10 +4189,10 @@ const CONTENT = {
       name: 'Cupidité',
       desc: 'Argent gagné.',
       tiers: [
-        { price: 40, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
-        { price: 100, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
-        { price: 200, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
-        { price: 350, mods: [{ stat: 'coinGain', mul: 1.15 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
+        { price: 70, mods: [{ stat: 'coinGain', mul: 1.1 }], hooks: {}, special: null },
+        { price: 120, mods: [{ stat: 'coinGain', mul: 1.15 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4182,10 +4200,10 @@ const CONTENT = {
       name: 'Étude',
       desc: 'XP gagnée.',
       tiers: [
-        { price: 40, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
-        { price: 100, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
-        { price: 200, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
-        { price: 350, mods: [{ stat: 'xpGain', mul: 1.1 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
+        { price: 70, mods: [{ stat: 'xpGain', mul: 1.08 }], hooks: {}, special: null },
+        { price: 120, mods: [{ stat: 'xpGain', mul: 1.1 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4193,10 +4211,10 @@ const CONTENT = {
       name: 'Réactivité',
       desc: 'Réduction des cooldowns de compétence.',
       tiers: [
-        { price: 70, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
+        { price: 90, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
         { price: 150, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
-        { price: 280, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
-        { price: 450, mods: [{ stat: 'cooldownReduction', add: 0.05 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4204,9 +4222,9 @@ const CONTENT = {
       name: 'Résurrection',
       desc: 'Une seconde vie par run.',
       tiers: [
-        { price: 120, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.25 }] }, special: 'resurrect' },
-        { price: 300, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.4 }] }, special: 'resurrect' },
-        { price: 550, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.6 }] }, special: 'resurrect' },
+        { price: 40, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.25 }] }, special: 'resurrect' },
+        { price: 100, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.4 }] }, special: 'resurrect' },
+        { price: 180, mods: [], hooks: { passive: [{ effect: 'second_chance', hpFraction: 0.6 }] }, special: 'resurrect' },
       ],
     },
     {
@@ -4214,9 +4232,9 @@ const CONTENT = {
       name: 'Mémoire sélective',
       desc: 'Commencer la run avec une amélioration de la run précédente.',
       tiers: [
-        { price: 100, mods: [], hooks: {}, special: 'selective_memory' },
-        { price: 250, mods: [], hooks: {}, special: 'selective_memory' },
-        { price: 450, mods: [], hooks: {}, special: 'selective_memory' },
+        { price: 30, mods: [], hooks: {}, special: 'selective_memory' },
+        { price: 80, mods: [], hooks: {}, special: 'selective_memory' },
+        { price: 150, mods: [], hooks: {}, special: 'selective_memory' },
       ],
     },
     {
@@ -4224,9 +4242,9 @@ const CONTENT = {
       name: 'Aperçu du coffre',
       desc: 'Voir le contenu du prochain coffre.',
       tiers: [
-        { price: 80, mods: [], hooks: {}, special: 'chest_preview' },
-        { price: 200, mods: [], hooks: {}, special: 'chest_preview' },
-        { price: 380, mods: [], hooks: {}, special: 'chest_preview' },
+        { price: 30, mods: [], hooks: {}, special: 'chest_preview' },
+        { price: 70, mods: [], hooks: {}, special: 'chest_preview' },
+        { price: 130, mods: [], hooks: {}, special: 'chest_preview' },
       ],
     },
     {
@@ -4234,9 +4252,9 @@ const CONTENT = {
       name: 'Quatrième choix',
       desc: 'Un 4e choix au level-up.',
       tiers: [
-        { price: 120, mods: [], hooks: {}, special: 'fourth_choice' },
-        { price: 300, mods: [], hooks: {}, special: 'fourth_choice' },
-        { price: 500, mods: [], hooks: {}, special: 'fourth_choice' },
+        { price: 40, mods: [], hooks: {}, special: 'fourth_choice' },
+        { price: 100, mods: [], hooks: {}, special: 'fourth_choice' },
+        { price: 170, mods: [], hooks: {}, special: 'fourth_choice' },
       ],
     },
     {
@@ -4244,9 +4262,9 @@ const CONTENT = {
       name: 'Re-roll',
       desc: 'Relancer les choix de level-up.',
       tiers: [
-        { price: 90, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
-        { price: 220, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
-        { price: 420, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
+        { price: 30, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
+        { price: 70, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
+        { price: 140, mods: [], hooks: { onLevelUp: [{ effect: 'reroll_on_levelup', count: 1 }] }, special: 'reroll' },
       ],
     },
     {
@@ -4254,9 +4272,9 @@ const CONTENT = {
       name: 'Célérité',
       desc: 'Vitesse de déplacement.',
       tiers: [
-        { price: 60, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
-        { price: 150, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
-        { price: 300, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
+        { price: 100, mods: [{ stat: 'speed', mul: 1.04 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4264,9 +4282,9 @@ const CONTENT = {
       name: 'Carapace',
       desc: 'Armure de base.',
       tiers: [
-        { price: 80, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
-        { price: 200, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
-        { price: 380, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
+        { price: 70, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
+        { price: 130, mods: [{ stat: 'armor', add: 1 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4274,9 +4292,9 @@ const CONTENT = {
       name: 'Isolation',
       desc: 'Dégâts des pièges subis.',
       tiers: [
-        { price: 70, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
-        { price: 170, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
-        { price: 320, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
+        { price: 60, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
+        { price: 110, mods: [{ stat: 'trapDamageMul', mul: 0.85 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4284,9 +4302,9 @@ const CONTENT = {
       name: 'Aimantation',
       desc: 'Rayon de ramassage.',
       tiers: [
-        { price: 40, mods: [{ stat: 'pickupRadius', add: 30 }], hooks: {}, special: null },
-        { price: 100, mods: [{ stat: 'pickupRadius', add: 30 }], hooks: {}, special: null },
-        { price: 220, mods: [{ stat: 'pickupRadius', add: 40 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'pickupRadius', add: 30 }], hooks: {}, special: null },
+        { price: 30, mods: [{ stat: 'pickupRadius', add: 30 }], hooks: {}, special: null },
+        { price: 70, mods: [{ stat: 'pickupRadius', add: 40 }], hooks: {}, special: null },
       ],
     },
     {
@@ -4294,10 +4312,10 @@ const CONTENT = {
       name: 'Précision',
       desc: 'Chance de critique de base.',
       tiers: [
-        { price: 70, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
+        { price: 20, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
+        { price: 50, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
+        { price: 90, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
         { price: 150, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
-        { price: 280, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
-        { price: 450, mods: [{ stat: 'critChance', add: 0.03 }], hooks: {}, special: null },
       ],
     },
   ],
@@ -4359,7 +4377,9 @@ const CONTENT = {
         'trap_rayon',
       ],
       miniboss: 'boss_etalon_07',
-      difficulty: { hpMul: 1, damageMul: 1, speedMul: 1 },
+      /* Le premier palier apprend le jeu : PV et dégâts sous la référence, montée par salle plus douce (0,06 contre
+         0,09 ailleurs). Mesuré avant : 0 victoire sur 32 parties de bot, mort en salle 3 ou 5. */
+      difficulty: { hpMul: 0.85, damageMul: 0.75, speedMul: 1, rampPerRoom: 0.06 },
     },
   ],
 
@@ -4482,7 +4502,7 @@ const CONTENT = {
       id: 'boss_etalon_07',
       name: 'Étalon 07, dit « le Portier »',
       desc: "Le sujet de référence d'ADMISSION, gardé comme mètre-étalon. Vérin hydraulique au bras droit, prise de calibration à nu dans le dos. Lourd, prévisible : il faut le faire pivoter.",
-      hp: 3300,
+      hp: 2600, // 3300 avant : le premier boss du jeu durait trop, et chaque seconde de plus coûtait des PV
       speed: 120,
       radius: 36,
       damage: 22,
@@ -4493,16 +4513,19 @@ const CONTENT = {
         {
           hpBelow: 1.0,
           patterns: [
-            { kind: 'ring', telegraph: 0.8, duration: 0.3, cooldown: 2.3, count: 12, projSpeed: 260, projDamage: 22, projSize: 8 },
-            { kind: 'charge', telegraph: 0.9, duration: 0.8, cooldown: 3.4, speed: 620, damage: 34, stopOnWall: true, stunTime: 1.5 },
-            { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 4.0, radius: 140, damage: 32, knockback: 3.0 },
+            /* Premier boss du jeu : ses quatre attaques se chevauchaient (recharges 2,3 / 3,4 / 4 / 5,5 s) et
+               chacune coûtait un quart des PV. Recharges +30 %, dégâts −20 % : il reste lourd et prévisible,
+               il laisse le temps de le lire. Mesuré avant : 7 parties de bot sur 16 meurent ici. */
+            { kind: 'ring', telegraph: 0.8, duration: 0.3, cooldown: 3.0, count: 12, projSpeed: 260, projDamage: 18, projSize: 8 },
+            { kind: 'charge', telegraph: 0.9, duration: 0.8, cooldown: 4.4, speed: 620, damage: 28, stopOnWall: true, stunTime: 1.5 },
+            { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 5.2, radius: 140, damage: 26, knockback: 3.0 },
             {
               kind: 'quake',
               telegraph: 1.1,
               duration: 2.0,
-              cooldown: 5.5,
+              cooldown: 7.0,
               speed: 580,
-              damage: 26,
+              damage: 22,
               range: 900,
               color: '#9fd8ff',
               label: 'ONDE DE CHOC',
@@ -7975,8 +7998,8 @@ CONTENT.pets.push(
     speed: 320,
     knockback: 2,
     taunt: 230,
-    hp: 90,
-    revive: 6,
+    hp: 150,
+    revive: 5,
     size: 64,
     price: 0,
     unlocked: true,
@@ -10113,9 +10136,12 @@ const Progression = (() => {
   }
 
   /* --- Argent : règle validée. checkpoint = index de la dernière salle checkpoint (0 au départ). --- */
+  /* Ce qu'une mort garde : une prime fixe plus une par salle atteinte (BALANCE.deathBonus), et 10 % des crédits
+     en attente par salle depuis la dernière consignation. La prime fait qu'une mort en salle 3 vaut ~70 crédits,
+     pas 18 : une progression que l'on sent d'une partie à l'autre. */
   function coinsKeptOnDeath(pending, roomIndex, lastCheckpoint) {
     const frac = clamp(0.1 * (roomIndex - lastCheckpoint), 0, 1);
-    return Math.floor(pending * frac);
+    return BALANCE.deathBonus.base + BALANCE.deathBonus.perRoom * Math.max(0, roomIndex) + Math.floor(pending * frac);
   }
 
   return {
@@ -11076,7 +11102,7 @@ const Combat = {
     for (let i = 0; i < n; i++) Pickups.spawn(e.x, e.y, 'xp', Math.max(1, Math.round(xp / n)));
     const coins = Math.round(e.coins * coinMul);
     for (let i = 0; i < coins; i++) Pickups.spawn(e.x, e.y, 'coin', 1);
-    if (!e.isBoss && RNG.chance(0.03)) Pickups.spawn(e.x, e.y, 'heart', 15);
+    if (!e.isBoss && RNG.chance(BALANCE.heartDropChance)) Pickups.spawn(e.x, e.y, 'heart', 15);
     if (!info.silent || e.elite) Pickups.maybeDrop(e);
     for (const h of pl.hooks.onKill) {
       if (h.effect === 'explode')
@@ -11125,7 +11151,7 @@ const Combat = {
       pl.invulnUntil = Time.now + 0.2;
       return false;
     }
-    dmg = Math.max(1, Math.round(dmg - pl.stats.armor));
+    dmg = Math.max(1, Math.round(dmg * (1 - Math.min(BALANCE.armor.max, pl.stats.armor * BALANCE.armor.perPoint)))); // armure en %, plafonnée
     if (pl.shield > 0) {
       const used = Math.min(pl.shield, dmg);
       pl.shield -= used;
@@ -11267,10 +11293,12 @@ const Weapons = {
     }
     if (w.family === 'bow') {
       const ch = w.charge || { min: 0.15, max: 0.9, damageMul: 3 };
-      if (firing && pl.attackCd <= 0) {
+      /* On charge tant qu'on tient ; on tire en lâchant, OU dès que la charge est pleine si on tient toujours.
+         Sans ça, un débutant (et le bot) qui garde le bouton enfoncé ne tirait jamais : mort en salle 1. */
+      if (firing && pl.attackCd <= 0 && pl.charge < ch.max) {
         const cs = Progression.hasPassive(pl.hooks, 'charge_speed');
         pl.charge = Math.min(ch.max, pl.charge + dt * (cs ? cs.mul || 1.4 : 1));
-      } else if (pl.charge > 0) {
+      } else if (pl.charge > 0 && (!firing || pl.charge >= ch.max)) {
         const t = clamp((pl.charge - ch.min) / Math.max(0.01, ch.max - ch.min), 0, 1);
         pl.beatMul = Tempo.playerAction(pl, 'shot');
         Weapons.shoot(pl, aim, {
@@ -12399,6 +12427,7 @@ class Pet {
   }
   hurt(d) {
     if (!this.maxHp || this.down) return;
+    this.lastHurt = Time.now;
     this.hp -= d;
     Floaters.add(this.x, this.y - 20, Math.round(d), '#ff9a9a', 12);
     if (this.hp <= 0) {
@@ -12430,6 +12459,9 @@ class Pet {
     if (!this.airborne) resolveRoomCollision(this);
   }
   update(dt) {
+    /* laissé tranquille quelques secondes, un compagnon qui a des PV les récupère */
+    if (this.maxHp && !this.down && this.hp < this.maxHp && Time.now - (this.lastHurt || -1e9) > BALANCE.petRegen.delay)
+      this.hp = Math.min(this.maxHp, this.hp + BALANCE.petRegen.perSec * dt);
     /* mode « à l'appel » : décompte de la présence puis du repos ; absent, il ne fait rien et ne se dessine pas */
     if (this.mode === 'call') {
       if (this.away) {
@@ -13119,7 +13151,7 @@ class Enemy {
       }
     for (const pe of G.pets)
       if (pe.taunts && dist(this.x, this.y, pe.x, pe.y) < this.r + pe.r && this.contactCd <= 0) {
-        pe.hurt(this.damage);
+        pe.hurt(this.damage * BALANCE.petRegen.contactMul); // un animal encaisse moins qu'un joueur au contact
         this.contactCd = 0.6;
       }
   }
@@ -13948,6 +13980,12 @@ class Boss extends Enemy {
       AudioEngine.bossPhase({});
       Music.tapeStop();
       UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color);
+      /* second souffle : un cœur tombe au changement de phase. Tenir jusque-là se récompense, et le boss est la
+         seule salle sans le cœur de fin de salle avant sa seconde moitié. */
+      if (BALANCE.heartOnBossPhase && G.player) {
+        const a = Math.atan2(G.player.y - this.y, G.player.x - this.x);
+        Pickups.spawn(this.x + Math.cos(a) * (this.r + 60), this.y + Math.sin(a) * (this.r + 60), 'heart', BALANCE.heartOnBossPhase);
+      }
     }
     /* faiblesse temporelle */
     if (this.weakActive && Time.now > this.weakUntil) this.weakActive = false;
@@ -16570,6 +16608,7 @@ const Challenge = (() => {
       c.r = 3 * TILE;
       c.reinforceT = 5;
       c.reinforceEvery = 6;
+      c.reinforcements = 0; // vagues de renfort envoyées (plafonnées par BALANCE.reinforcementWaves)
     } else if (id === 'collapse') {
       c.holes = new Set();
       c.warn = new Map();
@@ -16700,9 +16739,15 @@ const Challenge = (() => {
       const inside = dist(pl.x, pl.y, z.x, z.y) < c.r;
       c.gauge = clamp(c.gauge + (inside ? dt / 6 : -dt / 12), 0, 1);
       c.reinforceT -= dt;
-      if (c.reinforceT <= 0) {
+      if (c.reinforceT <= 0 && c.reinforcements < BALANCE.reinforcementWaves) {
         c.reinforceT = c.reinforceEvery;
+        c.reinforcements++;
         spawnReinforcement(3 + Math.floor(RNG() * 2), true);
+      }
+      /* plus de renforts et plus personne : la porte s'ouvre, les zones restent non capturées (pas de prime) */
+      if (c.reinforcements >= BALANCE.reinforcementWaves && Room.alive() === 0 && room.waves.every(w => w.done)) {
+        c.done = true;
+        UI.banner("Zones abandonnées — la porte s'ouvre", '#ffb347');
       }
       if (c.gauge >= 1) {
         c.zi++;
@@ -18254,7 +18299,13 @@ function applyDifficulty() {
   const d = G.debug.difficulty;
   const b = (G.run && G.run.biome && G.run.biome.difficulty) || {};
   const idx = (G.run && G.run.roomIndex) || 1;
-  const ramp = 1 + (b.rampPerRoom != null ? b.rampPerRoom : BALANCE.rampPerRoom) * Math.max(0, idx - 1); // salle 1 → ×1, salle 9 → ×1.48 par défaut
+  /* Une salle de boss n'est pas rampée : un boss est réglé à la main pour SA salle, et la rampe (×1,24 en salle 5,
+     ×1,48 en salle 9) s'ajoutait par-dessus — elle annulait toute baisse de ses dégâts et gonflait la revanche
+     de salle 9 à 12 500 PV au biome 4. */
+  const defs = G.run && G.run.biome ? Content.roomsOf(G.run.biome.id) : [];
+  const def = defs[idx - 1];
+  const salleDeBoss = !!(def && /BOSS|REVENGE/.test(def.type || ''));
+  const ramp = salleDeBoss ? 1 : 1 + (b.rampPerRoom != null ? b.rampPerRoom : BALANCE.rampPerRoom) * Math.max(0, idx - 1); // salle 1 → ×1, salle 9 → ×1.48 par défaut
   G.difficulty = {
     hpMul: d * (b.hpMul || 1) * ramp,
     damageMul: d * (b.damageMul || 1) * ramp,
@@ -18727,6 +18778,10 @@ const Room = {
     UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
     Music.calm();
     for (const p of Pickups.list) p.magnet = true;
+    /* Un cœur à chaque salle vidée, devant la porte : la seule source de soin régulière d'une run. Sans lui,
+       on arrivait au mini-boss avec 40 PV et aucun moyen d'en regagner — c'est là que mouraient 13 parties sur 16. */
+    if (BALANCE.heartOnClear && r.index > 0)
+      Pickups.spawn(ROOM_X + 22 * TILE + TILE / 2, ROOM_Y + 6 * TILE + TILE / 2, 'heart', BALANCE.heartOnClear);
   },
   /* score de la salle courante */
   score() {
@@ -21797,6 +21852,11 @@ const Debug = (() => {
         config
       );
       Meta.setMode(c.mode === 'normal' ? 'sandbox' : c.mode);
+      if (c.pet !== undefined) {
+        // le compagnon de départ (id ou null) et son mode, comme un joueur les choisirait au hub
+        Meta.profile.pet = c.pet;
+        Meta.profile.petMode = c.petMode || 'always';
+      }
       G.debug.difficulty = c.difficulty;
       UI.hideAll(); // 'normal' → profil jetable : l'autoplay n'écrit jamais dans la sauvegarde
       const rng = makeRng(c.seed);

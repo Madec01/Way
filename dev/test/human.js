@@ -45,7 +45,7 @@ test(async ({ page, ok, entrer }) => {
   await page.waitForTimeout(200);
   ok('Échap reprend', !(await page.evaluate(() => G.paused)));
 
-  /* mort forcée : 50 crédits consignés + 10 % des 100 en attente */
+  /* mort forcée en salle 1 : 50 consignés + prime (30 + 10 × 1) + 10 % des 100 en attente = 100 */
   await page.evaluate(() => {
     G.run.coinsPending = 100;
     G.run.coinsValidated = 50;
@@ -55,8 +55,8 @@ test(async ({ page, ok, entrer }) => {
   await page.waitForTimeout(1700); // le personnage joue sa chute avant l'écran de fin
   const fin = await page.evaluate(() => ({ overlay: G.overlay, coins: Meta.coins, deaths: Meta.profile.deaths }));
   ok(
-    'la mort garde 50 + 10 % de 100 = 60 crédits',
-    fin.overlay === 'end' && fin.coins === 60,
+    'la mort garde 50 + 40 de prime + 10 % de 100 = 100 crédits',
+    fin.overlay === 'end' && fin.coins === 100,
     `${fin.coins} crédits, ${fin.deaths} mort(s)`
   );
   await page.screenshot({ path: out('human_fin.png') });
@@ -64,12 +64,12 @@ test(async ({ page, ok, entrer }) => {
   await page.reload();
   await page.waitForTimeout(800);
   const apres = await page.evaluate(() => ({ coins: Meta.coins, runs: Meta.profile.runs }));
-  ok('les crédits survivent au rechargement', apres.coins === 60, `${apres.coins} crédits, ${apres.runs} run(s)`);
+  ok('les crédits survivent au rechargement', apres.coins === 100, `${apres.coins} crédits, ${apres.runs} run(s)`);
 
   await entrer('normal');
   const achat = await page.evaluate(() => {
     const r = Meta.buy('meta_vitalite');
     return { r, tier: Meta.tierOf('meta_vitalite'), coins: Meta.coins };
   });
-  ok('on peut acheter Vitalité palier 1 avec 60 crédits', achat.r && achat.tier === 1, `reste ${achat.coins} crédits`);
+  ok('on peut acheter Vitalité palier 1 (20 crédits)', achat.r && achat.tier === 1 && achat.coins === 80, `reste ${achat.coins} crédits`);
 });

@@ -184,7 +184,7 @@ class Enemy {
       }
     for (const pe of G.pets)
       if (pe.taunts && dist(this.x, this.y, pe.x, pe.y) < this.r + pe.r && this.contactCd <= 0) {
-        pe.hurt(this.damage);
+        pe.hurt(this.damage * BALANCE.petRegen.contactMul); // un animal encaisse moins qu'un joueur au contact
         this.contactCd = 0.6;
       }
   }
@@ -1013,6 +1013,12 @@ class Boss extends Enemy {
       AudioEngine.bossPhase({});
       Music.tapeStop();
       UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color);
+      /* second souffle : un cœur tombe au changement de phase. Tenir jusque-là se récompense, et le boss est la
+         seule salle sans le cœur de fin de salle avant sa seconde moitié. */
+      if (BALANCE.heartOnBossPhase && G.player) {
+        const a = Math.atan2(G.player.y - this.y, G.player.x - this.x);
+        Pickups.spawn(this.x + Math.cos(a) * (this.r + 60), this.y + Math.sin(a) * (this.r + 60), 'heart', BALANCE.heartOnBossPhase);
+      }
     }
     /* faiblesse temporelle */
     if (this.weakActive && Time.now > this.weakUntil) this.weakActive = false;

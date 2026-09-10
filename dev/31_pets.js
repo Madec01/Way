@@ -124,6 +124,7 @@ class Pet {
   }
   hurt(d) {
     if (!this.maxHp || this.down) return;
+    this.lastHurt = Time.now;
     this.hp -= d;
     Floaters.add(this.x, this.y - 20, Math.round(d), '#ff9a9a', 12);
     if (this.hp <= 0) {
@@ -155,6 +156,9 @@ class Pet {
     if (!this.airborne) resolveRoomCollision(this);
   }
   update(dt) {
+    /* laissé tranquille quelques secondes, un compagnon qui a des PV les récupère */
+    if (this.maxHp && !this.down && this.hp < this.maxHp && Time.now - (this.lastHurt || -1e9) > BALANCE.petRegen.delay)
+      this.hp = Math.min(this.maxHp, this.hp + BALANCE.petRegen.perSec * dt);
     /* mode « à l'appel » : décompte de la présence puis du repos ; absent, il ne fait rien et ne se dessine pas */
     if (this.mode === 'call') {
       if (this.away) {

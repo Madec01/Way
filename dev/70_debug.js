@@ -552,6 +552,11 @@ const Debug = (() => {
         config
       );
       Meta.setMode(c.mode === 'normal' ? 'sandbox' : c.mode);
+      if (c.pet !== undefined) {
+        // le compagnon de départ (id ou null) et son mode, comme un joueur les choisirait au hub
+        Meta.profile.pet = c.pet;
+        Meta.profile.petMode = c.petMode || 'always';
+      }
       G.debug.difficulty = c.difficulty;
       UI.hideAll(); // 'normal' → profil jetable : l'autoplay n'écrit jamais dans la sauvegarde
       const rng = makeRng(c.seed);

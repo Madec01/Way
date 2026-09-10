@@ -937,7 +937,7 @@ const Combat = {
     for (let i = 0; i < n; i++) Pickups.spawn(e.x, e.y, 'xp', Math.max(1, Math.round(xp / n)));
     const coins = Math.round(e.coins * coinMul);
     for (let i = 0; i < coins; i++) Pickups.spawn(e.x, e.y, 'coin', 1);
-    if (!e.isBoss && RNG.chance(0.03)) Pickups.spawn(e.x, e.y, 'heart', 15);
+    if (!e.isBoss && RNG.chance(BALANCE.heartDropChance)) Pickups.spawn(e.x, e.y, 'heart', 15);
     if (!info.silent || e.elite) Pickups.maybeDrop(e);
     for (const h of pl.hooks.onKill) {
       if (h.effect === 'explode')
@@ -986,7 +986,7 @@ const Combat = {
       pl.invulnUntil = Time.now + 0.2;
       return false;
     }
-    dmg = Math.max(1, Math.round(dmg - pl.stats.armor));
+    dmg = Math.max(1, Math.round(dmg * (1 - Math.min(BALANCE.armor.max, pl.stats.armor * BALANCE.armor.perPoint)))); // armure en %, plafonnée
     if (pl.shield > 0) {
       const used = Math.min(pl.shield, dmg);
       pl.shield -= used;
@@ -1128,10 +1128,12 @@ const Weapons = {
     }
     if (w.family === 'bow') {
       const ch = w.charge || { min: 0.15, max: 0.9, damageMul: 3 };
-      if (firing && pl.attackCd <= 0) {
+      /* On charge tant qu'on tient ; on tire en lâchant, OU dès que la charge est pleine si on tient toujours.
+         Sans ça, un débutant (et le bot) qui garde le bouton enfoncé ne tirait jamais : mort en salle 1. */
+      if (firing && pl.attackCd <= 0 && pl.charge < ch.max) {
         const cs = Progression.hasPassive(pl.hooks, 'charge_speed');
         pl.charge = Math.min(ch.max, pl.charge + dt * (cs ? cs.mul || 1.4 : 1));
-      } else if (pl.charge > 0) {
+      } else if (pl.charge > 0 && (!firing || pl.charge >= ch.max)) {
         const t = clamp((pl.charge - ch.min) / Math.max(0.01, ch.max - ch.min), 0, 1);
         pl.beatMul = Tempo.playerAction(pl, 'shot');
         Weapons.shoot(pl, aim, {
