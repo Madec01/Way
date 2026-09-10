@@ -2,7 +2,7 @@
 
 Une seule liste, dans l'ordre où je te conseille de faire les choses. Elle rassemble tout ce qui reste des trois plans — le plan de chantiers (`PLAN-CHANTIERS.md`, chantiers 8 à 11), le plan des interfaces (`PLAN-INTERFACES.md`, I-3 à I-8) et le plan du ressenti (`PLAN-RESSENTI.md`, F-1 à F-7). Chaque étape renvoie à son plan pour le détail ; ici, une ligne dit ce qu'elle change pour un joueur, ce qu'elle te demande, et pourquoi elle est à cette place.
 
-**Fait à ce jour (10 septembre 2026)** : chantiers 0 à 6 du plan principal, I-1 et I-2 du plan des interfaces. **Reste** : 16 étapes, **21 à 28 séances**. Une séance = une session de travail avec moi, vérifiée par la batterie de tests et livrée sur `main`.
+**Fait à ce jour (10 septembre 2026)** : chantiers 0 à 6 du plan principal, I-1 à I-4 du plan des interfaces, F-1 à F-4 du plan du ressenti. **Reste** : 11 étapes, **14 à 19 séances**. Une séance = une session de travail avec moi, vérifiée par la batterie de tests et livrée sur `main`.
 
 ## Le principe de l'ordre
 
@@ -22,7 +22,7 @@ Une seule liste, dans l'ordre où je te conseille de faire les choses. Elle rass
 | 4 | **I-3 Le hub en trois questions** | interfaces | « Qui part ? Avec qui ? Où ? Partir. » Les compagnons en grand, une carte d'équipe, la boutique dans son propre écran, trois clics au lieu de sept. | 2 | **une partie de toi sur le nouveau hub** avant l'étape suivante ; le sort de l'onglet Fragments |
 | 5 | **I-4 La prépa qui montre** | interfaces | Une image et trois jauges par arme, un seul panneau de détail, « 3 compétences tirées au sort sur 8 ». Fabrique la planche d'icônes que tout le reste réutilise. | 1 | la décision « planche d'icônes » |
 | 6 | **F-4 La mort d'un ennemi et le ramassage** | ressenti | Un ennemi tué blanchit, s'écrase et laisse une trace ; les pièces partent en arc ; la cascade sonore du ramassage devient visible ; le coffre s'ouvre. | 1 | rien |
-| 7 | **F-5 Le monde bat** | ressenti | La lumière de la salle, le joueur, les ennemis, les pièces et la porte battent avec la musique, partout ; l'anneau de mesure doré sous le personnage — la marque de fabrique. | 1 à 2 | **ton avis sur ce qui doit battre** (je propose, tu tranches) |
+| 7 | **F-5 Le monde bat** | ressenti | La lumière de la salle, le joueur, les ennemis, les pièces et la porte battent avec la musique, partout ; l'anneau de mesure doré sous le personnage — la marque de fabrique. **Plus la correction demandée le 10 septembre : les pièges laser n'éclairent plus en jaune les cases où le rayon passe.** | 1 à 2 | **ton avis sur ce qui doit battre** (je propose, tu tranches) |
 | 8 | **I-5 Le HUD refait** | interfaces | Barre de vie segmentée, XP en bande tout en haut, barre du boss par phases, anneau de compétence qui flashe quand elle est prête, télégraphies au sol, le HUD s'estompe quand il ne se passe rien. | 2 | rien |
 | 9 | **I-6 Une seule voix** | interfaces | Une règle pour les messages : un bandeau à la fois, les infos attendent la fin du combat, rien ne s'affiche entre toi et les ennemis. | 1 | rien |
 | 10 | **F-6 Les moments forts** | ressenti | Montée de niveau mise en scène, arrivée et mort du boss, ta mort avec le compagnon qui vient s'asseoir, entrée de salle en marchant avec un seul texte. | 2 | **une partie jusqu'à la mort et jusqu'au boss**, avant et après ; la décision « le compagnon dans la mort » |

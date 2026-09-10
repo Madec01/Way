@@ -101,7 +101,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 **Taille** : 1 séance (courte : elle peut se faire dans la même que F-2).
 **Bilan** : fait (CONTENT.md §46, test `palette.js`, 7 mesures). `PAL` est dans `00_core.js` et plus aucun corail, rouge d'alerte ou rouge de boss n'est écrit en dur hors de lui (le test balaie les sources, l'atelier et le CSS exceptés). Toutes les télégraphies — ennemis, patterns de boss, rayons — sont dans `PAL.alert`, plus dans la couleur de l'ennemi ; la barre de vie ennemie est en blanc cassé ; la barre du boss et son nom en corail (le boss est le danger extérieur) ; les cœurs sont **verts** (la vie qui revient, comme les soins) ; la porte fermée est une croix grise, plus un danger ; « ENRAGÉS » et « Mauvais ordre » sont des alertes. Les trois seuls ennemis rouge vif (rôdeur, mèche, baril) sont passés en rouges sourds — les autres avaient déjà leurs teintes ; les couleurs des quatre animaux étaient déjà celles que je proposais, et **un dégât de compagnon s'écrit dans sa couleur** (Uno mord en orange). La barre de PV est hachurée sous 25 %. Pas fait, à dessein : la teinte du sol — le vrai remède est la lumière de F-5, et une retouche sans mesure aurait été du goût, pas une règle. À vérifier à la main : un cœur vert, ça se lit ?
 
-## Chantier F-4 — La mort d'un ennemi et le ramassage
+## Chantier F-4 — La mort d'un ennemi et le ramassage ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : tuer produit une image, et ce qu'on ramasse a de la gourmandise.
 
@@ -112,6 +112,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 
 **Fini quand** : `ressenti.js` vérifie qu'un ennemi tué reste dessiné 220 ms (`deathT`), qu'une tache est posée et purgée au changement de salle, que les drops ont une vitesse verticale négative au départ, que la taille des étincelles suit la série ; une capture 60 ms après une mort montre la silhouette blanche (luminance mesurée au pixel, comme dans l'audit).
 **Taille** : 1 séance.
+**Bilan** : fait (CONTENT.md §49, test `butin.js`, 13 mesures — un fichier à part plutôt que `ressenti.js`, qui reste celui de F-1). Tout ce qui était écrit : la mort en 220 ms avec la silhouette blanche (luminance 237 mesurée au pixel à 30 ms) puis l'écrasement, l'arrêt de 70 ms, la couronne au corps, l'onde à plat, la tache plafonnée à 60 et effacée avec la salle ; les drops qui partent en arc avec une ombre au sol et rebondissent ; les étincelles du ramassage à la taille de la série (2 px × 5 seul, 4 px × 13 au huitième), l'anneau, le cœur qui fait sursauter, la relique et l'arme qui arrêtent le combat sous un rayon de lumière ; le coffre dont le halo grossit à l'approche et qui s'ouvre en 300 ms — couvercle, gerbe, sept éclats en arc — avant l'écran de choix. En plus : les trois fantômes derrière un orbe aimanté. Pas fait, à dessein : la couleur de la tache reste celle de l'ennemi (pas de sang), et le sursaut du coffre est de 6 px — à voir à la main si c'est trop discret.
 
 ## Chantier F-5 — Le monde bat
 
@@ -125,6 +126,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 - [I.6] [R9] La porte bat (`shadowBlur 12 + 10 × k`) et **s'ouvre sur le temps fort suivant** (`Beat.timeToNextBar()`), avec une onde verte de 60 px.
 - [I.7] [R13] La partition au sol dans toutes les salles : retirer la condition sur les pièges, et donner aux ennemis à `beatLock` une tuile de frappe annoncée.
 - [I.8] [R13] Des lumières dans les salles : `ANIM_DEFS.light` existe et bat déjà ; en poser 2 à 4 par salle du biome 1 (halo 90 px, alpha 0,10 + 0,10 × k, couleur néon). C'est du contenu — la partie « décor animé » du chantier 9 commence ici.
+- **Correction demandée le 10 septembre 2026** (vu sur les captures de F-4) : les pièges laser **peignent en jaune les cases où le rayon passe**. Une case de piège ne doit pas s'éclairer comme une récompense : la zone se marque d'un trait discret, la case qui va être frappée s'annonce en `PAL.alert` (le contrat de couleur, F-3), et rien n'est rempli en or hors de la partition. À faire dans ce chantier, avec la passe de lumière, puisque c'est la même question : qu'est-ce qui a le droit d'éclairer le sol.
 
 **Fini quand** : `ressenti.js` vérifie que le bob du joueur au repos suit `Beat.phase()` en salle 1 (pas seulement en salle 7), que l'anneau de mesure est dessiné sous le joueur (sonde `ellipse`), que la télégraphie d'un ennemi ne lit plus `Time.now`, que la porte s'ouvre à moins de 30 ms d'un temps fort, que la passe de lumière change l'alpha du sol entre phase 0 et phase 0,5 (luminance mesurée) ; le bot joue 9 salles sans erreur et sans perte de fps mesurable (`levels.js` reste sous 60 s par salle).
 **Taille** : 1 à 2 séances.

@@ -951,12 +951,26 @@ const Sprites = (() => {
   function drawChest(ctx, ch) {
     ctx.save();
     const near = ch.near && !ch.opened;
+    /* le halo grossit à l'approche (ch.approach, 0 loin → 1 à portée), puis bat quand on peut ouvrir */
+    const ap = ch.opened ? 0 : ch.approach || 0;
     ctx.shadowColor = '#ffb347';
-    ctx.shadowBlur = near ? 26 + Math.sin(Time.now * 6) * 8 : 12;
+    ctx.shadowBlur = 10 + ap * 18 + (near ? 8 + Math.sin(Time.now * 6) * 8 : 0);
+    if (ap > 0.05) {
+      ctx.save();
+      ctx.globalAlpha = 0.18 * ap;
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.ellipse(ch.x, ch.y + 14, 22 + ap * 26, 9 + ap * 10, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+    /* l'ouverture : le couvercle se lève en CHEST_OPEN_MS, le coffre sursaute au départ */
+    const openK = ch.opened ? clamp((ch.openT != null ? ch.openT : 1) / (CHEST_OPEN_MS / 1000), 0, 1) : 0;
+    const jump = ch.opened && openK < 1 ? Math.sin(openK * Math.PI) * 6 : 0;
     const d = SPRITE_DEFS.chest;
     if (ready) {
-      const f = ch.opened ? 2 : 0;
-      ctx.drawImage(sheet, d.idle[0] + f * 16, d.idle[1], 16, 16, ch.x - 24, ch.y - 24, 48, 48);
+      const f = ch.opened ? (openK < 0.4 ? 1 : 2) : 0;
+      ctx.drawImage(sheet, d.idle[0] + f * 16, d.idle[1], 16, 16, ch.x - 24, ch.y - 24 - jump, 48, 48);
     } else {
       ctx.fillStyle = ch.opened ? '#5a4a2a' : '#b8862b';
       ctx.fillRect(ch.x - 22, ch.y - 16, 44, 32);

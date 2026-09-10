@@ -25,6 +25,9 @@ function enemyProjectile(e, a, o = {}) {
   });
 }
 
+/* la mort d'un ennemi (chantier F-4) : le corps reste dessiné DEATH_MS, blanc pendant DEATH_WHITE, puis s'écrase */
+const DEATH_MS = 220;
+const DEATH_WHITE = 60;
 class Enemy {
   constructor(def, x, y, opts = {}) {
     Object.assign(this, {
@@ -116,7 +119,10 @@ class Enemy {
     return this.stateT >= t && (!this.beatLock || Beat.crossedFrame(this.beatDiv || 1));
   }
   update(dt) {
-    if (this.dead) return;
+    if (this.dead) {
+      if (this.deathT != null) this.deathT += dt; // la mort en 220 ms : le corps reste dessiné le temps de s'écraser
+      return;
+    }
     const pl = G.player;
     this.slow = updateStatus(this, dt);
     if (this.dead) return;
@@ -188,6 +194,31 @@ class Enemy {
         pe.hurt(this.damage * BALANCE.petRegen.contactMul); // un animal encaisse moins qu'un joueur au contact
         this.contactCd = 0.6;
       }
+  }
+  /* la mort en deux temps (chantier F-4) : 60 ms de silhouette blanche pleine, un peu plus grande, puis l'écrasement au
+     sol (+55 % de large, −80 % de haut, outCubic) en s'effaçant. Une mort produit une image avant de disparaître. */
+  renderDeath(ctx) {
+    const t = this.deathT;
+    const white = t < DEATH_WHITE / 1000;
+    const k = white ? 0 : Ease.outCubic(clamp((t - DEATH_WHITE / 1000) / ((DEATH_MS - DEATH_WHITE) / 1000), 0, 1));
+    const scale = (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (white ? 1.12 : 1);
+    ctx.save();
+    ctx.globalAlpha = white ? 1 : 1 - k * 0.9;
+    Sprites.draw(ctx, this.def.sprite || (this.isBoss ? 'boss' : 'enemy_' + this.archetype), this.x, this.y, {
+      flip: this.facing < 0,
+      walk: this.anim,
+      flash: white ? 1 : 0,
+      sx: 1 + 0.55 * k,
+      sy: 1 - 0.8 * k,
+      scale,
+      fallback: () => {
+        ctx.fillStyle = white ? '#fff' : this.color;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + this.r * 0.8 * k, this.r * (1 + 0.55 * k), this.r * (1 - 0.8 * k) + 1, 0, 0, TAU);
+        ctx.fill();
+      },
+    });
+    ctx.restore();
   }
   relocate() {
     this.stuckT = 0;
@@ -434,7 +465,10 @@ class Enemy {
   }
   /* --- rendu commun --- */
   render(ctx) {
-    if (this.dead) return;
+    if (this.dead) {
+      if (this.deathT != null && this.deathT < DEATH_MS / 1000) this.renderDeath(ctx);
+      return;
+    }
     const alpha = this.spawnT > 0 ? clamp(1 - this.spawnT / 0.6, 0.1, 1) : 1;
     ctx.save();
     ctx.globalAlpha = alpha;

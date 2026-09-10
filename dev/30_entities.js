@@ -578,11 +578,26 @@ const RELICS = [
   { id: 'sifflet', name: 'Sifflet de chef de gare', desc: 'Appelle un allié pour 25 s', apply: pl => Pickups.summonAlly(pl.x, pl.y) },
 ];
 const NO_MAGNET = new Set(['fragment', 'weapon', 'ally', 'relic', 'pet']);
+/* chantier F-4 : la pesanteur des drops (px/s²) et la couleur de chaque genre, pour les étincelles du ramassage et les fantômes */
+const PICK_GRAVITY = 520;
+const PICK_COLORS = {
+  xp: '#7ef0ff',
+  coin: '#ffd166',
+  fragment: '#c8ff5a',
+  heart: '#7fff9a',
+  purse: '#ffd166',
+  relic: '#c9a3ff',
+  weapon: '#ffffff',
+  ally: '#9ff',
+  pet: '#ffb347',
+  glint: '#ffd166',
+};
 const Pickups = {
   list: [],
   spawn(x, y, kind, value = 1, extra = {}) {
     const a = RNG.range(0, TAU),
       s = RNG.range(40, 120);
+    /* un drop part en arc (chantier F-4) : une hauteur z, une vitesse verticale négative, la pesanteur le ramène au sol */
     this.list.push(
       Object.assign(
         {
@@ -590,6 +605,8 @@ const Pickups = {
           y,
           vx: Math.cos(a) * s,
           vy: Math.sin(a) * s,
+          z: 0,
+          vz: -RNG.range(140, 260),
           kind,
           value,
           t: 0,
@@ -664,13 +681,36 @@ const Pickups = {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const p = this.list[i];
       p.t += dt;
+      /* la pesanteur : z < 0 est en l'air ; au sol, un rebond amorti puis plus rien */
+      if (p.z < 0 || p.vz < 0) {
+        p.vz += PICK_GRAVITY * dt;
+        p.z += p.vz * dt;
+        if (p.z >= 0) {
+          p.z = 0;
+          p.vz = p.vz > 60 ? -p.vz * 0.35 : 0;
+        }
+      }
+      if (p.ghost) {
+        /* un éclat de décor (pièces du coffre) : il vit sa vie et s'éteint, personne ne le ramasse */
+        p.vx -= p.vx * 3 * dt;
+        p.vy -= p.vy * 3 * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.t > (p.life || 0.9)) this.list.splice(i, 1);
+        continue;
+      }
       const d = dist(p.x, p.y, pl.x, pl.y);
       if (p.magnet || (d < pl.stats.pickupRadius && !NO_MAGNET.has(p.kind)) || (always && !NO_MAGNET.has(p.kind))) {
+        if (!p.trail) p.trail = []; // l'aimantation peut venir d'ailleurs (fin de salle, tempo, compagnon) : la traînée naît ici
         p.magnet = true;
+        p.z = Math.min(0, p.z * 0.8);
         const a = angleTo(p.x, p.y, pl.x, pl.y);
         const sp = 420 + p.t * 300;
         p.vx = Math.cos(a) * sp;
         p.vy = Math.sin(a) * sp;
+        /* trois fantômes derrière un orbe aimanté */
+        p.trail.unshift({ x: p.x, y: p.y + p.z });
+        if (p.trail.length > 3) p.trail.length = 3;
       } else {
         p.vx -= p.vx * 5 * dt;
         p.vy -= p.vy * 5 * dt;
@@ -686,7 +726,41 @@ const Pickups = {
   },
   render(ctx) {
     for (const p of this.list) {
-      const bob = Math.sin(Time.now * 6 + p.x) * 2;
+      /* en l'air : l'objet monte de z, son ombre reste au sol et rétrécit */
+      if (p.z < -1) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y + 3, Math.max(2, p.r * (1 + p.z / 200)), Math.max(1, p.r * 0.4 * (1 + p.z / 200)), 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+      if (p.trail && p.trail.length) {
+        const col = PICK_COLORS[p.kind] || '#fff';
+        for (let i = 0; i < p.trail.length; i++) {
+          ctx.globalAlpha = 0.35 - i * 0.1;
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(p.trail[i].x, p.trail[i].y, Math.max(1, p.r - 1 - i), 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+      if (p.kind === 'glint') {
+        const k = 1 - p.t / (p.life || 0.9);
+        ctx.globalAlpha = Math.min(1, k * 2);
+        ctx.fillStyle = PAL.gold;
+        ctx.shadowColor = PAL.gold;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y + p.z, 4, 0, TAU);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      const bob = Math.sin(Time.now * 6 + p.x) * 2 + p.z;
       if (p.kind === 'xp') {
         ctx.fillStyle = '#7ef0ff';
         ctx.shadowColor = '#7ef0ff';
@@ -1014,14 +1088,27 @@ const Combat = {
     }
     AudioEngine.skillShockwave({ x: (x - W / 2) / (W / 2), intensity: 0.6 });
   },
+  /* une tache au sol, qui reste jusqu'au changement de salle (plafond DECAL_MAX, la plus vieille part) */
+  stain(x, y, color, k = 1) {
+    const d = G.room.decals;
+    d.push({ x, y, rx: 9 * k, ry: 3.5 * k, color: color || '#000' });
+    if (d.length > DECAL_MAX) d.splice(0, d.length - DECAL_MAX);
+  },
   killEnemy(e, info = {}) {
     if (e.dead) return;
     e.dead = true;
+    e.deathT = 0; // le corps reste dessiné DEATH_MS : blanc, puis écrasé (Enemy.renderDeath)
     const pl = G.player;
     AudioEngine.enemyDie({ x: (e.x - W / 2) / (W / 2) });
-    Feel.stop(60, true); // une mort compte toujours, même juste après le coup qui l'a donnée
+    Feel.stop(70, true); // une mort compte toujours, même juste après le coup qui l'a donnée
     Feel.shake(4, info.vx != null ? Math.atan2(info.vy, info.vx) : angleTo(pl.x, pl.y, e.x, e.y), 160);
-    Particles.spawn(e.x, e.y, { count: 12, color: e.color, size: 3, speedMax: 200, glow: true });
+    /* la couronne part du corps, pas des pieds : 22 blanches, 6 dorées ; une onde à plat au sol ; une tache qui reste */
+    const by = e.y - Combat.bodyH(e) * 0.5;
+    Particles.spawn(e.x, by, { count: 22, color: '#ffffff', size: 3, speedMin: 90, speedMax: 260, glow: true, life: 0.45 });
+    Particles.spawn(e.x, by, { count: 6, color: PAL.gold, size: 2, speedMin: 60, speedMax: 180, glow: true, life: 0.6 });
+    Particles.spawn(e.x, by, { count: 8, color: e.color, size: 3, speedMax: 200, glow: true });
+    G.room.blasts.push({ x: e.x, y: e.y + e.r * 0.6, r: 34, t: 0, life: 0.22, color: '#ffffff', flat: true });
+    Combat.stain(e.x, e.y + e.r * 0.6, e.color, e.isBoss ? 2.2 : clamp(e.r / 14, 0.7, 1.6));
     G.run.stats.kills++;
     G.room.kills++;
     G.room.combo++;
@@ -1160,6 +1247,39 @@ const Combat = {
     const streak = Time.now - (Pickups.lastT || -9) < 0.5 ? Math.min((Pickups.streak || 0) + 1, 12) : 0;
     Pickups.lastT = Time.now;
     Pickups.streak = streak; // cascade : un degré de la gamme par orbe
+    /* la cascade sonore devient visible : la taille et le nombre d'étincelles suivent la série ; un anneau à la collecte */
+    const col = PICK_COLORS[p.kind] || '#fff';
+    const fx = { size: 2 + streak * 0.25, count: 5 + streak, color: col };
+    Pickups.lastFx = fx;
+    Particles.spawn(p.x, p.y + (p.z || 0), {
+      count: fx.count,
+      color: col,
+      size: fx.size,
+      speedMin: 60,
+      speedMax: 160 + streak * 12,
+      glow: true,
+      life: 0.35,
+    });
+    G.room.blasts.push({ x: p.x, y: p.y, r: 12 + streak, t: 0, life: 0.18, color: col });
+    if (p.kind === 'heart') {
+      Feel.pop(pl, 0.3, 160);
+      G.room.blasts.push({ x: pl.x, y: pl.y, r: 40, t: 0, life: 0.35, color: PAL.life });
+    } else if (p.kind === 'relic' || p.kind === 'weapon') {
+      /* les seuls ramassages qui interrompent le combat : un arrêt et un rayon de lumière vertical */
+      Feel.stop(140, true);
+      G.room.beams.push({ ax: p.x, ay: p.y - 360, bx: p.x, by: p.y + 6, t: 0, life: 0.4, color: '#fff3c4', width: 10 });
+      Particles.spawn(p.x, p.y, {
+        count: 16,
+        color: '#fff3c4',
+        size: 3,
+        speedMin: 40,
+        speedMax: 140,
+        angle: -Math.PI / 2,
+        spread: 0.6,
+        glow: true,
+        life: 0.6,
+      });
+    }
     if (p.kind === 'xp') {
       Run.addXp(p.value);
       AudioEngine.pickupXp({ x: (p.x - W / 2) / (W / 2), step: streak });

@@ -86,6 +86,7 @@ const Room = {
       boss: null,
       beams: [],
       blasts: [],
+      decals: [], // les traces qui restent (taches des morts) : plafond DECAL_MAX, effacées avec la salle
       slashes: [],
       hazards: [],
       turrets: [],
@@ -335,9 +336,18 @@ const Room = {
     }
     /* coffre */
     if (r.chest && !r.chest.opened) {
-      const near = dist(pl.x, pl.y, r.chest.x, r.chest.y) < r.chest.r + pl.r + 16;
+      const d = dist(pl.x, pl.y, r.chest.x, r.chest.y);
+      const near = d < r.chest.r + pl.r + 16;
       r.chest.near = near;
+      r.chest.approach = clamp(1 - (d - 40) / 220, 0, 1); // le halo grossit à l'approche, bien avant la portée d'ouverture
       if (near && (Input.wasPressed('interact') || (pl.bot && r.stateT > 1))) Run.openChest();
+    } else if (r.chest && r.chest.pending) {
+      /* l'ouverture prend CHEST_OPEN_MS : le couvercle, la gerbe, les pièces en arc — l'écran de choix vient après */
+      r.chest.openT += dt;
+      if (r.chest.openT >= CHEST_OPEN_MS / 1000) {
+        r.chest.pending = false;
+        Run.chestChoice();
+      }
     }
     /* porte */
     if (r.doorOpen && !pl.dead) {
@@ -538,7 +548,22 @@ const Room = {
     const r = G.room;
     if (!r) return;
     Sprites.drawFloor(ctx, r);
-    if (r.grid) Terrain.render(ctx, r); // miroitement de l'eau : la seule partie animée, le reste est peint dans le cache du sol
+    if (r.grid) Terrain.render(ctx, r);
+    /* les traces des morts : une ellipse sombre teintée de l'ennemi, posée pour la salle */
+    for (const d of r.decals) {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#05060a';
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y, d.rx, d.ry, 0, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = d.color;
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y, d.rx * 0.7, d.ry * 0.7, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    } // miroitement de l'eau : la seule partie animée, le reste est peint dans le cache du sol
     for (const d of r.deco) Sprites.drawDeco(ctx, d);
     Anim.render(ctx, r); // décor animé au sol : sous les obstacles et les entités
     /* obstacles */
@@ -693,11 +718,13 @@ const Room = {
       }
       ctx.globalAlpha = 1 - k;
       ctx.strokeStyle = b.color;
-      ctx.lineWidth = 7 * (1 - k) + 1;
+      ctx.lineWidth = (b.flat ? 3 : 7) * (1 - k) + 1;
       ctx.shadowColor = b.color;
-      ctx.shadowBlur = 24;
+      ctx.shadowBlur = b.flat ? 8 : 24;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU);
+      if (b.flat)
+        ctx.ellipse(b.x, b.y, b.r * (0.3 + 0.7 * k), b.r * (0.3 + 0.7 * k) * 0.4, 0, 0, TAU); // une onde à plat sur le sol
+      else ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU);
       ctx.stroke();
       ctx.restore();
     }
@@ -871,8 +898,31 @@ const Run = {
   openChest() {
     const r = G.room;
     if (!r.chest || r.chest.opened) return;
-    r.chest.opened = true;
+    const ch = r.chest;
+    ch.opened = true;
+    ch.pending = true;
+    ch.openT = 0;
     AudioEngine.chestOpen({});
+    Feel.stop(70, true);
+    Feel.shake(4, -Math.PI / 2, 160);
+    Particles.spawn(ch.x, ch.y - 10, {
+      count: 26,
+      color: '#ffd166',
+      size: 3,
+      speedMin: 120,
+      speedMax: 320,
+      angle: -Math.PI / 2,
+      spread: 0.9,
+      glow: true,
+      life: 0.7,
+    });
+    Particles.spawn(ch.x, ch.y - 10, { count: 10, color: '#fff3c4', size: 2, speedMax: 160, glow: true, life: 0.4 });
+    /* des pièces qui partent en arc du coffre : un décor du moment, pas des crédits — elles ne se ramassent pas */
+    for (let i = 0; i < 7; i++) Pickups.spawn(ch.x, ch.y, 'glint', 0, { vz: -VFX_RNG.range(220, 340), ghost: true, life: 0.9 });
+  },
+  /* l'écran de choix du coffre, une fois le couvercle levé */
+  chestChoice() {
+    const r = G.room;
     const win = Run.chestWindow();
     const opts = Progression.chestOptions(win.avg, win.died);
     if (G.debug.forceRarity) opts.force = G.debug.forceRarity;
@@ -1032,7 +1082,7 @@ const Run = {
     pl.update(dt);
     Pets.update(dt);
     for (const e of G.enemies) e.update(dt);
-    G.enemies = G.enemies.filter(e => !e.dead);
+    G.enemies = G.enemies.filter(e => !e.dead || (e.deathT != null && e.deathT < DEATH_MS / 1000)); // un mort s'écrase avant de partir
     Projectiles.update(dt);
     Pickups.update(dt);
     Room.update(dt);

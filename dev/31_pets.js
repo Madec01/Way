@@ -297,7 +297,7 @@ class Pet {
         let best = null,
           bd = R;
         for (const p of Pickups.list) {
-          if (p.magnet || NO_MAGNET.has(p.kind)) continue;
+          if (p.magnet || p.ghost || NO_MAGNET.has(p.kind)) continue; // un éclat de décor ne se rapporte pas
           const d = dist(p.x, p.y, this.x, this.y);
           if (d < reach) {
             p.magnet = true;

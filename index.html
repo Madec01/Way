@@ -476,7 +476,7 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 14:14';</script>
+<script>window.WAY_BUILD = '2026-09-10 15:44';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -738,6 +738,9 @@ const PAL = {
 };
 const FONT_PIXEL = '"Silkscreen", "Segoe UI", system-ui, sans-serif';
 const FONT_TEXT = '"VT323", "Segoe UI", monospace';
+/* chantier F-4 : les traces qui restent et l'ouverture du coffre */
+const DECAL_MAX = 60;
+const CHEST_OPEN_MS = 300;
 const Feel = {
   lastStop: -9,
   /* arrêt sur image : la simulation se fige (Time.slow = 0,02) le temps demandé. Jamais par-dessus un ralenti de
@@ -9279,12 +9282,26 @@ const Sprites = (() => {
   function drawChest(ctx, ch) {
     ctx.save();
     const near = ch.near && !ch.opened;
+    /* le halo grossit à l'approche (ch.approach, 0 loin → 1 à portée), puis bat quand on peut ouvrir */
+    const ap = ch.opened ? 0 : ch.approach || 0;
     ctx.shadowColor = '#ffb347';
-    ctx.shadowBlur = near ? 26 + Math.sin(Time.now * 6) * 8 : 12;
+    ctx.shadowBlur = 10 + ap * 18 + (near ? 8 + Math.sin(Time.now * 6) * 8 : 0);
+    if (ap > 0.05) {
+      ctx.save();
+      ctx.globalAlpha = 0.18 * ap;
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.ellipse(ch.x, ch.y + 14, 22 + ap * 26, 9 + ap * 10, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+    /* l'ouverture : le couvercle se lève en CHEST_OPEN_MS, le coffre sursaute au départ */
+    const openK = ch.opened ? clamp((ch.openT != null ? ch.openT : 1) / (CHEST_OPEN_MS / 1000), 0, 1) : 0;
+    const jump = ch.opened && openK < 1 ? Math.sin(openK * Math.PI) * 6 : 0;
     const d = SPRITE_DEFS.chest;
     if (ready) {
-      const f = ch.opened ? 2 : 0;
-      ctx.drawImage(sheet, d.idle[0] + f * 16, d.idle[1], 16, 16, ch.x - 24, ch.y - 24, 48, 48);
+      const f = ch.opened ? (openK < 0.4 ? 1 : 2) : 0;
+      ctx.drawImage(sheet, d.idle[0] + f * 16, d.idle[1], 16, 16, ch.x - 24, ch.y - 24 - jump, 48, 48);
     } else {
       ctx.fillStyle = ch.opened ? '#5a4a2a' : '#b8862b';
       ctx.fillRect(ch.x - 22, ch.y - 16, 44, 32);
@@ -10923,11 +10940,26 @@ const RELICS = [
   { id: 'sifflet', name: 'Sifflet de chef de gare', desc: 'Appelle un allié pour 25 s', apply: pl => Pickups.summonAlly(pl.x, pl.y) },
 ];
 const NO_MAGNET = new Set(['fragment', 'weapon', 'ally', 'relic', 'pet']);
+/* chantier F-4 : la pesanteur des drops (px/s²) et la couleur de chaque genre, pour les étincelles du ramassage et les fantômes */
+const PICK_GRAVITY = 520;
+const PICK_COLORS = {
+  xp: '#7ef0ff',
+  coin: '#ffd166',
+  fragment: '#c8ff5a',
+  heart: '#7fff9a',
+  purse: '#ffd166',
+  relic: '#c9a3ff',
+  weapon: '#ffffff',
+  ally: '#9ff',
+  pet: '#ffb347',
+  glint: '#ffd166',
+};
 const Pickups = {
   list: [],
   spawn(x, y, kind, value = 1, extra = {}) {
     const a = RNG.range(0, TAU),
       s = RNG.range(40, 120);
+    /* un drop part en arc (chantier F-4) : une hauteur z, une vitesse verticale négative, la pesanteur le ramène au sol */
     this.list.push(
       Object.assign(
         {
@@ -10935,6 +10967,8 @@ const Pickups = {
           y,
           vx: Math.cos(a) * s,
           vy: Math.sin(a) * s,
+          z: 0,
+          vz: -RNG.range(140, 260),
           kind,
           value,
           t: 0,
@@ -11009,13 +11043,36 @@ const Pickups = {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const p = this.list[i];
       p.t += dt;
+      /* la pesanteur : z < 0 est en l'air ; au sol, un rebond amorti puis plus rien */
+      if (p.z < 0 || p.vz < 0) {
+        p.vz += PICK_GRAVITY * dt;
+        p.z += p.vz * dt;
+        if (p.z >= 0) {
+          p.z = 0;
+          p.vz = p.vz > 60 ? -p.vz * 0.35 : 0;
+        }
+      }
+      if (p.ghost) {
+        /* un éclat de décor (pièces du coffre) : il vit sa vie et s'éteint, personne ne le ramasse */
+        p.vx -= p.vx * 3 * dt;
+        p.vy -= p.vy * 3 * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.t > (p.life || 0.9)) this.list.splice(i, 1);
+        continue;
+      }
       const d = dist(p.x, p.y, pl.x, pl.y);
       if (p.magnet || (d < pl.stats.pickupRadius && !NO_MAGNET.has(p.kind)) || (always && !NO_MAGNET.has(p.kind))) {
+        if (!p.trail) p.trail = []; // l'aimantation peut venir d'ailleurs (fin de salle, tempo, compagnon) : la traînée naît ici
         p.magnet = true;
+        p.z = Math.min(0, p.z * 0.8);
         const a = angleTo(p.x, p.y, pl.x, pl.y);
         const sp = 420 + p.t * 300;
         p.vx = Math.cos(a) * sp;
         p.vy = Math.sin(a) * sp;
+        /* trois fantômes derrière un orbe aimanté */
+        p.trail.unshift({ x: p.x, y: p.y + p.z });
+        if (p.trail.length > 3) p.trail.length = 3;
       } else {
         p.vx -= p.vx * 5 * dt;
         p.vy -= p.vy * 5 * dt;
@@ -11031,7 +11088,41 @@ const Pickups = {
   },
   render(ctx) {
     for (const p of this.list) {
-      const bob = Math.sin(Time.now * 6 + p.x) * 2;
+      /* en l'air : l'objet monte de z, son ombre reste au sol et rétrécit */
+      if (p.z < -1) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y + 3, Math.max(2, p.r * (1 + p.z / 200)), Math.max(1, p.r * 0.4 * (1 + p.z / 200)), 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+      if (p.trail && p.trail.length) {
+        const col = PICK_COLORS[p.kind] || '#fff';
+        for (let i = 0; i < p.trail.length; i++) {
+          ctx.globalAlpha = 0.35 - i * 0.1;
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(p.trail[i].x, p.trail[i].y, Math.max(1, p.r - 1 - i), 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+      if (p.kind === 'glint') {
+        const k = 1 - p.t / (p.life || 0.9);
+        ctx.globalAlpha = Math.min(1, k * 2);
+        ctx.fillStyle = PAL.gold;
+        ctx.shadowColor = PAL.gold;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y + p.z, 4, 0, TAU);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      const bob = Math.sin(Time.now * 6 + p.x) * 2 + p.z;
       if (p.kind === 'xp') {
         ctx.fillStyle = '#7ef0ff';
         ctx.shadowColor = '#7ef0ff';
@@ -11359,14 +11450,27 @@ const Combat = {
     }
     AudioEngine.skillShockwave({ x: (x - W / 2) / (W / 2), intensity: 0.6 });
   },
+  /* une tache au sol, qui reste jusqu'au changement de salle (plafond DECAL_MAX, la plus vieille part) */
+  stain(x, y, color, k = 1) {
+    const d = G.room.decals;
+    d.push({ x, y, rx: 9 * k, ry: 3.5 * k, color: color || '#000' });
+    if (d.length > DECAL_MAX) d.splice(0, d.length - DECAL_MAX);
+  },
   killEnemy(e, info = {}) {
     if (e.dead) return;
     e.dead = true;
+    e.deathT = 0; // le corps reste dessiné DEATH_MS : blanc, puis écrasé (Enemy.renderDeath)
     const pl = G.player;
     AudioEngine.enemyDie({ x: (e.x - W / 2) / (W / 2) });
-    Feel.stop(60, true); // une mort compte toujours, même juste après le coup qui l'a donnée
+    Feel.stop(70, true); // une mort compte toujours, même juste après le coup qui l'a donnée
     Feel.shake(4, info.vx != null ? Math.atan2(info.vy, info.vx) : angleTo(pl.x, pl.y, e.x, e.y), 160);
-    Particles.spawn(e.x, e.y, { count: 12, color: e.color, size: 3, speedMax: 200, glow: true });
+    /* la couronne part du corps, pas des pieds : 22 blanches, 6 dorées ; une onde à plat au sol ; une tache qui reste */
+    const by = e.y - Combat.bodyH(e) * 0.5;
+    Particles.spawn(e.x, by, { count: 22, color: '#ffffff', size: 3, speedMin: 90, speedMax: 260, glow: true, life: 0.45 });
+    Particles.spawn(e.x, by, { count: 6, color: PAL.gold, size: 2, speedMin: 60, speedMax: 180, glow: true, life: 0.6 });
+    Particles.spawn(e.x, by, { count: 8, color: e.color, size: 3, speedMax: 200, glow: true });
+    G.room.blasts.push({ x: e.x, y: e.y + e.r * 0.6, r: 34, t: 0, life: 0.22, color: '#ffffff', flat: true });
+    Combat.stain(e.x, e.y + e.r * 0.6, e.color, e.isBoss ? 2.2 : clamp(e.r / 14, 0.7, 1.6));
     G.run.stats.kills++;
     G.room.kills++;
     G.room.combo++;
@@ -11505,6 +11609,39 @@ const Combat = {
     const streak = Time.now - (Pickups.lastT || -9) < 0.5 ? Math.min((Pickups.streak || 0) + 1, 12) : 0;
     Pickups.lastT = Time.now;
     Pickups.streak = streak; // cascade : un degré de la gamme par orbe
+    /* la cascade sonore devient visible : la taille et le nombre d'étincelles suivent la série ; un anneau à la collecte */
+    const col = PICK_COLORS[p.kind] || '#fff';
+    const fx = { size: 2 + streak * 0.25, count: 5 + streak, color: col };
+    Pickups.lastFx = fx;
+    Particles.spawn(p.x, p.y + (p.z || 0), {
+      count: fx.count,
+      color: col,
+      size: fx.size,
+      speedMin: 60,
+      speedMax: 160 + streak * 12,
+      glow: true,
+      life: 0.35,
+    });
+    G.room.blasts.push({ x: p.x, y: p.y, r: 12 + streak, t: 0, life: 0.18, color: col });
+    if (p.kind === 'heart') {
+      Feel.pop(pl, 0.3, 160);
+      G.room.blasts.push({ x: pl.x, y: pl.y, r: 40, t: 0, life: 0.35, color: PAL.life });
+    } else if (p.kind === 'relic' || p.kind === 'weapon') {
+      /* les seuls ramassages qui interrompent le combat : un arrêt et un rayon de lumière vertical */
+      Feel.stop(140, true);
+      G.room.beams.push({ ax: p.x, ay: p.y - 360, bx: p.x, by: p.y + 6, t: 0, life: 0.4, color: '#fff3c4', width: 10 });
+      Particles.spawn(p.x, p.y, {
+        count: 16,
+        color: '#fff3c4',
+        size: 3,
+        speedMin: 40,
+        speedMax: 140,
+        angle: -Math.PI / 2,
+        spread: 0.6,
+        glow: true,
+        life: 0.6,
+      });
+    }
     if (p.kind === 'xp') {
       Run.addXp(p.value);
       AudioEngine.pickupXp({ x: (p.x - W / 2) / (W / 2), step: streak });
@@ -12907,7 +13044,7 @@ class Pet {
         let best = null,
           bd = R;
         for (const p of Pickups.list) {
-          if (p.magnet || NO_MAGNET.has(p.kind)) continue;
+          if (p.magnet || p.ghost || NO_MAGNET.has(p.kind)) continue; // un éclat de décor ne se rapporte pas
           const d = dist(p.x, p.y, this.x, this.y);
           if (d < reach) {
             p.magnet = true;
@@ -13382,6 +13519,9 @@ function enemyProjectile(e, a, o = {}) {
   });
 }
 
+/* la mort d'un ennemi (chantier F-4) : le corps reste dessiné DEATH_MS, blanc pendant DEATH_WHITE, puis s'écrase */
+const DEATH_MS = 220;
+const DEATH_WHITE = 60;
 class Enemy {
   constructor(def, x, y, opts = {}) {
     Object.assign(this, {
@@ -13473,7 +13613,10 @@ class Enemy {
     return this.stateT >= t && (!this.beatLock || Beat.crossedFrame(this.beatDiv || 1));
   }
   update(dt) {
-    if (this.dead) return;
+    if (this.dead) {
+      if (this.deathT != null) this.deathT += dt; // la mort en 220 ms : le corps reste dessiné le temps de s'écraser
+      return;
+    }
     const pl = G.player;
     this.slow = updateStatus(this, dt);
     if (this.dead) return;
@@ -13545,6 +13688,31 @@ class Enemy {
         pe.hurt(this.damage * BALANCE.petRegen.contactMul); // un animal encaisse moins qu'un joueur au contact
         this.contactCd = 0.6;
       }
+  }
+  /* la mort en deux temps (chantier F-4) : 60 ms de silhouette blanche pleine, un peu plus grande, puis l'écrasement au
+     sol (+55 % de large, −80 % de haut, outCubic) en s'effaçant. Une mort produit une image avant de disparaître. */
+  renderDeath(ctx) {
+    const t = this.deathT;
+    const white = t < DEATH_WHITE / 1000;
+    const k = white ? 0 : Ease.outCubic(clamp((t - DEATH_WHITE / 1000) / ((DEATH_MS - DEATH_WHITE) / 1000), 0, 1));
+    const scale = (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (white ? 1.12 : 1);
+    ctx.save();
+    ctx.globalAlpha = white ? 1 : 1 - k * 0.9;
+    Sprites.draw(ctx, this.def.sprite || (this.isBoss ? 'boss' : 'enemy_' + this.archetype), this.x, this.y, {
+      flip: this.facing < 0,
+      walk: this.anim,
+      flash: white ? 1 : 0,
+      sx: 1 + 0.55 * k,
+      sy: 1 - 0.8 * k,
+      scale,
+      fallback: () => {
+        ctx.fillStyle = white ? '#fff' : this.color;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + this.r * 0.8 * k, this.r * (1 + 0.55 * k), this.r * (1 - 0.8 * k) + 1, 0, 0, TAU);
+        ctx.fill();
+      },
+    });
+    ctx.restore();
   }
   relocate() {
     this.stuckT = 0;
@@ -13791,7 +13959,10 @@ class Enemy {
   }
   /* --- rendu commun --- */
   render(ctx) {
-    if (this.dead) return;
+    if (this.dead) {
+      if (this.deathT != null && this.deathT < DEATH_MS / 1000) this.renderDeath(ctx);
+      return;
+    }
     const alpha = this.spawnT > 0 ? clamp(1 - this.spawnT / 0.6, 0.1, 1) : 1;
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -18791,6 +18962,7 @@ const Room = {
       boss: null,
       beams: [],
       blasts: [],
+      decals: [], // les traces qui restent (taches des morts) : plafond DECAL_MAX, effacées avec la salle
       slashes: [],
       hazards: [],
       turrets: [],
@@ -19040,9 +19212,18 @@ const Room = {
     }
     /* coffre */
     if (r.chest && !r.chest.opened) {
-      const near = dist(pl.x, pl.y, r.chest.x, r.chest.y) < r.chest.r + pl.r + 16;
+      const d = dist(pl.x, pl.y, r.chest.x, r.chest.y);
+      const near = d < r.chest.r + pl.r + 16;
       r.chest.near = near;
+      r.chest.approach = clamp(1 - (d - 40) / 220, 0, 1); // le halo grossit à l'approche, bien avant la portée d'ouverture
       if (near && (Input.wasPressed('interact') || (pl.bot && r.stateT > 1))) Run.openChest();
+    } else if (r.chest && r.chest.pending) {
+      /* l'ouverture prend CHEST_OPEN_MS : le couvercle, la gerbe, les pièces en arc — l'écran de choix vient après */
+      r.chest.openT += dt;
+      if (r.chest.openT >= CHEST_OPEN_MS / 1000) {
+        r.chest.pending = false;
+        Run.chestChoice();
+      }
     }
     /* porte */
     if (r.doorOpen && !pl.dead) {
@@ -19243,7 +19424,22 @@ const Room = {
     const r = G.room;
     if (!r) return;
     Sprites.drawFloor(ctx, r);
-    if (r.grid) Terrain.render(ctx, r); // miroitement de l'eau : la seule partie animée, le reste est peint dans le cache du sol
+    if (r.grid) Terrain.render(ctx, r);
+    /* les traces des morts : une ellipse sombre teintée de l'ennemi, posée pour la salle */
+    for (const d of r.decals) {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#05060a';
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y, d.rx, d.ry, 0, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = d.color;
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y, d.rx * 0.7, d.ry * 0.7, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    } // miroitement de l'eau : la seule partie animée, le reste est peint dans le cache du sol
     for (const d of r.deco) Sprites.drawDeco(ctx, d);
     Anim.render(ctx, r); // décor animé au sol : sous les obstacles et les entités
     /* obstacles */
@@ -19398,11 +19594,13 @@ const Room = {
       }
       ctx.globalAlpha = 1 - k;
       ctx.strokeStyle = b.color;
-      ctx.lineWidth = 7 * (1 - k) + 1;
+      ctx.lineWidth = (b.flat ? 3 : 7) * (1 - k) + 1;
       ctx.shadowColor = b.color;
-      ctx.shadowBlur = 24;
+      ctx.shadowBlur = b.flat ? 8 : 24;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU);
+      if (b.flat)
+        ctx.ellipse(b.x, b.y, b.r * (0.3 + 0.7 * k), b.r * (0.3 + 0.7 * k) * 0.4, 0, 0, TAU); // une onde à plat sur le sol
+      else ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU);
       ctx.stroke();
       ctx.restore();
     }
@@ -19576,8 +19774,31 @@ const Run = {
   openChest() {
     const r = G.room;
     if (!r.chest || r.chest.opened) return;
-    r.chest.opened = true;
+    const ch = r.chest;
+    ch.opened = true;
+    ch.pending = true;
+    ch.openT = 0;
     AudioEngine.chestOpen({});
+    Feel.stop(70, true);
+    Feel.shake(4, -Math.PI / 2, 160);
+    Particles.spawn(ch.x, ch.y - 10, {
+      count: 26,
+      color: '#ffd166',
+      size: 3,
+      speedMin: 120,
+      speedMax: 320,
+      angle: -Math.PI / 2,
+      spread: 0.9,
+      glow: true,
+      life: 0.7,
+    });
+    Particles.spawn(ch.x, ch.y - 10, { count: 10, color: '#fff3c4', size: 2, speedMax: 160, glow: true, life: 0.4 });
+    /* des pièces qui partent en arc du coffre : un décor du moment, pas des crédits — elles ne se ramassent pas */
+    for (let i = 0; i < 7; i++) Pickups.spawn(ch.x, ch.y, 'glint', 0, { vz: -VFX_RNG.range(220, 340), ghost: true, life: 0.9 });
+  },
+  /* l'écran de choix du coffre, une fois le couvercle levé */
+  chestChoice() {
+    const r = G.room;
     const win = Run.chestWindow();
     const opts = Progression.chestOptions(win.avg, win.died);
     if (G.debug.forceRarity) opts.force = G.debug.forceRarity;
@@ -19737,7 +19958,7 @@ const Run = {
     pl.update(dt);
     Pets.update(dt);
     for (const e of G.enemies) e.update(dt);
-    G.enemies = G.enemies.filter(e => !e.dead);
+    G.enemies = G.enemies.filter(e => !e.dead || (e.deathT != null && e.deathT < DEATH_MS / 1000)); // un mort s'écrase avant de partir
     Projectiles.update(dt);
     Pickups.update(dt);
     Room.update(dt);
