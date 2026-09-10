@@ -13,7 +13,10 @@ function update(dt, rawDt) {
   } // le son tourne : l'invite du menu disparaît
   if (G.state === 'run') {
     Run.update(dt);
-    if (G.player) Camera.follow(G.player.x, G.player.y, rawDt);
+    if (G.player) {
+      const tg = Camera.target(G.player);
+      Camera.follow(tg.x, tg.y, rawDt);
+    }
   } else if (G.attract) Attract.update(dt);
   Atelier.update();
 }

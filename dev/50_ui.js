@@ -1305,6 +1305,20 @@ const UI = (() => {
       vignette(0.45 * (pl.hurtVig / 0.35), 255, 60, 90);
       hudProbe.flags.hurtVig = +(pl.hurtVig / 0.35).toFixed(2);
     }
+    /* les scènes (F-6) : le voile sombre de la mort (0,55 en 1,2 s + vignette corail), le voile doré de la victoire */
+    if (r.deathScene) {
+      const k = Ease.outCubic(clamp(r.deathScene.t / r.deathScene.dur, 0, 1));
+      ctx.fillStyle = `rgba(3,4,8,${(0.55 * k).toFixed(3)})`;
+      ctx.fillRect(L, T, V.w, V.h);
+      vignette(0.45 * k, 255, 94, 122);
+      hudProbe.flags.deathVeil = +k.toFixed(2);
+    }
+    if (r.winScene) {
+      const k = Ease.outCubic(clamp(r.winScene.t / r.winScene.dur, 0, 1));
+      ctx.fillStyle = `rgba(255,209,102,${(0.22 * k).toFixed(3)})`;
+      ctx.fillRect(L, T, V.w, V.h);
+      hudProbe.flags.winVeil = +k.toFixed(2);
+    }
     /* flash blanc d'une image */
     if (flashScreenState && Time.now < flashScreenState.until) {
       ctx.globalAlpha = flashScreenState.a * ((flashScreenState.until - Time.now) / flashScreenState.life);
@@ -1520,6 +1534,28 @@ const UI = (() => {
       hudProbe.flags.upgGrid = ups.length;
     }
     ctx.globalAlpha = 1;
+    /* le rideau du boss (F-6) : deux bandes noires de 40 px, son nom sur celle du bas */
+    const sc = rm.scene;
+    if (sc && sc.kind === 'bossIn') {
+      const k = sc.t < 0.2 ? sc.t / 0.2 : sc.t > sc.dur - 0.3 ? (sc.dur - sc.t) / 0.3 : 1;
+      const h = 40 * clamp(k, 0, 1);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(L, T, V.w, h);
+      ctx.fillRect(L, B - h, V.w, h);
+      if (h > 30)
+        label(ctx, sc.name, CX, B - h / 2 + 1, { kind: 'num', align: 'center', weight: 'bold', size: 14, color: PAL.danger, free: true });
+      hudProbe.flags.curtain = +h.toFixed(0);
+    }
+    /* l'entrée de salle : un seul texte, le nom de la salle, en bas, en petit */
+    if (rm.introLabelT > 0) {
+      rm.introLabelT -= Math.min(0.1, Time.now - (rm.introLabelClock || Time.now));
+      rm.introLabelClock = Time.now;
+      const a = clamp(Math.min(rm.introLabelT / 0.4, 1), 0, 1);
+      ctx.globalAlpha = a;
+      label(ctx, rm.label, CX, B - 60, { kind: 'num', align: 'center', size: 12, color: '#9fd8ff', free: true });
+      ctx.globalAlpha = 1;
+      hudProbe.flags.introLabel = rm.label;
+    }
     /* bannières : le tiers supérieur, au-dessus de la zone de combat, jamais entre le joueur et les ennemis */
     banners.slice(0, 1).forEach(b => {
       const kk = b.t / b.life;

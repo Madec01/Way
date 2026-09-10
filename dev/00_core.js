@@ -324,6 +324,7 @@ const Camera = {
   update(dt) {
     if (this.k && this.k.t < this.k.life) this.k.t += dt;
     this.pulse += (0 - this.pulse) * Math.min(1, 6 * dt);
+    this.zoomFx += (this.zoomFxTarget - this.zoomFx) * Math.min(1, this.zoomFxSpeed * dt);
     if (Math.abs(this.pulse) < 0.0005) this.pulse = 0;
   },
   /* appliquée AVANT le zoom, en coordonnées d'écran : 12 px de secousse sont 12 px, pas 18 en tactile */
@@ -349,6 +350,24 @@ const Camera = {
     this.y = lerp(this.y, y, k);
     this.clamp();
   },
+  /* les scènes (F-6) : un point à regarder à la place du joueur, et un zoom de scène qui se multiplie au zoom courant.
+     focus = { x, y, until } (horloge murale) ; zoomFx tend vers zoomFxTarget à la vitesse zoomFxSpeed. */
+  focus: null,
+  zoomFx: 1,
+  zoomFxTarget: 1,
+  zoomFxSpeed: 3,
+  lookAt(x, y, ms) {
+    this.focus = { x, y, until: performance.now() + ms };
+  },
+  target(pl) {
+    if (this.focus && performance.now() < this.focus.until) return this.focus;
+    this.focus = null;
+    return pl;
+  },
+  zoomTo(z, speed = 3) {
+    this.zoomFxTarget = z;
+    this.zoomFxSpeed = speed;
+  },
   clamp() {
     const v = Engine.view;
     const hw = v.w / (2 * this.zoom),
@@ -357,7 +376,7 @@ const Camera = {
     this.y = hh >= H / 2 ? H / 2 : clamp(this.y, hh, H - hh);
   },
   apply(ctx) {
-    const z = this.zoom * (1 + (this.pulse || 0));
+    const z = this.zoom * (1 + (this.pulse || 0)) * (this.zoomFx || 1);
     ctx.translate(W / 2, H / 2);
     ctx.scale(z, z);
     ctx.translate(-this.x, -this.y);

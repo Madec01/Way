@@ -52,7 +52,7 @@ test(async ({ page, ok, entrer }) => {
     G.player.hp = 1;
     Combat.hitPlayer(999, { type: 'contact' });
   });
-  await page.waitForTimeout(1700); // le personnage joue sa chute avant l'écran de fin
+  await page.waitForFunction(() => G.overlay === 'end', { timeout: 6000 }).catch(() => {}); // la chute, puis le temps fort suivant (F-6)
   const fin = await page.evaluate(() => ({ overlay: G.overlay, coins: Meta.coins, deaths: Meta.profile.deaths }));
   ok(
     'la mort garde 50 + 40 de prime + 10 % de 100 = 100 crédits',

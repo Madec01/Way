@@ -476,7 +476,7 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 19:11';</script>
+<script>window.WAY_BUILD = '2026-09-10 21:29';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -805,6 +805,7 @@ const Camera = {
   update(dt) {
     if (this.k && this.k.t < this.k.life) this.k.t += dt;
     this.pulse += (0 - this.pulse) * Math.min(1, 6 * dt);
+    this.zoomFx += (this.zoomFxTarget - this.zoomFx) * Math.min(1, this.zoomFxSpeed * dt);
     if (Math.abs(this.pulse) < 0.0005) this.pulse = 0;
   },
   /* appliquée AVANT le zoom, en coordonnées d'écran : 12 px de secousse sont 12 px, pas 18 en tactile */
@@ -830,6 +831,24 @@ const Camera = {
     this.y = lerp(this.y, y, k);
     this.clamp();
   },
+  /* les scènes (F-6) : un point à regarder à la place du joueur, et un zoom de scène qui se multiplie au zoom courant.
+     focus = { x, y, until } (horloge murale) ; zoomFx tend vers zoomFxTarget à la vitesse zoomFxSpeed. */
+  focus: null,
+  zoomFx: 1,
+  zoomFxTarget: 1,
+  zoomFxSpeed: 3,
+  lookAt(x, y, ms) {
+    this.focus = { x, y, until: performance.now() + ms };
+  },
+  target(pl) {
+    if (this.focus && performance.now() < this.focus.until) return this.focus;
+    this.focus = null;
+    return pl;
+  },
+  zoomTo(z, speed = 3) {
+    this.zoomFxTarget = z;
+    this.zoomFxSpeed = speed;
+  },
   clamp() {
     const v = Engine.view;
     const hw = v.w / (2 * this.zoom),
@@ -838,7 +857,7 @@ const Camera = {
     this.y = hh >= H / 2 ? H / 2 : clamp(this.y, hh, H - hh);
   },
   apply(ctx) {
-    const z = this.zoom * (1 + (this.pulse || 0));
+    const z = this.zoom * (1 + (this.pulse || 0)) * (this.zoomFx || 1);
     ctx.translate(W / 2, H / 2);
     ctx.scale(z, z);
     ctx.translate(-this.x, -this.y);
@@ -12353,6 +12372,7 @@ class Player {
       this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);
       this.movingNow = !!(mv.x || mv.y);
+      if (this.whiteT > 0) this.whiteT -= dt;
       this.animStep(dt, !!(mv.x || mv.y), firing);
     }
     /* poussée : s'ajoute au déplacement puis s'amortit, comme chez les ennemis. Un piège peut ainsi déplacer le
@@ -12613,7 +12633,7 @@ class Player {
       dir: dv && dv.dir,
       flip: dv ? dv.flip : this.facing < 0,
       walk: this.walkT,
-      flash: this.hurtFlash > 0,
+      flash: this.hurtFlash > 0 || this.whiteT > 0, // blessé, ou la silhouette blanche de la montée de niveau (F-6)
       scale: 1 + 0.04 * kb,
       sx: idle ? 1 - 0.03 * kb : undefined,
       sy: idle ? 1 + 0.035 * kb : undefined,
@@ -12872,6 +12892,37 @@ class Pet {
     return true;
   }
   /* replacé à côté du joueur : changement de salle, ou trop distancé */
+  /* un petit saut : l'animal fait son action et bondit (montée de niveau, victoire, boss abattu) */
+  hop() {
+    this.act = 1;
+    this.jumpT = 0.4;
+    this.jumpD = 0.4;
+  }
+  /* venir s'asseoir près du corps : Uno se couche, ORI se pose, Choupi et Tanuki tournent autour */
+  mournStep(dt, pl) {
+    const mode = this.def.mourn || (this.def.behavior === 'mark' || this.airborne ? 'perch' : this.def.duo ? 'circle' : 'lie');
+    this.mournT = (this.mournT || 0) + dt;
+    this.mode0 = mode;
+    if (mode === 'circle') {
+      const a = this.mournT * 1.6;
+      const tx = pl.x + Math.cos(a) * 46,
+        ty = pl.y + Math.sin(a) * 22;
+      this.moveTo(tx, ty, dt, 0.9);
+      this.mournPose = 'circle';
+      return;
+    }
+    const side = this.x < pl.x ? -1 : 1;
+    const tx = pl.x + side * 34,
+      ty = pl.y + 6;
+    if (dist(this.x, this.y, tx, ty) > 8) {
+      this.moveTo(tx, ty, dt, 1.1);
+      this.mournPose = null;
+    } else {
+      this.moving = false;
+      this.mournPose = mode; // 'lie' ou 'perch'
+      this.dx = pl.x < this.x ? -1 : 1;
+    }
+  }
   snap() {
     const pl = G.player;
     if (!pl) return;
@@ -12903,6 +12954,23 @@ class Pet {
     }
   }
   /* déplacement de suite : rejoint le joueur au-delà de `dist`, se pose en deçà */
+  /* aller vers un point, à la vitesse de l'animal (scènes : le corps du boss, le côté du joueur) */
+  moveTo(x, y, dt, mult) {
+    const d = dist(this.x, this.y, x, y);
+    if (d < 2) {
+      this.moving = false;
+      return;
+    }
+    const a = angleTo(this.x, this.y, x, y);
+    const sp = Math.min((this.def.speed || 260) * (mult || 1), 60 + d * 5);
+    this.x += Math.cos(a) * sp * dt;
+    this.y += Math.sin(a) * sp * dt;
+    this.dx = Math.cos(a);
+    this.dy = Math.sin(a);
+    this.facing = Math.cos(a) > 0 ? 1 : -1;
+    this.moving = true;
+    if (!this.airborne) resolveRoomCollision(this);
+  }
   follow(dt, mult) {
     const pl = G.player;
     const d = dist(this.x, this.y, pl.x, pl.y);
@@ -12956,6 +13024,27 @@ class Pet {
     }
     const tick = this.beatTick();
     const pl = G.player;
+    if (this.jumpT > 0) this.jumpT -= dt;
+    /* les scènes (F-6) : courir vers le corps du boss, ou venir s'asseoir près du joueur mort */
+    const raw = Run.rawDt(dt); // les scènes se jouent en temps réel, ralenti ou pas
+    if (this.mourn && pl && pl.dead) {
+      this.mournStep(raw, pl);
+      return;
+    }
+    if (this.celebrate) {
+      if (performance.now() > this.celebrate.until) this.celebrate = null;
+      else {
+        const c = this.celebrate;
+        const d = dist(this.x, this.y, c.x, c.y);
+        if (d > 40)
+          this.moveTo(c.x, c.y, raw, 1.8); // il court
+        else {
+          this.moving = false;
+          if (this.jumpT <= 0) this.hop();
+        }
+        return;
+      }
+    }
     switch (this.def.behavior) {
       /* --- faucon : pique sur l'ennemi le plus proche, revient ensuite --- */
       case 'strike': {
@@ -13228,8 +13317,15 @@ class Pet {
   }
   render(ctx) {
     const s = this.def.size || 48;
-    const lift = this.airborne ? 15 : 0;
-    const bob = this.moving ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5 : Math.sin(this.t * 3) * 2;
+    const jump = this.jumpT > 0 ? Math.sin((1 - this.jumpT / (this.jumpD || 0.4)) * Math.PI) * 26 : 0; // le bond
+    const pose = this.mournPose;
+    const lift = (this.airborne && pose !== 'perch' ? 15 : 0) + jump;
+    const bob =
+      pose === 'lie' || pose === 'perch'
+        ? Math.sin(this.t * 1.4) * 0.6
+        : this.moving
+          ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5
+          : Math.sin(this.t * 3) * 2;
     const a = this.def.anim;
     const planche = a && a[this.clip] && Sprites.sheetInfo(a[this.clip]);
     /* vue affichée : celle du déplacement réel. Une planche n'a qu'un profil, retourné vers l'ouest. */
@@ -13256,6 +13352,8 @@ class Pet {
         foot: true,
         flip: dv.flip,
         alpha: this.down ? 0.5 : 1,
+        sx: pose === 'lie' ? 1.25 : undefined,
+        sy: pose === 'lie' ? 0.55 : undefined,
       });
       this.renderTags(ctx, s, lift);
       return;
@@ -13692,8 +13790,10 @@ class Enemy {
      sol (+55 % de large, −80 % de haut, outCubic) en s'effaçant. Une mort produit une image avant de disparaître. */
   renderDeath(ctx) {
     const t = this.deathT;
-    const white = t < DEATH_WHITE / 1000;
-    const k = white ? 0 : Ease.outCubic(clamp((t - DEATH_WHITE / 1000) / ((DEATH_MS - DEATH_WHITE) / 1000), 0, 1));
+    const dur = this.deathDur || DEATH_MS / 1000,
+      wdur = this.deathWhite || DEATH_WHITE / 1000; // un boss meurt plus longtemps (F-6)
+    const white = t < wdur;
+    const k = white ? 0 : Ease.outCubic(clamp((t - wdur) / (dur - wdur), 0, 1));
     const scale = (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (white ? 1.12 : 1);
     ctx.save();
     ctx.globalAlpha = white ? 1 : 1 - k * 0.9;
@@ -13959,16 +14059,36 @@ class Enemy {
   /* --- rendu commun --- */
   render(ctx) {
     if (this.dead) {
-      if (this.deathT != null && this.deathT < DEATH_MS / 1000) this.renderDeath(ctx);
+      if (this.deathT != null && this.deathT < (this.deathDur || DEATH_MS / 1000)) this.renderDeath(ctx);
+      return;
+    }
+    /* l'arrivée d'un boss (F-6) : il descend de 120 px — tout son dessin est décalé vers le haut, l'ombre reste au sol
+       et grossit à mesure qu'il touche terre */
+    const drop = this.introDrop || 0;
+    if (drop > 0 && !this._dropping) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9 * (1 - 0.6 * drop), this.r * 0.4 * (1 - 0.6 * drop), 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+      const y0 = this.y;
+      this._dropping = true;
+      this.y -= 120 * drop;
+      this.render(ctx);
+      this.y = y0;
+      this._dropping = false;
       return;
     }
     const alpha = this.spawnT > 0 ? clamp(1 - this.spawnT / 0.6, 0.1, 1) : 1;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'rgba(0,0,0,.35)';
-    ctx.beginPath();
-    ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
-    ctx.fill();
+    if (!this._dropping) {
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
+      ctx.fill();
+    }
     /* ornement du boss : dessiné par-dessus le sprite pour que les trois boss ne se confondent jamais */
     if (this.isBoss && this.bossDef && this.bossDef.crest && !this.bossDef.crestOver) Boss.drawCrest(ctx, this, this.bossDef.crest, alpha);
     if (this.isBoss && this.cur) Boss.renderPattern(ctx, this, this.cur, alpha);
@@ -15189,7 +15309,10 @@ class Boss extends Enemy {
     }
   }
   update(dt) {
-    if (this.dead) return;
+    if (this.dead) {
+      if (this.deathT != null) this.deathT += dt; // un boss meurt aussi en scène (F-4/F-6)
+      return;
+    }
     const pl = G.player;
     this.slow = updateStatus(this, dt);
     if (this.dead) return;
@@ -18930,7 +19053,8 @@ const Tempo = {
       ph = Beat.phase();
     const prog = (bib + ph) / 4;
     const snap = bib === 0 && ph < 0.3 ? 1 - Ease.outCubic(ph / 0.3) : 0;
-    const r = 26 + 14 * snap;
+    const win = G.run && G.run.winScene ? Ease.outCubic(clamp(G.run.winScene.t / G.run.winScene.dur, 0, 1)) : 0; // la victoire : l'anneau s'ouvre en grand
+    const r = 26 + 14 * snap + 60 * win;
     ctx.save();
     ctx.strokeStyle = PAL.gold;
     ctx.globalAlpha = 0.22 + 0.4 * snap;
@@ -19097,8 +19221,11 @@ const Room = {
       G.run.usedChallenges.push(chId);
     }
     const pl = G.player;
-    pl.x = ROOM_X + TILE * 1.5;
+    /* l'entrée de salle (F-6) : le joueur part dans le mur de gauche et entre en marchant pendant l'intro */
+    G.room.entry = { from: ROOM_X - TILE * 0.6, to: ROOM_X + TILE * 1.5, dur: 0.5 };
+    pl.x = G.room.entry.from;
     pl.y = ROOM_Y + ROOM_H / 2;
+    pl.facing = 1;
     pl.dashing = false;
     pl.orbs = null;
     pl.charge = 0;
@@ -19140,7 +19267,7 @@ const Room = {
       }, 900);
     }
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Tempo.createBoss(G.room);
-    UI.banner(G.room.label, '#6ee7ff');
+    G.room.introLabelT = 2.4; // un seul texte : le nom de la salle, en bas, en petit (HUD) — plus de bandeau
     AudioEngine.uiConfirm({});
     if (G.room.challenge)
       setTimeout(() => {
@@ -19155,6 +19282,10 @@ const Room = {
     return true;
   },
   begin() {
+    if (G.room.entry) {
+      G.player.x = G.room.entry.to; // une intro sautée (débogage) : le joueur prend sa place d'un coup
+      G.room.entry = null;
+    }
     G.room.state = 'fight';
     G.room.stateT = 0;
     if (G.room.pendingWeaponDrop && G.player.weapon) {
@@ -19226,11 +19357,28 @@ const Room = {
     G.enemies.push(b);
     G.room.boss = b;
     AudioEngine.bossRoar({}); // pas de bandeau : la barre de vie en haut de l'écran porte déjà son nom
+    /* l'arrivée (F-6) : 1,4 s de rideau, la caméra va sur lui et revient, zoom 1 → 1,12 → 1, il descend de 120 px,
+       trois pas de secousse espacés d'un temps exact ; son nom sur la bande du bas */
+    if (!G.autoplay) {
+      G.room.scene = { kind: 'bossIn', t: 0, dur: 1.4, boss: b, kicks: 0, name: b.name };
+      b.introDrop = 1;
+      Camera.lookAt(b.x, b.y, 900);
+      Camera.zoomTo(1.12, 4);
+    }
   },
   onBossDefeated(b) {
     G.room.bossDead = true;
     G.run.stats.bossKilled = true;
     Feel.shake(9, angleTo(b.x, b.y, G.player.x, G.player.y), 320);
+    /* la mort du boss (F-6) : 1,6 s — ralenti à 0,25, cinq explosions échelonnées, le corps qui blanchit puis s'écrase,
+       un coup de zoom, et le compagnon qui court vers le corps */
+    b.deathDur = 0.4; // en temps de jeu : 1,6 s réelles au ralenti ×0,25
+    b.deathWhite = 0.15;
+    Time.slow = 0.25; // par-dessus l'arrêt sur image du coup mortel : la scène prime
+    Time.slowUntil = Time.now + 1.6;
+    Camera.pulse = 0.08;
+    G.room.scene = { kind: 'bossOut', t: 0, dur: 1.6, boss: b, fired: 0 };
+    for (const pe of G.pets) pe.celebrate = { x: b.x, y: b.y, until: performance.now() + 2600 };
     UI.banner(Content.pick('bossWin') || 'Étalon neutralisé', '#ffd166');
     AudioEngine.roomClear({});
     for (let i = 0; i < 12; i++) Pickups.spawn(b.x, b.y, 'coin', 1);
@@ -19246,6 +19394,15 @@ const Room = {
     r.stateT += dt;
     if (r.combo > 0 && Time.now > r.comboUntil) r.combo = 0;
     if (r.state === 'intro') {
+      /* le joueur entre en marchant : sa position suit une courbe, sa planche joue la marche, la caméra le rejoint */
+      if (r.entry) {
+        const k = clamp(r.stateT / r.entry.dur, 0, 1);
+        pl.x = lerp(r.entry.from, r.entry.to, Ease.outCubic(k));
+        pl.walkT = (pl.walkT || 0) + dt;
+        pl.movingNow = k < 1;
+        pl.animStep(dt, k < 1, false);
+        if (k >= 1) r.entry = null;
+      }
       if (r.stateT >= 0.8) Room.begin();
       return;
     }
@@ -19853,7 +20010,109 @@ const Run = {
       r.pendingLevelUps++;
       r.stats.levelReached = r.level;
     }
-    if (r.pendingLevelUps > 0 && !G.overlay) Run.levelUp();
+    if (r.pendingLevelUps > 0 && !G.overlay) {
+      /* en plein combat, la montée est une scène et l'écran attend le temps fort ; ailleurs (prépa, entre deux salles, bot), tout de suite */
+      if (G.room && G.room.state === 'fight' && !G.autoplay && !G.player.dead) Run.levelUpScene();
+      else Run.levelUp();
+    }
+  },
+  /* Les scènes (F-6) : ce qui se joue dans le temps après un événement. Une scène est un objet sur la salle
+     ({ kind, t, dur, … }) ; les rendez-vous musicaux (montée de niveau, écran de fin) sont des instants de Beat.t,
+     repris sur la mesure suivante si l'horloge se recale. */
+  barAfter(delay) {
+    const bar = 4 * Beat.beatLen();
+    let t = Beat.timeToNextBar();
+    while (t < delay) t += bar;
+    return Beat.t + t;
+  },
+  /* les scènes vivent en temps réel : un ralenti ne les étire pas (dt est le pas de simulation, déjà ralenti) */
+  rawDt(dt) {
+    return Time.now < Time.slowUntil ? dt / Math.max(0.02, Time.slow) : dt;
+  },
+  updateScenes(dt) {
+    const r = G.run,
+      rm = G.room,
+      pl = G.player;
+    const raw = Run.rawDt(dt);
+    const sc = rm.scene;
+    if (sc) {
+      sc.t += raw;
+      if (sc.kind === 'bossIn') {
+        const b = sc.boss;
+        b.introDrop = 1 - Ease.outCubic(clamp(sc.t / 0.7, 0, 1));
+        const L = Beat.beatLen();
+        while (sc.kicks < 3 && sc.t >= 0.45 + sc.kicks * L) {
+          Feel.shake(9, Math.PI / 2, 160);
+          sc.kicks++;
+        }
+        if (sc.t >= 0.9) Camera.zoomTo(1, 3);
+      } else if (sc.kind === 'bossOut') {
+        const b = sc.boss;
+        while (sc.fired < 5 && sc.t >= sc.fired * 0.25) {
+          const a = (sc.fired * TAU) / 5;
+          const R = b.r || 30; // un boss factice des tests n'a pas de rayon
+          const x = b.x + Math.cos(a) * R * 0.7,
+            y = b.y + Math.sin(a) * R * 0.5;
+          rm.blasts.push({ x, y, r: 60 + sc.fired * 14, t: 0, life: 0.45, color: b.color || '#ff8c42', fill: true });
+          Particles.spawn(x, y, { count: 14, color: '#fff3c4', size: 3, speedMax: 240, glow: true, life: 0.6 });
+          Feel.shake(9, a, 200);
+          sc.fired++;
+          rm.bossExplosions = sc.fired; // pour les tests : combien ont éclaté
+        }
+      }
+      if (sc.t >= sc.dur) rm.scene = null;
+    }
+    /* la montée de niveau différée sur le temps fort suivant */
+    if (r.levelAt != null && !G.overlay) {
+      if (Beat.t < r.levelAt - 4 * Beat.beatLen() - 0.5) r.levelAt = Run.barAfter(0);
+      if (Beat.t >= r.levelAt) {
+        r.levelAt = null;
+        r.levelUpAt = { bib: Beat.beatInBar(), phase: Beat.phase() };
+        Run.levelUp();
+      }
+    }
+    /* l'écran de fin sur le temps fort */
+    if (r.endAt != null) {
+      if (Beat.t < r.endAt - 4 * Beat.beatLen() - 0.5) r.endAt = Run.barAfter(0);
+      if (Beat.t >= r.endAt) {
+        r.endAt = null;
+        r.endedAt = { bib: Beat.beatInBar(), phase: Beat.phase() };
+        if (r.endFn) r.endFn();
+      }
+    }
+    if (r.deathScene) r.deathScene.t += raw;
+    if (r.winScene) r.winScene.t += raw;
+    /* l'écran de fin de la mort : en temps réel, après la chute et au moins 1,4 s — la bande ralentit, un temps fort n'y a plus de sens */
+    if (r.endReal && performance.now() >= r.endReal) {
+      r.endReal = null;
+      r.endedAt = { real: true };
+      if (r.endFn) r.endFn();
+    }
+  },
+  /* la montée de niveau mise en scène : l'écran de choix vient sur le temps fort suivant, le reste tout de suite */
+  levelUpScene() {
+    const r = G.run,
+      pl = G.player;
+    if (r.levelAt != null) return;
+    Feel.stop(120, true);
+    Camera.pulse = 0.06;
+    const by = pl.y - 10;
+    G.room.blasts.push({ x: pl.x, y: pl.y + Sprites.SOL - 3, r: 170, t: 0, life: 0.55, color: PAL.gold, flat: true });
+    Particles.spawn(pl.x, by, {
+      count: 40,
+      color: PAL.gold,
+      size: 3,
+      speedMin: 120,
+      speedMax: 320,
+      angle: -Math.PI / 2,
+      spread: 0.7,
+      glow: true,
+      life: 0.8,
+    });
+    pl.whiteT = 0.2;
+    Floaters.add(pl.x, pl.y - 70, `${STR.level.toUpperCase()} ${r.level}`, PAL.gold, 40, 'event');
+    for (const pe of G.pets) pe.hop();
+    r.levelAt = Run.barAfter(0.3);
   },
   /* la paire bonus/malus choisie en prépa (index dans G.run.pairChoices) */
   setPair(i) {
@@ -20035,8 +20294,17 @@ const Run = {
       G.paused = true;
       UI.showEnd({ victory: false, kept, pending: r.coinsPending, validated: r.coinsValidated, total });
     };
-    if (chute > 0) setTimeout(fin, chute * 1000);
-    else fin();
+    if (G.autoplay) fin();
+    else {
+      /* la scène (F-6) : ralenti, ennemis figés, voile sombre, zoom sur le corps, le compagnon qui vient s'asseoir ;
+         l'écran de fin sur le temps fort suivant, après la chute et au moins 1,4 s */
+      Feel.slow(0.18, 1400);
+      Camera.zoomTo(1.3, 1.4);
+      r.deathScene = { t: 0, dur: 1.2 };
+      for (const pe of G.pets) pe.mourn = true;
+      r.endFn = fin;
+      r.endReal = performance.now() + Math.max(chute, 1.4) * 1000;
+    }
     Music.dying(2.2, () => {
       if (G.overlay === 'end' || G.state === 'hub') Music.play('hub');
     }); // la bande ralentit et descend, puis le hub
@@ -20049,10 +20317,22 @@ const Run = {
     const total = r.coinsValidated + r.coinsPending + bonus;
     Meta.addCoins(total);
     Meta.recordRun(true);
-    G.paused = true;
-    UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
-    Music.resetState();
-    Music.play('hub');
+    const fin = () => {
+      if (G.overlay === 'end') return;
+      G.paused = true;
+      UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
+      Music.resetState();
+      Music.play('hub');
+    };
+    if (G.autoplay) fin();
+    else {
+      /* la victoire : la même image que la mort, à l'envers — debout, l'animal qui saute, voile doré, l'anneau grand ouvert */
+      r.winScene = { t: 0, dur: 1.4 };
+      for (const pe of G.pets) pe.hop();
+      Camera.zoomTo(1.15, 1.2);
+      r.endFn = fin;
+      r.endAt = Run.barAfter(1.4);
+    }
   },
   abort() {
     const r = G.run;
@@ -20103,10 +20383,12 @@ const Run = {
         slow: Time.now < Time.slowUntil ? Time.slow : 1,
         overdrive: pl.overdriveUntil > Time.now,
       });
-    pl.update(dt);
+    const rm = G.room;
+    if (!(rm && rm.state === 'intro')) pl.update(dt); // pendant l'entrée de salle, c'est la scène qui bouge le joueur
     Pets.update(dt);
-    for (const e of G.enemies) e.update(dt);
-    G.enemies = G.enemies.filter(e => !e.dead || (e.deathT != null && e.deathT < DEATH_MS / 1000)); // un mort s'écrase avant de partir
+    if (!pl.dead) for (const e of G.enemies) e.update(dt); // la mort du joueur fige les ennemis
+    G.enemies = G.enemies.filter(e => !e.dead || (e.deathT != null && e.deathT < (e.deathDur || DEATH_MS / 1000))); // un mort s'écrase avant de partir
+    Run.updateScenes(dt);
     Projectiles.update(dt);
     Pickups.update(dt);
     Room.update(dt);
@@ -21426,6 +21708,20 @@ const UI = (() => {
       vignette(0.45 * (pl.hurtVig / 0.35), 255, 60, 90);
       hudProbe.flags.hurtVig = +(pl.hurtVig / 0.35).toFixed(2);
     }
+    /* les scènes (F-6) : le voile sombre de la mort (0,55 en 1,2 s + vignette corail), le voile doré de la victoire */
+    if (r.deathScene) {
+      const k = Ease.outCubic(clamp(r.deathScene.t / r.deathScene.dur, 0, 1));
+      ctx.fillStyle = `rgba(3,4,8,${(0.55 * k).toFixed(3)})`;
+      ctx.fillRect(L, T, V.w, V.h);
+      vignette(0.45 * k, 255, 94, 122);
+      hudProbe.flags.deathVeil = +k.toFixed(2);
+    }
+    if (r.winScene) {
+      const k = Ease.outCubic(clamp(r.winScene.t / r.winScene.dur, 0, 1));
+      ctx.fillStyle = `rgba(255,209,102,${(0.22 * k).toFixed(3)})`;
+      ctx.fillRect(L, T, V.w, V.h);
+      hudProbe.flags.winVeil = +k.toFixed(2);
+    }
     /* flash blanc d'une image */
     if (flashScreenState && Time.now < flashScreenState.until) {
       ctx.globalAlpha = flashScreenState.a * ((flashScreenState.until - Time.now) / flashScreenState.life);
@@ -21641,6 +21937,28 @@ const UI = (() => {
       hudProbe.flags.upgGrid = ups.length;
     }
     ctx.globalAlpha = 1;
+    /* le rideau du boss (F-6) : deux bandes noires de 40 px, son nom sur celle du bas */
+    const sc = rm.scene;
+    if (sc && sc.kind === 'bossIn') {
+      const k = sc.t < 0.2 ? sc.t / 0.2 : sc.t > sc.dur - 0.3 ? (sc.dur - sc.t) / 0.3 : 1;
+      const h = 40 * clamp(k, 0, 1);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(L, T, V.w, h);
+      ctx.fillRect(L, B - h, V.w, h);
+      if (h > 30)
+        label(ctx, sc.name, CX, B - h / 2 + 1, { kind: 'num', align: 'center', weight: 'bold', size: 14, color: PAL.danger, free: true });
+      hudProbe.flags.curtain = +h.toFixed(0);
+    }
+    /* l'entrée de salle : un seul texte, le nom de la salle, en bas, en petit */
+    if (rm.introLabelT > 0) {
+      rm.introLabelT -= Math.min(0.1, Time.now - (rm.introLabelClock || Time.now));
+      rm.introLabelClock = Time.now;
+      const a = clamp(Math.min(rm.introLabelT / 0.4, 1), 0, 1);
+      ctx.globalAlpha = a;
+      label(ctx, rm.label, CX, B - 60, { kind: 'num', align: 'center', size: 12, color: '#9fd8ff', free: true });
+      ctx.globalAlpha = 1;
+      hudProbe.flags.introLabel = rm.label;
+    }
     /* bannières : le tiers supérieur, au-dessus de la zone de combat, jamais entre le joueur et les ennemis */
     banners.slice(0, 1).forEach(b => {
       const kk = b.t / b.life;
@@ -24991,7 +25309,10 @@ function update(dt, rawDt) {
   } // le son tourne : l'invite du menu disparaît
   if (G.state === 'run') {
     Run.update(dt);
-    if (G.player) Camera.follow(G.player.x, G.player.y, rawDt);
+    if (G.player) {
+      const tg = Camera.target(G.player);
+      Camera.follow(tg.x, tg.y, rawDt);
+    }
   } else if (G.attract) Attract.update(dt);
   Atelier.update();
 }

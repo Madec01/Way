@@ -139,8 +139,11 @@ const Room = {
       G.run.usedChallenges.push(chId);
     }
     const pl = G.player;
-    pl.x = ROOM_X + TILE * 1.5;
+    /* l'entrée de salle (F-6) : le joueur part dans le mur de gauche et entre en marchant pendant l'intro */
+    G.room.entry = { from: ROOM_X - TILE * 0.6, to: ROOM_X + TILE * 1.5, dur: 0.5 };
+    pl.x = G.room.entry.from;
     pl.y = ROOM_Y + ROOM_H / 2;
+    pl.facing = 1;
     pl.dashing = false;
     pl.orbs = null;
     pl.charge = 0;
@@ -182,7 +185,7 @@ const Room = {
       }, 900);
     }
     if (def.type === 'MINIBOSS' || def.type === 'BOSS_REVENGE') Tempo.createBoss(G.room);
-    UI.banner(G.room.label, '#6ee7ff');
+    G.room.introLabelT = 2.4; // un seul texte : le nom de la salle, en bas, en petit (HUD) — plus de bandeau
     AudioEngine.uiConfirm({});
     if (G.room.challenge)
       setTimeout(() => {
@@ -197,6 +200,10 @@ const Room = {
     return true;
   },
   begin() {
+    if (G.room.entry) {
+      G.player.x = G.room.entry.to; // une intro sautée (débogage) : le joueur prend sa place d'un coup
+      G.room.entry = null;
+    }
     G.room.state = 'fight';
     G.room.stateT = 0;
     if (G.room.pendingWeaponDrop && G.player.weapon) {
@@ -268,11 +275,28 @@ const Room = {
     G.enemies.push(b);
     G.room.boss = b;
     AudioEngine.bossRoar({}); // pas de bandeau : la barre de vie en haut de l'écran porte déjà son nom
+    /* l'arrivée (F-6) : 1,4 s de rideau, la caméra va sur lui et revient, zoom 1 → 1,12 → 1, il descend de 120 px,
+       trois pas de secousse espacés d'un temps exact ; son nom sur la bande du bas */
+    if (!G.autoplay) {
+      G.room.scene = { kind: 'bossIn', t: 0, dur: 1.4, boss: b, kicks: 0, name: b.name };
+      b.introDrop = 1;
+      Camera.lookAt(b.x, b.y, 900);
+      Camera.zoomTo(1.12, 4);
+    }
   },
   onBossDefeated(b) {
     G.room.bossDead = true;
     G.run.stats.bossKilled = true;
     Feel.shake(9, angleTo(b.x, b.y, G.player.x, G.player.y), 320);
+    /* la mort du boss (F-6) : 1,6 s — ralenti à 0,25, cinq explosions échelonnées, le corps qui blanchit puis s'écrase,
+       un coup de zoom, et le compagnon qui court vers le corps */
+    b.deathDur = 0.4; // en temps de jeu : 1,6 s réelles au ralenti ×0,25
+    b.deathWhite = 0.15;
+    Time.slow = 0.25; // par-dessus l'arrêt sur image du coup mortel : la scène prime
+    Time.slowUntil = Time.now + 1.6;
+    Camera.pulse = 0.08;
+    G.room.scene = { kind: 'bossOut', t: 0, dur: 1.6, boss: b, fired: 0 };
+    for (const pe of G.pets) pe.celebrate = { x: b.x, y: b.y, until: performance.now() + 2600 };
     UI.banner(Content.pick('bossWin') || 'Étalon neutralisé', '#ffd166');
     AudioEngine.roomClear({});
     for (let i = 0; i < 12; i++) Pickups.spawn(b.x, b.y, 'coin', 1);
@@ -288,6 +312,15 @@ const Room = {
     r.stateT += dt;
     if (r.combo > 0 && Time.now > r.comboUntil) r.combo = 0;
     if (r.state === 'intro') {
+      /* le joueur entre en marchant : sa position suit une courbe, sa planche joue la marche, la caméra le rejoint */
+      if (r.entry) {
+        const k = clamp(r.stateT / r.entry.dur, 0, 1);
+        pl.x = lerp(r.entry.from, r.entry.to, Ease.outCubic(k));
+        pl.walkT = (pl.walkT || 0) + dt;
+        pl.movingNow = k < 1;
+        pl.animStep(dt, k < 1, false);
+        if (k >= 1) r.entry = null;
+      }
       if (r.stateT >= 0.8) Room.begin();
       return;
     }
@@ -895,7 +928,109 @@ const Run = {
       r.pendingLevelUps++;
       r.stats.levelReached = r.level;
     }
-    if (r.pendingLevelUps > 0 && !G.overlay) Run.levelUp();
+    if (r.pendingLevelUps > 0 && !G.overlay) {
+      /* en plein combat, la montée est une scène et l'écran attend le temps fort ; ailleurs (prépa, entre deux salles, bot), tout de suite */
+      if (G.room && G.room.state === 'fight' && !G.autoplay && !G.player.dead) Run.levelUpScene();
+      else Run.levelUp();
+    }
+  },
+  /* Les scènes (F-6) : ce qui se joue dans le temps après un événement. Une scène est un objet sur la salle
+     ({ kind, t, dur, … }) ; les rendez-vous musicaux (montée de niveau, écran de fin) sont des instants de Beat.t,
+     repris sur la mesure suivante si l'horloge se recale. */
+  barAfter(delay) {
+    const bar = 4 * Beat.beatLen();
+    let t = Beat.timeToNextBar();
+    while (t < delay) t += bar;
+    return Beat.t + t;
+  },
+  /* les scènes vivent en temps réel : un ralenti ne les étire pas (dt est le pas de simulation, déjà ralenti) */
+  rawDt(dt) {
+    return Time.now < Time.slowUntil ? dt / Math.max(0.02, Time.slow) : dt;
+  },
+  updateScenes(dt) {
+    const r = G.run,
+      rm = G.room,
+      pl = G.player;
+    const raw = Run.rawDt(dt);
+    const sc = rm.scene;
+    if (sc) {
+      sc.t += raw;
+      if (sc.kind === 'bossIn') {
+        const b = sc.boss;
+        b.introDrop = 1 - Ease.outCubic(clamp(sc.t / 0.7, 0, 1));
+        const L = Beat.beatLen();
+        while (sc.kicks < 3 && sc.t >= 0.45 + sc.kicks * L) {
+          Feel.shake(9, Math.PI / 2, 160);
+          sc.kicks++;
+        }
+        if (sc.t >= 0.9) Camera.zoomTo(1, 3);
+      } else if (sc.kind === 'bossOut') {
+        const b = sc.boss;
+        while (sc.fired < 5 && sc.t >= sc.fired * 0.25) {
+          const a = (sc.fired * TAU) / 5;
+          const R = b.r || 30; // un boss factice des tests n'a pas de rayon
+          const x = b.x + Math.cos(a) * R * 0.7,
+            y = b.y + Math.sin(a) * R * 0.5;
+          rm.blasts.push({ x, y, r: 60 + sc.fired * 14, t: 0, life: 0.45, color: b.color || '#ff8c42', fill: true });
+          Particles.spawn(x, y, { count: 14, color: '#fff3c4', size: 3, speedMax: 240, glow: true, life: 0.6 });
+          Feel.shake(9, a, 200);
+          sc.fired++;
+          rm.bossExplosions = sc.fired; // pour les tests : combien ont éclaté
+        }
+      }
+      if (sc.t >= sc.dur) rm.scene = null;
+    }
+    /* la montée de niveau différée sur le temps fort suivant */
+    if (r.levelAt != null && !G.overlay) {
+      if (Beat.t < r.levelAt - 4 * Beat.beatLen() - 0.5) r.levelAt = Run.barAfter(0);
+      if (Beat.t >= r.levelAt) {
+        r.levelAt = null;
+        r.levelUpAt = { bib: Beat.beatInBar(), phase: Beat.phase() };
+        Run.levelUp();
+      }
+    }
+    /* l'écran de fin sur le temps fort */
+    if (r.endAt != null) {
+      if (Beat.t < r.endAt - 4 * Beat.beatLen() - 0.5) r.endAt = Run.barAfter(0);
+      if (Beat.t >= r.endAt) {
+        r.endAt = null;
+        r.endedAt = { bib: Beat.beatInBar(), phase: Beat.phase() };
+        if (r.endFn) r.endFn();
+      }
+    }
+    if (r.deathScene) r.deathScene.t += raw;
+    if (r.winScene) r.winScene.t += raw;
+    /* l'écran de fin de la mort : en temps réel, après la chute et au moins 1,4 s — la bande ralentit, un temps fort n'y a plus de sens */
+    if (r.endReal && performance.now() >= r.endReal) {
+      r.endReal = null;
+      r.endedAt = { real: true };
+      if (r.endFn) r.endFn();
+    }
+  },
+  /* la montée de niveau mise en scène : l'écran de choix vient sur le temps fort suivant, le reste tout de suite */
+  levelUpScene() {
+    const r = G.run,
+      pl = G.player;
+    if (r.levelAt != null) return;
+    Feel.stop(120, true);
+    Camera.pulse = 0.06;
+    const by = pl.y - 10;
+    G.room.blasts.push({ x: pl.x, y: pl.y + Sprites.SOL - 3, r: 170, t: 0, life: 0.55, color: PAL.gold, flat: true });
+    Particles.spawn(pl.x, by, {
+      count: 40,
+      color: PAL.gold,
+      size: 3,
+      speedMin: 120,
+      speedMax: 320,
+      angle: -Math.PI / 2,
+      spread: 0.7,
+      glow: true,
+      life: 0.8,
+    });
+    pl.whiteT = 0.2;
+    Floaters.add(pl.x, pl.y - 70, `${STR.level.toUpperCase()} ${r.level}`, PAL.gold, 40, 'event');
+    for (const pe of G.pets) pe.hop();
+    r.levelAt = Run.barAfter(0.3);
   },
   /* la paire bonus/malus choisie en prépa (index dans G.run.pairChoices) */
   setPair(i) {
@@ -1077,8 +1212,17 @@ const Run = {
       G.paused = true;
       UI.showEnd({ victory: false, kept, pending: r.coinsPending, validated: r.coinsValidated, total });
     };
-    if (chute > 0) setTimeout(fin, chute * 1000);
-    else fin();
+    if (G.autoplay) fin();
+    else {
+      /* la scène (F-6) : ralenti, ennemis figés, voile sombre, zoom sur le corps, le compagnon qui vient s'asseoir ;
+         l'écran de fin sur le temps fort suivant, après la chute et au moins 1,4 s */
+      Feel.slow(0.18, 1400);
+      Camera.zoomTo(1.3, 1.4);
+      r.deathScene = { t: 0, dur: 1.2 };
+      for (const pe of G.pets) pe.mourn = true;
+      r.endFn = fin;
+      r.endReal = performance.now() + Math.max(chute, 1.4) * 1000;
+    }
     Music.dying(2.2, () => {
       if (G.overlay === 'end' || G.state === 'hub') Music.play('hub');
     }); // la bande ralentit et descend, puis le hub
@@ -1091,10 +1235,22 @@ const Run = {
     const total = r.coinsValidated + r.coinsPending + bonus;
     Meta.addCoins(total);
     Meta.recordRun(true);
-    G.paused = true;
-    UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
-    Music.resetState();
-    Music.play('hub');
+    const fin = () => {
+      if (G.overlay === 'end') return;
+      G.paused = true;
+      UI.showEnd({ victory: true, kept: r.coinsPending, pending: 0, validated: r.coinsValidated, total, bonus });
+      Music.resetState();
+      Music.play('hub');
+    };
+    if (G.autoplay) fin();
+    else {
+      /* la victoire : la même image que la mort, à l'envers — debout, l'animal qui saute, voile doré, l'anneau grand ouvert */
+      r.winScene = { t: 0, dur: 1.4 };
+      for (const pe of G.pets) pe.hop();
+      Camera.zoomTo(1.15, 1.2);
+      r.endFn = fin;
+      r.endAt = Run.barAfter(1.4);
+    }
   },
   abort() {
     const r = G.run;
@@ -1145,10 +1301,12 @@ const Run = {
         slow: Time.now < Time.slowUntil ? Time.slow : 1,
         overdrive: pl.overdriveUntil > Time.now,
       });
-    pl.update(dt);
+    const rm = G.room;
+    if (!(rm && rm.state === 'intro')) pl.update(dt); // pendant l'entrée de salle, c'est la scène qui bouge le joueur
     Pets.update(dt);
-    for (const e of G.enemies) e.update(dt);
-    G.enemies = G.enemies.filter(e => !e.dead || (e.deathT != null && e.deathT < DEATH_MS / 1000)); // un mort s'écrase avant de partir
+    if (!pl.dead) for (const e of G.enemies) e.update(dt); // la mort du joueur fige les ennemis
+    G.enemies = G.enemies.filter(e => !e.dead || (e.deathT != null && e.deathT < (e.deathDur || DEATH_MS / 1000))); // un mort s'écrase avant de partir
+    Run.updateScenes(dt);
     Projectiles.update(dt);
     Pickups.update(dt);
     Room.update(dt);

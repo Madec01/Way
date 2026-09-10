@@ -43,8 +43,15 @@ test(async ({ page, ok, entrer, run }) => {
   ok('mort, le corps est encore dessiné', juste.pixels > 300, juste.pixels + ' pixels opaques');
   ok("l'écran de fin n'est pas encore là", juste.overlay !== 'end' && !juste.paused, 'overlay ' + juste.overlay);
 
-  await page.waitForTimeout(1600);
-  const apres = await page.evaluate(() => ({ overlay: G.overlay, paused: G.paused, clipT: G.player.clipT }));
-  ok("l'écran de fin arrive après la chute", apres.overlay === 'end' && apres.paused, `après ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  /* la scène de mort (F-6) : l'écran de fin vient après la chute, au moins 1,4 s, sur le temps fort suivant — jusqu'à
+     une mesure de plus. On attend qu'il paraisse, sans dépasser 6 s. */
+  await page.waitForFunction(() => G.overlay === 'end', { timeout: 6000 }).catch(() => {});
+  const apres = await page.evaluate(() => ({ overlay: G.overlay, paused: G.paused, clipT: G.player.clipT, at: G.run.endedAt }));
+  const attente = (Date.now() - t0) / 1000;
+  ok(
+    "l'écran de fin arrive après la chute, au moins 1,4 s",
+    apres.overlay === 'end' && apres.paused && attente >= 1.3 && !!apres.at,
+    `après ${attente.toFixed(1)} s`
+  );
   await page.screenshot({ path: out('mort.png') });
 });

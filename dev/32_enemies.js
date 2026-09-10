@@ -199,8 +199,10 @@ class Enemy {
      sol (+55 % de large, −80 % de haut, outCubic) en s'effaçant. Une mort produit une image avant de disparaître. */
   renderDeath(ctx) {
     const t = this.deathT;
-    const white = t < DEATH_WHITE / 1000;
-    const k = white ? 0 : Ease.outCubic(clamp((t - DEATH_WHITE / 1000) / ((DEATH_MS - DEATH_WHITE) / 1000), 0, 1));
+    const dur = this.deathDur || DEATH_MS / 1000,
+      wdur = this.deathWhite || DEATH_WHITE / 1000; // un boss meurt plus longtemps (F-6)
+    const white = t < wdur;
+    const k = white ? 0 : Ease.outCubic(clamp((t - wdur) / (dur - wdur), 0, 1));
     const scale = (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (white ? 1.12 : 1);
     ctx.save();
     ctx.globalAlpha = white ? 1 : 1 - k * 0.9;
@@ -466,16 +468,36 @@ class Enemy {
   /* --- rendu commun --- */
   render(ctx) {
     if (this.dead) {
-      if (this.deathT != null && this.deathT < DEATH_MS / 1000) this.renderDeath(ctx);
+      if (this.deathT != null && this.deathT < (this.deathDur || DEATH_MS / 1000)) this.renderDeath(ctx);
+      return;
+    }
+    /* l'arrivée d'un boss (F-6) : il descend de 120 px — tout son dessin est décalé vers le haut, l'ombre reste au sol
+       et grossit à mesure qu'il touche terre */
+    const drop = this.introDrop || 0;
+    if (drop > 0 && !this._dropping) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9 * (1 - 0.6 * drop), this.r * 0.4 * (1 - 0.6 * drop), 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+      const y0 = this.y;
+      this._dropping = true;
+      this.y -= 120 * drop;
+      this.render(ctx);
+      this.y = y0;
+      this._dropping = false;
       return;
     }
     const alpha = this.spawnT > 0 ? clamp(1 - this.spawnT / 0.6, 0.1, 1) : 1;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'rgba(0,0,0,.35)';
-    ctx.beginPath();
-    ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
-    ctx.fill();
+    if (!this._dropping) {
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
+      ctx.fill();
+    }
     /* ornement du boss : dessiné par-dessus le sprite pour que les trois boss ne se confondent jamais */
     if (this.isBoss && this.bossDef && this.bossDef.crest && !this.bossDef.crestOver) Boss.drawCrest(ctx, this, this.bossDef.crest, alpha);
     if (this.isBoss && this.cur) Boss.renderPattern(ctx, this, this.cur, alpha);
@@ -1696,7 +1718,10 @@ class Boss extends Enemy {
     }
   }
   update(dt) {
-    if (this.dead) return;
+    if (this.dead) {
+      if (this.deathT != null) this.deathT += dt; // un boss meurt aussi en scène (F-4/F-6)
+      return;
+    }
     const pl = G.player;
     this.slow = updateStatus(this, dt);
     if (this.dead) return;

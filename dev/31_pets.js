@@ -114,6 +114,37 @@ class Pet {
     return true;
   }
   /* replacé à côté du joueur : changement de salle, ou trop distancé */
+  /* un petit saut : l'animal fait son action et bondit (montée de niveau, victoire, boss abattu) */
+  hop() {
+    this.act = 1;
+    this.jumpT = 0.4;
+    this.jumpD = 0.4;
+  }
+  /* venir s'asseoir près du corps : Uno se couche, ORI se pose, Choupi et Tanuki tournent autour */
+  mournStep(dt, pl) {
+    const mode = this.def.mourn || (this.def.behavior === 'mark' || this.airborne ? 'perch' : this.def.duo ? 'circle' : 'lie');
+    this.mournT = (this.mournT || 0) + dt;
+    this.mode0 = mode;
+    if (mode === 'circle') {
+      const a = this.mournT * 1.6;
+      const tx = pl.x + Math.cos(a) * 46,
+        ty = pl.y + Math.sin(a) * 22;
+      this.moveTo(tx, ty, dt, 0.9);
+      this.mournPose = 'circle';
+      return;
+    }
+    const side = this.x < pl.x ? -1 : 1;
+    const tx = pl.x + side * 34,
+      ty = pl.y + 6;
+    if (dist(this.x, this.y, tx, ty) > 8) {
+      this.moveTo(tx, ty, dt, 1.1);
+      this.mournPose = null;
+    } else {
+      this.moving = false;
+      this.mournPose = mode; // 'lie' ou 'perch'
+      this.dx = pl.x < this.x ? -1 : 1;
+    }
+  }
   snap() {
     const pl = G.player;
     if (!pl) return;
@@ -145,6 +176,23 @@ class Pet {
     }
   }
   /* déplacement de suite : rejoint le joueur au-delà de `dist`, se pose en deçà */
+  /* aller vers un point, à la vitesse de l'animal (scènes : le corps du boss, le côté du joueur) */
+  moveTo(x, y, dt, mult) {
+    const d = dist(this.x, this.y, x, y);
+    if (d < 2) {
+      this.moving = false;
+      return;
+    }
+    const a = angleTo(this.x, this.y, x, y);
+    const sp = Math.min((this.def.speed || 260) * (mult || 1), 60 + d * 5);
+    this.x += Math.cos(a) * sp * dt;
+    this.y += Math.sin(a) * sp * dt;
+    this.dx = Math.cos(a);
+    this.dy = Math.sin(a);
+    this.facing = Math.cos(a) > 0 ? 1 : -1;
+    this.moving = true;
+    if (!this.airborne) resolveRoomCollision(this);
+  }
   follow(dt, mult) {
     const pl = G.player;
     const d = dist(this.x, this.y, pl.x, pl.y);
@@ -198,6 +246,27 @@ class Pet {
     }
     const tick = this.beatTick();
     const pl = G.player;
+    if (this.jumpT > 0) this.jumpT -= dt;
+    /* les scènes (F-6) : courir vers le corps du boss, ou venir s'asseoir près du joueur mort */
+    const raw = Run.rawDt(dt); // les scènes se jouent en temps réel, ralenti ou pas
+    if (this.mourn && pl && pl.dead) {
+      this.mournStep(raw, pl);
+      return;
+    }
+    if (this.celebrate) {
+      if (performance.now() > this.celebrate.until) this.celebrate = null;
+      else {
+        const c = this.celebrate;
+        const d = dist(this.x, this.y, c.x, c.y);
+        if (d > 40)
+          this.moveTo(c.x, c.y, raw, 1.8); // il court
+        else {
+          this.moving = false;
+          if (this.jumpT <= 0) this.hop();
+        }
+        return;
+      }
+    }
     switch (this.def.behavior) {
       /* --- faucon : pique sur l'ennemi le plus proche, revient ensuite --- */
       case 'strike': {
@@ -470,8 +539,15 @@ class Pet {
   }
   render(ctx) {
     const s = this.def.size || 48;
-    const lift = this.airborne ? 15 : 0;
-    const bob = this.moving ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5 : Math.sin(this.t * 3) * 2;
+    const jump = this.jumpT > 0 ? Math.sin((1 - this.jumpT / (this.jumpD || 0.4)) * Math.PI) * 26 : 0; // le bond
+    const pose = this.mournPose;
+    const lift = (this.airborne && pose !== 'perch' ? 15 : 0) + jump;
+    const bob =
+      pose === 'lie' || pose === 'perch'
+        ? Math.sin(this.t * 1.4) * 0.6
+        : this.moving
+          ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5
+          : Math.sin(this.t * 3) * 2;
     const a = this.def.anim;
     const planche = a && a[this.clip] && Sprites.sheetInfo(a[this.clip]);
     /* vue affichée : celle du déplacement réel. Une planche n'a qu'un profil, retourné vers l'ouest. */
@@ -498,6 +574,8 @@ class Pet {
         foot: true,
         flip: dv.flip,
         alpha: this.down ? 0.5 : 1,
+        sx: pose === 'lie' ? 1.25 : undefined,
+        sy: pose === 'lie' ? 0.55 : undefined,
       });
       this.renderTags(ctx, s, lift);
       return;

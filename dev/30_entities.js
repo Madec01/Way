@@ -1990,6 +1990,7 @@ class Player {
       this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);
       this.movingNow = !!(mv.x || mv.y);
+      if (this.whiteT > 0) this.whiteT -= dt;
       this.animStep(dt, !!(mv.x || mv.y), firing);
     }
     /* poussée : s'ajoute au déplacement puis s'amortit, comme chez les ennemis. Un piège peut ainsi déplacer le
@@ -2250,7 +2251,7 @@ class Player {
       dir: dv && dv.dir,
       flip: dv ? dv.flip : this.facing < 0,
       walk: this.walkT,
-      flash: this.hurtFlash > 0,
+      flash: this.hurtFlash > 0 || this.whiteT > 0, // blessé, ou la silhouette blanche de la montée de niveau (F-6)
       scale: 1 + 0.04 * kb,
       sx: idle ? 1 - 0.03 * kb : undefined,
       sy: idle ? 1 + 0.035 * kb : undefined,

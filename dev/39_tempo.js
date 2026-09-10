@@ -788,7 +788,8 @@ const Tempo = {
       ph = Beat.phase();
     const prog = (bib + ph) / 4;
     const snap = bib === 0 && ph < 0.3 ? 1 - Ease.outCubic(ph / 0.3) : 0;
-    const r = 26 + 14 * snap;
+    const win = G.run && G.run.winScene ? Ease.outCubic(clamp(G.run.winScene.t / G.run.winScene.dur, 0, 1)) : 0; // la victoire : l'anneau s'ouvre en grand
+    const r = 26 + 14 * snap + 60 * win;
     ctx.save();
     ctx.strokeStyle = PAL.gold;
     ctx.globalAlpha = 0.22 + 0.4 * snap;
