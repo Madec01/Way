@@ -460,7 +460,7 @@ class Enemy {
     /* télégraphie : halo pulsant + ligne d'intention */
     if (this.tele) {
       const k = 0.5 + 0.5 * Math.sin(Time.now * 30);
-      ctx.strokeStyle = this.telegraph.color || '#fff';
+      ctx.strokeStyle = PAL.alert; // LA couleur d'alerte, la même pour tous : le joueur apprend « rouge vif = évite »
       ctx.lineWidth = 2 + k * 2;
       ctx.shadowColor = ctx.strokeStyle;
       ctx.shadowBlur = 12;
@@ -654,7 +654,7 @@ class Enemy {
       const w = this.r * 2.2;
       ctx.fillStyle = '#000a';
       ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w, 4);
-      ctx.fillStyle = '#ff5e7a';
+      ctx.fillStyle = PAL.enemyBar; // ni le corail du joueur ni le cyan de l'XP : on ne confond pas « moi » et « eux »
       ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w * clamp(this.hp / this.maxHp, 0, 1), 4);
     }
     if (Time.now < this.stunUntil) {
@@ -682,9 +682,9 @@ class Boss extends Enemy {
         radius: def.radius || 30,
         xp: Math.round(def.xp * (rv ? 1.5 : 1)),
         coins: Math.round(def.coins * (rv ? 1.5 : 1)),
-        color: rv ? '#ff7a3c' : def.color || '#ff3b5c',
+        color: rv ? '#ff7a3c' : def.color || PAL.danger,
         sprite: def.sprite,
-        telegraph: { time: 0.8, color: '#ff3b5c' },
+        telegraph: { time: 0.8, color: PAL.alert },
       },
       x,
       y,
@@ -901,7 +901,7 @@ class Boss extends Enemy {
         ctx.fill();
       } // boulons
       const k = 0.5 + 0.5 * Math.sin(Time.now * 5);
-      ctx.fillStyle = '#ff3b5c';
+      ctx.fillStyle = PAL.alert;
       ctx.globalAlpha = alpha * (0.4 + 0.6 * k);
       ctx.beginPath();
       ctx.arc(x, y - 3, 3, 0, TAU);
@@ -1056,7 +1056,7 @@ class Boss extends Enemy {
       this.patternIdx++;
       this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p);
       this.tele = 1;
-      this.telegraph = { time: p.telegraph || 0.8, color: p.color || this.color };
+      this.telegraph = { time: p.telegraph || 0.8, color: PAL.alert };
       this.chargeA = angleTo(this.x, this.y, t.x, t.y);
       AudioEngine.trapWarn({ intensity: 0.7 });
       if (p.label) Floaters.add(this.x, this.y - this.r - 30, p.label, p.color || '#ff7a3c', 15);
@@ -1078,7 +1078,7 @@ class Boss extends Enemy {
   startPattern(p, telegraph, t) {
     this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p, telegraph != null ? { telegraph } : {});
     this.tele = 1;
-    this.telegraph = { time: this.cur.telegraph || 0.8, color: p.color || this.color };
+    this.telegraph = { time: this.cur.telegraph || 0.8, color: PAL.alert };
     this.chargeA = angleTo(this.x, this.y, t.x, t.y);
     AudioEngine.trapWarn({ intensity: Boss.patKind(p) === 'big' ? 0.9 : 0.5 });
     if (p.label) Floaters.add(this.x, this.y - this.r - 30, p.label, p.color || '#ff7a3c', 15);
@@ -1530,7 +1530,7 @@ class Boss extends Enemy {
           by: this.y + Math.sin(a) * len,
           t: 0,
           life: 0.05,
-          color: c.color || '#ff3b5c',
+          color: c.color || PAL.alert,
           width: 8,
         });
         if (segCircle(this.x, this.y, this.x + Math.cos(a) * len, this.y + Math.sin(a) * len, pl.x, pl.y, pl.r))

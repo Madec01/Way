@@ -368,7 +368,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 12:02';</script>
+<script>window.WAY_BUILD = '2026-09-10 12:46';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -611,6 +611,23 @@ const Ease = {
 /* Polices du monde : Silkscreen pour les chiffres, les noms et les compteurs ; VT323 pour les phrases. Les deux sont
    déjà chargées par le CSS ; boot() attend document.fonts.ready avant le premier rendu. Le HUD garde sa police
    jusqu'au chantier I-5 (HUD_FONT dans 50_ui.js). */
+/* Le contrat de couleur (chantier F-3, CONTENT.md §46) : une couleur, une intention, sans exception.
+   self = toi et ce qui est à toi · gold = le temps, la mesure, la récompense · danger = ce qui vient de l'extérieur
+   (dégâts subis, pièges, zones, vignette) · alert = LA couleur des télégraphies, jamais employée ailleurs · life = la
+   vie qui revient (soins, cœurs, porte ouverte) · enemyBar = la vie des ennemis, ni rouge ni cyan · les animaux dans
+   la seule famille chaude et douce du jeu. Un effet prend sa couleur ici, jamais en dur. */
+const PAL = {
+  self: '#6ee7ff',
+  gold: '#ffd166',
+  danger: '#ff5e7a',
+  alert: '#ff3b3b',
+  life: '#7fff9a',
+  text: '#e8ecf7',
+  muted: '#9aa4c4',
+  ink: '#0b0d14',
+  enemyBar: '#cfd6e6',
+  pets: { pet_uno: '#e08a4a', pet_choupi: '#f0c46a', pet_tanuki: '#a8784a', pet_ori: '#c9a3ff' },
+};
 const FONT_PIXEL = '"Silkscreen", "Segoe UI", system-ui, sans-serif';
 const FONT_TEXT = '"VT323", "Segoe UI", monospace';
 const Feel = {
@@ -4334,7 +4351,7 @@ const CONTENT = {
       radius: 14,
       xp: 4,
       coins: 1,
-      color: '#e05a4a',
+      color: '#c0553f', // rouge sourd : le rouge vif est réservé à l'alerte (F-3)
       behavior: { lungeRange: 90, lungeWindup: 0.35, lungeSpeed: 520, lungeDuration: 0.25, lungeCooldown: 1.2 },
       telegraph: { time: 0.35, color: '#ffd166' },
     },
@@ -4379,7 +4396,7 @@ const CONTENT = {
       radius: 12,
       xp: 5,
       coins: 1,
-      color: '#ff5f3b',
+      color: '#d8613f',
       behavior: { fuse: 0.9, radius: 80, explosionDamage: 24, triggerRange: 60, explodeOnDeath: true },
       telegraph: { time: 0.9, color: '#ff3b3b' },
     },
@@ -6021,7 +6038,7 @@ CONTENT.enemies.push(
     radius: 13,
     xp: 7,
     coins: 2,
-    color: '#c0392b',
+    color: '#a8402e',
     sprite: 'enemy_kamikaze3',
     behavior: { fuse: 0.75, radius: 105, explosionDamage: 30, triggerRange: 70, explodeOnDeath: true },
     telegraph: { time: 0.75, color: '#ff9a3c' },
@@ -10224,14 +10241,14 @@ const Floaters = {
      sur n'importe quel sol. Deux chiffres du même genre trop proches fusionnent au lieu de s'empiler. */
   KINDS: {
     dmg: { size: 18, color: '#f4f7ff', vy: -90, vx: 40, g: 180, life: 0.7 },
-    crit: { size: 30, color: '#ffd166', vy: -130, vx: 40, g: 180, life: 0.85 },
-    taken: { size: 34, color: '#ff5e7a', vy: 40, vx: 0, g: -160, life: 0.9 },
-    heal: { size: 20, color: '#7fff9a', vy: -70, vx: 20, g: 0, life: 0.7 },
+    crit: { size: 30, color: PAL.gold, vy: -130, vx: 40, g: 180, life: 0.85 },
+    taken: { size: 34, color: PAL.danger, vy: 40, vx: 0, g: -160, life: 0.9 },
+    heal: { size: 20, color: PAL.life, vy: -70, vx: 20, g: 0, life: 0.7 },
     event: { size: 22, color: '#fff', vy: -30, vx: 0, g: 0, life: 1.1 },
   },
   add(x, y, text, color, size, kind) {
     text = String(text);
-    if (!kind) kind = /^[+-]?\d+$/.test(text) ? (color === '#ff5e7a' ? 'taken' : text[0] === '+' ? 'heal' : 'dmg') : 'event';
+    if (!kind) kind = /^[+-]?\d+$/.test(text) ? (color === PAL.danger ? 'taken' : text[0] === '+' ? 'heal' : 'dmg') : 'event';
     const K = this.KINDS[kind] || this.KINDS.event;
     const x0 = x,
       y0 = y; // le point d'origine, avant dispersion : c'est lui qui sert à la fusion
@@ -10254,7 +10271,7 @@ const Floaters = {
       x0,
       y0,
       text,
-      color: kind === 'event' ? color || K.color : K.color,
+      color: color || K.color, // un dégât de compagnon vient dans SA couleur (Uno mord en orange)
       size: kind === 'event' ? Math.round((size || K.size / 1.15) * 1.15) : K.size,
       t: 0,
       life: K.life,
@@ -10960,8 +10977,8 @@ const Pickups = {
         ctx.textAlign = 'center';
         ctx.fillText(rl ? rl.name : 'Relique', p.x, p.y + bob - 18);
       } else if (p.kind === 'heart') {
-        ctx.fillStyle = '#ff5e7a';
-        ctx.shadowColor = '#ff5e7a';
+        ctx.fillStyle = PAL.life; // un cœur, c'est la vie qui revient : vert, pas corail (le corail est le danger)
+        ctx.shadowColor = PAL.life;
         ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(p.x - 3, p.y + bob - 2, 4, 0, TAU);
@@ -11095,7 +11112,7 @@ const Combat = {
         glow: true,
       });
       G.room.slashes.push({ x: e.x, y: hy, a, range: 20, arc: 2.6, t: 0, life: 0.09, color: '#ffffff', spark: true });
-      Floaters.add(e.x, hy - 10, d, null, null, info.crit ? 'crit' : 'dmg');
+      Floaters.add(e.x, hy - 10, d, info.color || null, null, info.crit ? 'crit' : 'dmg');
       if (!info.silent) {
         Feel.stop(info.crit ? 70 : 30);
         Feel.shake(info.crit ? 3.5 : 1.6, a, 120);
@@ -11122,7 +11139,7 @@ const Combat = {
       const ex = Progression.hasPassive(pl.hooks, 'execute');
       if (ex && e.hp / e.maxHp <= (ex.threshold || 0.15)) {
         e.hp = 0;
-        Floaters.add(e.x, e.y - e.r - 16, 'EXÉCUTION', '#ff5e7a', 13);
+        Floaters.add(e.x, e.y - e.r - 16, 'EXÉCUTION', PAL.gold, 13);
       }
     }
     if (e.hp <= 0) Combat.killEnemy(e, info);
@@ -11263,7 +11280,7 @@ const Combat = {
     G.run.stats.hitsTaken++;
     AudioEngine.playerHurt({ intensity: clamp(dmg / 30, 0.3, 1) });
     Floaters.add(pl.x, pl.y - 30, '-' + dmg, null, null, 'taken');
-    Particles.spawn(pl.x, pl.y, { count: 8, color: '#ff5e7a', size: 3 });
+    Particles.spawn(pl.x, pl.y, { count: 8, color: PAL.danger, size: 3 });
     /* le coup se sent sans quitter le personnage des yeux : recul en courbe à l'opposé de la source, vignette
        corail sur les bords, ralenti bref, secousse dirigée, et un flash d'une image sur un gros coup */
     pl.hurtA = angleTo(info.x != null ? info.x : pl.x - pl.facing, info.y != null ? info.y : pl.y, pl.x, pl.y);
@@ -12630,7 +12647,7 @@ class Pet {
           this.facing = Math.cos(a) > 0 ? 1 : -1;
           this.moving = true;
           if (dist(this.x, this.y, t.x, t.y) < t.r + this.r) {
-            Combat.hitEnemy(t, this.dmg(), { x: t.x, y: t.y, knockback: this.def.knockback || 1.4, silent: true });
+            Combat.hitEnemy(t, this.dmg(), { x: t.x, y: t.y, knockback: this.def.knockback || 1.4, silent: true, color: this.color });
             Particles.spawn(t.x, t.y, { count: 7, color: this.color, glow: true, speedMax: 160, life: 0.35, size: 2 });
             AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.35 });
             this.act = 1;
@@ -12664,7 +12681,7 @@ class Pet {
           } else {
             this.moving = false;
             if (tick) {
-              Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true });
+              Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true, color: this.color });
               Particles.spawn(e.x, e.y, { count: 5, color: this.color, speedMax: 120, life: 0.3, size: 2 });
               this.act = 1;
             }
@@ -12768,7 +12785,7 @@ class Pet {
           for (const e of G.enemies) {
             if (e.dead || this.rolled.has(e) || dist(this.x, this.y, e.x, e.y) > e.r + this.r) continue;
             this.rolled.add(e);
-            Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true });
+            Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true, color: this.color });
             Particles.spawn(e.x, e.y, { count: 6, color: this.color, speedMax: 150, life: 0.3, size: 2 });
           }
           this.rollT -= dt;
@@ -12836,7 +12853,7 @@ class Pet {
         this.moving = true;
         /* la piqûre porte jusqu'au rayon d'orbite : sinon l'abeille tourne juste au-delà de sa propre portée */
         if (tick && dist(this.x, this.y, e.x, e.y) < e.r + R + 10) {
-          Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true });
+          Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true, color: this.color });
           Particles.spawn(this.x, this.y, { count: 3, color: this.color, speedMax: 80, life: 0.25, size: 2 });
           this.act = 1;
         }
@@ -13622,7 +13639,7 @@ class Enemy {
     /* télégraphie : halo pulsant + ligne d'intention */
     if (this.tele) {
       const k = 0.5 + 0.5 * Math.sin(Time.now * 30);
-      ctx.strokeStyle = this.telegraph.color || '#fff';
+      ctx.strokeStyle = PAL.alert; // LA couleur d'alerte, la même pour tous : le joueur apprend « rouge vif = évite »
       ctx.lineWidth = 2 + k * 2;
       ctx.shadowColor = ctx.strokeStyle;
       ctx.shadowBlur = 12;
@@ -13816,7 +13833,7 @@ class Enemy {
       const w = this.r * 2.2;
       ctx.fillStyle = '#000a';
       ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w, 4);
-      ctx.fillStyle = '#ff5e7a';
+      ctx.fillStyle = PAL.enemyBar; // ni le corail du joueur ni le cyan de l'XP : on ne confond pas « moi » et « eux »
       ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w * clamp(this.hp / this.maxHp, 0, 1), 4);
     }
     if (Time.now < this.stunUntil) {
@@ -13844,9 +13861,9 @@ class Boss extends Enemy {
         radius: def.radius || 30,
         xp: Math.round(def.xp * (rv ? 1.5 : 1)),
         coins: Math.round(def.coins * (rv ? 1.5 : 1)),
-        color: rv ? '#ff7a3c' : def.color || '#ff3b5c',
+        color: rv ? '#ff7a3c' : def.color || PAL.danger,
         sprite: def.sprite,
-        telegraph: { time: 0.8, color: '#ff3b5c' },
+        telegraph: { time: 0.8, color: PAL.alert },
       },
       x,
       y,
@@ -14063,7 +14080,7 @@ class Boss extends Enemy {
         ctx.fill();
       } // boulons
       const k = 0.5 + 0.5 * Math.sin(Time.now * 5);
-      ctx.fillStyle = '#ff3b5c';
+      ctx.fillStyle = PAL.alert;
       ctx.globalAlpha = alpha * (0.4 + 0.6 * k);
       ctx.beginPath();
       ctx.arc(x, y - 3, 3, 0, TAU);
@@ -14218,7 +14235,7 @@ class Boss extends Enemy {
       this.patternIdx++;
       this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p);
       this.tele = 1;
-      this.telegraph = { time: p.telegraph || 0.8, color: p.color || this.color };
+      this.telegraph = { time: p.telegraph || 0.8, color: PAL.alert };
       this.chargeA = angleTo(this.x, this.y, t.x, t.y);
       AudioEngine.trapWarn({ intensity: 0.7 });
       if (p.label) Floaters.add(this.x, this.y - this.r - 30, p.label, p.color || '#ff7a3c', 15);
@@ -14240,7 +14257,7 @@ class Boss extends Enemy {
   startPattern(p, telegraph, t) {
     this.cur = Object.assign({ t: 0, fired: 0, phase: 'tele' }, p, telegraph != null ? { telegraph } : {});
     this.tele = 1;
-    this.telegraph = { time: this.cur.telegraph || 0.8, color: p.color || this.color };
+    this.telegraph = { time: this.cur.telegraph || 0.8, color: PAL.alert };
     this.chargeA = angleTo(this.x, this.y, t.x, t.y);
     AudioEngine.trapWarn({ intensity: Boss.patKind(p) === 'big' ? 0.9 : 0.5 });
     if (p.label) Floaters.add(this.x, this.y - this.r - 30, p.label, p.color || '#ff7a3c', 15);
@@ -14692,7 +14709,7 @@ class Boss extends Enemy {
           by: this.y + Math.sin(a) * len,
           t: 0,
           life: 0.05,
-          color: c.color || '#ff3b5c',
+          color: c.color || PAL.alert,
           width: 8,
         });
         if (segCircle(this.x, this.y, this.x + Math.cos(a) * len, this.y + Math.sin(a) * len, pl.x, pl.y, pl.r))
@@ -15231,7 +15248,7 @@ class Trap {
     this.warned = -1;
     this.fireCount = 0;
     this.lastShot = null;
-    this.color = this.p.color || def.color || '#ff5e7a'; // `params.color` : une salle peut reteinter un piège
+    this.color = this.p.color || def.color || PAL.danger; // `params.color` : une salle peut reteinter un piège
     this.disabled = false;
     this.beats = this.p.beats || null; // salle du tempo : cadence en temps musicaux (voir syncBeat)
     /* --- adaptation des paramètres de contenu --- */
@@ -16764,7 +16781,7 @@ const CHALLENGE_DEFS = {
     name: 'Chrono',
     desc: "Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s'enrage.",
     rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'],
-    color: '#ff5e7a',
+    color: PAL.danger,
   },
 };
 const CHALLENGE_ROOMS = [2, 6]; // salle 2 : toujours un défi ; 6 : 60 % de chance (la salle 7 est la salle du tempo)
@@ -17031,7 +17048,7 @@ const Challenge = (() => {
           c.step = 0;
           Combat.hitPlayer(8, { type: 'trap', x: s.x, y: s.y, trapName: 'Décharge' });
           G.room.beams.push({ ax: s.x, ay: s.y, bx: pl.x, by: pl.y, t: 0, life: 0.25, color: '#c9a3ff', width: 4, jag: true });
-          UI.banner('Mauvais ordre', '#ff5e7a');
+          UI.banner('Mauvais ordre', PAL.alert);
           s.cool = 1;
         }
       }
@@ -17131,7 +17148,7 @@ const Challenge = (() => {
       }
       if (left <= 0 && !c.enraged) {
         c.enraged = true;
-        UI.banner('ENRAGÉS', '#ff5e7a');
+        UI.banner('ENRAGÉS', PAL.alert);
         AudioEngine.bossRoar({});
         for (const e of G.enemies) enrage(e);
       }
@@ -17143,7 +17160,7 @@ const Challenge = (() => {
     e.enraged = true;
     e.speed *= 1.3;
     e.damage = Math.round(e.damage * 1.3);
-    e.color = '#ff3b3b';
+    e.color = PAL.alert;
   }
   function reward(room) {
     const pl = G.player;
@@ -17610,7 +17627,7 @@ const Challenge = (() => {
     /* yeux des ennemis */
     for (const e of G.enemies) {
       if (e.dead) continue;
-      ctx.fillStyle = e.tele ? '#ffd166' : '#ff5e7a';
+      ctx.fillStyle = e.tele ? PAL.alert : PAL.danger; // les yeux dans le noir : corail, et LA couleur d'alerte quand ça va frapper
       ctx.shadowColor = ctx.fillStyle;
       ctx.shadowBlur = 8;
       ctx.beginPath();
@@ -18344,7 +18361,7 @@ const Tempo = {
       const pp = b.phrasePos();
       if (pp) {
         const seg = pp.p < pp.smallEnd ? 0 : pp.p < pp.bigBeat ? 1 : b.cur ? 2 : 3;
-        const col = ['#e8ecf7', '#ffb347', '#ff3b5c', '#7fff9a'][seg];
+        const col = ['#e8ecf7', '#ffb347', PAL.alert, '#7fff9a'][seg];
         ctx.strokeStyle = col;
         ctx.shadowColor = col;
         ctx.shadowBlur = 12;
@@ -18433,7 +18450,7 @@ const Tempo = {
       ctx.fillRect(x0 - 12, yb - 14, w + 24, 28);
       for (let i = 0; i < n; i++) {
         const x = x0 + i * spd + Math.floor(i / 4) * gap + spd / 2;
-        const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? '#ff3b5c' : '#7fff9a';
+        const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? PAL.alert : '#7fff9a';
         const cur = Math.floor(pp.p) === i;
         ctx.globalAlpha = cur ? 1 : 0.4;
         ctx.fillStyle = col;
@@ -19075,7 +19092,7 @@ const Room = {
       ctx.textAlign = 'center';
       ctx.fillText('▶', dx + TILE / 2, dy + 8);
     } else {
-      ctx.strokeStyle = '#ff5e7a';
+      ctx.strokeStyle = PAL.muted; // porte fermée : une croix grise, pas un danger
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(dx + 6, dy - TILE + 8);
@@ -20646,7 +20663,7 @@ const UI = (() => {
     };
     if (hpk < 0.3 && pl.hp > 0) {
       const k = 1 - hpk / 0.3;
-      vignette(0.08 + 0.2 * k + 0.06 * (1 - Beat.phase()), 255, 40, 60);
+      vignette(0.08 + 0.2 * k + 0.06 * (1 - Beat.phase()), 255, 59, 59); // PAL.alert
       hudProbe.flags.vignette = true;
     }
     /* coup reçu : vignette corail qui s'efface en 350 ms */
@@ -20671,12 +20688,29 @@ const UI = (() => {
     ctx.fillStyle = '#2b1a24';
     ctx.fillRect(bx, by, bw, bh);
     /* vert tant que ça va, doré quand ça baisse, rouge — la couleur d'alerte — seulement sous 30 %, et il pulse */
-    const hpCol = hpk > 0.6 ? '#7fff9a' : hpk > 0.3 ? '#ffd166' : '#ff3b3b';
+    const hpCol = hpk > 0.6 ? PAL.life : hpk > 0.3 ? PAL.gold : PAL.alert;
     ctx.globalAlpha = hpk <= 0.3 ? 0.7 + 0.3 * Math.sin(Time.now * 6) : 1;
     ctx.fillStyle = hpCol;
     ctx.fillRect(bx, by, bw * hpk, bh);
     ctx.globalAlpha = 1;
     hudProbe.flags.hpColor = hpCol;
+    /* sous 25 % : des hachures en plus de la couleur — un état ne se signale jamais par la seule couleur */
+    if (hpk <= 0.25 && hpk > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(bx, by, bw * hpk, bh);
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(0,0,0,.35)';
+      ctx.lineWidth = 2;
+      for (let x = bx - bh; x < bx + bw * hpk + bh; x += 7) {
+        ctx.beginPath();
+        ctx.moveTo(x, by + bh);
+        ctx.lineTo(x + bh, by);
+        ctx.stroke();
+      }
+      ctx.restore();
+      hudProbe.flags.hatch = true;
+    }
     if (pl.shield > 0) {
       ctx.fillStyle = 'rgba(140,255,255,.7)';
       ctx.fillRect(bx, by - 4, bw * clamp(pl.shield / pl.stats.maxHp, 0, 1), 3);
@@ -20707,11 +20741,11 @@ const UI = (() => {
         align: 'center',
         weight: 'bold',
         size: 13,
-        color: '#ff3b5c',
+        color: PAL.danger,
       });
       ctx.fillStyle = '#2b1a24';
       ctx.fillRect(x2, y2 + 22, w2, 12);
-      ctx.fillStyle = '#ff3b5c';
+      ctx.fillStyle = PAL.danger;
       ctx.fillRect(x2, y2 + 22, w2 * clamp(boss.hp / boss.maxHp, 0, 1), 12);
       if (boss.weakActive)
         label(ctx, 'PRISE EXPOSÉE ×' + boss.weakMul, CX, y2 + 40, { align: 'center', weight: 'bold', size: 11, color: '#ffd166' });

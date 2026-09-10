@@ -89,7 +89,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 **Taille** : 1 séance.
 **Bilan** : fait (CONTENT.md §45, test `coup.js`, 9 mesures — un fichier à part plutôt que dans `ressenti.js`, pour rester lisible). `Floaters` est réécrit avec cinq genres (`dmg` 18 px, `crit` 30, `taken` 34 qui part vers le bas, `heal` 20, `event` dans sa couleur), Silkscreen à contour noir de 4 px, sursaut `outBack` de 120 ms, trajectoire balistique, plein jusqu'à 65 % de la durée, dispersion sur X et Y, fusion à 14 px et 120 ms (12 + 30 → 42, plus gros), plafond 40, naissance au corps. Un ancien appel sans genre devine le sien (un nombre corail = dégât subi, un « + » = soin, un mot = événement) : les vingt-quatre appels du code marchent sans être tous réécrits. Le « +n XP » est sorti ; « TEMPO ×n » et « +n ◈ » (bourse) restent, décision I-1 et seul retour d'une bourse depuis que le HUD ne montre plus les crédits. Coup reçu : recul de 7 px en courbe à l'opposé de la source (`pl.hurtA`), vignette corail 350 ms, ralenti 35 % pendant 120 ms, flash blanc d'une image au-dessus de 15 % des PV (`UI.flashScreen`), clignotement à 6 Hz à 35 %, vignette de PV bas qui bat avec `Beat`. À regarder à la main : 34 px pour un dégât subi, est-ce trop gros sur un téléphone ? Le HUD grossira de 1,35 en I-8, pas le monde.
 
-## Chantier F-3 — Le contrat de couleur
+## Chantier F-3 — Le contrat de couleur ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : une couleur, une intention. Sur une capture, on voit ce qui est dangereux.
 
@@ -99,6 +99,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 
 **Fini quand** : un test `palette.js` balaie les sources : `#ff5e7a` n'apparaît que dans `PAL.danger` et ses usages autorisés ; aucune télégraphie ne lit `e.color` ; les ennemis du contenu n'ont plus de `#e33` ; la barre ennemie n'est ni `PAL.danger` ni `PAL.self`.
 **Taille** : 1 séance (courte : elle peut se faire dans la même que F-2).
+**Bilan** : fait (CONTENT.md §46, test `palette.js`, 7 mesures). `PAL` est dans `00_core.js` et plus aucun corail, rouge d'alerte ou rouge de boss n'est écrit en dur hors de lui (le test balaie les sources, l'atelier et le CSS exceptés). Toutes les télégraphies — ennemis, patterns de boss, rayons — sont dans `PAL.alert`, plus dans la couleur de l'ennemi ; la barre de vie ennemie est en blanc cassé ; la barre du boss et son nom en corail (le boss est le danger extérieur) ; les cœurs sont **verts** (la vie qui revient, comme les soins) ; la porte fermée est une croix grise, plus un danger ; « ENRAGÉS » et « Mauvais ordre » sont des alertes. Les trois seuls ennemis rouge vif (rôdeur, mèche, baril) sont passés en rouges sourds — les autres avaient déjà leurs teintes ; les couleurs des quatre animaux étaient déjà celles que je proposais, et **un dégât de compagnon s'écrit dans sa couleur** (Uno mord en orange). La barre de PV est hachurée sous 25 %. Pas fait, à dessein : la teinte du sol — le vrai remède est la lumière de F-5, et une retouche sans mesure aurait été du goût, pas une règle. À vérifier à la main : un cœur vert, ça se lit ?
 
 ## Chantier F-4 — La mort d'un ennemi et le ramassage
 

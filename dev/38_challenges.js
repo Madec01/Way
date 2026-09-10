@@ -36,7 +36,7 @@ const CHALLENGE_DEFS = {
     name: 'Chrono',
     desc: "Finissez en moins de 60 s : prime de crédits. Après, tout ce qui reste s'enrage.",
     rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'],
-    color: '#ff5e7a',
+    color: PAL.danger,
   },
 };
 const CHALLENGE_ROOMS = [2, 6]; // salle 2 : toujours un défi ; 6 : 60 % de chance (la salle 7 est la salle du tempo)
@@ -303,7 +303,7 @@ const Challenge = (() => {
           c.step = 0;
           Combat.hitPlayer(8, { type: 'trap', x: s.x, y: s.y, trapName: 'Décharge' });
           G.room.beams.push({ ax: s.x, ay: s.y, bx: pl.x, by: pl.y, t: 0, life: 0.25, color: '#c9a3ff', width: 4, jag: true });
-          UI.banner('Mauvais ordre', '#ff5e7a');
+          UI.banner('Mauvais ordre', PAL.alert);
           s.cool = 1;
         }
       }
@@ -403,7 +403,7 @@ const Challenge = (() => {
       }
       if (left <= 0 && !c.enraged) {
         c.enraged = true;
-        UI.banner('ENRAGÉS', '#ff5e7a');
+        UI.banner('ENRAGÉS', PAL.alert);
         AudioEngine.bossRoar({});
         for (const e of G.enemies) enrage(e);
       }
@@ -415,7 +415,7 @@ const Challenge = (() => {
     e.enraged = true;
     e.speed *= 1.3;
     e.damage = Math.round(e.damage * 1.3);
-    e.color = '#ff3b3b';
+    e.color = PAL.alert;
   }
   function reward(room) {
     const pl = G.player;
@@ -882,7 +882,7 @@ const Challenge = (() => {
     /* yeux des ennemis */
     for (const e of G.enemies) {
       if (e.dead) continue;
-      ctx.fillStyle = e.tele ? '#ffd166' : '#ff5e7a';
+      ctx.fillStyle = e.tele ? PAL.alert : PAL.danger; // les yeux dans le noir : corail, et LA couleur d'alerte quand ça va frapper
       ctx.shadowColor = ctx.fillStyle;
       ctx.shadowBlur = 8;
       ctx.beginPath();

@@ -49,6 +49,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `human` | une partie au clavier et à la souris en mode Normal : bouger, tirer, compétence, pause, mort, crédits, achat |
 | `levels` | le bot joue 4 armes sur 9 salles (mode test) — équilibrage, pas de plantage |
 | `martin` | Martin : cinq clips, boucle de marche, mort figée, retournement, pieds |
+| `palette` | chantier F-3 : plus de rouge en dur hors de PAL, télégraphies en PAL.alert, barre ennemie en blanc cassé, cœurs verts, ennemis en rouges sourds, couleurs des animaux, dégât d'Uno en orange, PV hachurés sous 25 % |
 | `pets` | les neuf comportements du moteur des compagnons, un par un |
 | `ressenti` | chantier F-1 : Ease et Feel, arrêt sur image (30 / 70 / 60 ms, plafonné, jamais sur un ralenti), étincelles au corps dans le sens du coup, étincelle de contact, écrasement, secousse directionnelle indépendante du zoom, plus de `G.shake`, recul de l'arme, polices pixel dans le monde, squash & stretch des planches |
 | `spawncheck` | chaque salle des quatre biomes : spawns et pièges sur des tuiles libres, porte atteignable |

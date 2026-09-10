@@ -1238,7 +1238,7 @@ const CONTENT = {
       radius: 14,
       xp: 4,
       coins: 1,
-      color: '#e05a4a',
+      color: '#c0553f', // rouge sourd : le rouge vif est réservé à l'alerte (F-3)
       behavior: { lungeRange: 90, lungeWindup: 0.35, lungeSpeed: 520, lungeDuration: 0.25, lungeCooldown: 1.2 },
       telegraph: { time: 0.35, color: '#ffd166' },
     },
@@ -1283,7 +1283,7 @@ const CONTENT = {
       radius: 12,
       xp: 5,
       coins: 1,
-      color: '#ff5f3b',
+      color: '#d8613f',
       behavior: { fuse: 0.9, radius: 80, explosionDamage: 24, triggerRange: 60, explodeOnDeath: true },
       telegraph: { time: 0.9, color: '#ff3b3b' },
     },

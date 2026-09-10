@@ -238,6 +238,23 @@ const Ease = {
 /* Polices du monde : Silkscreen pour les chiffres, les noms et les compteurs ; VT323 pour les phrases. Les deux sont
    déjà chargées par le CSS ; boot() attend document.fonts.ready avant le premier rendu. Le HUD garde sa police
    jusqu'au chantier I-5 (HUD_FONT dans 50_ui.js). */
+/* Le contrat de couleur (chantier F-3, CONTENT.md §46) : une couleur, une intention, sans exception.
+   self = toi et ce qui est à toi · gold = le temps, la mesure, la récompense · danger = ce qui vient de l'extérieur
+   (dégâts subis, pièges, zones, vignette) · alert = LA couleur des télégraphies, jamais employée ailleurs · life = la
+   vie qui revient (soins, cœurs, porte ouverte) · enemyBar = la vie des ennemis, ni rouge ni cyan · les animaux dans
+   la seule famille chaude et douce du jeu. Un effet prend sa couleur ici, jamais en dur. */
+const PAL = {
+  self: '#6ee7ff',
+  gold: '#ffd166',
+  danger: '#ff5e7a',
+  alert: '#ff3b3b',
+  life: '#7fff9a',
+  text: '#e8ecf7',
+  muted: '#9aa4c4',
+  ink: '#0b0d14',
+  enemyBar: '#cfd6e6',
+  pets: { pet_uno: '#e08a4a', pet_choupi: '#f0c46a', pet_tanuki: '#a8784a', pet_ori: '#c9a3ff' },
+};
 const FONT_PIXEL = '"Silkscreen", "Segoe UI", system-ui, sans-serif';
 const FONT_TEXT = '"VT323", "Segoe UI", monospace';
 const Feel = {

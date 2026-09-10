@@ -46,7 +46,7 @@ class Trap {
     this.warned = -1;
     this.fireCount = 0;
     this.lastShot = null;
-    this.color = this.p.color || def.color || '#ff5e7a'; // `params.color` : une salle peut reteinter un piège
+    this.color = this.p.color || def.color || PAL.danger; // `params.color` : une salle peut reteinter un piège
     this.disabled = false;
     this.beats = this.p.beats || null; // salle du tempo : cadence en temps musicaux (voir syncBeat)
     /* --- adaptation des paramètres de contenu --- */

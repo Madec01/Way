@@ -565,7 +565,7 @@ const Room = {
       ctx.textAlign = 'center';
       ctx.fillText('▶', dx + TILE / 2, dy + 8);
     } else {
-      ctx.strokeStyle = '#ff5e7a';
+      ctx.strokeStyle = PAL.muted; // porte fermée : une croix grise, pas un danger
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(dx + 6, dy - TILE + 8);

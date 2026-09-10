@@ -614,7 +614,7 @@ const Tempo = {
       const pp = b.phrasePos();
       if (pp) {
         const seg = pp.p < pp.smallEnd ? 0 : pp.p < pp.bigBeat ? 1 : b.cur ? 2 : 3;
-        const col = ['#e8ecf7', '#ffb347', '#ff3b5c', '#7fff9a'][seg];
+        const col = ['#e8ecf7', '#ffb347', PAL.alert, '#7fff9a'][seg];
         ctx.strokeStyle = col;
         ctx.shadowColor = col;
         ctx.shadowBlur = 12;
@@ -703,7 +703,7 @@ const Tempo = {
       ctx.fillRect(x0 - 12, yb - 14, w + 24, 28);
       for (let i = 0; i < n; i++) {
         const x = x0 + i * spd + Math.floor(i / 4) * gap + spd / 2;
-        const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? '#ff3b5c' : '#7fff9a';
+        const col = i < pp.smallEnd ? '#e8ecf7' : i < pp.bigBeat ? '#ffb347' : i === pp.bigBeat ? PAL.alert : '#7fff9a';
         const cur = Math.floor(pp.p) === i;
         ctx.globalAlpha = cur ? 1 : 0.4;
         ctx.fillStyle = col;

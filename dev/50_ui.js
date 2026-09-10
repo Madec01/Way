@@ -1089,7 +1089,7 @@ const UI = (() => {
     };
     if (hpk < 0.3 && pl.hp > 0) {
       const k = 1 - hpk / 0.3;
-      vignette(0.08 + 0.2 * k + 0.06 * (1 - Beat.phase()), 255, 40, 60);
+      vignette(0.08 + 0.2 * k + 0.06 * (1 - Beat.phase()), 255, 59, 59); // PAL.alert
       hudProbe.flags.vignette = true;
     }
     /* coup reçu : vignette corail qui s'efface en 350 ms */
@@ -1114,12 +1114,29 @@ const UI = (() => {
     ctx.fillStyle = '#2b1a24';
     ctx.fillRect(bx, by, bw, bh);
     /* vert tant que ça va, doré quand ça baisse, rouge — la couleur d'alerte — seulement sous 30 %, et il pulse */
-    const hpCol = hpk > 0.6 ? '#7fff9a' : hpk > 0.3 ? '#ffd166' : '#ff3b3b';
+    const hpCol = hpk > 0.6 ? PAL.life : hpk > 0.3 ? PAL.gold : PAL.alert;
     ctx.globalAlpha = hpk <= 0.3 ? 0.7 + 0.3 * Math.sin(Time.now * 6) : 1;
     ctx.fillStyle = hpCol;
     ctx.fillRect(bx, by, bw * hpk, bh);
     ctx.globalAlpha = 1;
     hudProbe.flags.hpColor = hpCol;
+    /* sous 25 % : des hachures en plus de la couleur — un état ne se signale jamais par la seule couleur */
+    if (hpk <= 0.25 && hpk > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(bx, by, bw * hpk, bh);
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(0,0,0,.35)';
+      ctx.lineWidth = 2;
+      for (let x = bx - bh; x < bx + bw * hpk + bh; x += 7) {
+        ctx.beginPath();
+        ctx.moveTo(x, by + bh);
+        ctx.lineTo(x + bh, by);
+        ctx.stroke();
+      }
+      ctx.restore();
+      hudProbe.flags.hatch = true;
+    }
     if (pl.shield > 0) {
       ctx.fillStyle = 'rgba(140,255,255,.7)';
       ctx.fillRect(bx, by - 4, bw * clamp(pl.shield / pl.stats.maxHp, 0, 1), 3);
@@ -1150,11 +1167,11 @@ const UI = (() => {
         align: 'center',
         weight: 'bold',
         size: 13,
-        color: '#ff3b5c',
+        color: PAL.danger,
       });
       ctx.fillStyle = '#2b1a24';
       ctx.fillRect(x2, y2 + 22, w2, 12);
-      ctx.fillStyle = '#ff3b5c';
+      ctx.fillStyle = PAL.danger;
       ctx.fillRect(x2, y2 + 22, w2 * clamp(boss.hp / boss.maxHp, 0, 1), 12);
       if (boss.weakActive)
         label(ctx, 'PRISE EXPOSÉE ×' + boss.weakMul, CX, y2 + 40, { align: 'center', weight: 'bold', size: 11, color: '#ffd166' });

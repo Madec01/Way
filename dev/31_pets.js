@@ -209,7 +209,7 @@ class Pet {
           this.facing = Math.cos(a) > 0 ? 1 : -1;
           this.moving = true;
           if (dist(this.x, this.y, t.x, t.y) < t.r + this.r) {
-            Combat.hitEnemy(t, this.dmg(), { x: t.x, y: t.y, knockback: this.def.knockback || 1.4, silent: true });
+            Combat.hitEnemy(t, this.dmg(), { x: t.x, y: t.y, knockback: this.def.knockback || 1.4, silent: true, color: this.color });
             Particles.spawn(t.x, t.y, { count: 7, color: this.color, glow: true, speedMax: 160, life: 0.35, size: 2 });
             AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.35 });
             this.act = 1;
@@ -243,7 +243,7 @@ class Pet {
           } else {
             this.moving = false;
             if (tick) {
-              Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true });
+              Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true, color: this.color });
               Particles.spawn(e.x, e.y, { count: 5, color: this.color, speedMax: 120, life: 0.3, size: 2 });
               this.act = 1;
             }
@@ -347,7 +347,7 @@ class Pet {
           for (const e of G.enemies) {
             if (e.dead || this.rolled.has(e) || dist(this.x, this.y, e.x, e.y) > e.r + this.r) continue;
             this.rolled.add(e);
-            Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true });
+            Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true, color: this.color });
             Particles.spawn(e.x, e.y, { count: 6, color: this.color, speedMax: 150, life: 0.3, size: 2 });
           }
           this.rollT -= dt;
@@ -415,7 +415,7 @@ class Pet {
         this.moving = true;
         /* la piqûre porte jusqu'au rayon d'orbite : sinon l'abeille tourne juste au-delà de sa propre portée */
         if (tick && dist(this.x, this.y, e.x, e.y) < e.r + R + 10) {
-          Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true });
+          Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true, color: this.color });
           Particles.spawn(this.x, this.y, { count: 3, color: this.color, speedMax: 80, life: 0.25, size: 2 });
           this.act = 1;
         }

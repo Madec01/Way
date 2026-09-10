@@ -1331,3 +1331,24 @@ Silkscreen, **contour noir de 4 px** (un `strokeText` avant le `fillText` — un
 
 Test : `coup.js` — 9 mesures : les cinq genres ; police, contour, sursaut ; fusion (12 + 30 → 42) ; naissance au corps et dispersion ; plus de « +n XP » ; petit coup (vignette, recul −7 px, ralenti 120 ms, pas de flash) ; gros coup (flash, recul dans l'autre sens) ; 6 Hz et vignette sur `Beat`.
 
+## 46. Chantier F-3 — le contrat de couleur (ressenti)
+
+**Une couleur, une intention, sans exception.** La palette vit dans `PAL` (`00_core.js`) ; un effet y prend sa couleur, jamais en dur (`palette.js` balaie les sources).
+
+| Clé | Couleur | Ce qu'elle veut dire | Où |
+|---|---|---|---|
+| `PAL.self` | cyan `#6ee7ff` | toi et ce qui est à toi | joueur, ruée, bouclier, XP, portée d'aimant |
+| `PAL.gold` | or `#ffd166` | le temps, la mesure, la récompense | métronome, anneau de mesure, pièces, critiques, partition, coffre, « EXÉCUTION » |
+| `PAL.danger` | corail `#ff5e7a` | le danger qui vient de l'extérieur | dégâts subis, vignette de coup, pièges, zones, barre et nom du boss, yeux dans le noir |
+| `PAL.alert` | rouge vif `#ff3b3b` | **ça va frapper** — toutes les télégraphies, rien d'autre | anneau et ligne d'intention des ennemis, patterns et rayons de boss, grosse attaque de la partition, « ENRAGÉS », PV sous 30 % |
+| `PAL.life` | vert `#7fff9a` | la vie qui revient | soins, **cœurs** (plus corail), porte ouverte, PV au-dessus de 60 % |
+| `PAL.enemyBar` | blanc cassé `#cfd6e6` | la vie des ennemis | leur barre : ni le corail du joueur, ni le cyan de l'XP |
+| `PAL.pets` | Uno `#e08a4a` orange · Choupi `#f0c46a` doré · Tanuki `#a8784a` brun · ORI `#c9a3ff` mauve | la seule famille chaude et douce du jeu | leur sprite de repli, leur marque, leur anneau, **leurs chiffres de dégâts** (`info.color` dans `Combat.hitEnemy`) |
+| `PAL.muted` | gris `#9aa4c4` | ce qui n'a pas d'intention | porte fermée (une croix grise, plus un danger), sous-titres |
+
+Avant, `#ff5e7a` avait cinq emplois contradictoires (barre de PV pleine, barre ennemie, dégât subi, porte fermée, nom de boss) et la télégraphie prenait la couleur de chaque ennemi : le joueur ne pouvait jamais apprendre « cette couleur = évite ». Les trois ennemis rouge vif (rôdeur `#c0553f`, mèche `#d8613f`, baril `#a8402e`) passent en rouges sourds pour laisser le rouge vif à l'alerte ; les autres avaient déjà leurs teintes de biome. La barre de PV du joueur (vert → or → rouge d'alerte, I-1) est **hachurée sous 25 %** : un état ne se signale jamais par la seule couleur.
+
+Pas touché, à dessein : la teinte du sol (le remède est la lumière, F-5), le CSS des menus (`.chip.bad`, I-3), l'atelier.
+
+Test : `palette.js` — 7 mesures : aucun rouge en dur hors de `PAL` ; télégraphies, barre ennemie, cœurs ; le boss télégraphie en alerte et pas dans sa couleur ; rouges sourds et aucun rouge vif ; les quatre animaux ; un dégât d'Uno en orange ; hachures à 20 %, pas à 50 %.
+

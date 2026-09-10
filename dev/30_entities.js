@@ -68,14 +68,14 @@ const Floaters = {
      sur n'importe quel sol. Deux chiffres du même genre trop proches fusionnent au lieu de s'empiler. */
   KINDS: {
     dmg: { size: 18, color: '#f4f7ff', vy: -90, vx: 40, g: 180, life: 0.7 },
-    crit: { size: 30, color: '#ffd166', vy: -130, vx: 40, g: 180, life: 0.85 },
-    taken: { size: 34, color: '#ff5e7a', vy: 40, vx: 0, g: -160, life: 0.9 },
-    heal: { size: 20, color: '#7fff9a', vy: -70, vx: 20, g: 0, life: 0.7 },
+    crit: { size: 30, color: PAL.gold, vy: -130, vx: 40, g: 180, life: 0.85 },
+    taken: { size: 34, color: PAL.danger, vy: 40, vx: 0, g: -160, life: 0.9 },
+    heal: { size: 20, color: PAL.life, vy: -70, vx: 20, g: 0, life: 0.7 },
     event: { size: 22, color: '#fff', vy: -30, vx: 0, g: 0, life: 1.1 },
   },
   add(x, y, text, color, size, kind) {
     text = String(text);
-    if (!kind) kind = /^[+-]?\d+$/.test(text) ? (color === '#ff5e7a' ? 'taken' : text[0] === '+' ? 'heal' : 'dmg') : 'event';
+    if (!kind) kind = /^[+-]?\d+$/.test(text) ? (color === PAL.danger ? 'taken' : text[0] === '+' ? 'heal' : 'dmg') : 'event';
     const K = this.KINDS[kind] || this.KINDS.event;
     const x0 = x,
       y0 = y; // le point d'origine, avant dispersion : c'est lui qui sert à la fusion
@@ -98,7 +98,7 @@ const Floaters = {
       x0,
       y0,
       text,
-      color: kind === 'event' ? color || K.color : K.color,
+      color: color || K.color, // un dégât de compagnon vient dans SA couleur (Uno mord en orange)
       size: kind === 'event' ? Math.round((size || K.size / 1.15) * 1.15) : K.size,
       t: 0,
       life: K.life,
@@ -804,8 +804,8 @@ const Pickups = {
         ctx.textAlign = 'center';
         ctx.fillText(rl ? rl.name : 'Relique', p.x, p.y + bob - 18);
       } else if (p.kind === 'heart') {
-        ctx.fillStyle = '#ff5e7a';
-        ctx.shadowColor = '#ff5e7a';
+        ctx.fillStyle = PAL.life; // un cœur, c'est la vie qui revient : vert, pas corail (le corail est le danger)
+        ctx.shadowColor = PAL.life;
         ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(p.x - 3, p.y + bob - 2, 4, 0, TAU);
@@ -939,7 +939,7 @@ const Combat = {
         glow: true,
       });
       G.room.slashes.push({ x: e.x, y: hy, a, range: 20, arc: 2.6, t: 0, life: 0.09, color: '#ffffff', spark: true });
-      Floaters.add(e.x, hy - 10, d, null, null, info.crit ? 'crit' : 'dmg');
+      Floaters.add(e.x, hy - 10, d, info.color || null, null, info.crit ? 'crit' : 'dmg');
       if (!info.silent) {
         Feel.stop(info.crit ? 70 : 30);
         Feel.shake(info.crit ? 3.5 : 1.6, a, 120);
@@ -966,7 +966,7 @@ const Combat = {
       const ex = Progression.hasPassive(pl.hooks, 'execute');
       if (ex && e.hp / e.maxHp <= (ex.threshold || 0.15)) {
         e.hp = 0;
-        Floaters.add(e.x, e.y - e.r - 16, 'EXÉCUTION', '#ff5e7a', 13);
+        Floaters.add(e.x, e.y - e.r - 16, 'EXÉCUTION', PAL.gold, 13);
       }
     }
     if (e.hp <= 0) Combat.killEnemy(e, info);
@@ -1107,7 +1107,7 @@ const Combat = {
     G.run.stats.hitsTaken++;
     AudioEngine.playerHurt({ intensity: clamp(dmg / 30, 0.3, 1) });
     Floaters.add(pl.x, pl.y - 30, '-' + dmg, null, null, 'taken');
-    Particles.spawn(pl.x, pl.y, { count: 8, color: '#ff5e7a', size: 3 });
+    Particles.spawn(pl.x, pl.y, { count: 8, color: PAL.danger, size: 3 });
     /* le coup se sent sans quitter le personnage des yeux : recul en courbe à l'opposé de la source, vignette
        corail sur les bords, ralenti bref, secousse dirigée, et un flash d'une image sur un gros coup */
     pl.hurtA = angleTo(info.x != null ? info.x : pl.x - pl.facing, info.y != null ? info.y : pl.y, pl.x, pl.y);

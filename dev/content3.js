@@ -135,7 +135,7 @@ CONTENT.enemies.push(
     radius: 13,
     xp: 7,
     coins: 2,
-    color: '#c0392b',
+    color: '#a8402e',
     sprite: 'enemy_kamikaze3',
     behavior: { fuse: 0.75, radius: 105, explosionDamage: 30, triggerRange: 70, explodeOnDeath: true },
     telegraph: { time: 0.75, color: '#ff9a3c' },
