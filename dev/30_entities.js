@@ -1219,6 +1219,7 @@ const Weapons = {
       }[w.family] || 'shootPistol';
     AudioEngine[snd]({ x: (pl.x - W / 2) / (W / 2) });
     G.run.stats.shots++;
+    pl.tir(pl.attackCd);
   },
   melee(pl, aim) {
     const w = pl.weapon,
@@ -1271,6 +1272,7 @@ const Weapons = {
     if (slam) G.shake = Math.min(10, G.shake + 5);
     AudioEngine[w.family === 'hammer' ? 'shootHammer' : 'shootBlade']({ x: (pl.x - W / 2) / (W / 2), intensity: hits ? 1 : 0.5 });
     G.run.stats.shots++;
+    pl.tir(pl.attackCd);
   },
   chainStrike(pl, aim) {
     const w = pl.weapon,
@@ -1292,6 +1294,7 @@ const Weapons = {
     }
     AudioEngine.shootChain({ x: (pl.x - W / 2) / (W / 2) });
     G.run.stats.shots++;
+    pl.tir(pl.attackCd);
     const ex = best ? best.x : pl.x + Math.cos(aim) * range * 0.6,
       ey = best ? best.y : pl.y + Math.sin(aim) * range * 0.6;
     G.room.beams.push({ ax: pl.x, ay: pl.y, bx: ex, by: ey, t: 0, life: 0.12, color: w.color || '#b3e5ff', width: 4, jag: true });
@@ -1645,12 +1648,28 @@ class Player {
   }
   /* Choisit le clip à jouer et avance son horloge. L'ordre est une priorité : mourir passe avant tout, puis
      ramasser, puis tirer, puis marcher. Un clip « une fois » garde la main jusqu'au bout de sa durée. */
+  /* Un geste de tir par tir réel, à la cadence de l'arme : le clip tient dans l'intervalle entre deux tirs
+     (borné entre 0,15 et 0,6 s), ses images réparties dessus. Avant, un geste fixe de 0,5 s courait tout seul
+     tant que le bouton était tenu : deux balles de pistolet par geste, deux gestes et demi par coup de marteau. */
+  tir(intervalle) {
+    const a = this.char && this.char.anim;
+    if (!a || !a.fire) return;
+    const inf = Sprites.sheetInfo(a.fire);
+    if (!inf) return;
+    const duree = clamp(intervalle || 0.3, 0.15, 0.6);
+    this.fireT = duree;
+    this.fireFps = inf.n / duree;
+    if (this.clip === 'fire') this.clipT = 0; // un nouveau tir relance le geste
+  }
+  /* les pieds, pour l'ordre de dessin : plus bas à l'écran = dessiné après */
+  feetY() {
+    return this.y + Sprites.SOL;
+  }
   animStep(dt, moving, firing) {
     const a = this.char && this.char.anim;
     if (!a) return;
     this.fireT = Math.max(0, this.fireT - dt);
     this.pickT = Math.max(0, this.pickT - dt);
-    if (firing && a.fire && this.fireT <= 0) this.fireT = clipLen(a.fire, 'fire');
     let want = 'idle';
     if (this.dead && a.death) want = 'death';
     else if (this.pickT > 0 && a.pick) want = 'pick';
@@ -1701,6 +1720,7 @@ class Player {
       this.dashT += dt;
       this.x += this.dashVx * dt;
       this.y += this.dashVy * dt;
+      this.animStep(dt, true, false); // le personnage court pendant le dash au lieu de se figer
       Particles.spawn(this.x, this.y, { count: 2, color: '#9ff', size: 3, speedMax: 30, life: 0.3 });
       if (this.trail && Time.now < this.trail.until)
         G.room.hazards.push({
@@ -1881,7 +1901,7 @@ class Player {
     /* ombre */
     ctx.fillStyle = 'rgba(0,0,0,.35)';
     ctx.beginPath();
-    ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
+    ctx.ellipse(this.x, this.y + Sprites.SOL - 3, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
     ctx.fill();
     /* auras selon les greffes (artefacts visibles) */
     const fx = this.hooks;
@@ -1950,10 +1970,18 @@ class Player {
           life: 0.8,
         });
     }
+    /* Le corps regarde où il vise, comme l'arme — pas où il marche : on tirait à droite avec le dos tourné.
+       Une planche n'a qu'un profil (décision : pas de nord/sud), retourné vers l'ouest ; un sprite à trois vues
+       choisit la sienne d'après la visée. */
     const dv =
-      this.char && (this.char.body || this.char.face || this.char.anim)
-        ? Sprites.dirFrom(this.moveDir.x || Math.cos(this.aim), this.moveDir.y || Math.sin(this.aim))
-        : null;
+      this.char && this.char.anim
+        ? { dir: 'e', flip: Math.cos(this.aim) < 0 }
+        : this.char && (this.char.body || this.char.face)
+          ? Sprites.dirFrom(Math.cos(this.aim), Math.sin(this.aim))
+          : null;
+    /* blessé : un recul de trois pixels le temps du flash, en plus du blanc */
+    const recul = this.hurtFlash > 0.13 ? -this.facing * 3 : 0;
+    if (recul) ctx.translate(recul, 0);
     Sprites.drawBody(ctx, (this.char && this.char.sprite) || 'player', this.x, this.y, {
       face: this.char && this.char.face,
       body: this.char && this.char.body,
@@ -1961,6 +1989,7 @@ class Player {
       anim: this.char && this.char.anim,
       clip: this.clip,
       clipT: this.clipT,
+      fps: this.clip === 'fire' ? this.fireFps : undefined,
       dir: dv && dv.dir,
       flip: dv ? dv.flip : this.facing < 0,
       walk: this.walkT,

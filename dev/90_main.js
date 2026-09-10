@@ -27,11 +27,14 @@ function render(ctx) {
     ctx.fillRect(-W, -H, 3 * W, 3 * H);
     Room.render(ctx);
     Pickups.render(ctx);
+    /* Ordre de dessin par les PIEDS, joueur compris : ce qui est plus bas à l'écran passe devant. Le joueur
+       était toujours dessiné après tout le monde — un chat devant lui passait derrière. */
     const ents = G.enemies.slice();
     for (const pe of G.pets) if (!pe.hidden()) ents.push(pe);
-    ents.sort((a, b) => a.y - b.y);
+    ents.push(G.player);
+    const pieds = e => (e.feetY ? e.feetY() : e.y + 20);
+    ents.sort((a, b) => pieds(a) - pieds(b));
     for (const e of ents) e.render(ctx);
-    G.player.render(ctx);
     Projectiles.render(ctx);
     Room.renderFx(ctx);
     Particles.render(ctx);

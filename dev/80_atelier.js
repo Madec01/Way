@@ -1002,7 +1002,16 @@ const Atelier = (() => {
     rd.onload = () => {
       entry.sheets = entry.sheets || {};
       entry.sheets[clip] = rd.result;
-      Sprites.addSheet(entry.id + '_' + clip, rd.result, entry.fw || 0).then(inf => {
+      /* la case est devinée pour CHAQUE planche ; une planche d'une autre case que les précédentes est refusée
+         plutôt que découpée de travers en silence */
+      Sprites.addSheet(entry.id + '_' + clip, rd.result, 0).then(inf => {
+        if (inf && entry.fw && inf.fw !== entry.fw) {
+          UI.toast(`${clip} : cases de ${inf.fw} px, les autres planches sont en ${entry.fw} px — planche refusée`, 6);
+          delete entry.sheets[clip];
+          amisSave();
+          refresh();
+          return;
+        }
         if (inf) {
           if (!entry.fw) entry.fw = inf.fw;
           /* taille d'affichage calée sur un multiple entier de la case : ×2 garde des pixels carrés et donne une

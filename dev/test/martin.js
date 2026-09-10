@@ -46,6 +46,7 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
     out.repos = pl2.clip;
     for (let i = 0; i < 5; i++) pl2.animStep(0.016, true, false);
     out.marche = pl2.clip;
+    pl2.tir(0.3); // le geste de tir part d'un tir réel, plus du bouton tenu
     for (let i = 0; i < 5; i++) pl2.animStep(0.016, false, true);
     out.tir = pl2.clip;
     pl2.pickT = 0.5;

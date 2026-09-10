@@ -586,7 +586,7 @@ const Sprites = (() => {
     } // TODO_SPRITE : fallback Canvas
     if (!opts.tint && d.tint) opts = Object.assign({}, opts, { tint: d.tint }); // teinte propre au sprite (variantes de biome)
     if (d.scale) opts = Object.assign({}, opts, { scale: (opts.scale || 1) * d.scale }); // agrandissement propre au sprite (le Vizir, plus haut que les autres boss)
-    const moving = opts.walk != null && opts.walk > 0 && opts.walkFrame == null;
+    const moving = opts.walk != null && opts.walk > 0;
     const set = opts.flash && d.hit ? d.hit : moving ? d.run : d.idle;
     const frame = opts.flash && d.hit ? 0 : Math.floor(((opts.walk != null ? opts.walk : Time.now) * (moving ? 10 : 6)) % d.n);
     const [sx, sy, sw, sh] = set;
@@ -907,10 +907,6 @@ const Sprites = (() => {
      Il n'y a plus de paliers de tenue. Un personnage sans image de l'auteur prend directement sa planche de
      sprites ; celui qui porte un visage garde le corps dessiné, habillé, pour que le visage reste visible.
      Dessin en « pixels » de 3 px sur une grille 16×28, même ancrage que les sprites (pieds). */
-  const BODY_PALETTES = {
-    player: { skin: '#e8b58f', skin2: '#c98d6b', hair: '#5a3a22', eye: '#1a1a2a', cloth: '#7a5a3a', pants: '#3a5a8a', boot: '#3a2a1a' },
-    player2: { skin: '#f0c4a0', skin2: '#d09a78', hair: '#e2c15a', eye: '#1a1a2a', cloth: '#3a6a4a', pants: '#5a3a5a', boot: '#3a2a1a' },
-  };
   /* ---- planches d'animation de l'auteur ----
      Une planche est une grille de cases carrées lues dans l'ordre de lecture. Elle est stockée SANS retouche :
      ni recadrage ni redimensionnement, sinon la grille ne tombe plus juste. La taille de case est devinée à
@@ -1007,8 +1003,11 @@ const Sprites = (() => {
   function sheetCanvas(name, size) {
     const s = sheets[name];
     if (!s) return null;
+    /* multiple entier de la case, ou sa moitié exacte : 48 → 24, 48 ou 96, jamais 34 (des lignes perdues) */
+    const voulu = size || 32;
+    const k = voulu >= s.fw ? Math.max(1, Math.floor(voulu / s.fw)) : 0.5;
     const out = document.createElement('canvas');
-    out.width = out.height = size || 32;
+    out.width = out.height = Math.round(s.fw * k);
     const g = out.getContext('2d');
     g.imageSmoothingEnabled = false;
     g.drawImage(s.c, 0, 0, s.fw, s.fh, 0, 0, out.width, out.height);
@@ -1048,7 +1047,7 @@ const Sprites = (() => {
     walk: { fps: 12 },
     fire: { fps: 14, once: true },
     pick: { fps: 12, once: true },
-    death: { fps: 8, once: true, hold: true },
+    death: { fps: 8, once: true },
     attack: { fps: 14, once: true },
     hurt: { fps: 10, once: true },
   }; // clips propres aux compagnons
@@ -1069,7 +1068,7 @@ const Sprites = (() => {
   /* Démarche pour un sprite figé : un rebond, un léger balancement et une respiration. Ce n'est pas une animation,
      c'est ce qui empêche une image unique de paraître collée au sol en attendant les vraies planches. */
   function gait(walk) {
-    if (!(walk > 0)) return { bob: Math.sin(walk * 0 + Date.now() / 700) * 0.6, tilt: 0, sx: 1, sy: 1 };
+    if (!(walk > 0)) return { bob: Math.sin(Time.now * 1.43) * 0.6, tilt: 0, sx: 1, sy: 1 }; // respiration lente, figée en pause
     const t = walk * 10;
     return {
       bob: Math.abs(Math.sin(t)) * 2.5,
@@ -1078,22 +1077,87 @@ const Sprites = (() => {
       sy: 1 + Math.abs(Math.sin(t)) * 0.05,
     };
   }
-  /* Hauteur de main, en coordonnées écran : c'est là que se dessine l'arme.
-     Chaque façon de dessiner un corps a sa propre ligne de sol et sa propre hauteur — une planche de l'auteur
-     pose ses pieds à `y + 25` et fait 90 px, la planche du jeu s'arrête à `y + 20` et n'en fait que 60. Une
-     hauteur fixe convenait au seul corps du départ et plaçait l'arme à l'entrejambe des personnages de planche. */
+  /* ---------- Un corps, une ligne de sol ----------
+     Tout ce qui se dessine debout — joueur à planche, sprite entier, visage sur corps, compagnon à planche ou
+     à image, planche du jeu — pose ses pieds à `y + SOL`. Un corps se décrit par trois nombres depuis son point
+     d'ancrage (x, y) : `sol` (les pieds sont à y + sol), `hauteur` (du sommet aux pieds), `main` (la main est à
+     y + main). L'ombre, l'arme, la zone de contact et l'ordre de dessin lisent ces trois nombres et rien d'autre.
+     Avant, six façons de dessiner un corps avaient chacune leur ligne de sol : l'arme sortait de l'entrejambe des
+     grands, les petits flottaient, un chat devant le joueur passait derrière. */
+  const SOL = 25;
   const HAND = 0.45; // fraction du corps au-dessus des pieds : la main d'une silhouette debout, arme tendue
-  function handY(key, y, opts = {}) {
-    const clip = opts.anim && opts.clip && opts.anim[opts.clip] ? opts.anim[opts.clip] : null;
-    if (clip && sheets[clip]) {
-      const inf = sheets[clip];
-      return y + 25 - HAND * (opts.size || 64) * (inf.foot != null ? inf.foot : 1);
+  /* Où s'arrête vraiment le dessin d'un sprite du jeu dans sa case (fraction de la hauteur), mesuré une fois :
+     les planches du jeu laissent du vide sous les pieds, et le chiffre change d'un sprite à l'autre. */
+  const defBornes = {};
+  function spriteBornes(key) {
+    if (defBornes[key]) return defBornes[key];
+    const d = SPRITE_DEFS[key];
+    if (!ready || !d || !d.idle) return { haut: 0, bas: 1 };
+    try {
+      const [sx, sy, sw, sh] = d.idle;
+      const c = document.createElement('canvas');
+      c.width = sw;
+      c.height = sh;
+      const g = c.getContext('2d');
+      g.drawImage(sheet, sx, sy, sw, sh, 0, 0, sw, sh);
+      const px = g.getImageData(0, 0, sw, sh).data;
+      let haut = sh,
+        bas = -1;
+      for (let yy = 0; yy < sh; yy++)
+        for (let xx = 0; xx < sw; xx++)
+          if (px[(yy * sw + xx) * 4 + 3] > 10) {
+            haut = Math.min(haut, yy);
+            bas = yy;
+          }
+      defBornes[key] = bas < 0 ? { haut: 0, bas: 1 } : { haut: haut / sh, bas: (bas + 1) / sh }; // le chevalier laisse 8 rangées vides EN HAUT, aucune en bas
+    } catch (e) {
+      defBornes[key] = { haut: 0, bas: 1 };
     }
-    if (pickDir(opts.body, opts.dir || 's')) return y + 25 - HAND * (opts.size || 64);
-    if (pickDir(opts.face, opts.dir || 's')) return y + 25 - HAND * 25 * SCALE; // corps dessiné : 25 rangées de 3 px
+    return defBornes[key];
+  }
+  const spriteFoot = key => spriteBornes(key).bas;
+  /* Décalage à donner à draw() pour qu'un sprite du jeu pose ses pieds à y + SOL : draw() ancre la case à sa
+     manière (voir son `oy`), on corrige de la différence, mesurée. */
+  function spriteDecalage(key, scale) {
     const d = SPRITE_DEFS[key] || SPRITE_DEFS.player;
-    const dh = (d.idle ? d.idle[3] : 28) * SCALE;
-    return y + (d.foot ? dh / 2 - 14 - 8 : dh / 2) - HAND * dh * 0.72; // la case déborde : le dessin n'en remplit que ~72 %
+    const dh = (d.idle ? d.idle[3] : 28) * SCALE * (scale || 1) * (d.scale || 1);
+    const s2 = scale || 1;
+    const hautCase = d.foot ? -(dh / 2 - 14 * s2) * 0.5 - dh / 2 - 8 : -dh / 2; // où draw() met le haut de la case, depuis y
+    const bas = hautCase + dh * spriteFoot(key);
+    return SOL - bas;
+  }
+  function clipDe(opts) {
+    const n = opts.anim && opts.clip && opts.anim[opts.clip] ? opts.anim[opts.clip] : null;
+    return n && sheets[n] ? n : null;
+  }
+  function corps(key, opts = {}) {
+    const sc = opts.scale || 1;
+    const clip = clipDe(opts);
+    if (clip) {
+      const inf = sheets[clip];
+      const h = (opts.size || 64) * sc * (inf.foot != null ? inf.foot : 1);
+      return { sol: SOL * sc, hauteur: h, main: SOL * sc - HAND * h };
+    }
+    const bodyName = pickDir(opts.body, opts.dir || 's');
+    const body = bodyName ? props[bodyName] : null;
+    if (body) {
+      const w = (opts.size || 64) * sc;
+      const k = Math.min(w / body.width, w / body.height);
+      const h = body.height * k;
+      return { sol: SOL * sc, hauteur: h, main: SOL * sc - HAND * h };
+    }
+    if (pickDir(opts.face, opts.dir || 's')) {
+      const h = 25 * SCALE * sc; // visage (8 rangées) + corps de la planche coupé sous le cou (17 rangées), en pixels de 3
+      return { sol: SOL * sc, hauteur: h, main: SOL * sc - HAND * h };
+    }
+    const d = SPRITE_DEFS[key] || SPRITE_DEFS.player;
+    const b = spriteBornes(key);
+    const h = (d.idle ? d.idle[3] : 28) * SCALE * sc * (d.scale || 1) * (b.bas - b.haut); // rangées réellement dessinées
+    return { sol: SOL * sc, hauteur: h, main: SOL * sc - HAND * h };
+  }
+  /* Hauteur de main en coordonnées écran : là où se dessine l'arme. Une lecture du descripteur, rien de plus. */
+  function handY(key, y, opts = {}) {
+    return y + corps(key, opts).main;
   }
   function drawBody(ctx, key, x, y, opts = {}) {
     /* `body` : sprite entier fourni par l'auteur, il remplace le corps dessiné. Il est posé sur la ligne de sol du
@@ -1107,12 +1171,12 @@ const Sprites = (() => {
       const size = (opts.size || 64) * sc;
       const inf = sheets[clip];
       const cf = CLIPS[opts.clip] || CLIPS.idle;
-      let f = Math.floor((opts.clipT || 0) * cf.fps);
+      let f = Math.floor((opts.clipT || 0) * (opts.fps || cf.fps)); // `fps` : cadence imposée (le tir suit l'arme)
       if (cf.once) f = Math.min(f, inf.n - 1);
       else f %= inf.n;
       const g2 = gait(opts.clip === 'walk' ? 0 : opts.walk || 0); // la planche de marche anime déjà : pas de démarche par-dessus
-      const foot = inf.foot != null ? inf.foot : 1; // les pieds du dessin tombent sur la ligne de sol du corps standard
-      drawSheet(ctx, clip, f, x, y + 25 * sc - (foot - 0.5) * size - (opts.clip === 'walk' ? 0 : g2.bob), size, {
+      const foot = inf.foot != null ? inf.foot : 1; // les pieds du dessin tombent sur la ligne de sol
+      drawSheet(ctx, clip, f, x, y + SOL * sc - (foot - 0.5) * size - (opts.clip === 'walk' ? 0 : g2.bob), size, {
         flip: opts.flip,
         alpha: opts.alpha,
         flash: opts.flash,
@@ -1131,7 +1195,7 @@ const Sprites = (() => {
       const g2 = gait(opts.walk || 0);
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.translate(x, y + 25 * sc - dh / 2 - g2.bob);
+      ctx.translate(x, y + SOL * sc - dh / 2 - g2.bob);
       if (opts.flip) ctx.scale(-1, 1);
       ctx.rotate(g2.tilt * (opts.flip ? -1 : 1));
       ctx.scale(g2.sx, g2.sy);
@@ -1148,65 +1212,41 @@ const Sprites = (() => {
     /* `face` : image de l'auteur collée à la place de la tête. Un personnage qui en porte une garde toujours le corps
        dessiné en pixels (jamais la planche de sprites), sinon le visage disparaîtrait dès la tenue complète. */
     const face = pickDir(opts.face, opts.dir || 's') ? props[pickDir(opts.face, opts.dir || 's')] : null;
-    if (!face) return draw(ctx, key, x, y, opts);
+    if (!face) return draw(ctx, key, x, y + spriteDecalage(key, opts.scale), opts); // planche du jeu, pieds à y + SOL
+    if (!ready) return false; // le visage se pose sur le corps de la planche : sans planche chargée, rien à dessiner
     const d = SPRITE_DEFS[key] || SPRITE_DEFS.player;
-    const pal = BODY_PALETTES[key] || BODY_PALETTES.player;
     const u = SCALE * (opts.scale || 1);
-    const left = -8 * u,
-      top = -14 * u - 8; // même ancrage que draw() pour les sprites 16×28 à pied
+    const left = -8 * u;
+    const top = SOL * (opts.scale || 1) - 25 * u; // 25 rangées : 8 de visage, 17 de corps — les pieds à y + SOL
     const moving = opts.walk != null && opts.walk > 0;
     const step = moving ? (Math.floor(opts.walk * 10) % 2 ? 1 : -1) : 0;
     const bob = moving && step > 0 ? 1 : 0;
     ctx.save();
-    ctx.translate(x, y - (d.foot ? 0 : 0));
+    ctx.translate(x, y);
     if (opts.flip) ctx.scale(-1, 1);
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
-    const px = (gx, gy, w, h, col) => {
-      ctx.fillStyle = opts.flash ? '#fff' : col;
-      ctx.fillRect(left + gx * u, top + (gy + bob) * u, w * u, h * u);
-    };
-    /* tête + cheveux + yeux, ou le visage de l'auteur à la place */
-    if (face) {
-      ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      if (opts.flip) ctx.scale(-1, 1);
-      ctx.drawImage(face, left + (opts.flip ? -12 : 4) * u, top + (0 + bob) * u, 8 * u, 8 * u);
-      ctx.restore();
-      if (opts.flash) {
-        ctx.globalAlpha = 0.6;
-        px(4, 0, 8, 8, '#fff');
-        ctx.globalAlpha = 1;
-      }
-    } else {
-      px(5, 2, 6, 6, pal.skin);
-      px(4, 1, 8, 2, pal.hair);
-      px(4, 3, 1, 2, pal.hair);
-      px(11, 3, 1, 2, pal.hair);
-      px(9, 4, 1, 1, pal.eye);
-      px(7, 5, 3, 1, pal.skin2);
+    /* le visage de l'auteur à la place de la tête */
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    if (opts.flip) ctx.scale(-1, 1);
+    ctx.drawImage(face, left + (opts.flip ? -12 : 4) * u, top + bob * u, 8 * u, 8 * u);
+    ctx.restore();
+    if (opts.flash) {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(left + 4 * u, top + bob * u, 8 * u, 8 * u);
+      ctx.globalAlpha = opts.alpha != null ? opts.alpha : 1;
     }
-    px(7, 8, 2, 1, pal.skin); // cou
-    if (ready) {
-      /* le corps de la planche, sans la tête : c'est la tenue la plus soignée, et le visage reste celui de l'auteur */
-      const [sx, sy, sw, sh] = moving ? d.run : d.idle;
-      const frame = Math.floor((opts.walk || Time.now) * (moving ? 10 : 6)) % d.n;
-      const cut = 10;
-      ctx.drawImage(sheet, sx + frame * sw, sy + cut, sw, sh - cut, left, top + cut * u, sw * u, (sh - cut) * u);
-      if (opts.flash) {
-        ctx.fillStyle = 'rgba(255,255,255,.6)';
-        ctx.fillRect(left, top + cut * u, sw * u, (sh - cut) * u);
-      }
-    } else {
-      /* la planche n'est pas encore chargée : torse, bras, jambes dessinés, habillés */
-      px(5, 9, 6, 8, pal.cloth);
-      px(3, 10, 2, 7, pal.skin);
-      px(11, 10, 2, 7, pal.skin);
-      px(5, 17, 2, 6, pal.pants);
-      px(9, 17 + (moving ? step : 0), 2, 6 - (moving ? step : 0), pal.pants);
-      px(5, 23, 3, 2, pal.boot);
-      px(9, 23, 3, 2, pal.boot);
-      px(5, 16, 6, 4, pal.pants);
-      px(5, 9, 6, 1, pal.cloth);
+    /* le corps de la planche, sans la tête (coupé sous le cou) : la tenue la plus soignée, et le visage reste */
+    const [sx, sy, sw, sh] = moving ? d.run : d.idle;
+    const frame = Math.floor((opts.walk || Time.now) * (moving ? 10 : 6)) % d.n;
+    const cut = 10;
+    const hCorps = 17 * u; // les 17 rangées sous le cou, quelle que soit la case du sprite
+    const piedRow = Math.max(cut + 1, Math.round(sh * spriteFoot(key))); // on coupe aussi le vide sous les pieds de la planche
+    ctx.drawImage(sheet, sx + frame * sw, sy + cut, sw, piedRow - cut, left, top + (8 + bob) * u, sw * u, hCorps);
+    if (opts.flash) {
+      ctx.fillStyle = 'rgba(255,255,255,.6)';
+      ctx.fillRect(left, top + (8 + bob) * u, sw * u, hCorps);
     }
     ctx.restore();
     return true;
@@ -1236,31 +1276,6 @@ const Sprites = (() => {
     drawIt();
     return c;
   }
-  /* portrait DOM (canvas) d'un sprite, pour le hub */
-  function portrait(key, scale = 4) {
-    const d = SPRITE_DEFS[key];
-    if (!ready || !d) return null;
-    const [sx, sy, sw, sh] = d.idle;
-    const c = document.createElement('canvas');
-    c.width = sw * scale;
-    c.height = sh * scale;
-    c.className = 'portrait-canvas';
-    const g = c.getContext('2d');
-    g.imageSmoothingEnabled = false;
-    let f = 0;
-    const draw = () => {
-      g.clearRect(0, 0, c.width, c.height);
-      g.drawImage(sheet, sx + f * sw, sy, sw, sh, 0, 0, c.width, c.height);
-      f = (f + 1) % d.n;
-      if (c.isConnected) setTimeout(draw, 180);
-      else
-        setTimeout(() => {
-          if (c.isConnected) draw();
-        }, 500);
-    };
-    draw();
-    return c;
-  }
   return {
     load,
     loadProps,
@@ -1283,12 +1298,13 @@ const Sprites = (() => {
     draw,
     drawBody,
     handY,
+    corps,
+    SOL,
     portraitBody,
     tile,
     drawFloor,
     drawBlock,
     drawChest,
-    portrait,
     setVariant,
     clearVariants,
     variantOf,

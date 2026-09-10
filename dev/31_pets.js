@@ -430,19 +430,20 @@ class Pet {
       this.clipT = 0;
     } else this.clipT += dt;
   }
+  feetY() {
+    return this.y + Sprites.SOL;
+  }
   render(ctx) {
     const s = this.def.size || 48;
     const lift = this.airborne ? 15 : 0;
     const bob = this.moving ? Math.abs(Math.sin(this.t * (this.airborne ? 16 : 11))) * 3.5 : Math.sin(this.t * 3) * 2;
-    /* vue affichée : celle du déplacement réel, l'ouest étant l'est retourné */
-    const dv = Sprites.dirFrom(this.dx, this.dy);
-    const sprite = Sprites.pickDir(this.def.sprite, dv.dir);
     const a = this.def.anim;
     const planche = a && a[this.clip] && Sprites.sheetInfo(a[this.clip]);
-    /* Ligne de sol. Pour une planche c'est celle du joueur (`y + 25`), la même pour tous : proportionnelle à la
-       taille, comme pour un accessoire, un petit animal se retrouvait à flotter plus haut qu'un grand — 11 px
-       d'écart entre un chat de 32 et un chien de 64, posés au même endroit. */
-    const sol = planche ? 25 : s * 0.34;
+    /* vue affichée : celle du déplacement réel. Une planche n'a qu'un profil, retourné vers l'ouest. */
+    const dv = planche ? { dir: 'e', flip: this.dx < 0 } : Sprites.dirFrom(this.dx, this.dy);
+    const sprite = Sprites.pickDir(this.def.sprite, dv.dir);
+    /* Une seule ligne de sol pour tout le monde, planche ou image : celle du joueur (Sprites.SOL). */
+    const sol = Sprites.SOL;
     ctx.save();
     ctx.globalAlpha = this.down ? 0.15 : 0.32;
     ctx.fillStyle = '#05070c';
@@ -465,14 +466,16 @@ class Pet {
       return;
     }
     const opts = { flip: dv.flip, rot: this.down ? 1.4 : 0, alpha: this.down ? 0.5 : 1 };
-    if (!Sprites.drawProp(ctx, sprite, this.x, this.y - bob - lift, s * pop, s * pop, opts)) {
+    /* image fixe : dessinée centrée, donc remontée d'une demi-taille pour que son bas touche la ligne de sol */
+    const cy = this.y + sol - (s * pop) / 2 - bob - lift;
+    if (!Sprites.drawProp(ctx, sprite, this.x, cy, s * pop, s * pop, opts)) {
       ctx.save();
       ctx.globalAlpha = this.down ? 0.5 : 1;
       ctx.fillStyle = this.color;
       ctx.shadowColor = this.color;
       ctx.shadowBlur = 8;
       ctx.beginPath();
-      ctx.arc(this.x, this.y - bob - lift, s * 0.24, 0, TAU);
+      ctx.arc(this.x, this.y + sol - s * 0.24 - bob - lift, s * 0.24, 0, TAU);
       ctx.fill();
       ctx.restore();
     }

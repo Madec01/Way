@@ -61,7 +61,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Taille** : 1 séance.
 **Bilan** : `way_save` v2 avec migration, fusion profonde et copie de secours (SCHEMA.md §8) ; `Rapport` note toute erreur et « Copier le rapport » est dans la pause et l'écran de fin ; l'export demande l'accord pour les photos et un pseudo remplace le prénom. Tests `sauvegarde.js` (11), `rapport.js` (7), `export.js` (3).
 
-## Chantier 3 — Un corps, une ligne de sol
+## Chantier 3 — Un corps, une ligne de sol ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : une seule vérité sur où sont les pieds, la main, l'ombre et la hitbox. C'est le chantier qui empêche les bugs « ça flotte », « l'arme sort de l'entrejambe », « le chat passe derrière » de revenir.
 
@@ -79,6 +79,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
 **Fini quand** : un test `corps.js` dessine chaque personnage et chaque animal, mesure pieds, main et ombre au pixel, et exige la même ligne pour tous ; le clip de tir compte exactement un geste par tir sur les 8 armes.
 **Taille** : 2 séances.
+**Bilan** : fait en une séance (CONTENT.md §38). `Sprites.corps` et `SOL = 25` pour tous ; `corps.js` mesure 23 fois au pixel (trois personnages, sprite entier, visage collé, planche du jeu, quatre animaux, compagnon à image, ordre de dessin, regard, un geste par tir, dash). La cadence du geste est vérifiée sur l'arme de départ, pas encore sur les 8 : à compléter au chantier 4 quand on touchera aux armes.
 
 ## Chantier 4 — Le Normal gagnable
 
