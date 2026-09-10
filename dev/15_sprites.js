@@ -1046,12 +1046,20 @@ const Sprites = (() => {
       ctx.translate(0, -dh / 2);
     }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
-    ctx.drawImage(s.c, cx, cy, s.fw, s.fh, -dw / 2, -dh / 2, dw, dh);
     if (opts.flash) {
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = 'rgba(255,255,255,.75)';
-      ctx.fillRect(-dw / 2, -dh / 2, dw, dh);
-    }
+      /* le blanc ne couvre que les pixels du dessin : canvas hors écran (un source-atop sur le canvas du jeu, dont le sol
+         est opaque, blanchissait toute la case — le joueur touché devenait un rectangle) */
+      const fx = flashCanvas(dw, dh);
+      const g = fx.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.globalCompositeOperation = 'source-over';
+      g.clearRect(0, 0, dw, dh);
+      g.drawImage(s.c, cx, cy, s.fw, s.fh, 0, 0, dw, dh);
+      g.globalCompositeOperation = 'source-atop';
+      g.fillStyle = `rgba(255,255,255,${opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9})`;
+      g.fillRect(0, 0, dw, dh);
+      ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2, dw, dh);
+    } else ctx.drawImage(s.c, cx, cy, s.fw, s.fh, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
     return true;
   }

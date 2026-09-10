@@ -1037,6 +1037,11 @@ const UI = (() => {
      milieu du terrain. Sonde de mise en page : quand G.debug.hudProbe est vrai, chaque panneau et chaque texte
      sont notés — interface.js vérifie qu'un texte tient dans un panneau et que tout tient dans la vue. */
   const hudProbe = { rects: [], texts: [], flags: {} };
+  /* flash blanc plein écran d'une image (gros coup reçu, phase de boss) : { a, until, life } */
+  let flashScreenState = null;
+  function flashScreen(a, ms) {
+    flashScreenState = { a, until: Time.now + ms / 1000, life: ms / 1000 };
+  }
   const HUD_FONT = '"Segoe UI", system-ui, sans-serif';
   function panel(ctx, x, y, w, h, r = 8, fill = 'rgba(8,10,18,.75)') {
     ctx.fillStyle = fill;
@@ -1073,16 +1078,32 @@ const UI = (() => {
     }
     ctx.save();
     ctx.textBaseline = 'middle';
-    /* PV bas : le danger se lit en périphérie, sans quitter le personnage des yeux */
+    /* PV bas : le danger se lit en périphérie, sans quitter le personnage des yeux — et la vignette bat avec la musique */
     const hpk = clamp(pl.hp / pl.stats.maxHp, 0, 1);
+    const vignette = (a, r, g, b) => {
+      const gr = ctx.createRadialGradient(CX, T + V.h / 2, Math.min(V.w, V.h) * 0.35, CX, T + V.h / 2, Math.max(V.w, V.h) * 0.72);
+      gr.addColorStop(0, `rgba(${r},${g},${b},0)`);
+      gr.addColorStop(1, `rgba(${r},${g},${b},${a.toFixed(3)})`);
+      ctx.fillStyle = gr;
+      ctx.fillRect(L, T, V.w, V.h);
+    };
     if (hpk < 0.3 && pl.hp > 0) {
       const k = 1 - hpk / 0.3;
-      const g = ctx.createRadialGradient(CX, T + V.h / 2, Math.min(V.w, V.h) * 0.35, CX, T + V.h / 2, Math.max(V.w, V.h) * 0.72);
-      g.addColorStop(0, 'rgba(255,40,60,0)');
-      g.addColorStop(1, `rgba(255,40,60,${(0.08 + 0.2 * k).toFixed(3)})`);
-      ctx.fillStyle = g;
-      ctx.fillRect(L, T, V.w, V.h);
+      vignette(0.08 + 0.2 * k + 0.06 * (1 - Beat.phase()), 255, 40, 60);
       hudProbe.flags.vignette = true;
+    }
+    /* coup reçu : vignette corail qui s'efface en 350 ms */
+    if (pl.hurtVig > 0) {
+      vignette(0.45 * (pl.hurtVig / 0.35), 255, 60, 90);
+      hudProbe.flags.hurtVig = +(pl.hurtVig / 0.35).toFixed(2);
+    }
+    /* flash blanc d'une image */
+    if (flashScreenState && Time.now < flashScreenState.until) {
+      ctx.globalAlpha = flashScreenState.a * ((flashScreenState.until - Time.now) / flashScreenState.life);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(L, T, V.w, V.h);
+      ctx.globalAlpha = 1;
+      hudProbe.flags.flash = true;
     }
     /* PV + XP + niveau, dans un seul panneau */
     const bx = L + 24,
@@ -1366,6 +1387,7 @@ const UI = (() => {
     renderHud,
     renderToasts,
     hudProbe,
+    flashScreen,
     renderFade,
     renderBackdrop,
     state,

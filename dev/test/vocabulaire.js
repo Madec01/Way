@@ -136,7 +136,11 @@ test(async ({ page: p, ok, entrer, run, sansPause }) => {
         .map((l, i) => [f + ':' + (i + 1), l])
         .filter(([, l]) => /\b(toast|banner|Floaters\.add)\(/.test(l) && !/^\s*(\/\/|\*|\/\*)/.test(l.trim()))
     );
-  const litteraux = l => (l.match(/'([^'\\]|\\.)*'|"([^"\\]|\\.)*"|`([^`\\]|\\.)*`/g) || []).join(' ');
+  /* les chaînes littérales de la ligne, sans les identifiants de genre d'un chiffre flottant ('dmg', 'crit'…), qui ne s'affichent pas */
+  const litteraux = l =>
+    (l.match(/'([^'\\]|\\.)*'|"([^"\\]|\\.)*"|`([^`\\]|\\.)*`/g) || [])
+      .filter(t => !/^['"](dmg|crit|taken|heal|event)['"]$/.test(t))
+      .join(' ');
   const f4 = src.flatMap(([ou, l]) => fautes(litteraux(l), ou));
   ok(`les ${src.length} messages du code sont propres`, f4.length === 0, f4.slice(0, 8).join('\n      ') || 'aucun mot banni');
 

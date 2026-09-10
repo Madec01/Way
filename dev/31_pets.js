@@ -128,7 +128,7 @@ class Pet {
     if (!this.maxHp || this.down) return;
     this.lastHurt = Time.now;
     this.hp -= d;
-    Floaters.add(this.x, this.y - 20, Math.round(d), '#ff9a9a', 12);
+    Floaters.add(this.x, this.y - 20, Math.round(d), null, null, 'dmg');
     if (this.hp <= 0) {
       this.hp = 0;
       this.downT = this.def.revive || 6;
@@ -428,7 +428,7 @@ class Pet {
           const h = this.def.heal || 4;
           pl.heal(h);
           this.act = 1;
-          Floaters.add(pl.x, pl.y - 34, '+' + h, '#7fff9a', 13);
+          Floaters.add(pl.x, pl.y - 34, '+' + h, null, null, 'heal');
           Particles.spawn(this.x, this.y - 8, { count: 4, color: '#7fff9a', glow: true, speedMax: 70, life: 0.5, size: 2 });
         }
         break;

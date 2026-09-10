@@ -62,27 +62,82 @@ const Particles = {
 /* Textes flottants (dégâts, +XP) */
 const Floaters = {
   list: [],
-  add(x, y, text, color = '#fff', size = 14) {
-    this.list.push({ x, y, text, color, size, t: 0, life: 0.8, vy: -40 });
-    if (this.list.length > 80) this.list.shift();
+  /* Un chiffre naît, retombe et s'efface — et son genre dit tout : un dégât normal est petit et blanc, un critique
+     presque deux fois plus grand et doré, un dégât subi est le plus gros texte du jeu, part vers le bas et remonte,
+     un soin est vert, un événement (« SONNÉ », « TEMPO ×4 ») garde sa couleur. Silkscreen à contour noir : lisible
+     sur n'importe quel sol. Deux chiffres du même genre trop proches fusionnent au lieu de s'empiler. */
+  KINDS: {
+    dmg: { size: 18, color: '#f4f7ff', vy: -90, vx: 40, g: 180, life: 0.7 },
+    crit: { size: 30, color: '#ffd166', vy: -130, vx: 40, g: 180, life: 0.85 },
+    taken: { size: 34, color: '#ff5e7a', vy: 40, vx: 0, g: -160, life: 0.9 },
+    heal: { size: 20, color: '#7fff9a', vy: -70, vx: 20, g: 0, life: 0.7 },
+    event: { size: 22, color: '#fff', vy: -30, vx: 0, g: 0, life: 1.1 },
+  },
+  add(x, y, text, color, size, kind) {
+    text = String(text);
+    if (!kind) kind = /^[+-]?\d+$/.test(text) ? (color === '#ff5e7a' ? 'taken' : text[0] === '+' ? 'heal' : 'dmg') : 'event';
+    const K = this.KINDS[kind] || this.KINDS.event;
+    const x0 = x,
+      y0 = y; // le point d'origine, avant dispersion : c'est lui qui sert à la fusion
+    if (kind === 'dmg' || kind === 'crit') {
+      /* fusion : un chiffre du même genre à moins de 14 px et de moins de 120 ms s'additionne et grossit */
+      const f = this.list.find(o => o.kind === kind && o.t < 0.12 && Math.abs(o.x0 - x) < 14 && Math.abs(o.y0 - y) < 14);
+      if (f) {
+        f.text = String(+f.text + +text);
+        f.t = 0;
+        f.size = Math.min(f.size + 2, 40);
+        return f;
+      }
+      x += VFX_RNG.range(-14, 14);
+      y += VFX_RNG.range(-10, 4);
+    }
+    const f = {
+      kind,
+      x,
+      y,
+      x0,
+      y0,
+      text,
+      color: kind === 'event' ? color || K.color : K.color,
+      size: kind === 'event' ? Math.round((size || K.size / 1.15) * 1.15) : K.size,
+      t: 0,
+      life: K.life,
+      vx: VFX_RNG.range(-K.vx, K.vx),
+      vy: K.vy,
+      g: K.g,
+    };
+    this.list.push(f);
+    if (this.list.length > 40) this.list.shift();
+    return f;
   },
   update(dt) {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const f = this.list[i];
       f.t += dt;
+      f.vy += f.g * dt;
+      f.x += f.vx * dt;
       f.y += f.vy * dt;
       if (f.t > f.life) this.list.splice(i, 1);
     }
   },
   render(ctx) {
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
     for (const f of this.list) {
-      ctx.globalAlpha = 1 - f.t / f.life;
-      ctx.font = `bold ${Math.round(f.size * 1.15)}px ${FONT_PIXEL}`; // Silkscreen est plus basse que la police système : +15 %
-      ctx.fillStyle = '#000a';
-      ctx.fillText(f.text, f.x + 1, f.y + 1);
+      const k = f.t / f.life;
+      ctx.globalAlpha = k < 0.65 ? 1 : 1 - (k - 0.65) / 0.35; // plein jusqu'à 65 % de la durée, puis il s'efface
+      const pop = Ease.outBack(Math.min(1, f.t / 0.12)); // il naît d'un sursaut
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.scale(pop, pop);
+      ctx.font = `bold ${f.size}px ${FONT_PIXEL}`;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#0b0d14';
+      ctx.strokeText(f.text, 0, 0);
       ctx.fillStyle = f.color;
-      ctx.fillText(f.text, f.x, f.y);
+      ctx.fillText(f.text, 0, 0);
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
   },
@@ -884,7 +939,7 @@ const Combat = {
         glow: true,
       });
       G.room.slashes.push({ x: e.x, y: hy, a, range: 20, arc: 2.6, t: 0, life: 0.09, color: '#ffffff', spark: true });
-      Floaters.add(e.x + VFX_RNG.range(-8, 8), hy - 10, String(d), info.crit ? '#ffd166' : '#fff', info.crit ? 16 : 12);
+      Floaters.add(e.x, hy - 10, d, null, null, info.crit ? 'crit' : 'dmg');
       if (!info.silent) {
         Feel.stop(info.crit ? 70 : 30);
         Feel.shake(info.crit ? 3.5 : 1.6, a, 120);
@@ -1051,10 +1106,15 @@ const Combat = {
     G.run.stats.damageTaken += dmg;
     G.run.stats.hitsTaken++;
     AudioEngine.playerHurt({ intensity: clamp(dmg / 30, 0.3, 1) });
-    Floaters.add(pl.x, pl.y - 30, '-' + dmg, '#ff5e7a', 16);
+    Floaters.add(pl.x, pl.y - 30, '-' + dmg, null, null, 'taken');
     Particles.spawn(pl.x, pl.y, { count: 8, color: '#ff5e7a', size: 3 });
-    Feel.shake(4, angleTo(info.x != null ? info.x : pl.x - pl.facing, info.y != null ? info.y : pl.y, pl.x, pl.y), 200);
+    /* le coup se sent sans quitter le personnage des yeux : recul en courbe à l'opposé de la source, vignette
+       corail sur les bords, ralenti bref, secousse dirigée, et un flash d'une image sur un gros coup */
+    pl.hurtA = angleTo(info.x != null ? info.x : pl.x - pl.facing, info.y != null ? info.y : pl.y, pl.x, pl.y);
+    pl.hurtVig = 0.35;
+    Feel.shake(4, pl.hurtA, 200);
     Feel.slow(0.35, 120);
+    if (dmg > pl.stats.maxHp * 0.15) UI.flashScreen(0.5, 60);
     for (const h of pl.hooks.onDamaged) {
       if (h.effect === 'shockwave') Combat.playerShockwave(h);
       else if (h.effect === 'time_slow_on_damage') {
@@ -1112,7 +1172,6 @@ const Combat = {
       const xp = Math.round(p.value * mul * pl.stats.xpGain * G.debug.xpMul);
       Run.addXp(xp);
       G.room.fragments++;
-      Floaters.add(p.x, p.y - 16, '+' + xp + ' XP', '#c8ff5a', 16);
       AudioEngine.pickupFragment({});
     } else if (p.kind === 'heart') {
       pl.heal(p.value);
@@ -1570,6 +1629,8 @@ class Player {
     this.shieldUntil = 0;
     this.invulnUntil = 0;
     this.hurtFlash = 0;
+    this.hurtVig = 0; // vignette de dégât (0,35 s)
+    this.hurtA = 0; // direction du recul : à l'opposé de la source du coup
     this.kickT = 1; // recul de l'arme : actif tant que kickT < 0,09
     this.kickA = 0;
     this.kickMag = 0;
@@ -1682,7 +1743,7 @@ class Player {
     if (this.dead) return;
     const before = this.hp;
     this.hp = Math.min(this.stats.maxHp, this.hp + n);
-    if (!silent && this.hp - before >= 1) Floaters.add(this.x, this.y - 30, '+' + Math.round(this.hp - before), '#7fff9a');
+    if (!silent && this.hp - before >= 1) Floaters.add(this.x, this.y - 30, '+' + Math.round(this.hp - before), null, null, 'heal');
   }
   die() {
     const sc = Progression.hasPassive(this.hooks, 'second_chance') || Meta.resurrectAvailable();
@@ -1831,6 +1892,7 @@ class Player {
       } else if (this.overdrive.selfDps) this.hp = Math.max(1, this.hp - this.overdrive.selfDps * dt);
     }
     if (this.hurtFlash > 0) this.hurtFlash -= dt;
+    if (this.hurtVig > 0) this.hurtVig -= dt;
     if (this.kickT < 0.09) this.kickT += dt;
     if (this.buffs.length && this.buffs.some(b => Time.now > b.until)) {
       this.buffs = this.buffs.filter(b => Time.now <= b.until);
@@ -1955,9 +2017,10 @@ class Player {
        Rien d'autre ne se dessine sur un mort : ni arme en main, ni aura, ni clignotement. */
     const chute = this.dead && !!(this.char && this.char.anim && this.char.anim.death);
     if (this.dead && !chute) return;
-    const blink = !this.dead && Time.now < this.invulnUntil && Math.floor(Time.now * 20) % 2 === 0 && !this.dashing;
+    /* invulnérable : clignotement à 6 Hz (10 Hz se lisait comme un scintillement d'erreur) */
+    const blink = !this.dead && Time.now < this.invulnUntil && Math.floor(Time.now * 12) % 2 === 0 && !this.dashing;
     ctx.save();
-    if (blink) ctx.globalAlpha = 0.45;
+    if (blink) ctx.globalAlpha = 0.35;
     /* ombre */
     ctx.fillStyle = 'rgba(0,0,0,.35)';
     ctx.beginPath();
@@ -2039,9 +2102,11 @@ class Player {
         : this.char && (this.char.body || this.char.face)
           ? Sprites.dirFrom(Math.cos(this.aim), Math.sin(this.aim))
           : null;
-    /* blessé : un recul de trois pixels le temps du flash, en plus du blanc */
-    const recul = this.hurtFlash > 0.13 ? -this.facing * 3 : 0;
-    if (recul) ctx.translate(recul, 0);
+    /* blessé : un recul de 7 px en courbe, à l'opposé de la source du coup, pendant 140 ms — plus un créneau de 3 px */
+    if (this.hurtFlash > 0.11) {
+      const kk = 7 * (1 - Ease.outCubic(Math.min(1, (0.25 - this.hurtFlash) / 0.14)));
+      ctx.translate(Math.cos(this.hurtA) * kk, Math.sin(this.hurtA) * kk);
+    }
     if (this.kickT < 0.09) {
       const kk = this.kickMag * (1 - Ease.outCubic(this.kickT / 0.09));
       ctx.translate(-Math.cos(this.kickA) * kk, -Math.sin(this.kickA) * kk);

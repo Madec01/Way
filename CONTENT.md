@@ -1313,3 +1313,21 @@ Premier chantier du plan du ressenti (`PLAN-RESSENTI.md`, direction « La Voie b
 
 Test : `ressenti.js` — 13 mesures : Ease et Feel ; 30 / 70 / 60 ms ; le plafond de 250 ms ; le ralenti de compétence intact ; étincelles au corps (aucune aux pieds), dans le sens du coup ; étincelle de contact et écrasement ; secousse dirigée et tournée, même amplitude à zoom 1 et 1,5 ; plus de `G.shake =` dans les sources ; le recul 2 / 3 / 6 ; plus de Segoe UI dans le monde ; la planche de marche de Martin dessinée avec un scale non uniforme.
 
+## 45. Chantier F-2 — les chiffres et le coup reçu (ressenti)
+
+**Les chiffres flottants** (`Floaters`, 30_entities.js) ont un genre, et le genre dit tout :
+
+| Genre | Taille | Couleur | Trajectoire | Durée |
+|---|---|---|---|---|
+| `dmg` (dégât normal) | 18 px | blanc `#f4f7ff` | monte (`vy −90`, `vx ±40`), retombe (gravité +180) | 0,7 s |
+| `crit` (critique) | **30 px** | doré `#ffd166` | monte plus haut (`vy −130`) | 0,85 s |
+| `taken` (dégât subi) | **34 px** — le plus gros texte du jeu | corail `#ff5e7a` | **part vers le bas** (`vy +40`) puis remonte (gravité −160) | 0,9 s |
+| `heal` (soin) | 20 px | vert `#7fff9a` | monte doucement | 0,7 s |
+| `event` (« SONNÉ », « TEMPO ×4 », le nom d'une greffe…) | la taille donnée × 1,15 | la couleur donnée | montée lente | 1,1 s |
+
+Silkscreen, **contour noir de 4 px** (un `strokeText` avant le `fillText` — une ombre d'1 px était illisible sur un sol clair), **sursaut de naissance** (`Ease.outBack` sur 120 ms : le chiffre sort de l'ennemi, il n'apparaît pas dessus), plein jusqu'à 65 % de sa durée puis effacé, dispersion `±14` en X et `−10 / +4` en Y, naissance **au corps** (`Combat.bodyH`). **Fusion** : un `dmg` ou `crit` à moins de 14 px et 120 ms d'un autre s'y additionne et le grossit de 2 px (plafond 40) — trois « 52 » empilés deviennent un « 156 ». Plafond 40 chiffres. Un appel sans genre devine le sien (nombre corail = `taken`, « + » = `heal`, mot = `event`). Le « +n XP » par orbe est sorti du canal (la barre d'XP le dit) ; « TEMPO ×n » reste (seul compteur de série, décision I-1) et « +n ◈ » aussi (seul retour d'une bourse depuis que le HUD ne montre plus les crédits).
+
+**Le coup reçu** (`Combat.hitPlayer`, `Player.render`, `UI.renderHud`) : recul de **7 px en courbe** (`outCubic`, 140 ms) **à l'opposé de la source** du coup (`pl.hurtA`) au lieu d'un créneau de 3 px ; **vignette corail** sur les bords (`pl.hurtVig`, 0,45 → 0 en 350 ms) ; **ralenti** à 35 % pendant 120 ms (`Feel.slow`, jamais par-dessus un ralenti plus fort) ; secousse dirigée depuis la source ; **flash blanc d'une image** (`UI.flashScreen(0.5, 60)`) quand le coup dépasse 15 % des PV max ; clignotement d'invulnérabilité à **6 Hz** (alpha 0,35) au lieu de 10 Hz. La vignette de PV bas (I-1) **bat avec la musique** : `+0,06 × (1 − Beat.phase())`.
+
+Test : `coup.js` — 9 mesures : les cinq genres ; police, contour, sursaut ; fusion (12 + 30 → 42) ; naissance au corps et dispersion ; plus de « +n XP » ; petit coup (vignette, recul −7 px, ralenti 120 ms, pas de flash) ; gros coup (flash, recul dans l'autre sens) ; 6 Hz et vignette sur `Beat`.
+
