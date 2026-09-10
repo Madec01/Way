@@ -191,6 +191,15 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
   );
 
   /* --- la porte s'ouvre sur le temps fort --- */
+  /* l'horloge musicale se recale quand la piste démarre (elle peut sauter, même en arrière) : on attend qu'elle file
+     droit pendant une demi-seconde avant de prendre rendez-vous avec le temps fort */
+  await p.evaluate(async () => {
+    for (let i = 0; i < 40; i++) {
+      const a = Beat.t;
+      await new Promise(r => setTimeout(r, 500));
+      if (Math.abs(Beat.t - a - 0.5) < 0.2) return;
+    }
+  });
   await p.evaluate(() => {
     G.enemies = [];
     for (const w of G.room.waves) w.done = true;
@@ -206,13 +215,22 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
     attente: +(G.room.doorAt - Beat.t).toFixed(3),
   }));
   const porte = await p.evaluate(async () => {
-    for (let i = 0; i < 80 && !G.room.doorOpen; i++) await new Promise(r => setTimeout(r, 50));
+    for (let i = 0; i < 200 && !G.room.doorOpen; i++) await new Promise(r => setTimeout(r, 50)); // jusqu'à 10 s : une mesure lente sous la charge de la batterie
     const r = G.room;
     return {
       open: r.doorOpen,
       at: r.doorOpenedAt,
       ms: r.doorOpenedAt ? Math.round(r.doorOpenedAt.phase * Beat.beatLen() * 1000) : null,
       onde: r.blasts.filter(b => b.r === 60 && b.color === PAL.life).length,
+      diag: {
+        pending: r.pendingDoor,
+        state: r.state,
+        attente: r.doorAt != null ? +(r.doorAt - Beat.t).toFixed(2) : null,
+        salle: r.index,
+        paused: G.paused,
+        beatT: +Beat.t.toFixed(2),
+        etat: G.state,
+      },
     };
   });
   ok(
@@ -223,6 +241,6 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
   ok(
     'la porte s’ouvre sur le temps fort, à moins de 30 ms, avec une onde verte de 60 px',
     porte.open && porte.at && porte.at.bib === 0 && porte.ms < 30 && porte.onde === 1,
-    `temps ${porte.at && porte.at.bib}, ${porte.ms} ms après le temps fort, ${porte.onde} onde`
+    `temps ${porte.at && porte.at.bib}, ${porte.ms} ms après le temps fort, ${porte.onde} onde · ${JSON.stringify(porte.diag)}`
   );
 });

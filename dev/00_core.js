@@ -257,6 +257,7 @@ const PAL = {
 };
 const FONT_PIXEL = '"Silkscreen", "Segoe UI", system-ui, sans-serif';
 const FONT_TEXT = '"VT323", "Segoe UI", monospace';
+const FONT_TITLE = '"Pixelify Sans", "Segoe UI", sans-serif'; // les titres du HUD (nom du boss, bandeaux)
 /* chantier F-4 : les traces qui restent et l'ouverture du coffre */
 const DECAL_MAX = 60;
 const CHEST_OPEN_MS = 300;

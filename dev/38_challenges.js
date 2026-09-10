@@ -902,20 +902,27 @@ const Challenge = (() => {
     const V = Engine.view;
     const w = 340,
       x = -V.ox + V.w / 2 - w / 2,
-      y = -V.oy + 52;
-    ctx.fillStyle = 'rgba(8,10,18,.75)';
-    UI.roundRect(ctx, x, y, w, 30, 8);
-    ctx.fill();
+      y = -V.oy + (room.tempo ? 84 : 44); // sous la ligne « Salle n/9 », et sous le métronome quand il y en a un
+    ctx.globalAlpha = UI.hudAlpha();
+    UI.panel(ctx, x, y, w, 30, 8, 'rgba(8,10,18,.75)');
     ctx.strokeStyle = c.def.color;
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.fillStyle = c.def.color;
-    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(
+    UI.label(
+      ctx,
       `${c.def.name.toUpperCase()}${c.done ? ' — ' + (room.challengeOk ? 'réussi' : 'terminé') : ' · ' + c.hud}`,
       x + w / 2,
-      y + 15
+      y + 13,
+      {
+        kind: 'title',
+        weight: 'bold',
+        size: 12,
+        align: 'center',
+        color: c.def.color,
+      }
     );
+    /* l'objectif qui se remplit : une jauge de 4 px sous le texte, quand le défi en a une */
+    if (typeof c.gauge === 'number' && !c.done) UI.gauge(ctx, x + 12, y + 24, w - 24, 4, c.gauge, c.def.color, { bg: 'rgba(18,32,58,.8)' });
     ctx.restore();
   }
   function dangerAt(x, y, room) {

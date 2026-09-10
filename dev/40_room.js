@@ -352,7 +352,12 @@ const Room = {
       }
     }
     /* porte : elle s'ouvre pile sur le temps fort, avec une onde verte */
-    if (r.pendingDoor && Beat.t >= r.doorAt) Room.openDoor();
+    if (r.pendingDoor) {
+      /* l'horloge musicale peut se recaler sur la piste (elle saute en arrière quand la musique démarre) : un rendez-vous
+         qui s'est retrouvé à plus d'une mesure est repris sur la mesure suivante, jamais perdu */
+      if (Beat.t < r.doorAt - 4 * Beat.beatLen() - 0.5) r.doorAt = Beat.t + Beat.timeToNextBar();
+      if (Beat.t >= r.doorAt) Room.openDoor();
+    }
     if (r.doorOpen && !pl.dead) {
       const dx = ROOM_X + ROOM_W,
         dy = ROOM_Y + ROOM_H / 2;
@@ -883,6 +888,7 @@ const Run = {
     while (r.xp >= r.xpNext) {
       r.xp -= r.xpNext;
       r.level++;
+      r.levelPopT = Time.now; // la pastille de niveau grossit et un anneau se dilate (HUD, I-5)
       r.xpNext = Progression.xpForLevel(r.level);
       r.pendingLevelUps++;
       r.stats.levelReached = r.level;

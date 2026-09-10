@@ -476,7 +476,7 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 16:40';</script>
+<script>window.WAY_BUILD = '2026-09-10 18:20';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -738,6 +738,7 @@ const PAL = {
 };
 const FONT_PIXEL = '"Silkscreen", "Segoe UI", system-ui, sans-serif';
 const FONT_TEXT = '"VT323", "Segoe UI", monospace';
+const FONT_TITLE = '"Pixelify Sans", "Segoe UI", sans-serif'; // les titres du HUD (nom du boss, bandeaux)
 /* chantier F-4 : les traces qui restent et l'ouverture du coffre */
 const DECAL_MAX = 60;
 const CHEST_OPEN_MS = 300;
@@ -11474,6 +11475,7 @@ const Combat = {
     Combat.stain(e.x, e.y + e.r * 0.6, e.color, e.isBoss ? 2.2 : clamp(e.r / 14, 0.7, 1.6));
     G.run.stats.kills++;
     G.room.kills++;
+    G.room.lastKillT = G.room.time; // le HUD s'estompe après 4 s de calme (temps de salle, comme lastDamageT)
     G.room.combo++;
     G.room.comboUntil = Time.now + 2.5;
     G.room.bestCombo = Math.max(G.room.bestCombo, G.room.combo);
@@ -13432,9 +13434,8 @@ const Pets = {
     const m = PET_MODES.call;
     const pret = p.away && p.cdT <= 0;
     ctx.save();
-    ctx.fillStyle = 'rgba(8,10,18,.72)';
-    UI.roundRect(ctx, x, y, 420, 30, 8);
-    ctx.fill();
+    ctx.globalAlpha = UI.hudAlpha();
+    UI.panel(ctx, x, y, 420, 30, 8, 'rgba(8,10,18,.72)');
     if (!Pets.icon(ctx, p, x + 22, y + 15, 24, p.away ? 0.35 : 1)) {
       ctx.globalAlpha = p.away ? 0.35 : 1;
       ctx.fillStyle = p.color;
@@ -13443,22 +13444,21 @@ const Pets = {
       ctx.fill();
       ctx.globalAlpha = 1;
     }
-    ctx.fillStyle = pret ? '#7fff9a' : '#e8ecf7';
-    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(Pets.title(p.def), x + 40, y + 15);
-    ctx.fillStyle = pret ? '#7fff9a' : '#9aa4c4';
-    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(
+    ctx.textBaseline = 'middle';
+    UI.label(ctx, Pets.title(p.def), x + 40, y + 15, { size: 12, color: pret ? '#7fff9a' : '#e8ecf7' });
+    /* la jauge d'appel : 4 px sous le badge, le repos qui s'écoule ou la présence qui reste */
+    const jk = p.away ? (p.cdT <= 0 ? 1 : 1 - Math.min(1, p.cdT / (m.cd || 25))) : Math.min(1, p.callT / (m.dur || 12));
+    UI.gauge(ctx, x + 40, y + 24, 120, 4, jk, pret ? '#7fff9a' : p.away ? '#4fb3ff' : '#ffd166');
+    UI.label(
+      ctx,
       pret ? 'C : appeler' : p.away ? 'repos ' + Math.ceil(p.cdT) + ' s' : 'présent ' + Math.ceil(p.callT) + ' s',
       x + 175,
-      y + 15
+      y + 15,
+      {
+        size: 12,
+        color: pret ? '#7fff9a' : '#9aa4c4',
+      }
     );
-    const k = p.away ? (p.cdT > 0 ? 1 - p.cdT / m.cd : 1) : p.callT / m.dur;
-    ctx.fillStyle = '#12203a';
-    ctx.fillRect(x + 340, y + 12, 70, 6);
-    ctx.fillStyle = pret ? '#7fff9a' : p.away ? '#6ee7ff' : '#ffd166';
-    ctx.fillRect(x + 340, y + 12, 70 * clamp(k, 0, 1), 6);
     ctx.restore();
   },
   /* badge du compagnon, au-dessus de la ligne arme/compétence */
@@ -13471,29 +13471,19 @@ const Pets = {
     const x = -V.ox + 18,
       y = -V.oy + V.h - 98; // même bord gauche et même largeur que le cartouche d'arme, juste au-dessus
     ctx.save();
-    ctx.fillStyle = 'rgba(8,10,18,.72)';
-    UI.roundRect(ctx, x, y, 420, 30, 8);
-    ctx.fill();
+    ctx.globalAlpha = UI.hudAlpha();
+    UI.panel(ctx, x, y, 420, 30, 8, 'rgba(8,10,18,.72)');
     if (!Pets.icon(ctx, p, x + 22, y + 15, 24, p.down ? 0.4 : 1)) {
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(x + 22, y + 15, 7, 0, TAU);
       ctx.fill();
     }
-    ctx.fillStyle = p.down ? '#8a93ad' : '#e8ecf7';
-    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(nom, x + 40, y + 15);
-    ctx.fillStyle = '#9aa4c4';
-    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(p.down ? 'sonné — ' + Math.ceil(p.downT) + ' s' : p.def.tag || '', x + 175, y + 15);
+    ctx.textBaseline = 'middle';
+    UI.label(ctx, nom, x + 40, y + 15, { size: 12, color: p.down ? '#8a93ad' : '#e8ecf7' });
+    UI.label(ctx, p.down ? 'sonné — ' + Math.ceil(p.downT) + ' s' : p.def.tag || '', x + 175, y + 15, { size: 12, color: '#9aa4c4' });
     /* la vie d'un compagnon qui en a : dans le badge, plus seulement au-dessus de sa tête */
-    if (p.maxHp) {
-      ctx.fillStyle = '#12203a';
-      ctx.fillRect(x + 340, y + 12, 70, 6);
-      ctx.fillStyle = p.down ? '#8a93ad' : '#7fff9a';
-      ctx.fillRect(x + 340, y + 12, 70 * clamp(p.hp / p.maxHp, 0, 1), 6);
-    }
+    if (p.maxHp) UI.gauge(ctx, x + 340, y + 12, 70, 6, p.hp / p.maxHp, p.down ? '#8a93ad' : '#7fff9a', { segments: 4 });
     ctx.restore();
   },
 };
@@ -14015,22 +14005,54 @@ class Enemy {
                 ? this.aimA
                 : null;
       if (a != null) {
+        /* la zone d'impact au sol (I-5) : une bande d'alerte de la largeur du corps là où la charge ou le tir va
+           passer, en plus de la ligne d'intention — on voit où ne pas être, pas seulement vers où il regarde */
+        const len = this.state === 'aim' ? 220 : 160;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(a);
+        ctx.globalAlpha = alpha * (0.1 + 0.12 * k);
+        ctx.fillStyle = PAL.alert;
+        ctx.shadowBlur = 0;
+        if (this.state === 'aim') ctx.fillRect(0, -3, len, 6);
+        else {
+          ctx.beginPath();
+          ctx.moveTo(0, -this.r);
+          ctx.lineTo(len, -this.r * 1.3);
+          ctx.lineTo(len, this.r * 1.3);
+          ctx.lineTo(0, this.r);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
         ctx.globalAlpha = alpha * 0.5;
         ctx.setLineDash([8, 8]);
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
-        ctx.lineTo(this.x + Math.cos(a) * 160, this.y + Math.sin(a) * 160);
+        ctx.lineTo(this.x + Math.cos(a) * len, this.y + Math.sin(a) * len);
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.globalAlpha = alpha;
+        this.teleZone = this.state === 'aim' ? 'line' : 'cone';
+      } else if (this.state === 'summon') {
+        /* l'invocation : le disque où les renforts vont paraître */
+        ctx.globalAlpha = alpha * (0.08 + 0.1 * k);
+        ctx.fillStyle = PAL.alert;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, (this.behavior && this.behavior.spawnRadius) || 70, 0, TAU);
+        ctx.fill();
+        ctx.globalAlpha = alpha;
+        this.teleZone = 'disc';
       }
       if (this.archetype === 'kamikaze') {
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = this.color;
+        /* le rayon de l'explosion, dans la couleur d'alerte : c'est « ça va frapper », pas la couleur de l'ennemi */
+        ctx.globalAlpha = alpha * (0.14 + 0.1 * k);
+        ctx.fillStyle = PAL.alert;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.behavior.radius || 80, 0, TAU);
         ctx.fill();
         ctx.globalAlpha = alpha;
+        this.teleZone = 'disc';
       }
       ctx.shadowBlur = 0;
     }
@@ -14193,6 +14215,9 @@ class Enemy {
       ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w, 4);
       ctx.fillStyle = PAL.enemyBar; // ni le corail du joueur ni le cyan de l'XP : on ne confond pas « moi » et « eux »
       ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w * clamp(this.hp / this.maxHp, 0, 1), 4);
+      /* segmentée à 25 % : on lit « il lui reste un quart » sans compter les pixels */
+      ctx.fillStyle = 'rgba(5,6,10,.7)';
+      for (let i = 1; i < 4; i++) ctx.fillRect(Math.round(this.x - w / 2 + (w * i) / 4) - 0.5, this.y - this.r - 10, 1, 4);
     }
     if (Time.now < this.stunUntil) {
       ctx.fillStyle = '#ffd166';
@@ -18005,20 +18030,27 @@ const Challenge = (() => {
     const V = Engine.view;
     const w = 340,
       x = -V.ox + V.w / 2 - w / 2,
-      y = -V.oy + 52;
-    ctx.fillStyle = 'rgba(8,10,18,.75)';
-    UI.roundRect(ctx, x, y, w, 30, 8);
-    ctx.fill();
+      y = -V.oy + (room.tempo ? 84 : 44); // sous la ligne « Salle n/9 », et sous le métronome quand il y en a un
+    ctx.globalAlpha = UI.hudAlpha();
+    UI.panel(ctx, x, y, w, 30, 8, 'rgba(8,10,18,.75)');
     ctx.strokeStyle = c.def.color;
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.fillStyle = c.def.color;
-    ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(
+    UI.label(
+      ctx,
       `${c.def.name.toUpperCase()}${c.done ? ' — ' + (room.challengeOk ? 'réussi' : 'terminé') : ' · ' + c.hud}`,
       x + w / 2,
-      y + 15
+      y + 13,
+      {
+        kind: 'title',
+        weight: 'bold',
+        size: 12,
+        align: 'center',
+        color: c.def.color,
+      }
     );
+    /* l'objectif qui se remplit : une jauge de 4 px sous le texte, quand le défi en a une */
+    if (typeof c.gauge === 'number' && !c.done) UI.gauge(ctx, x + 12, y + 24, w - 24, 4, c.gauge, c.def.color, { bg: 'rgba(18,32,58,.8)' });
     ctx.restore();
   }
   function dangerAt(x, y, room) {
@@ -18566,7 +18598,9 @@ const Tempo = {
     }
     sc.look.fill(0);
     sc.near.fill(0);
-    const beats = room.traps.filter(t => t.beats && !t.disabled);
+    /* Les lasers dessinent déjà leur rayon et son annonce : les remettre case par case faisait des carrés cerclés de rouge
+       sur tout leur trajet (demande du 10 septembre). La partition ne parle que pour ce qui frappe des cases. */
+    const beats = room.traps.filter(t => t.beats && !t.disabled && !/^laser/.test(t.kind));
     if (!beats.length) return sc;
     for (let ty = 0; ty < ROOM_ROWS; ty++)
       for (let tx = 0; tx < ROOM_COLS; tx++) {
@@ -18586,7 +18620,7 @@ const Tempo = {
   },
   renderScore(ctx, room) {
     if (room.noScore) return; // mode test de l'atelier : la salle sans ses repères d'édition
-    if (!room.traps.some(t => t.beats && !t.disabled)) return;
+    if (!room.traps.some(t => t.beats && !t.disabled && !/^laser/.test(t.kind))) return;
     const sc = Tempo.scoreAt(room);
     ctx.save();
     for (let ty = 0; ty < ROOM_ROWS; ty++)
@@ -18619,10 +18653,10 @@ const Tempo = {
           }
         }
         if (near >= 0.2) {
-          ctx.globalAlpha = 0.45 + 0.45 * near;
-          ctx.strokeStyle = PAL.alert;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x + 4.5, y + 4.5, TILE - 9, TILE - 9);
+          /* imminent : un voile d'alerte sur la case, sans cadre — un carré cerclé de rouge, c'est laid et ça crie */
+          ctx.globalAlpha = 0.1 + 0.16 * near;
+          ctx.fillStyle = PAL.alert;
+          ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);
         }
       }
     ctx.restore();
@@ -18864,7 +18898,7 @@ const Tempo = {
       ctx.fillRect(cx - 150, ty - 11, 300, 22);
       ctx.fillStyle = '#ff9a3c';
       ctx.globalAlpha = 0.6 + 0.4 * kk;
-      ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+      ctx.font = `bold 14px ${FONT_TITLE}`;
       ctx.fillText('⚠ ' + (tp.cueName || 'Nouveau piège') + ' dans ' + tp.cueBeats, cx, ty);
       ctx.globalAlpha = 1;
     } else if (tp.newTrapT < 3 && tp.lastName) {
@@ -18874,7 +18908,7 @@ const Tempo = {
       ctx.fillStyle = 'rgba(8,10,18,.7)';
       ctx.fillRect(cx - 150, ty - 11, 300, 22);
       ctx.fillStyle = Tempo.COLOR;
-      ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+      ctx.font = `bold 14px ${FONT_TITLE}`;
       ctx.fillText('Piège en place : ' + tp.lastName, cx, ty);
       ctx.globalAlpha = 1;
     }
@@ -19270,7 +19304,12 @@ const Room = {
       }
     }
     /* porte : elle s'ouvre pile sur le temps fort, avec une onde verte */
-    if (r.pendingDoor && Beat.t >= r.doorAt) Room.openDoor();
+    if (r.pendingDoor) {
+      /* l'horloge musicale peut se recaler sur la piste (elle saute en arrière quand la musique démarre) : un rendez-vous
+         qui s'est retrouvé à plus d'une mesure est repris sur la mesure suivante, jamais perdu */
+      if (Beat.t < r.doorAt - 4 * Beat.beatLen() - 0.5) r.doorAt = Beat.t + Beat.timeToNextBar();
+      if (Beat.t >= r.doorAt) Room.openDoor();
+    }
     if (r.doorOpen && !pl.dead) {
       const dx = ROOM_X + ROOM_W,
         dy = ROOM_Y + ROOM_H / 2;
@@ -19801,6 +19840,7 @@ const Run = {
     while (r.xp >= r.xpNext) {
       r.xp -= r.xpNext;
       r.level++;
+      r.levelPopT = Time.now; // la pastille de niveau grossit et un anneau se dilate (HUD, I-5)
       r.xpNext = Progression.xpForLevel(r.level);
       r.pendingLevelUps++;
       r.stats.levelReached = r.level;
@@ -21183,21 +21223,48 @@ const UI = (() => {
      jamais sur W et H : sinon, sur un téléphone, la barre de PV flotte à 90 px du bord et l'arme se retrouve au
      milieu du terrain. Sonde de mise en page : quand G.debug.hudProbe est vrai, chaque panneau et chaque texte
      sont notés — interface.js vérifie qu'un texte tient dans un panneau et que tout tient dans la vue. */
-  const hudProbe = { rects: [], texts: [], flags: {} };
+  const hudProbe = { rects: [], texts: [], flags: {}, gauges: [], fonts: new Set() };
   /* flash blanc plein écran d'une image (gros coup reçu, phase de boss) : { a, until, life } */
   let flashScreenState = null;
   function flashScreen(a, ms) {
     flashScreenState = { a, until: Time.now + ms / 1000, life: ms / 1000 };
   }
-  const HUD_FONT = '"Segoe UI", system-ui, sans-serif';
+  /* Le vocabulaire de dessin du HUD (chantier I-5) : panel, gauge, label — les cinq renderHud du jeu passent par là,
+     c'est ce qui les fait se ressembler. Trois polices, celles du CSS : les chiffres en Silkscreen (kind 'num'), le
+     texte en VT323 (par défaut, un cran plus grand parce que la police est étroite), les titres en Pixelify Sans
+     (kind 'title'). Plus jamais la police système. */
+  const HUD_FONT = FONT_TEXT;
+  function hudFont(o) {
+    const kind = o.kind || 'text';
+    const fam = kind === 'num' ? FONT_PIXEL : kind === 'title' ? FONT_TITLE : FONT_TEXT;
+    const size = Math.round((o.size || 12) * (kind === 'text' ? 1.3 : 1));
+    if (G.debug.hudProbe) hudProbe.fonts.add(fam.split(',')[0].replace(/"/g, ''));
+    return `${o.weight ? o.weight + ' ' : ''}${size}px ${fam}`;
+  }
+  function textW(ctx, t, o = {}) {
+    ctx.font = hudFont(o);
+    return ctx.measureText(t).width;
+  }
   function panel(ctx, x, y, w, h, r = 8, fill = 'rgba(8,10,18,.75)') {
     ctx.fillStyle = fill;
     roundRect(ctx, x, y, w, h, r);
     ctx.fill();
     if (G.debug.hudProbe) hudProbe.rects.push({ x, y, w, h });
   }
+  /* une jauge : fond, remplissage, et des séparations tous les `segments` — une barre segmentée se lit en paliers */
+  function gauge(ctx, x, y, w, h, k, col, o = {}) {
+    ctx.fillStyle = o.bg || '#12203a';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w * clamp(k, 0, 1), h);
+    if (o.segments > 1) {
+      ctx.fillStyle = o.seg || 'rgba(5,6,10,.6)';
+      for (let i = 1; i < o.segments; i++) ctx.fillRect(Math.round(x + (w * i) / o.segments) - 1, y, 2, h);
+    }
+    if (G.debug.hudProbe) hudProbe.gauges.push({ x, y, w, h, k, segments: o.segments || 1 });
+  }
   function label(ctx, t, x, y, o = {}) {
-    ctx.font = `${o.weight ? o.weight + ' ' : ''}${o.size || 12}px ${HUD_FONT}`;
+    ctx.font = hudFont(o);
     ctx.fillStyle = o.color || '#e8ecf7';
     ctx.textAlign = o.align || 'left';
     ctx.fillText(t, x, y);
@@ -21207,6 +21274,28 @@ const UI = (() => {
       hudProbe.texts.push({ t, x: x0, y, w, h: o.size || 12, free: !!o.free });
     }
   }
+  /* Le HUD s'estompe : après 4 s sans dégât ni ennemi vivant, les blocs secondaires passent à 45 % et remontent en
+     0,15 s dès qu'un ennemi paraît. hudAlpha() est lu par les autres renderHud (compagnon, défi). */
+  let hudFade = 1,
+    hudFadeT = 0;
+  function hudAlpha() {
+    return hudFade;
+  }
+  function updateHudFade() {
+    const rm = G.room;
+    const now = performance.now() / 1000; // horloge murale : le fondu ne dépend ni de la pause ni des ralentis
+    const dt = Math.min(0.1, Math.max(0, now - hudFadeT));
+    hudFadeT = now;
+    const calme =
+      rm && rm.time > 4 && Room.alive() === 0 && rm.time - (rm.lastDamageT || 0) > 4 && rm.time - (rm.lastKillT || 0) > 4 && !rm.boss;
+    const cible = calme ? 0.45 : 1;
+    if (cible > hudFade) hudFade = Math.min(1, hudFade + dt / 0.15);
+    else hudFade = Math.max(cible, hudFade - dt / 0.6);
+    return hudFade;
+  }
+  const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  let skillWasReady = true,
+    skillFlashT = -9;
   function renderHud(ctx) {
     const pl = G.player,
       r = G.run,
@@ -21221,8 +21310,12 @@ const UI = (() => {
     if (G.debug.hudProbe) {
       hudProbe.rects.length = 0;
       hudProbe.texts.length = 0;
+      hudProbe.gauges.length = 0;
+      hudProbe.fonts.clear();
       hudProbe.flags = {};
     }
+    const fade = updateHudFade();
+    hudProbe.flags.hudAlpha = +fade.toFixed(2);
     ctx.save();
     ctx.textBaseline = 'middle';
     /* PV bas : le danger se lit en périphérie, sans quitter le personnage des yeux — et la vignette bat avec la musique */
@@ -21252,21 +21345,43 @@ const UI = (() => {
       ctx.globalAlpha = 1;
       hudProbe.flags.flash = true;
     }
-    /* PV + XP + niveau, dans un seul panneau */
-    const bx = L + 24,
-      by = T + 14,
-      bw = 260,
-      bh = 18;
-    panel(ctx, bx - 6, by - 6, bw + 12, bh + 40);
-    ctx.fillStyle = '#2b1a24';
-    ctx.fillRect(bx, by, bw, bh);
+    /* le bloc « moi » (haut gauche) : pastille de niveau, barre de PV segmentée tous les 25 PV avec les chiffres
+       dedans, bouclier au-dessus ; l'XP est une bande de 4 px tout en haut de l'écran, pleine largeur */
+    const px0 = L + 18,
+      py0 = T + 10,
+      bw = 220,
+      bh = 22,
+      bx = px0 + 48,
+      by = py0 + 14;
+    panel(ctx, px0, py0, bw + 62, 50);
+    /* la pastille de niveau : 26 px, ×1,6 → ×1 en 0,35 s à la montée, avec un anneau qui se dilate */
+    const lvK = r.levelPopT != null ? clamp((Time.now - r.levelPopT) / 0.35, 0, 1) : 1;
+    const lvS = 1 + 0.6 * (1 - Ease.outCubic(lvK));
+    const lx = px0 + 24,
+      ly = py0 + 25;
+    if (lvK < 1) {
+      ctx.strokeStyle = PAL.self;
+      ctx.globalAlpha = 1 - lvK;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(lx, ly, 13 + 30 * Ease.outCubic(lvK), 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = PAL.self;
+    ctx.beginPath();
+    ctx.arc(lx, ly, 13 * lvS, 0, TAU);
+    ctx.fill();
+    label(ctx, String(r.level), lx, ly + 1, { kind: 'num', size: Math.round(11 * lvS), weight: 'bold', align: 'center', color: '#07080d' });
+    hudProbe.flags.levelPop = +lvS.toFixed(2);
     /* vert tant que ça va, doré quand ça baisse, rouge — la couleur d'alerte — seulement sous 30 %, et il pulse */
     const hpCol = hpk > 0.6 ? PAL.life : hpk > 0.3 ? PAL.gold : PAL.alert;
+    const hpSeg = Math.max(1, Math.ceil(pl.stats.maxHp / 25));
     ctx.globalAlpha = hpk <= 0.3 ? 0.7 + 0.3 * Math.sin(Time.now * 6) : 1;
-    ctx.fillStyle = hpCol;
-    ctx.fillRect(bx, by, bw * hpk, bh);
+    gauge(ctx, bx, by, bw, bh, hpk, hpCol, { bg: '#2b1a24', segments: hpSeg });
     ctx.globalAlpha = 1;
     hudProbe.flags.hpColor = hpCol;
+    hudProbe.flags.hpSegments = hpSeg;
     /* sous 25 % : des hachures en plus de la couleur — un état ne se signale jamais par la seule couleur */
     if (hpk <= 0.25 && hpk > 0) {
       ctx.save();
@@ -21285,85 +21400,162 @@ const UI = (() => {
       hudProbe.flags.hatch = true;
     }
     if (pl.shield > 0) {
-      ctx.fillStyle = 'rgba(140,255,255,.7)';
-      ctx.fillRect(bx, by - 4, bw * clamp(pl.shield / pl.stats.maxHp, 0, 1), 3);
+      ctx.fillStyle = 'rgba(140,255,255,.8)';
+      ctx.fillRect(bx, by - 5, bw * clamp(pl.shield / pl.stats.maxHp, 0, 1), 3);
     }
-    label(
-      ctx,
-      `${STR.hp} ${Math.ceil(pl.hp)} / ${pl.stats.maxHp}${pl.shield > 0 ? '  +' + Math.ceil(pl.shield) : ''}`,
-      bx + 6,
-      by + bh / 2,
-      {
-        weight: 'bold',
-        color: '#fff',
-      }
-    );
-    ctx.fillStyle = '#12203a';
-    ctx.fillRect(bx, by + bh + 4, bw, 8);
-    ctx.fillStyle = '#6ee7ff';
-    ctx.fillRect(bx, by + bh + 4, bw * clamp(r.xp / r.xpNext, 0, 1), 8);
-    label(ctx, `${STR.level} ${r.level}`, bx, by + bh + 22, { size: 11, color: '#9aa4c4' });
-    /* haut-centre : la salle et le temps — ou la barre du boss, au même endroit, là où le joueur regarde */
+    label(ctx, `${Math.ceil(pl.hp)} / ${pl.stats.maxHp}${pl.shield > 0 ? '  +' + Math.ceil(pl.shield) : ''}`, bx + 6, by + bh / 2 + 1, {
+      kind: 'num',
+      weight: 'bold',
+      size: 11,
+      color: '#fff',
+    });
+    /* l'XP : une bande de 4 px tout en haut, sur toute la largeur — on la sent monter sans la regarder */
+    gauge(ctx, L, T, V.w, 4, r.xp / r.xpNext, PAL.self, { bg: 'rgba(18,32,58,.7)' });
+    hudProbe.flags.xpBar = { y: T, h: 4, w: V.w };
+    /* haut-centre : une seule ligne, « Salle 5/9 · 1:24 » — ou la barre du boss au même endroit, là où le joueur regarde */
     const boss = rm.boss;
     if (boss && !boss.dead) {
       const w2 = 480,
         x2 = CX - w2 / 2,
         y2 = T + 8;
-      panel(ctx, x2 - 8, y2, w2 + 16, 46, 8, 'rgba(8,10,18,.8)');
-      label(ctx, boss.name + ' — phase ' + (boss.phaseIdx + 1), CX, y2 + 11, {
-        align: 'center',
-        weight: 'bold',
-        size: 13,
-        color: PAL.danger,
-      });
+      /* entrée en 0,6 s, flash à chaque coup, dégât retardé en rouge sombre qui rattrape en 0,4 s */
+      if (boss.barT0 == null) {
+        boss.barT0 = Time.now;
+        boss.hpLag = boss.hp;
+      }
+      const entree = Ease.outCubic(clamp((Time.now - boss.barT0) / 0.6, 0, 1));
+      boss.hpLag =
+        boss.hpLag > boss.hp
+          ? Math.max(boss.hp, boss.hpLag - (boss.maxHp / 0.4) * Math.min(0.05, Time.now - (boss.lagT || Time.now)))
+          : boss.hp;
+      boss.lagT = Time.now;
+      panel(ctx, x2 - 8, y2, w2 + 16, 52, 8, 'rgba(8,10,18,.8)');
+      label(ctx, boss.name, CX, y2 + 13, { kind: 'title', align: 'center', weight: 'bold', size: 14, color: PAL.danger });
+      const hk = clamp(boss.hp / boss.maxHp, 0, 1) * entree,
+        lk = clamp(boss.hpLag / boss.maxHp, 0, 1) * entree;
       ctx.fillStyle = '#2b1a24';
-      ctx.fillRect(x2, y2 + 22, w2, 12);
-      ctx.fillStyle = PAL.danger;
-      ctx.fillRect(x2, y2 + 22, w2 * clamp(boss.hp / boss.maxHp, 0, 1), 12);
+      ctx.fillRect(x2, y2 + 26, w2, 16);
+      ctx.fillStyle = '#6b1a26';
+      ctx.fillRect(x2, y2 + 26, w2 * lk, 16);
+      ctx.fillStyle = boss.flash > 0 ? '#fff' : PAL.danger;
+      ctx.fillRect(x2, y2 + 26, w2 * hk, 16);
+      /* segmentée par phase : les seuils de hpBelow des phases suivantes */
+      const seuils = (boss.phases || []).slice(1).map(ph => ph.hpBelow || 0.5);
+      ctx.fillStyle = 'rgba(5,6,10,.7)';
+      for (const sk of seuils) ctx.fillRect(Math.round(x2 + w2 * sk) - 1, y2 + 26, 2, 16);
+      hudProbe.flags.bossSegments = seuils.length + 1;
       if (boss.weakActive)
-        label(ctx, 'PRISE EXPOSÉE ×' + boss.weakMul, CX, y2 + 40, { align: 'center', weight: 'bold', size: 11, color: '#ffd166' });
+        label(ctx, 'PRISE EXPOSÉE ×' + boss.weakMul, CX, y2 + 48, {
+          align: 'center',
+          weight: 'bold',
+          size: 10,
+          color: '#ffd166',
+          free: true,
+        });
       hudProbe.flags.bossY = y2;
     } else {
-      const t = `${rm.label} · ${Math.floor(rm.time)} s`;
-      ctx.font = `bold 14px ${HUD_FONT}`;
-      const w = ctx.measureText(t).width + 28; // la boîte suit le texte, jamais l'inverse
+      const t = `${STR.room} ${rm.index}/9 · ${mmss(rm.time)}`;
+      const w = textW(ctx, t, { kind: 'num', weight: 'bold', size: 12 }) + 28; // la boîte suit le texte, jamais l'inverse
       panel(ctx, CX - w / 2, T + 8, w, 26);
-      label(ctx, t, CX, T + 21, { align: 'center', weight: 'bold', size: 14 });
+      label(ctx, t, CX, T + 22, { kind: 'num', align: 'center', weight: 'bold', size: 12 });
     }
-    /* arme + compétence (bas gauche) */
+    /* arme + compétence (bas gauche) : l'icône de la planche, et un anneau de compétence qui se remplit dans le sens
+       horaire, flashe en blanc puis vert quand elle est prête ; le nom n'est écrit que les trois premières salles */
     const sy = B - 40,
       wx = L + 18;
+    ctx.globalAlpha = fade;
     panel(ctx, wx, sy - 22, 420, 44);
-    ctx.fillStyle = WEAPON_COLORS[pl.weapon.family] || '#fff';
-    ctx.beginPath();
-    ctx.arc(wx + 22, sy, 10, 0, TAU);
-    ctx.fill();
-    label(ctx, pl.weapon.name + (pl.trialWeapon ? ' (essai)' : ''), wx + 40, sy, {
-      weight: 'bold',
+    const wIcon = Sprites.icon(pl.weapon.id, 28);
+    if (wIcon) ctx.drawImage(wIcon, wx + 22 - wIcon.width / 2, sy - wIcon.height / 2);
+    else {
+      ctx.fillStyle = WEAPON_COLORS[pl.weapon.family] || '#fff';
+      ctx.beginPath();
+      ctx.arc(wx + 22, sy, 10, 0, TAU);
+      ctx.fill();
+    }
+    label(ctx, pl.weapon.name + (pl.trialWeapon ? ' (essai)' : ''), wx + 42, sy + 1, {
       size: 13,
       color: pl.trialWeapon ? '#ffd166' : '#e8ecf7',
     });
     const cx = wx + 252,
       cd = Skills.cooldownOf(pl);
     const ready = pl.skillCharges > 0;
+    if (ready && !skillWasReady) skillFlashT = Time.now;
+    skillWasReady = ready;
     const k = ready ? 1 : 1 - clamp(pl.skillCd / Math.max(0.01, cd), 0, 1);
-    ctx.fillStyle = '#1a2036';
+    const flashK = clamp(1 - (Time.now - skillFlashT) / 0.15, 0, 1);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#1a2036';
     ctx.beginPath();
-    ctx.arc(cx, sy, 14, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = ready ? '#7fff9a' : '#4fb3ff';
+    ctx.arc(cx, sy, 17, 0, TAU);
+    ctx.stroke();
+    ctx.strokeStyle = flashK > 0 ? '#fff' : ready ? PAL.life : '#4fb3ff';
     ctx.beginPath();
-    ctx.moveTo(cx, sy);
-    ctx.arc(cx, sy, 14, -Math.PI / 2, -Math.PI / 2 + TAU * k);
-    ctx.fill();
-    label(ctx, pl.skill.name + (pl.skillMaxCharges > 1 ? ` ×${pl.skillCharges}` : ''), cx + 22, sy - 7, { weight: 'bold', size: 13 });
-    /* le rappel des touches n'est utile que le temps d'apprendre : les trois premières salles */
-    const aide = rm.index <= 3 ? (Input.touch.active ? ' · bouton COMP.' : ' · clic droit ou Espace') : '';
-    label(ctx, ready ? STR.ready + aide : `${pl.skillCd.toFixed(1)} s`, cx + 22, sy + 9, { size: 11, color: '#9aa4c4' });
+    ctx.arc(cx, sy, 17, -Math.PI / 2, -Math.PI / 2 + TAU * k);
+    ctx.stroke();
+    if (Time.now - skillFlashT < 0.4) {
+      const rk = clamp((Time.now - skillFlashT) / 0.4, 0, 1);
+      ctx.globalAlpha = fade * (1 - rk);
+      ctx.strokeStyle = PAL.life;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, sy, 17 + 16 * Ease.outCubic(rk), 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = fade;
+    }
+    const sIcon = Sprites.icon(pl.skill.id, 20);
+    if (sIcon) ctx.drawImage(sIcon, cx - sIcon.width / 2, sy - sIcon.height / 2);
+    hudProbe.flags.skillRing = { r: 17, ready, flash: flashK > 0 };
+    if (rm.index <= 3) {
+      label(ctx, pl.skill.name + (pl.skillMaxCharges > 1 ? ` ×${pl.skillCharges}` : ''), cx + 24, sy - 8, { size: 12 });
+      const aide = Input.touch.active ? 'bouton COMP.' : 'clic droit ou Espace';
+      label(ctx, ready ? aide : `${pl.skillCd.toFixed(1)} s`, cx + 24, sy + 9, { size: 11, color: '#9aa4c4' });
+    } else {
+      label(ctx, ready ? (pl.skillMaxCharges > 1 ? `×${pl.skillCharges}` : STR.ready) : `${pl.skillCd.toFixed(1)} s`, cx + 24, sy + 1, {
+        kind: 'num',
+        size: 11,
+        color: ready ? PAL.life : '#9aa4c4',
+      });
+    }
+    /* les greffes en jeu (bas droite) : une grille d'icônes 24 px par catégorie, ×n en bas à droite, le nom au survol */
+    const ups = r.upgrades || [];
+    if (ups.length) {
+      const cell = 28,
+        perRow = 10,
+        rows = Math.ceil(ups.length / perRow),
+        gw = Math.min(ups.length, perRow) * cell + 12,
+        gh = rows * cell + 12;
+      const gx = R - 18 - gw,
+        gy = B - 18 - gh;
+      panel(ctx, gx, gy, gw, gh, 8, 'rgba(8,10,18,.6)');
+      const m = Input.mouse;
+      let hover = null;
+      ups.forEach((u, i) => {
+        const x = gx + 6 + (i % perRow) * cell,
+          y = gy + 6 + Math.floor(i / perRow) * cell;
+        const ic = Sprites.icon(u.def.category, 24);
+        if (ic) ctx.drawImage(ic, x + 12 - ic.width / 2, y + 12 - ic.height / 2);
+        else {
+          ctx.fillStyle = (RARITY[u.def.rarity] || {}).color || '#9aa4c4';
+          ctx.fillRect(x + 6, y + 6, 12, 12);
+        }
+        if (u.stacks > 1) label(ctx, '×' + u.stacks, x + cell - 2, y + cell - 6, { kind: 'num', size: 8, align: 'right', color: PAL.gold });
+        if (m && m.x >= x && m.x < x + cell && m.y >= y && m.y < y + cell) hover = { u, x: x + 12, y };
+      });
+      if (hover)
+        label(ctx, hover.u.def.name, hover.x, hover.y - 10, {
+          align: 'center',
+          size: 12,
+          color: (RARITY[hover.u.def.rarity] || {}).color || '#e8ecf7',
+          free: true,
+        });
+      hudProbe.flags.upgGrid = ups.length;
+    }
+    ctx.globalAlpha = 1;
     /* bannières : le tiers supérieur, au-dessus de la zone de combat, jamais entre le joueur et les ennemis */
     banners.forEach((b, bi) => {
       const kk = b.t / b.life;
-      const y0 = T + V.h * 0.18 + bi * 62;
+      const y0 = T + V.h * 0.1 + bi * 40; // empilés serrés dans le tiers supérieur : jamais entre le joueur et les ennemis
       const a = kk < 0.15 ? kk / 0.15 : kk > 0.75 ? (1 - kk) / 0.25 : 1;
       ctx.globalAlpha = a;
       ctx.shadowColor = b.color;
@@ -21382,11 +21574,10 @@ const UI = (() => {
       B = -V.oy + V.h;
     ctx.save();
     ctx.textBaseline = 'middle';
-    ctx.font = `13px ${HUD_FONT}`;
     toasts.forEach((t, i) => {
       const a = Math.min(1, t.t * 3, (t.life - t.t) * 2);
       ctx.globalAlpha = clamp(a, 0, 1);
-      const w = ctx.measureText(t.text).width + 24;
+      const w = textW(ctx, t.text, { size: 13 }) + 24; // mesuré avec la police du label, sinon la boîte ment
       const y = B - (Input.touch.active ? 270 : 70) - i * 30; // au-dessus des boutons tactiles (tir, compétence, action)
       panel(ctx, R - w, y - 12, w, 24, 8, 'rgba(8,10,18,.85)');
       ctx.strokeStyle = '#6ee7ff88';
@@ -21549,6 +21740,10 @@ const UI = (() => {
     transition,
     update,
     renderHud,
+    hudAlpha,
+    gauge,
+    label,
+    panel,
     renderToasts,
     hudProbe,
     flashScreen,

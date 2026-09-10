@@ -461,7 +461,9 @@ const Tempo = {
     }
     sc.look.fill(0);
     sc.near.fill(0);
-    const beats = room.traps.filter(t => t.beats && !t.disabled);
+    /* Les lasers dessinent déjà leur rayon et son annonce : les remettre case par case faisait des carrés cerclés de rouge
+       sur tout leur trajet (demande du 10 septembre). La partition ne parle que pour ce qui frappe des cases. */
+    const beats = room.traps.filter(t => t.beats && !t.disabled && !/^laser/.test(t.kind));
     if (!beats.length) return sc;
     for (let ty = 0; ty < ROOM_ROWS; ty++)
       for (let tx = 0; tx < ROOM_COLS; tx++) {
@@ -481,7 +483,7 @@ const Tempo = {
   },
   renderScore(ctx, room) {
     if (room.noScore) return; // mode test de l'atelier : la salle sans ses repères d'édition
-    if (!room.traps.some(t => t.beats && !t.disabled)) return;
+    if (!room.traps.some(t => t.beats && !t.disabled && !/^laser/.test(t.kind))) return;
     const sc = Tempo.scoreAt(room);
     ctx.save();
     for (let ty = 0; ty < ROOM_ROWS; ty++)
@@ -514,10 +516,10 @@ const Tempo = {
           }
         }
         if (near >= 0.2) {
-          ctx.globalAlpha = 0.45 + 0.45 * near;
-          ctx.strokeStyle = PAL.alert;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x + 4.5, y + 4.5, TILE - 9, TILE - 9);
+          /* imminent : un voile d'alerte sur la case, sans cadre — un carré cerclé de rouge, c'est laid et ça crie */
+          ctx.globalAlpha = 0.1 + 0.16 * near;
+          ctx.fillStyle = PAL.alert;
+          ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);
         }
       }
     ctx.restore();
@@ -759,7 +761,7 @@ const Tempo = {
       ctx.fillRect(cx - 150, ty - 11, 300, 22);
       ctx.fillStyle = '#ff9a3c';
       ctx.globalAlpha = 0.6 + 0.4 * kk;
-      ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+      ctx.font = `bold 14px ${FONT_TITLE}`;
       ctx.fillText('⚠ ' + (tp.cueName || 'Nouveau piège') + ' dans ' + tp.cueBeats, cx, ty);
       ctx.globalAlpha = 1;
     } else if (tp.newTrapT < 3 && tp.lastName) {
@@ -769,7 +771,7 @@ const Tempo = {
       ctx.fillStyle = 'rgba(8,10,18,.7)';
       ctx.fillRect(cx - 150, ty - 11, 300, 22);
       ctx.fillStyle = Tempo.COLOR;
-      ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+      ctx.font = `bold 14px ${FONT_TITLE}`;
       ctx.fillText('Piège en place : ' + tp.lastName, cx, ty);
       ctx.globalAlpha = 1;
     }

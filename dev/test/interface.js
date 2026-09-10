@@ -88,15 +88,9 @@ test(async ({ page: p, ok, entrer, salle, run, sansPause }) => {
     const toast = avecToast.texts.find(t => t.t === 'Un message court');
     /* badge du compagnon : même bord gauche et même largeur que le cartouche d'arme */
     Pets.give('pet_uno');
-    const rects = [];
-    const orig = UI.roundRect;
-    UI.roundRect = (cx, x, y, w, h, r) => {
-      rects.push({ x, y, w, h });
-      return orig(cx, x, y, w, h, r);
-    };
-    Pets.renderHud(ctx);
-    UI.roundRect = orig;
-    const badge = rects[0];
+    UI.hudProbe.rects.length = 0;
+    Pets.renderHud(ctx); // le badge passe par UI.panel (I-5) : la sonde le voit
+    const badge = UI.hudProbe.rects.find(r => r.h === 30) || UI.hudProbe.rects[0];
     const arme = plein.rects.find(r => r.w === 420);
     return {
       orphelins: plein.orphelins,

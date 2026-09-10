@@ -512,22 +512,54 @@ class Enemy {
                 ? this.aimA
                 : null;
       if (a != null) {
+        /* la zone d'impact au sol (I-5) : une bande d'alerte de la largeur du corps là où la charge ou le tir va
+           passer, en plus de la ligne d'intention — on voit où ne pas être, pas seulement vers où il regarde */
+        const len = this.state === 'aim' ? 220 : 160;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(a);
+        ctx.globalAlpha = alpha * (0.1 + 0.12 * k);
+        ctx.fillStyle = PAL.alert;
+        ctx.shadowBlur = 0;
+        if (this.state === 'aim') ctx.fillRect(0, -3, len, 6);
+        else {
+          ctx.beginPath();
+          ctx.moveTo(0, -this.r);
+          ctx.lineTo(len, -this.r * 1.3);
+          ctx.lineTo(len, this.r * 1.3);
+          ctx.lineTo(0, this.r);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
         ctx.globalAlpha = alpha * 0.5;
         ctx.setLineDash([8, 8]);
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
-        ctx.lineTo(this.x + Math.cos(a) * 160, this.y + Math.sin(a) * 160);
+        ctx.lineTo(this.x + Math.cos(a) * len, this.y + Math.sin(a) * len);
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.globalAlpha = alpha;
+        this.teleZone = this.state === 'aim' ? 'line' : 'cone';
+      } else if (this.state === 'summon') {
+        /* l'invocation : le disque où les renforts vont paraître */
+        ctx.globalAlpha = alpha * (0.08 + 0.1 * k);
+        ctx.fillStyle = PAL.alert;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, (this.behavior && this.behavior.spawnRadius) || 70, 0, TAU);
+        ctx.fill();
+        ctx.globalAlpha = alpha;
+        this.teleZone = 'disc';
       }
       if (this.archetype === 'kamikaze') {
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = this.color;
+        /* le rayon de l'explosion, dans la couleur d'alerte : c'est « ça va frapper », pas la couleur de l'ennemi */
+        ctx.globalAlpha = alpha * (0.14 + 0.1 * k);
+        ctx.fillStyle = PAL.alert;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.behavior.radius || 80, 0, TAU);
         ctx.fill();
         ctx.globalAlpha = alpha;
+        this.teleZone = 'disc';
       }
       ctx.shadowBlur = 0;
     }
@@ -690,6 +722,9 @@ class Enemy {
       ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w, 4);
       ctx.fillStyle = PAL.enemyBar; // ni le corail du joueur ni le cyan de l'XP : on ne confond pas « moi » et « eux »
       ctx.fillRect(this.x - w / 2, this.y - this.r - 10, w * clamp(this.hp / this.maxHp, 0, 1), 4);
+      /* segmentée à 25 % : on lit « il lui reste un quart » sans compter les pixels */
+      ctx.fillStyle = 'rgba(5,6,10,.7)';
+      for (let i = 1; i < 4; i++) ctx.fillRect(Math.round(this.x - w / 2 + (w * i) / 4) - 0.5, this.y - this.r - 10, 1, 4);
     }
     if (Time.now < this.stunUntil) {
       ctx.fillStyle = '#ffd166';

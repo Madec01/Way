@@ -1112,6 +1112,7 @@ const Combat = {
     Combat.stain(e.x, e.y + e.r * 0.6, e.color, e.isBoss ? 2.2 : clamp(e.r / 14, 0.7, 1.6));
     G.run.stats.kills++;
     G.room.kills++;
+    G.room.lastKillT = G.room.time; // le HUD s'estompe après 4 s de calme (temps de salle, comme lastDamageT)
     G.room.combo++;
     G.room.comboUntil = Time.now + 2.5;
     G.room.bestCombo = Math.max(G.room.bestCombo, G.room.combo);

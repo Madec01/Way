@@ -48,6 +48,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `habits` | plus de palier de tenue : habillé dès la salle 1, même corps après 9 greffes |
 | `interface` | chantier I-1 : onglets dans le cadre, textes obsolètes partis, attraction figée, Uno par défaut, HUD sondé (textes dans leurs panneaux, tout dans la vue), PV vert/doré/rouge + vignette, un seul compteur de série, boss en haut sans bandeau, toasts en bas à droite, badge aligné, écran de fin vrai et « Rejouer » |
 | `interface_mobile` | le même HUD en 900 × 420 tactile : ancré aux bords de la vue, onglets dans l'écran, polices ≥ 12 px, toast au-dessus des boutons |
+| `hud` | chantier I-5 : le centre de la vue libre, les trois polices du CSS, la barre de PV segmentée, l'XP en bande, la pastille de niveau, l'anneau de compétence, la ligne du haut, la barre du boss par phases, les trois tailles de chiffres, la grille des greffes, le fondu du HUD, les barres ennemies et les zones d'impact |
 | `hub` | chantier I-3 : le camp en trois questions, moins de 250 mots, une seule zone de défilement, Gabriel avec ses chats en deux clics, la carte d'équipe, la carte « Seul », les paliers verrouillés à moitié largeur, la boutique et les fragments hors du camp, le défilement gardé |
 | `human` | une partie au clavier et à la souris en mode Normal : bouger, tirer, compétence, pause, mort, crédits, achat |
 | `levels` | le bot joue 4 armes sur 9 salles (mode test) — équilibrage, pas de plantage |
