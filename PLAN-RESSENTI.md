@@ -114,7 +114,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 **Taille** : 1 séance.
 **Bilan** : fait (CONTENT.md §49, test `butin.js`, 13 mesures — un fichier à part plutôt que `ressenti.js`, qui reste celui de F-1). Tout ce qui était écrit : la mort en 220 ms avec la silhouette blanche (luminance 237 mesurée au pixel à 30 ms) puis l'écrasement, l'arrêt de 70 ms, la couronne au corps, l'onde à plat, la tache plafonnée à 60 et effacée avec la salle ; les drops qui partent en arc avec une ombre au sol et rebondissent ; les étincelles du ramassage à la taille de la série (2 px × 5 seul, 4 px × 13 au huitième), l'anneau, le cœur qui fait sursauter, la relique et l'arme qui arrêtent le combat sous un rayon de lumière ; le coffre dont le halo grossit à l'approche et qui s'ouvre en 300 ms — couvercle, gerbe, sept éclats en arc — avant l'écran de choix. En plus : les trois fantômes derrière un orbe aimanté. Pas fait, à dessein : la couleur de la tache reste celle de l'ennemi (pas de sang), et le sursaut du coffre est de 6 px — à voir à la main si c'est trop discret.
 
-## Chantier F-5 — Le monde bat
+## Chantier F-5 — Le monde bat ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : qu'on comprenne en dix secondes, sans qu'on le dise, que ce jeu est un jeu de musique. C'est la signature.
 
@@ -130,6 +130,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 
 **Fini quand** : `ressenti.js` vérifie que le bob du joueur au repos suit `Beat.phase()` en salle 1 (pas seulement en salle 7), que l'anneau de mesure est dessiné sous le joueur (sonde `ellipse`), que la télégraphie d'un ennemi ne lit plus `Time.now`, que la porte s'ouvre à moins de 30 ms d'un temps fort, que la passe de lumière change l'alpha du sol entre phase 0 et phase 0,5 (luminance mesurée) ; le bot joue 9 salles sans erreur et sans perte de fps mesurable (`levels.js` reste sous 60 s par salle).
 **Taille** : 1 à 2 séances.
+**Bilan** : fait en une séance (CONTENT.md §50, test `bat.js`, 12 mesures). Une seule courbe (`Beat.pulse`) et tout ce qui vit la suit : la lumière de la salle, l'anneau de mesure sous le joueur dans toutes les salles, le joueur (plus fort au repos), les ennemis, le boss sur le temps fort, les télégraphies à la croche, les annonces des pièges à la double, les pièces posées, la porte — qui s'ouvre désormais sur le temps fort suivant avec une onde verte — et deux à quatre lumières néon par salle, dans les quatre paliers et pas seulement le premier (c'était le même code). La décision « ce qui vit bat, ce qui est bâti ne bat pas » est appliquée : murs, caisses et pièges ne battent pas. La correction demandée est faite : la partition au sol ne peint plus d'or — coins gris pour l'annoncé, cadre rouge d'alerte pour l'imminent, sans remplissage. Pas fait, à dessein : la tuile de frappe annoncée des ennemis à `beatLock` (elle demande de savoir où ils frappent, ce qui est le travail des patterns du chantier 9) ; le voyant doré au-dessus d'eux suffit pour l'instant. À vérifier à la main : l'anneau sous les pieds gêne-t-il la lecture du sol dans les salles à pièges ?
 
 ## Chantier F-6 — Les moments forts
 

@@ -89,6 +89,14 @@ const Beat = (() => {
     return t >= prevT && Math.floor(t / L) !== Math.floor(prevT / L);
   }
   const beatInBar = () => ((index() % 4) + 4) % 4;
+  /* le battement (chantier F-5) : 1 pile sur le temps, retombe en outCubic — la seule courbe que le monde suit.
+     div : subdivision (2 = croche, 4 = double) ; pulseBar : le temps fort seulement, 0 ailleurs. */
+  const phaseDiv = (div = 1) => {
+    const L = beatLen() / div;
+    return (((t / L) % 1) + 1) % 1;
+  };
+  const pulse = (div = 1) => 1 - Ease.outCubic(phaseDiv(div));
+  const pulseBar = () => (beatInBar() === 0 ? pulse() : 0);
   /* distance (s) au temps le plus proche */
   function distToBeat(div = 1) {
     const L = beatLen() / div;
@@ -130,6 +138,9 @@ const Beat = (() => {
     phase,
     crossedFrame,
     beatInBar,
+    phaseDiv,
+    pulse,
+    pulseBar,
     distToBeat,
     timeToNextBar,
     timeToBeat,
@@ -483,9 +494,11 @@ const Tempo = {
           y = ROOM_Y + ty * TILE;
         /* Le damier du dancefloor remplit déjà des tuiles entières : un remplissage de plus s'y noierait. La partition
          parle donc en coins (annoncé) et en cadre (imminent) — deux formes que rien d'autre ne dessine. */
+        /* Le contrat de couleur (F-3) : une case qui va être frappée parle en rouge d'alerte, jamais en or — l'or est la
+           mesure et la récompense. Annoncé : quatre coins gris discrets ; imminent : un cadre d'alerte, sans remplissage. */
         if (far >= 0.2) {
-          ctx.globalAlpha = 0.25 + 0.35 * far;
-          ctx.fillStyle = '#ffd166';
+          ctx.globalAlpha = 0.18 + 0.3 * far;
+          ctx.fillStyle = PAL.muted;
           const c = 7,
             e = 3;
           for (const [ox, oy] of [
@@ -501,13 +514,10 @@ const Tempo = {
           }
         }
         if (near >= 0.2) {
-          ctx.globalAlpha = 0.5 + 0.4 * near;
-          ctx.strokeStyle = '#ffd166';
+          ctx.globalAlpha = 0.45 + 0.45 * near;
+          ctx.strokeStyle = PAL.alert;
           ctx.lineWidth = 2;
           ctx.strokeRect(x + 4.5, y + 4.5, TILE - 9, TILE - 9);
-          ctx.globalAlpha = 0.07 + 0.1 * near;
-          ctx.fillStyle = '#ffd166';
-          ctx.fillRect(x + 5, y + 5, TILE - 10, TILE - 10);
         }
       }
     ctx.restore();
@@ -767,6 +777,29 @@ const Tempo = {
   },
   /* près du joueur, en coordonnées du monde (appelé par Room.render) : la série qui se construit, quatre pastilles
      sous ses pieds ; dès quatre notes, c'est le chiffre flottant « TEMPO ×n » qui prend le relais */
+  /* L'anneau de mesure (chantier F-5) : sous les pieds du joueur, dans toutes les salles. Un arc doré se remplit sur les
+     quatre temps de la mesure et claque au temps fort (26 → 40 px en 0,3 temps). Sur une image figée, c'est ce qui dit
+     que WAY est un jeu de musique. */
+  renderRing(ctx, x, y) {
+    const bib = Beat.beatInBar(),
+      ph = Beat.phase();
+    const prog = (bib + ph) / 4;
+    const snap = bib === 0 && ph < 0.3 ? 1 - Ease.outCubic(ph / 0.3) : 0;
+    const r = 26 + 14 * snap;
+    ctx.save();
+    ctx.strokeStyle = PAL.gold;
+    ctx.globalAlpha = 0.22 + 0.4 * snap;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.4, 0, 0, TAU);
+    ctx.stroke();
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.4, 0, -Math.PI / 2, -Math.PI / 2 + prog * TAU);
+    ctx.stroke();
+    ctx.restore();
+  },
   renderPlayer(ctx, room) {
     const tp = room.tempo;
     const pl = G.player;

@@ -607,6 +607,7 @@ const Pickups = {
           vy: Math.sin(a) * s,
           z: 0,
           vz: -RNG.range(140, 260),
+          ph: RNG.range(0, 0.25), // posé, l'objet sautille en cadence avec ce léger déphasage (F-5)
           kind,
           value,
           t: 0,
@@ -760,7 +761,7 @@ const Pickups = {
         ctx.globalAlpha = 1;
         continue;
       }
-      const bob = Math.sin(Time.now * 6 + p.x) * 2 + p.z;
+      const bob = (p.z === 0 && !p.magnet ? -3 * (1 - Ease.outCubic((Beat.phase() + (p.ph || 0)) % 1)) : 0) + p.z; // posé : un petit saut sur chaque temps
       if (p.kind === 'xp') {
         ctx.fillStyle = '#7ef0ff';
         ctx.shadowColor = '#7ef0ff';
@@ -1987,6 +1988,7 @@ class Player {
       this.x += this.vx * dt;
       this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);
+      this.movingNow = !!(mv.x || mv.y);
       this.animStep(dt, !!(mv.x || mv.y), firing);
     }
     /* poussée : s'ajoute au déplacement puis s'amortit, comme chez les ennemis. Un piège peut ainsi déplacer le
@@ -2146,6 +2148,7 @@ class Player {
     ctx.beginPath();
     ctx.ellipse(this.x, this.y + Sprites.SOL - 3, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
     ctx.fill();
+    if (!this.dead && !G.attract) Tempo.renderRing(ctx, this.x, this.y + Sprites.SOL - 3); // l'anneau de mesure, partout
     /* auras selon les greffes (artefacts visibles) */
     const fx = this.hooks;
     const hasFx = eff => fx.onHit.some(h => h.effect === eff) || fx.passive.some(h => h.effect === eff);
@@ -2231,6 +2234,10 @@ class Player {
       const kk = this.kickMag * (1 - Ease.outCubic(this.kickT / 0.09));
       ctx.translate(-Math.cos(this.kickA) * kk, -Math.sin(this.kickA) * kk);
     }
+    /* la respiration (F-5) : le corps bat avec la musique partout, plus fort au repos (bob, écrasement) */
+    const kb = Beat.pulse();
+    const idle = !this.movingNow && !this.dead && !this.dashing;
+    if (idle) ctx.translate(0, -2.2 * kb);
     Sprites.drawBody(ctx, (this.char && this.char.sprite) || 'player', this.x, this.y, {
       face: this.char && this.char.face,
       body: this.char && this.char.body,
@@ -2243,7 +2250,9 @@ class Player {
       flip: dv ? dv.flip : this.facing < 0,
       walk: this.walkT,
       flash: this.hurtFlash > 0,
-      scale: G.room && G.room.tempo && G.room.tempo.started ? 1 + 0.07 * Math.max(0, 1 - Beat.phase() * 3) : 1,
+      scale: 1 + 0.04 * kb,
+      sx: idle ? 1 - 0.03 * kb : undefined,
+      sy: idle ? 1 + 0.035 * kb : undefined,
       fallback: () => {
         ctx.fillStyle = this.hurtFlash > 0 ? '#ff9db0' : '#e8ecf7';
         ctx.shadowColor = '#6ee7ff';

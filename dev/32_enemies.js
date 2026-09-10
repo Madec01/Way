@@ -493,7 +493,7 @@ class Enemy {
     }
     /* télégraphie : halo pulsant + ligne d'intention */
     if (this.tele) {
-      const k = 0.5 + 0.5 * Math.sin(Time.now * 30);
+      const k = Beat.pulse(2); // la télégraphie bat à la croche : la parade s'apprend avec la musique
       ctx.strokeStyle = PAL.alert; // LA couleur d'alerte, la même pour tous : le joueur apprend « rouge vif = évite »
       ctx.lineWidth = 2 + k * 2;
       ctx.shadowColor = ctx.strokeStyle;
@@ -555,7 +555,7 @@ class Enemy {
       tint,
       sx: 1 + 0.3 * sq,
       sy: 1 - 0.22 * sq,
-      scale: (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (this.beatLock ? 1 + 0.12 * Math.max(0, 1 - Beat.phase() * 3) : 1),
+      scale: (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (this.isBoss ? 1 + 0.1 * Beat.pulseBar() : 1 + 0.06 * Beat.pulse()), // tout ce qui vit bat
       fallback: () => {
         ctx.fillStyle = flash ? '#fff' : this.color;
         ctx.shadowColor = this.color;

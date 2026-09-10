@@ -1402,3 +1402,22 @@ Test : `prepa.js` — 10 mesures (icône et trois jauges par arme, cartes de 190
 
 Test : `butin.js` — 13 mesures (le corps reste 220 ms puis part et ne compte plus ; blanc à 30 ms et écrasé à 120 ms, mesuré au pixel sur un rendu à part ; arrêt, couronne, onde, tache ; vz < 0 au départ ; montée et retour au sol ; plafond des taches ; purge au changement de salle ; étincelles 2 px × 5 seul contre 4 px × 13 au huitième ; anneau doré ; cœur ; relique ; halo du coffre à l'approche ; ouverture en 300 ms avant l'écran).
 
+## 50. Chantier F-5 — le monde bat (ressenti)
+
+**Ce qui vit bat, ce qui est bâti ne bat pas.** Une seule courbe pour tout : `Beat.pulse(div)` = `1 − outCubic(phase)` (1 pile sur le temps, retombée), `Beat.pulseBar()` (le temps fort seulement), `Beat.phaseDiv(div)` (croche = 2, double = 4). Plus aucun `Math.sin(Time.now × n)` pour ce qui a un rapport avec la musique.
+
+| Qui bat | Comment | Où |
+|---|---|---|
+| la lumière de la salle | `fillRect` en `lighter` du néon du palier sur la salle, alpha 0,09 × k au temps fort, 0,045 × k ailleurs (`r.lightAlpha`, mesuré par les tests). Le sol reste en cache. | `Room.render`, après le sol et les taches |
+| **l'anneau de mesure** | sous les pieds du joueur, dans toutes les salles : ellipse dorée (ratio 0,4) de 26 px, arc qui se remplit sur les quatre temps de la mesure, claque à 40 px sur le temps fort (0,3 temps). Les pastilles de série de la salle du tempo se posent sur son bord avant. | `Tempo.renderRing`, appelé par `Player.render` après l'ombre |
+| le joueur | échelle `1 + 0,04 k` partout ; au repos (`pl.movingNow` faux) en plus un bob de −2,2 px et `sx −3 % / sy +3,5 %` | `Player.render` |
+| les ennemis | échelle `× (1 + 0,06 k)` ; un boss `× (1 + 0,10 k)` sur le temps fort seulement. Le voyant doré reste réservé aux ennemis à `beatLock` (« celui-ci frappe sur le temps »). | `Enemy.render` |
+| les télégraphies | l'anneau et la ligne d'intention battent à la croche (`Beat.pulse(2)`), les annonces des pièges à la double (`2 × Beat.pulse(4) − 1` à la place de `sin(Time.now × 25)`) : la parade s'apprend avec la musique | 32_enemies.js, 34_traps.js |
+| les pièces et orbes posés | un petit saut de 3 px sur chaque temps, avec un déphasage `p.ph ∈ [0, 0,25]` tiré à la naissance | `Pickups.render` |
+| la porte | `shadowBlur 12 + 10 k` ; une salle vidée **n'ouvre pas la porte tout de suite** : `Room.clear` pose `pendingDoor` et `doorAt = Beat.t + timeToNextBar()`, `Room.update` appelle `Room.openDoor()` à cet instant (son, onde verte de 60 px, `r.doorOpenedAt` pour les tests). La salle du tempo garde son propre chemin (`Tempo.onClear`). | 40_room.js |
+| les lumières | `Room.placeLights` : 2 à 4 halos `light` (33_anim.js, rayon 2 tuiles, base 0,5, gain 0,2, néon du palier alterné) aux coins et milieux de murs, tirés du `floorSeed`, dans toutes les salles de tous les paliers, sauf si le contenu de la salle pose déjà ses `anims` de kind `light`. Dessinés par-dessus la salle en additif (`Anim.renderOver`). | `Room.load` |
+
+**La partition au sol** (`Tempo.renderScore`, déjà dans toutes les salles à pièges cadencés) **ne peint plus d'or** — c'était les « cases jaunes » des lasers : une case annoncée porte quatre coins gris (`PAL.muted`), une case imminente un cadre rouge d'alerte (`PAL.alert`), sans remplissage. L'or est la mesure et la récompense, jamais « ça va frapper ».
+
+Test : `bat.js` — 12 mesures (Beat.pulse ; luminance du sol entre battement plein et nul avec l'alpha attendu ; échelle et écrasement du joueur au repos en salle 1 ; l'anneau doré sondé par `ellipse` ; l'échelle d'un ennemi ; les sources de la télégraphie, des annonces de pièges et de la partition ; le déphasage d'un drop ; les lumières de la salle ; la porte qui attend le temps fort puis s'ouvre à moins de 30 ms avec l'onde).
+

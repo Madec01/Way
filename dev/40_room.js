@@ -82,6 +82,7 @@ const Room = {
       comboTarget: 8,
       died: false,
       doorOpen: false,
+      pendingDoor: false,
       chest: null,
       boss: null,
       beams: [],
@@ -100,6 +101,7 @@ const Room = {
     };
     Terrain.compile(r, def); // le plan ASCII devient une grille + des rectangles poussés dans r.obstacles
     Anim.compile(r, def); // décor animé en rythme (sans collision ni dégât)
+    Room.placeLights(r, def);
     for (const t of def.traps || []) {
       const td = Content.trap(t.trap);
       if (!td) {
@@ -349,7 +351,8 @@ const Room = {
         Run.chestChoice();
       }
     }
-    /* porte */
+    /* porte : elle s'ouvre pile sur le temps fort, avec une onde verte */
+    if (r.pendingDoor && Beat.t >= r.doorAt) Room.openDoor();
     if (r.doorOpen && !pl.dead) {
       const dx = ROOM_X + ROOM_W,
         dy = ROOM_Y + ROOM_H / 2;
@@ -494,6 +497,37 @@ const Room = {
       r.deco.push({ x: t.x, y: t.y, kind: set.deco[Math.floor(rng() * set.deco.length)], big: rng() < 0.25 });
     }
   },
+  /* Des lumières dans les salles (F-5) : deux à quatre halos néon qui battent sur le temps fort, aux coins de la salle,
+     si le contenu de la salle n'en pose pas lui-même (`anims` avec kind 'light'). Tirées du floorSeed : les mêmes à
+     chaque visite. C'est le début du décor animé du chantier 9. */
+  placeLights(r, def) {
+    if (r.anims && r.anims.some(a => a.kind === 'light')) return;
+    const pal = (G.run && G.run.biome && G.run.biome.palette) || { neon: ['#6ee7ff', '#ff9a3c'] };
+    const rng = makeRng((r.floorSeed || 1) * 7 + 13);
+    const spots = [
+      { x: 1, y: 1 },
+      { x: ROOM_COLS - 3, y: 1 },
+      { x: 1, y: ROOM_ROWS - 3 },
+      { x: ROOM_COLS - 3, y: ROOM_ROWS - 3 },
+      { x: Math.floor(ROOM_COLS / 2) - 1, y: 0 },
+      { x: Math.floor(ROOM_COLS / 2) - 1, y: ROOM_ROWS - 2 },
+    ];
+    const n = 2 + Math.floor(rng() * 3);
+    const picked = spots.sort(() => rng() - 0.5).slice(0, n);
+    r.anims = r.anims || [];
+    picked.forEach((sp, i) =>
+      r.anims.push(
+        new AnimProp({
+          kind: 'light',
+          x: sp.x,
+          y: sp.y,
+          w: 2,
+          h: 2,
+          params: { radius: 2, base: 0.5, gain: 0.2, color: pal.neon[i % 2] || pal.neon[0] },
+        })
+      )
+    );
+  },
   /* horloge des pièges : temps musical dans la salle du tempo, temps de salle ailleurs */
   /* Horloge d'un piège : musicale s'il déclare une cadence en temps (`params.beats`), horloge de salle sinon.
      C'était décidé par salle : un piège rythmique posé hors de la salle du tempo tournait à la bonne vitesse mais
@@ -510,8 +544,9 @@ const Room = {
       Tempo.onClear(r);
       return;
     } // porte sur la mesure suivante
-    r.doorOpen = true;
-    AudioEngine.roomClear({});
+    /* la porte s'ouvre sur le temps fort suivant (F-5) : Room.update la guette ; le reste de la fin de salle est immédiat */
+    r.pendingDoor = true;
+    r.doorAt = Beat.t + Beat.timeToNextBar(); // un instant musical, pas une image : robuste aux grands pas de simulation
     UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
     Music.calm();
     for (const p of Pickups.list) p.magnet = true;
@@ -519,6 +554,15 @@ const Room = {
        on arrivait au mini-boss avec 40 PV et aucun moyen d'en regagner — c'est là que mouraient 13 parties sur 16. */
     if (BALANCE.heartOnClear && r.index > 0)
       Pickups.spawn(ROOM_X + 22 * TILE + TILE / 2, ROOM_Y + 6 * TILE + TILE / 2, 'heart', BALANCE.heartOnClear);
+  },
+  openDoor() {
+    const r = G.room;
+    if (r.doorOpen) return;
+    r.pendingDoor = false;
+    r.doorOpen = true;
+    r.doorOpenedAt = { phase: Beat.phase(), bib: Beat.beatInBar() }; // mesuré par les tests : à moins de 30 ms du temps fort
+    AudioEngine.roomClear({});
+    r.blasts.push({ x: ROOM_X + ROOM_W + TILE / 2, y: ROOM_Y + ROOM_H / 2, r: 60, t: 0, life: 0.45, color: PAL.life });
   },
   /* score de la salle courante */
   score() {
@@ -563,7 +607,21 @@ const Room = {
       ctx.ellipse(d.x, d.y, d.rx * 0.7, d.ry * 0.7, 0, 0, TAU);
       ctx.fill();
       ctx.restore();
-    } // miroitement de l'eau : la seule partie animée, le reste est peint dans le cache du sol
+    }
+    /* la passe de lumière (F-5) : le sol reste en cache, c'est la lumière qui bat — néon du palier en additif,
+       0,09 au temps fort et 0,045 sur les autres temps, en outCubic de la phase */
+    {
+      const pal = (G.run && G.run.biome && G.run.biome.palette) || { neon: ['#6ee7ff', '#ff9a3c'] };
+      r.lightAlpha = (Beat.beatInBar() === 0 ? 0.09 : 0.045) * Beat.pulse();
+      if (r.lightAlpha > 0.002) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = r.lightAlpha;
+        ctx.fillStyle = pal.neon[0];
+        ctx.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
+        ctx.restore();
+      }
+    }
     for (const d of r.deco) Sprites.drawDeco(ctx, d);
     Anim.render(ctx, r); // décor animé au sol : sous les obstacles et les entités
     /* obstacles */
@@ -582,7 +640,7 @@ const Room = {
     if (r.doorOpen) {
       ctx.strokeStyle = '#7fff9a';
       ctx.shadowColor = '#7fff9a';
-      ctx.shadowBlur = 16 + Math.sin(Time.now * 4) * 6;
+      ctx.shadowBlur = 12 + 10 * Beat.pulse(); // la porte bat
       ctx.lineWidth = 3;
       ctx.strokeRect(dx - 2, dy - TILE + 2, TILE + 4, TILE * 2 - 4);
       ctx.fillStyle = '#7fff9a';

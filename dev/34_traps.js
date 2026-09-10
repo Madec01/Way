@@ -265,7 +265,7 @@ class Trap {
       return;
     }
     const on = s.stage === 'on';
-    ctx.globalAlpha = on ? 1 : 0.4 + 0.4 * Math.sin(Time.now * 25);
+    ctx.globalAlpha = on ? 1 : 0.4 + 0.4 * (2 * Beat.pulse(4) - 1);
     ctx.lineWidth = on ? 5 : 2;
     ctx.shadowColor = this.color;
     ctx.shadowBlur = on ? 20 : 6;
@@ -327,7 +327,7 @@ class Trap {
     ctx.beginPath();
     ctx.arc(this.cx, this.cy, 12, 0, TAU);
     ctx.fill();
-    ctx.globalAlpha = c.stage === 'idle' ? 0.25 : c.stage === 'warn' ? 0.4 + 0.4 * Math.sin(Time.now * 25) : 1;
+    ctx.globalAlpha = c.stage === 'idle' ? 0.25 : c.stage === 'warn' ? 0.4 + 0.4 * (2 * Beat.pulse(4) - 1) : 1;
     ctx.strokeStyle = this.color;
     ctx.shadowColor = this.color;
     ctx.shadowBlur = arm ? 16 : 6;
@@ -385,7 +385,7 @@ class Trap {
       const mine = i % 2 === par;
       const on = c.stage === 'on' && mine;
       const warn = c.stage === 'warn' && mine;
-      ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * Math.sin(Time.now * 25) : 0.12;
+      ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.12;
       ctx.lineWidth = on ? 4 : 2;
       ctx.shadowBlur = on ? 14 : 0;
       ctx.setLineDash(on ? [] : [4, 8]);
@@ -865,7 +865,7 @@ class Trap {
     ctx.fill();
     ctx.strokeStyle = this.color;
     ctx.shadowColor = this.color;
-    ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * Math.sin(Time.now * 25) : 0.14;
+    ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.14;
     ctx.lineWidth = on ? (this.p.thickness || 0.4) * TILE * 0.55 : 2;
     ctx.shadowBlur = on ? 18 : 4;
     if (!on) ctx.setLineDash([5, 9]);

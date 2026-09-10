@@ -52,7 +52,9 @@ test(async ({ page, ok, entrer }) => {
   await page.waitForTimeout(1000);
   const fams = await page.evaluate(() => G.room.tempo.groups.length);
   let armed = 0;
-  for (let i = 0; i < 40; i++) {
+  /* les familles s'arment sur des mesures (6 à 10 entre deux) : sous la charge de la batterie complète, 40 s ne
+     suffisaient pas toujours — 70 s laissent la marge sans changer ce qu'on mesure */
+  for (let i = 0; i < 70; i++) {
     await page.waitForTimeout(1000);
     armed = await page.evaluate(() => G.room.tempo.groupIdx + 1);
     if (armed >= fams) break;

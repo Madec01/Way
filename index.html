@@ -476,7 +476,7 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 15:44';</script>
+<script>window.WAY_BUILD = '2026-09-10 16:40';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -10969,6 +10969,7 @@ const Pickups = {
           vy: Math.sin(a) * s,
           z: 0,
           vz: -RNG.range(140, 260),
+          ph: RNG.range(0, 0.25), // posé, l'objet sautille en cadence avec ce léger déphasage (F-5)
           kind,
           value,
           t: 0,
@@ -11122,7 +11123,7 @@ const Pickups = {
         ctx.globalAlpha = 1;
         continue;
       }
-      const bob = Math.sin(Time.now * 6 + p.x) * 2 + p.z;
+      const bob = (p.z === 0 && !p.magnet ? -3 * (1 - Ease.outCubic((Beat.phase() + (p.ph || 0)) % 1)) : 0) + p.z; // posé : un petit saut sur chaque temps
       if (p.kind === 'xp') {
         ctx.fillStyle = '#7ef0ff';
         ctx.shadowColor = '#7ef0ff';
@@ -12349,6 +12350,7 @@ class Player {
       this.x += this.vx * dt;
       this.y += this.vy * dt;
       this.walkT = (this.walkT || 0) + (mv.x || mv.y ? dt : 0);
+      this.movingNow = !!(mv.x || mv.y);
       this.animStep(dt, !!(mv.x || mv.y), firing);
     }
     /* poussée : s'ajoute au déplacement puis s'amortit, comme chez les ennemis. Un piège peut ainsi déplacer le
@@ -12508,6 +12510,7 @@ class Player {
     ctx.beginPath();
     ctx.ellipse(this.x, this.y + Sprites.SOL - 3, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
     ctx.fill();
+    if (!this.dead && !G.attract) Tempo.renderRing(ctx, this.x, this.y + Sprites.SOL - 3); // l'anneau de mesure, partout
     /* auras selon les greffes (artefacts visibles) */
     const fx = this.hooks;
     const hasFx = eff => fx.onHit.some(h => h.effect === eff) || fx.passive.some(h => h.effect === eff);
@@ -12593,6 +12596,10 @@ class Player {
       const kk = this.kickMag * (1 - Ease.outCubic(this.kickT / 0.09));
       ctx.translate(-Math.cos(this.kickA) * kk, -Math.sin(this.kickA) * kk);
     }
+    /* la respiration (F-5) : le corps bat avec la musique partout, plus fort au repos (bob, écrasement) */
+    const kb = Beat.pulse();
+    const idle = !this.movingNow && !this.dead && !this.dashing;
+    if (idle) ctx.translate(0, -2.2 * kb);
     Sprites.drawBody(ctx, (this.char && this.char.sprite) || 'player', this.x, this.y, {
       face: this.char && this.char.face,
       body: this.char && this.char.body,
@@ -12605,7 +12612,9 @@ class Player {
       flip: dv ? dv.flip : this.facing < 0,
       walk: this.walkT,
       flash: this.hurtFlash > 0,
-      scale: G.room && G.room.tempo && G.room.tempo.started ? 1 + 0.07 * Math.max(0, 1 - Beat.phase() * 3) : 1,
+      scale: 1 + 0.04 * kb,
+      sx: idle ? 1 - 0.03 * kb : undefined,
+      sy: idle ? 1 + 0.035 * kb : undefined,
       fallback: () => {
         ctx.fillStyle = this.hurtFlash > 0 ? '#ff9db0' : '#e8ecf7';
         ctx.shadowColor = '#6ee7ff';
@@ -13987,7 +13996,7 @@ class Enemy {
     }
     /* télégraphie : halo pulsant + ligne d'intention */
     if (this.tele) {
-      const k = 0.5 + 0.5 * Math.sin(Time.now * 30);
+      const k = Beat.pulse(2); // la télégraphie bat à la croche : la parade s'apprend avec la musique
       ctx.strokeStyle = PAL.alert; // LA couleur d'alerte, la même pour tous : le joueur apprend « rouge vif = évite »
       ctx.lineWidth = 2 + k * 2;
       ctx.shadowColor = ctx.strokeStyle;
@@ -14049,7 +14058,7 @@ class Enemy {
       tint,
       sx: 1 + 0.3 * sq,
       sy: 1 - 0.22 * sq,
-      scale: (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (this.beatLock ? 1 + 0.12 * Math.max(0, 1 - Beat.phase() * 3) : 1),
+      scale: (this.isBoss ? 1.15 : clamp(this.r / 14, 0.6, 1.5)) * (this.isBoss ? 1 + 0.1 * Beat.pulseBar() : 1 + 0.06 * Beat.pulse()), // tout ce qui vit bat
       fallback: () => {
         ctx.fillStyle = flash ? '#fff' : this.color;
         ctx.shadowColor = this.color;
@@ -15816,7 +15825,7 @@ class Trap {
       return;
     }
     const on = s.stage === 'on';
-    ctx.globalAlpha = on ? 1 : 0.4 + 0.4 * Math.sin(Time.now * 25);
+    ctx.globalAlpha = on ? 1 : 0.4 + 0.4 * (2 * Beat.pulse(4) - 1);
     ctx.lineWidth = on ? 5 : 2;
     ctx.shadowColor = this.color;
     ctx.shadowBlur = on ? 20 : 6;
@@ -15878,7 +15887,7 @@ class Trap {
     ctx.beginPath();
     ctx.arc(this.cx, this.cy, 12, 0, TAU);
     ctx.fill();
-    ctx.globalAlpha = c.stage === 'idle' ? 0.25 : c.stage === 'warn' ? 0.4 + 0.4 * Math.sin(Time.now * 25) : 1;
+    ctx.globalAlpha = c.stage === 'idle' ? 0.25 : c.stage === 'warn' ? 0.4 + 0.4 * (2 * Beat.pulse(4) - 1) : 1;
     ctx.strokeStyle = this.color;
     ctx.shadowColor = this.color;
     ctx.shadowBlur = arm ? 16 : 6;
@@ -15936,7 +15945,7 @@ class Trap {
       const mine = i % 2 === par;
       const on = c.stage === 'on' && mine;
       const warn = c.stage === 'warn' && mine;
-      ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * Math.sin(Time.now * 25) : 0.12;
+      ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.12;
       ctx.lineWidth = on ? 4 : 2;
       ctx.shadowBlur = on ? 14 : 0;
       ctx.setLineDash(on ? [] : [4, 8]);
@@ -16416,7 +16425,7 @@ class Trap {
     ctx.fill();
     ctx.strokeStyle = this.color;
     ctx.shadowColor = this.color;
-    ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * Math.sin(Time.now * 25) : 0.14;
+    ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.14;
     ctx.lineWidth = on ? (this.p.thickness || 0.4) * TILE * 0.55 : 2;
     ctx.shadowBlur = on ? 18 : 4;
     if (!on) ctx.setLineDash([5, 9]);
@@ -18185,6 +18194,14 @@ const Beat = (() => {
     return t >= prevT && Math.floor(t / L) !== Math.floor(prevT / L);
   }
   const beatInBar = () => ((index() % 4) + 4) % 4;
+  /* le battement (chantier F-5) : 1 pile sur le temps, retombe en outCubic — la seule courbe que le monde suit.
+     div : subdivision (2 = croche, 4 = double) ; pulseBar : le temps fort seulement, 0 ailleurs. */
+  const phaseDiv = (div = 1) => {
+    const L = beatLen() / div;
+    return (((t / L) % 1) + 1) % 1;
+  };
+  const pulse = (div = 1) => 1 - Ease.outCubic(phaseDiv(div));
+  const pulseBar = () => (beatInBar() === 0 ? pulse() : 0);
   /* distance (s) au temps le plus proche */
   function distToBeat(div = 1) {
     const L = beatLen() / div;
@@ -18226,6 +18243,9 @@ const Beat = (() => {
     phase,
     crossedFrame,
     beatInBar,
+    phaseDiv,
+    pulse,
+    pulseBar,
     distToBeat,
     timeToNextBar,
     timeToBeat,
@@ -18579,9 +18599,11 @@ const Tempo = {
           y = ROOM_Y + ty * TILE;
         /* Le damier du dancefloor remplit déjà des tuiles entières : un remplissage de plus s'y noierait. La partition
          parle donc en coins (annoncé) et en cadre (imminent) — deux formes que rien d'autre ne dessine. */
+        /* Le contrat de couleur (F-3) : une case qui va être frappée parle en rouge d'alerte, jamais en or — l'or est la
+           mesure et la récompense. Annoncé : quatre coins gris discrets ; imminent : un cadre d'alerte, sans remplissage. */
         if (far >= 0.2) {
-          ctx.globalAlpha = 0.25 + 0.35 * far;
-          ctx.fillStyle = '#ffd166';
+          ctx.globalAlpha = 0.18 + 0.3 * far;
+          ctx.fillStyle = PAL.muted;
           const c = 7,
             e = 3;
           for (const [ox, oy] of [
@@ -18597,13 +18619,10 @@ const Tempo = {
           }
         }
         if (near >= 0.2) {
-          ctx.globalAlpha = 0.5 + 0.4 * near;
-          ctx.strokeStyle = '#ffd166';
+          ctx.globalAlpha = 0.45 + 0.45 * near;
+          ctx.strokeStyle = PAL.alert;
           ctx.lineWidth = 2;
           ctx.strokeRect(x + 4.5, y + 4.5, TILE - 9, TILE - 9);
-          ctx.globalAlpha = 0.07 + 0.1 * near;
-          ctx.fillStyle = '#ffd166';
-          ctx.fillRect(x + 5, y + 5, TILE - 10, TILE - 10);
         }
       }
     ctx.restore();
@@ -18863,6 +18882,29 @@ const Tempo = {
   },
   /* près du joueur, en coordonnées du monde (appelé par Room.render) : la série qui se construit, quatre pastilles
      sous ses pieds ; dès quatre notes, c'est le chiffre flottant « TEMPO ×n » qui prend le relais */
+  /* L'anneau de mesure (chantier F-5) : sous les pieds du joueur, dans toutes les salles. Un arc doré se remplit sur les
+     quatre temps de la mesure et claque au temps fort (26 → 40 px en 0,3 temps). Sur une image figée, c'est ce qui dit
+     que WAY est un jeu de musique. */
+  renderRing(ctx, x, y) {
+    const bib = Beat.beatInBar(),
+      ph = Beat.phase();
+    const prog = (bib + ph) / 4;
+    const snap = bib === 0 && ph < 0.3 ? 1 - Ease.outCubic(ph / 0.3) : 0;
+    const r = 26 + 14 * snap;
+    ctx.save();
+    ctx.strokeStyle = PAL.gold;
+    ctx.globalAlpha = 0.22 + 0.4 * snap;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.4, 0, 0, TAU);
+    ctx.stroke();
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.4, 0, -Math.PI / 2, -Math.PI / 2 + prog * TAU);
+    ctx.stroke();
+    ctx.restore();
+  },
   renderPlayer(ctx, room) {
     const tp = room.tempo;
     const pl = G.player;
@@ -18958,6 +19000,7 @@ const Room = {
       comboTarget: 8,
       died: false,
       doorOpen: false,
+      pendingDoor: false,
       chest: null,
       boss: null,
       beams: [],
@@ -18976,6 +19019,7 @@ const Room = {
     };
     Terrain.compile(r, def); // le plan ASCII devient une grille + des rectangles poussés dans r.obstacles
     Anim.compile(r, def); // décor animé en rythme (sans collision ni dégât)
+    Room.placeLights(r, def);
     for (const t of def.traps || []) {
       const td = Content.trap(t.trap);
       if (!td) {
@@ -19225,7 +19269,8 @@ const Room = {
         Run.chestChoice();
       }
     }
-    /* porte */
+    /* porte : elle s'ouvre pile sur le temps fort, avec une onde verte */
+    if (r.pendingDoor && Beat.t >= r.doorAt) Room.openDoor();
     if (r.doorOpen && !pl.dead) {
       const dx = ROOM_X + ROOM_W,
         dy = ROOM_Y + ROOM_H / 2;
@@ -19370,6 +19415,37 @@ const Room = {
       r.deco.push({ x: t.x, y: t.y, kind: set.deco[Math.floor(rng() * set.deco.length)], big: rng() < 0.25 });
     }
   },
+  /* Des lumières dans les salles (F-5) : deux à quatre halos néon qui battent sur le temps fort, aux coins de la salle,
+     si le contenu de la salle n'en pose pas lui-même (`anims` avec kind 'light'). Tirées du floorSeed : les mêmes à
+     chaque visite. C'est le début du décor animé du chantier 9. */
+  placeLights(r, def) {
+    if (r.anims && r.anims.some(a => a.kind === 'light')) return;
+    const pal = (G.run && G.run.biome && G.run.biome.palette) || { neon: ['#6ee7ff', '#ff9a3c'] };
+    const rng = makeRng((r.floorSeed || 1) * 7 + 13);
+    const spots = [
+      { x: 1, y: 1 },
+      { x: ROOM_COLS - 3, y: 1 },
+      { x: 1, y: ROOM_ROWS - 3 },
+      { x: ROOM_COLS - 3, y: ROOM_ROWS - 3 },
+      { x: Math.floor(ROOM_COLS / 2) - 1, y: 0 },
+      { x: Math.floor(ROOM_COLS / 2) - 1, y: ROOM_ROWS - 2 },
+    ];
+    const n = 2 + Math.floor(rng() * 3);
+    const picked = spots.sort(() => rng() - 0.5).slice(0, n);
+    r.anims = r.anims || [];
+    picked.forEach((sp, i) =>
+      r.anims.push(
+        new AnimProp({
+          kind: 'light',
+          x: sp.x,
+          y: sp.y,
+          w: 2,
+          h: 2,
+          params: { radius: 2, base: 0.5, gain: 0.2, color: pal.neon[i % 2] || pal.neon[0] },
+        })
+      )
+    );
+  },
   /* horloge des pièges : temps musical dans la salle du tempo, temps de salle ailleurs */
   /* Horloge d'un piège : musicale s'il déclare une cadence en temps (`params.beats`), horloge de salle sinon.
      C'était décidé par salle : un piège rythmique posé hors de la salle du tempo tournait à la bonne vitesse mais
@@ -19386,8 +19462,9 @@ const Room = {
       Tempo.onClear(r);
       return;
     } // porte sur la mesure suivante
-    r.doorOpen = true;
-    AudioEngine.roomClear({});
+    /* la porte s'ouvre sur le temps fort suivant (F-5) : Room.update la guette ; le reste de la fin de salle est immédiat */
+    r.pendingDoor = true;
+    r.doorAt = Beat.t + Beat.timeToNextBar(); // un instant musical, pas une image : robuste aux grands pas de simulation
     UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
     Music.calm();
     for (const p of Pickups.list) p.magnet = true;
@@ -19395,6 +19472,15 @@ const Room = {
        on arrivait au mini-boss avec 40 PV et aucun moyen d'en regagner — c'est là que mouraient 13 parties sur 16. */
     if (BALANCE.heartOnClear && r.index > 0)
       Pickups.spawn(ROOM_X + 22 * TILE + TILE / 2, ROOM_Y + 6 * TILE + TILE / 2, 'heart', BALANCE.heartOnClear);
+  },
+  openDoor() {
+    const r = G.room;
+    if (r.doorOpen) return;
+    r.pendingDoor = false;
+    r.doorOpen = true;
+    r.doorOpenedAt = { phase: Beat.phase(), bib: Beat.beatInBar() }; // mesuré par les tests : à moins de 30 ms du temps fort
+    AudioEngine.roomClear({});
+    r.blasts.push({ x: ROOM_X + ROOM_W + TILE / 2, y: ROOM_Y + ROOM_H / 2, r: 60, t: 0, life: 0.45, color: PAL.life });
   },
   /* score de la salle courante */
   score() {
@@ -19439,7 +19525,21 @@ const Room = {
       ctx.ellipse(d.x, d.y, d.rx * 0.7, d.ry * 0.7, 0, 0, TAU);
       ctx.fill();
       ctx.restore();
-    } // miroitement de l'eau : la seule partie animée, le reste est peint dans le cache du sol
+    }
+    /* la passe de lumière (F-5) : le sol reste en cache, c'est la lumière qui bat — néon du palier en additif,
+       0,09 au temps fort et 0,045 sur les autres temps, en outCubic de la phase */
+    {
+      const pal = (G.run && G.run.biome && G.run.biome.palette) || { neon: ['#6ee7ff', '#ff9a3c'] };
+      r.lightAlpha = (Beat.beatInBar() === 0 ? 0.09 : 0.045) * Beat.pulse();
+      if (r.lightAlpha > 0.002) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = r.lightAlpha;
+        ctx.fillStyle = pal.neon[0];
+        ctx.fillRect(ROOM_X, ROOM_Y, ROOM_W, ROOM_H);
+        ctx.restore();
+      }
+    }
     for (const d of r.deco) Sprites.drawDeco(ctx, d);
     Anim.render(ctx, r); // décor animé au sol : sous les obstacles et les entités
     /* obstacles */
@@ -19458,7 +19558,7 @@ const Room = {
     if (r.doorOpen) {
       ctx.strokeStyle = '#7fff9a';
       ctx.shadowColor = '#7fff9a';
-      ctx.shadowBlur = 16 + Math.sin(Time.now * 4) * 6;
+      ctx.shadowBlur = 12 + 10 * Beat.pulse(); // la porte bat
       ctx.lineWidth = 3;
       ctx.strokeRect(dx - 2, dy - TILE + 2, TILE + 4, TILE * 2 - 4);
       ctx.fillStyle = '#7fff9a';
