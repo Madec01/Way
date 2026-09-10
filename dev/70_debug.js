@@ -392,6 +392,9 @@ const Debug = (() => {
     const w = pl.weapon;
     const isMelee = w && (w.type === 'melee' || w.type === 'area' || w.type === 'orbital');
     const enemy = nearestEnemy(pl.x, pl.y);
+    /* compagnon « à l'appel » : le bot l'appelle dès qu'il est disponible et qu'un ennemi est à portée, comme un joueur pressé */
+    if (enemy && dist(pl.x, pl.y, enemy.x, enemy.y) < 320)
+      for (const pe of G.pets) if (pe.mode === 'call' && pe.away && pe.cdT <= 0) pe.call();
     /* objectif */
     let goal = null;
     const frag = Pickups.list.find(p => p.kind === 'fragment');

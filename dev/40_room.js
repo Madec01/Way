@@ -273,6 +273,7 @@ const Room = {
     UI.banner(Content.pick('bossWin') || 'Étalon neutralisé', '#ffd166');
     AudioEngine.roomClear({});
     for (let i = 0; i < 12; i++) Pickups.spawn(b.x, b.y, 'coin', 1);
+    if (BALANCE.relicOnBoss) Pickups.spawn(b.x, b.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); // un boss abattu, une relique sûre
   },
   alive() {
     return G.enemies.filter(e => !e.dead).length;
@@ -750,7 +751,7 @@ const Run = {
       skillChoices: null,
       weaponDropRoom: RNG.pick([1, 3, 6, 7]),
     };
-    G.pets = [];
+    Run.reset();
     G.player = new Player(charDef);
     G.player.hp = 0;
     G.player.recompute();
@@ -977,16 +978,24 @@ const Run = {
     Meta.recordRun(false);
     Run.toHub();
   },
+  /* Tout ce qu'une partie laisse derrière elle, effacé d'un seul geste : au départ d'une run comme au retour au hub.
+     Une liste oubliée ici, c'est un compagnon fantôme ou une particule d'une autre partie qui traîne. */
+  reset() {
+    G.enemies = [];
+    G.pets = [];
+    G.room = null;
+    Projectiles.list = [];
+    Pickups.list = [];
+    Particles.list = [];
+    Floaters.list = [];
+  },
   toHub() {
     G.state = 'hub';
     G.paused = false;
     G.overlay = null;
     G.run = null;
     G.player = null;
-    G.enemies = [];
-    G.room = null;
-    Projectiles.list = [];
-    Pickups.list = [];
+    Run.reset();
     UI.showHub();
     Music.resetState();
     Music.play('hub');

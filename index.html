@@ -364,7 +364,7 @@ body.touch .menuscreen.main .bigtitle{font-size:calc(42px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-10 07:02';</script>
+<script>window.WAY_BUILD = '2026-09-10 07:39';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -920,6 +920,9 @@ const BALANCE = {
   heartOnClear: 30,
   heartDropChance: 0.05,
   heartOnBossPhase: 30, // second souffle au changement de phase d'un boss (0 = jamais)
+  /* reliques hors élites : chance qu'un ennemi ordinaire en lâche une (2 objets max par salle), et relique sûre sur le mini-boss */
+  relicDropChance: 0.02,
+  relicOnBoss: true,
   /* montée de difficulté à l'intérieur d'un palier : multiplicateur (1 + rampPerRoom·(salle-1)) sur PV et dégâts des ennemis/pièges */
   rampPerRoom: 0.09,
   /* foudre ambiante : intervalle réel = every × [jitterMin, jitterMax] */
@@ -7927,10 +7930,13 @@ CONTENT.characters.push(
     stats: { maxHp: 100, speed: 260, damage: 1, luck: 2 },
     trait: {
       id: 'trait_martin',
-      name: 'Tel quel',
-      desc: 'Aucun avantage particulier pour le moment : ses caractéristiques restent à écrire.',
-      mods: [],
-      hooks: {},
+      name: 'Bonne constitution',
+      desc: 'Il encaisse et repart : +10 % de PV max au début de chaque salle, +15 % d’expérience, +2 de chance.',
+      mods: [
+        { stat: 'xpGain', mul: 1.15 },
+        { stat: 'luck', add: 2 },
+      ],
+      hooks: { onRoomStart: [{ effect: 'heal_on_room', fraction: 0.1 }] },
     },
     startWeapon: 'weapon_blade',
     unlocked: true,
@@ -7952,10 +7958,10 @@ CONTENT.characters.push(
     stats: { maxHp: 100, speed: 260, damage: 1, luck: 2 },
     trait: {
       id: 'trait_gabriel',
-      name: 'Tel quel',
-      desc: 'Aucun avantage particulier pour le moment : ses caractéristiques restent à écrire.',
-      mods: [],
-      hooks: {},
+      name: 'Pied sûr',
+      desc: 'Les pièges lui font moitié moins mal et l’accélèrent 2 s quand ils le touchent ; il ramasse deux fois plus de fragments.',
+      mods: [{ stat: 'trapDamageMul', mul: 0.5 }],
+      hooks: { passive: [{ effect: 'fragments_double' }], onTrapDamage: [{ effect: 'speed_burst', speedMul: 1.2, duration: 2 }] },
     },
     startWeapon: 'weapon_blade',
     unlocked: true,
@@ -7971,9 +7977,12 @@ CONTENT.characters.push(
     stats: { maxHp: 100, speed: 260, damage: 1, luck: 2 },
     trait: {
       id: 'trait_jean',
-      name: 'Tel quel',
-      desc: 'Aucun avantage particulier pour le moment : ses caractéristiques restent à écrire.',
-      mods: [],
+      name: 'Sang-froid',
+      desc: 'Il vise juste : +10 % de chance de coup critique, et ses critiques font 25 % de plus.',
+      mods: [
+        { stat: 'critChance', add: 0.1 },
+        { stat: 'critMult', add: 0.25 },
+      ],
       hooks: {},
     },
     startWeapon: 'weapon_blade',
@@ -8010,11 +8019,13 @@ CONTENT.pets.push(
     duoName: 'Choupi & Tanuki',
     color: '#f0c46a',
     tag: 'ramasse à votre place · et Tanuki charge',
-    desc: 'Un des deux chats de Gabriel. Choupi rapporte tout ce qui traîne pendant que Tanuki traverse la salle en boule sur le temps fort. Inséparables.',
+    desc: 'Un des deux chats de Gabriel. Choupi court chercher ce qui traîne et le rapporte, pendant que Tanuki traverse la salle en boule sur le temps fort. Inséparables.',
     behavior: 'collect',
     damage: 0,
     every: 4,
     radius: 260,
+    reach: 140,
+    leash: 320,
     speed: 280,
     size: 96,
     price: 0,
@@ -8047,7 +8058,7 @@ CONTENT.pets.push(
     name: 'ORI',
     color: '#c9a3ff',
     tag: 'désigne une cible',
-    desc: "Le chat de Jean. Il ne frappe pas : il désigne. L'ennemi marqué encaisse 30 % de plus, de votre part comme de celle des autres.",
+    desc: "Le chat de Jean. Il ne frappe pas : il désigne. L'ennemi marqué encaisse 30 % de plus de tout le monde, et chacun de vos coups dessus est critique.",
     behavior: 'mark',
     fly: true,
     damage: 0,
@@ -8055,6 +8066,7 @@ CONTENT.pets.push(
     range: 420,
     markTime: 4,
     markMul: 1.3,
+    markCrit: true,
     speed: 280,
     size: 64,
     price: 0,
@@ -10710,12 +10722,17 @@ const Pickups = {
       )
     );
   },
-  /* tirage d'un objet à la mort d'un ennemi (élite : 35 % ; dernière vague : 6 % de bourse), 2 objets max par salle */
+  /* tirage d'un objet à la mort d'un ennemi : élite 35 % (bourse, relique, compagnon, allié) ; un ennemi ordinaire lâche
+     parfois une relique (BALANCE.relicDropChance) ; dernière vague : 6 % de bourse. 2 objets max par salle. Le mini-boss
+     ne passe pas ici : il lâche sa relique à coup sûr (Room.onBossDefeated). */
   maybeDrop(e) {
     const r = G.room;
     if (!r || r.drops >= 2 || e.isBoss) return;
     const lastWave = r.waves.length && r.waves.every(w => w.done);
-    if (e.elite && RNG.chance(0.35)) {
+    if (!e.elite && RNG.chance(BALANCE.relicDropChance)) {
+      r.drops++;
+      this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id });
+    } else if (e.elite && RNG.chance(0.35)) {
       const k = RNG();
       r.drops++;
       if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14));
@@ -10983,7 +11000,8 @@ const Combat = {
     const pl = G.player;
     let d = dmg;
     if (!info.dot && !info.noCrit) {
-      const crit = info.crit != null ? info.crit : RNG.chance(pl.stats.critChance);
+      const marked = e.markCrit && e.markUntil > Time.now; // désigné par un guetteur : le coup du joueur est critique à coup sûr
+      const crit = info.crit != null ? info.crit : marked || RNG.chance(pl.stats.critChance);
       if (crit) {
         d *= pl.stats.critMult;
         info.crit = true;
@@ -12323,18 +12341,19 @@ const PET_MODES = {
   call: {
     id: 'call',
     name: "À l'appel",
-    desc: 'Absent, appelé par C : il arrive plus fort (×1,6 dégâts, cadence doublée) pendant 12 s, puis se repose 25 s.',
+    desc: 'Absent, appelé par C : son arrivée repousse tout autour de vous, puis il frappe plus fort (×1,6, cadence doublée) pendant 12 s et se repose 25 s.',
     boost: 1.6,
     dur: 12,
     cd: 25,
+    arrival: { radius: 160, damage: 18, knockback: 3 }, // l'onde de choc de son arrivée, centrée sur le joueur
   },
   none: {
     id: 'none',
     name: 'Personne',
-    desc: 'Aucun compagnon — vous gardez sa part : +12 % de dégâts et +20 PV.',
+    desc: 'Aucun compagnon — vous gardez sa part : +35 % de PV max et +20 % de dégâts.',
     mods: [
-      { stat: 'damage', mul: 1.12 },
-      { stat: 'maxHp', add: 20 },
+      { stat: 'maxHp', mul: 1.35 },
+      { stat: 'damage', mul: 1.2 },
     ],
   },
 };
@@ -12404,6 +12423,7 @@ class Pet {
     this.callT = m.dur;
     this.boost = m.boost;
     this.snap();
+    if (m.arrival && G.room) Combat.playerShockwave(m.arrival); // il déboule : tout ce qui entoure le joueur est repoussé
     UI.toast(this.name + ' arrive');
     AudioEngine.levelUp({ intensity: 0.4 });
     return true;
@@ -12582,17 +12602,36 @@ class Pet {
         }
         break;
       }
-      /* --- scarabée : aimante les ramassables autour de lui --- */
+      /* --- rapporteur : il va chercher ce qui traîne. Il court vers le ramassable le plus proche (dans `radius`
+         de lui, sans s'éloigner du joueur de plus de `leash`) et tout ce qui passe à `reach` de lui file vers le joueur.
+         Un anneau au sol montre cette portée tant qu'il a une cible. --- */
       case 'collect': {
-        this.follow(dt);
-        const R = this.def.radius || 220;
+        const R = this.def.radius || 260,
+          reach = this.def.reach || 140,
+          leash = this.def.leash || 320;
+        let best = null,
+          bd = R;
         for (const p of Pickups.list) {
           if (p.magnet || NO_MAGNET.has(p.kind)) continue;
-          if (dist(p.x, p.y, this.x, this.y) < R) {
+          const d = dist(p.x, p.y, this.x, this.y);
+          if (d < reach) {
             p.magnet = true;
             this.act = Math.max(this.act, 0.6);
+          } else if (d < bd) {
+            bd = d;
+            best = p;
           }
         }
+        this.fetching = best && dist(best.x, best.y, pl.x, pl.y) < leash ? best : null;
+        if (this.fetching) {
+          const a = angleTo(this.x, this.y, best.x, best.y);
+          const sp = this.def.speed || 260;
+          this.x += Math.cos(a) * sp * dt;
+          this.y += Math.sin(a) * sp * dt;
+          this.facing = Math.cos(a) > 0 ? 1 : -1;
+          this.moving = true;
+          if (!this.airborne) resolveRoomCollision(this);
+        } else this.follow(dt);
         if (tick) this.act = Math.max(this.act, 0.5);
         break;
       }
@@ -12653,7 +12692,9 @@ class Pet {
         }
         break;
       }
-      /* --- chouette : désigne une cible, qui encaisse davantage tant qu'elle est marquée --- */
+      /* --- guetteur : désigne une cible, qui encaisse davantage tant qu'elle est marquée. Avec `markCrit`, chaque
+         coup du joueur sur la cible marquée est un coup critique. La marque se voit : un anneau à ses pieds et un
+         losange au-dessus de sa tête (renderMark). --- */
       case 'mark': {
         this.follow(dt);
         if (this.target && (this.target.dead || this.target.markUntil <= Time.now)) this.target = null;
@@ -12663,6 +12704,8 @@ class Pet {
           if (t) {
             t.markUntil = Time.now + (this.def.markTime || 4);
             t.markMul = this.def.markMul || 1.3;
+            t.markCrit = !!this.def.markCrit;
+            t.markColor = this.color;
             this.target = t;
             this.act = 1;
             Particles.spawn(t.x, t.y - 24, { count: 6, color: this.color, glow: true, speedMax: 60, life: 0.6, size: 2 });
@@ -12751,6 +12794,8 @@ class Pet {
     const sprite = Sprites.pickDir(this.def.sprite, dv.dir);
     /* Une seule ligne de sol pour tout le monde, planche ou image : celle du joueur (Sprites.SOL). */
     const sol = Sprites.SOL;
+    if (this.fetching && !this.down) this.renderReach(ctx, sol);
+    if (this.target && this.target.markUntil > Time.now && !this.target.dead) this.renderMark(ctx, this.target);
     ctx.save();
     ctx.globalAlpha = this.down ? 0.15 : 0.32;
     ctx.fillStyle = '#05070c';
@@ -12787,6 +12832,45 @@ class Pet {
       ctx.restore();
     }
     this.renderTags(ctx, s, lift);
+  }
+  /* rapporteur en course : sa portée d'aimant, un anneau au sol qui respire */
+  renderReach(ctx, sol) {
+    const reach = this.def.reach || 140;
+    ctx.save();
+    ctx.globalAlpha = 0.18 + Math.sin(this.t * 6) * 0.06;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 8]);
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + sol, reach, reach * 0.42, 0, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
+  }
+  /* guetteur : la cible marquée porte un anneau aux pieds et un losange au-dessus de la tête, aux couleurs du compagnon */
+  renderMark(ctx, t) {
+    const left = Math.max(0, t.markUntil - Time.now);
+    const pulse = 0.5 + Math.sin(this.t * 9) * 0.5;
+    ctx.save();
+    ctx.strokeStyle = this.color;
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = 0.55 + pulse * 0.3;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(t.x, t.y + t.r * 0.8, t.r + 8 + pulse * 3, (t.r + 8 + pulse * 3) * 0.4, 0, 0, TAU);
+    ctx.stroke();
+    const y = t.y - t.r - 22 - pulse * 4;
+    ctx.beginPath();
+    ctx.moveTo(t.x, y - 7);
+    ctx.lineTo(t.x + 6, y);
+    ctx.lineTo(t.x, y + 7);
+    ctx.lineTo(t.x - 6, y);
+    ctx.closePath();
+    ctx.fill();
+    if (left < 1.2) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(t.x - 8, y + 10, 16 * (left / 1.2), 2);
+    }
+    ctx.restore();
   }
   /* halo d'action et barre de vie, communs au dessin fixe et à la planche animée */
   renderTags(ctx, s, lift) {
@@ -18546,6 +18630,7 @@ const Room = {
     UI.banner(Content.pick('bossWin') || 'Étalon neutralisé', '#ffd166');
     AudioEngine.roomClear({});
     for (let i = 0; i < 12; i++) Pickups.spawn(b.x, b.y, 'coin', 1);
+    if (BALANCE.relicOnBoss) Pickups.spawn(b.x, b.y, 'relic', 1, { relic: RNG.pick(RELICS).id }); // un boss abattu, une relique sûre
   },
   alive() {
     return G.enemies.filter(e => !e.dead).length;
@@ -19023,7 +19108,7 @@ const Run = {
       skillChoices: null,
       weaponDropRoom: RNG.pick([1, 3, 6, 7]),
     };
-    G.pets = [];
+    Run.reset();
     G.player = new Player(charDef);
     G.player.hp = 0;
     G.player.recompute();
@@ -19250,16 +19335,24 @@ const Run = {
     Meta.recordRun(false);
     Run.toHub();
   },
+  /* Tout ce qu'une partie laisse derrière elle, effacé d'un seul geste : au départ d'une run comme au retour au hub.
+     Une liste oubliée ici, c'est un compagnon fantôme ou une particule d'une autre partie qui traîne. */
+  reset() {
+    G.enemies = [];
+    G.pets = [];
+    G.room = null;
+    Projectiles.list = [];
+    Pickups.list = [];
+    Particles.list = [];
+    Floaters.list = [];
+  },
   toHub() {
     G.state = 'hub';
     G.paused = false;
     G.overlay = null;
     G.run = null;
     G.player = null;
-    G.enemies = [];
-    G.room = null;
-    Projectiles.list = [];
-    Pickups.list = [];
+    Run.reset();
     UI.showHub();
     Music.resetState();
     Music.play('hub');
@@ -21692,6 +21785,9 @@ const Debug = (() => {
     const w = pl.weapon;
     const isMelee = w && (w.type === 'melee' || w.type === 'area' || w.type === 'orbital');
     const enemy = nearestEnemy(pl.x, pl.y);
+    /* compagnon « à l'appel » : le bot l'appelle dès qu'il est disponible et qu'un ennemi est à portée, comme un joueur pressé */
+    if (enemy && dist(pl.x, pl.y, enemy.x, enemy.y) < 320)
+      for (const pe of G.pets) if (pe.mode === 'call' && pe.away && pe.cdT <= 0) pe.call();
     /* objectif */
     let goal = null;
     const frag = Pickups.list.find(p => p.kind === 'fragment');
@@ -21986,11 +22082,15 @@ const Atelier = (() => {
     ['strike', 'pique en vol', { damage: 24, every: 8, range: 360, speed: 300, diveSpeed: 660, fly: true }],
     ['bite', 'mord et attire les coups', { damage: 14, every: 4, range: 280, speed: 320, taunt: 230, hp: 90, revive: 6 }],
     ['spit', 'crache à distance', { damage: 9, every: 2, range: 340, speed: 250, projSpeed: 480 }],
-    ['collect', 'ramasse à votre place', { damage: 0, every: 4, radius: 260, speed: 280 }],
+    ['collect', 'va chercher ce qui traîne', { damage: 0, every: 4, radius: 260, reach: 140, leash: 320, speed: 280 }],
     ['guard', 'brise les tirs ennemis', { damage: 0, every: 1, block: 2, dist: 56, spin: 1.7 }],
     ['mend', 'soigne', { damage: 0, every: 4, heal: 4, speed: 230 }],
     ['charge', 'charge en ligne droite', { damage: 18, every: 4, range: 420, speed: 240, rollSpeed: 560, rollTime: 0.8 }],
-    ['mark', 'désigne une cible', { damage: 0, every: 4, range: 420, markTime: 4, markMul: 1.3, speed: 280, fly: true }],
+    [
+      'mark',
+      'désigne une cible (vos coups dessus sont critiques)',
+      { damage: 0, every: 4, range: 420, markTime: 4, markMul: 1.3, markCrit: true, speed: 280, fly: true },
+    ],
     ['sting', 'harcèle sans relâche', { damage: 5, every: 1, range: 320, speed: 440, orbit: 26, spin: 5, fly: true }],
   ];
   const CADENCES = [
@@ -22001,8 +22101,33 @@ const Atelier = (() => {
     [16, 'toutes les quatre mesures'],
   ];
   /* Traits proposés pour un personnage : de quoi donner un caractère sans écrire de mods à la main. */
+  /* [id, libellé, mods, hooks] — les trois derniers sont les caractères des amis de l'auteur (content5.js), pour qu'un
+     copain créé ici puisse les prendre aussi */
   const TRAITS = [
     ['aucun', 'Aucun', []],
+    [
+      'constitution',
+      'Bonne constitution (+10 % PV par salle, +15 % XP, +2 chance)',
+      [
+        { stat: 'xpGain', mul: 1.15 },
+        { stat: 'luck', add: 2 },
+      ],
+      { onRoomStart: [{ effect: 'heal_on_room', fraction: 0.1 }] },
+    ],
+    [
+      'piedsur',
+      'Pied sûr (pièges ÷2, fragments ×2, sprint après un piège)',
+      [{ stat: 'trapDamageMul', mul: 0.5 }],
+      { passive: [{ effect: 'fragments_double' }], onTrapDamage: [{ effect: 'speed_burst', speedMul: 1.2, duration: 2 }] },
+    ],
+    [
+      'sangfroid',
+      'Sang-froid (+10 % de crit, crit +25 %)',
+      [
+        { stat: 'critChance', add: 0.1 },
+        { stat: 'critMult', add: 0.25 },
+      ],
+    ],
     [
       'xp',
       'Apprend vite (+15 % XP, +2 chance)',
@@ -22311,7 +22436,7 @@ const Atelier = (() => {
       atelier: true,
       desc: c.desc || '',
       stats: { maxHp: +c.maxHp || 100, speed: +c.speed || 260, damage: +c.damage || 1, luck: +c.luck || 2 },
-      trait: { id: 'trait_' + c.id, name: c.traitName || tr[1], desc: c.traitDesc || tr[1], mods: tr[2], hooks: {} },
+      trait: { id: 'trait_' + c.id, name: c.traitName || tr[1], desc: c.traitDesc || tr[1], mods: tr[2], hooks: tr[3] || {} },
       startWeapon: c.weapon || 'weapon_blade',
       unlocked: true,
       price: 0,

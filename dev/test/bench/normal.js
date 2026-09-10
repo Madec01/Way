@@ -4,7 +4,8 @@
      node normal.js                       → 8 armes × 4 graines, biome 1, Martin + Uno
      ARMES=weapon_pistol GRAINES=41,42 node normal.js
      BIOME=biome_3 PROFIL=test node normal.js   → profil maxé (mode test) sur un autre palier
-   Écrit un JSON dans out/bench_<biome>_<profil>.json pour comparer deux passes. */
+     MODE=call node normal.js                   → mode de compagnon (always, call, none) ; le bot appelle dès que possible
+   Écrit un JSON dans out/bench_<biome>_<profil>[_<mode>].json pour comparer deux passes. */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -16,6 +17,7 @@ const GRAINES = (process.env.GRAINES || '41,42,43,44').split(',').map(Number);
 const BIOME = process.env.BIOME || 'biome_1';
 const PROFIL = process.env.PROFIL || 'normal';
 const PET = process.env.PET === 'none' ? null : process.env.PET || 'pet_uno';
+const MODE = process.env.MODE || 'always';
 test(async ({ page, ok, url }) => {
   await page.goto(url);
   await page.waitForTimeout(1500);
@@ -35,6 +37,7 @@ test(async ({ page, ok, url }) => {
         biome: BIOME,
         character: 'char_martin',
         pet: PET,
+        petMode: MODE,
       };
       /* on note aussi ce que le compagnon encaisse : dégâts pris et fois sonné */
       const r = await Promise.race([
@@ -69,6 +72,7 @@ test(async ({ page, ok, url }) => {
         niveau: r.levelReached,
         kills: r.kills,
         degats: r.damageTaken,
+        infliges: r.damageDealt,
         duree: r.durationSec,
         boss: !!r.bossKilled,
         petHits: r.petHits,
@@ -77,7 +81,7 @@ test(async ({ page, ok, url }) => {
         salles: r.roomTimes || [],
       });
       console.log(
-        `${arme.replace('weapon_', '').padEnd(10)} g${graine}  ${String(r.outcome).padEnd(9)} salle ${String(r.roomReached).padStart(2)}  niv ${String(r.levelReached).padStart(2)}  dmg ${String(r.damageTaken).padStart(4)}  ${String(r.durationSec).padStart(6)} s  boss ${r.bossKilled ? 'oui' : 'non'}  Uno ${r.petHits || 0} dmg / ${r.petDown || 0} KO  pire salle ${salleMax} s`
+        `${arme.replace('weapon_', '').padEnd(10)} g${graine}  ${String(r.outcome).padEnd(9)} salle ${String(r.roomReached).padStart(2)}  niv ${String(r.levelReached).padStart(2)}  dmg ${String(r.damageTaken).padStart(4)}  infligés ${String(r.damageDealt).padStart(6)}  ${String(r.durationSec).padStart(6)} s  boss ${r.bossKilled ? 'oui' : 'non'}  Uno ${r.petHits || 0} dmg / ${r.petDown || 0} KO  pire salle ${salleMax} s`
       );
     }
   }
@@ -92,7 +96,9 @@ test(async ({ page, ok, url }) => {
     biome: BIOME,
     profil: PROFIL,
     pet: PET,
+    mode: MODE,
     n,
+    infligesMedian: mediane(runs.map(r => r.infliges || 0)),
     victoires: v,
     boss: b,
     salleMediane: mediane(runs.map(r => r.salle)),
@@ -101,8 +107,8 @@ test(async ({ page, ok, url }) => {
     petDownParRun: +(runs.reduce((s, r) => s + (r.petDown || 0), 0) / n).toFixed(2),
   };
   console.log(
-    `\nBILAN ${BIOME} ${PROFIL} : ${v}/${n} victoires (${Math.round((100 * v) / n)} %), mini-boss tué ${b}/${n} (${Math.round((100 * b) / n)} %), salle médiane ${bilan.salleMediane}, durée médiane ${bilan.dureeMediane} s, pire salle ${bilan.pireSalle} s, Uno KO ${bilan.petDownParRun} fois par run`
+    `\nBILAN ${BIOME} ${PROFIL} : ${v}/${n} victoires (${Math.round((100 * v) / n)} %), mini-boss tué ${b}/${n} (${Math.round((100 * b) / n)} %), salle médiane ${bilan.salleMediane}, durée médiane ${bilan.dureeMediane} s, pire salle ${bilan.pireSalle} s, dégâts infligés médians ${bilan.infligesMedian}, Uno KO ${bilan.petDownParRun} fois par run`
   );
-  fs.writeFileSync(out(`bench_${BIOME}_${PROFIL}.json`), JSON.stringify({ bilan, runs }, null, 1));
+  fs.writeFileSync(out(`bench_${BIOME}_${PROFIL}${MODE === 'always' ? '' : '_' + MODE}.json`), JSON.stringify({ bilan, runs }, null, 1));
   ok('le banc a tourné', n > 0, `${n} runs`);
 });

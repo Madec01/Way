@@ -20,18 +20,19 @@ const PET_MODES = {
   call: {
     id: 'call',
     name: "À l'appel",
-    desc: 'Absent, appelé par C : il arrive plus fort (×1,6 dégâts, cadence doublée) pendant 12 s, puis se repose 25 s.',
+    desc: 'Absent, appelé par C : son arrivée repousse tout autour de vous, puis il frappe plus fort (×1,6, cadence doublée) pendant 12 s et se repose 25 s.',
     boost: 1.6,
     dur: 12,
     cd: 25,
+    arrival: { radius: 160, damage: 18, knockback: 3 }, // l'onde de choc de son arrivée, centrée sur le joueur
   },
   none: {
     id: 'none',
     name: 'Personne',
-    desc: 'Aucun compagnon — vous gardez sa part : +12 % de dégâts et +20 PV.',
+    desc: 'Aucun compagnon — vous gardez sa part : +35 % de PV max et +20 % de dégâts.',
     mods: [
-      { stat: 'damage', mul: 1.12 },
-      { stat: 'maxHp', add: 20 },
+      { stat: 'maxHp', mul: 1.35 },
+      { stat: 'damage', mul: 1.2 },
     ],
   },
 };
@@ -101,6 +102,7 @@ class Pet {
     this.callT = m.dur;
     this.boost = m.boost;
     this.snap();
+    if (m.arrival && G.room) Combat.playerShockwave(m.arrival); // il déboule : tout ce qui entoure le joueur est repoussé
     UI.toast(this.name + ' arrive');
     AudioEngine.levelUp({ intensity: 0.4 });
     return true;
@@ -279,17 +281,36 @@ class Pet {
         }
         break;
       }
-      /* --- scarabée : aimante les ramassables autour de lui --- */
+      /* --- rapporteur : il va chercher ce qui traîne. Il court vers le ramassable le plus proche (dans `radius`
+         de lui, sans s'éloigner du joueur de plus de `leash`) et tout ce qui passe à `reach` de lui file vers le joueur.
+         Un anneau au sol montre cette portée tant qu'il a une cible. --- */
       case 'collect': {
-        this.follow(dt);
-        const R = this.def.radius || 220;
+        const R = this.def.radius || 260,
+          reach = this.def.reach || 140,
+          leash = this.def.leash || 320;
+        let best = null,
+          bd = R;
         for (const p of Pickups.list) {
           if (p.magnet || NO_MAGNET.has(p.kind)) continue;
-          if (dist(p.x, p.y, this.x, this.y) < R) {
+          const d = dist(p.x, p.y, this.x, this.y);
+          if (d < reach) {
             p.magnet = true;
             this.act = Math.max(this.act, 0.6);
+          } else if (d < bd) {
+            bd = d;
+            best = p;
           }
         }
+        this.fetching = best && dist(best.x, best.y, pl.x, pl.y) < leash ? best : null;
+        if (this.fetching) {
+          const a = angleTo(this.x, this.y, best.x, best.y);
+          const sp = this.def.speed || 260;
+          this.x += Math.cos(a) * sp * dt;
+          this.y += Math.sin(a) * sp * dt;
+          this.facing = Math.cos(a) > 0 ? 1 : -1;
+          this.moving = true;
+          if (!this.airborne) resolveRoomCollision(this);
+        } else this.follow(dt);
         if (tick) this.act = Math.max(this.act, 0.5);
         break;
       }
@@ -350,7 +371,9 @@ class Pet {
         }
         break;
       }
-      /* --- chouette : désigne une cible, qui encaisse davantage tant qu'elle est marquée --- */
+      /* --- guetteur : désigne une cible, qui encaisse davantage tant qu'elle est marquée. Avec `markCrit`, chaque
+         coup du joueur sur la cible marquée est un coup critique. La marque se voit : un anneau à ses pieds et un
+         losange au-dessus de sa tête (renderMark). --- */
       case 'mark': {
         this.follow(dt);
         if (this.target && (this.target.dead || this.target.markUntil <= Time.now)) this.target = null;
@@ -360,6 +383,8 @@ class Pet {
           if (t) {
             t.markUntil = Time.now + (this.def.markTime || 4);
             t.markMul = this.def.markMul || 1.3;
+            t.markCrit = !!this.def.markCrit;
+            t.markColor = this.color;
             this.target = t;
             this.act = 1;
             Particles.spawn(t.x, t.y - 24, { count: 6, color: this.color, glow: true, speedMax: 60, life: 0.6, size: 2 });
@@ -448,6 +473,8 @@ class Pet {
     const sprite = Sprites.pickDir(this.def.sprite, dv.dir);
     /* Une seule ligne de sol pour tout le monde, planche ou image : celle du joueur (Sprites.SOL). */
     const sol = Sprites.SOL;
+    if (this.fetching && !this.down) this.renderReach(ctx, sol);
+    if (this.target && this.target.markUntil > Time.now && !this.target.dead) this.renderMark(ctx, this.target);
     ctx.save();
     ctx.globalAlpha = this.down ? 0.15 : 0.32;
     ctx.fillStyle = '#05070c';
@@ -484,6 +511,45 @@ class Pet {
       ctx.restore();
     }
     this.renderTags(ctx, s, lift);
+  }
+  /* rapporteur en course : sa portée d'aimant, un anneau au sol qui respire */
+  renderReach(ctx, sol) {
+    const reach = this.def.reach || 140;
+    ctx.save();
+    ctx.globalAlpha = 0.18 + Math.sin(this.t * 6) * 0.06;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 8]);
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + sol, reach, reach * 0.42, 0, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
+  }
+  /* guetteur : la cible marquée porte un anneau aux pieds et un losange au-dessus de la tête, aux couleurs du compagnon */
+  renderMark(ctx, t) {
+    const left = Math.max(0, t.markUntil - Time.now);
+    const pulse = 0.5 + Math.sin(this.t * 9) * 0.5;
+    ctx.save();
+    ctx.strokeStyle = this.color;
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = 0.55 + pulse * 0.3;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(t.x, t.y + t.r * 0.8, t.r + 8 + pulse * 3, (t.r + 8 + pulse * 3) * 0.4, 0, 0, TAU);
+    ctx.stroke();
+    const y = t.y - t.r - 22 - pulse * 4;
+    ctx.beginPath();
+    ctx.moveTo(t.x, y - 7);
+    ctx.lineTo(t.x + 6, y);
+    ctx.lineTo(t.x, y + 7);
+    ctx.lineTo(t.x - 6, y);
+    ctx.closePath();
+    ctx.fill();
+    if (left < 1.2) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(t.x - 8, y + 10, 16 * (left / 1.2), 2);
+    }
+    ctx.restore();
   }
   /* halo d'action et barre de vie, communs au dessin fixe et à la planche animée */
   renderTags(ctx, s, lift) {

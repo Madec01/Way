@@ -951,8 +951,8 @@ Le choix se fait au hub et vaut pour la run entière. C'est un vrai triangle : s
 | Mode | Ce que ça donne |
 |---|---|
 | **Tout le temps** | Il suit du début à la fin, à sa force normale. |
-| **À l'appel** | Absent. La touche **C** l'appelle : il arrive à **×1,6 dégâts et cadence doublée** pendant 12 s, puis se repose 25 s. Un badge montre la jauge de présence ou de repos. |
-| **Personne** | Aucun animal, mais le joueur garde sa part : **+12 % de dégâts et +20 PV**, toute la run. |
+| **À l'appel** | Absent. La touche **C** l'appelle : **son arrivée est une onde de choc** (160 px, 18 dégâts, recul 3, centrée sur le joueur — `PET_MODES.call.arrival`), puis il frappe à **×1,6 dégâts et cadence doublée** pendant 12 s, et se repose 25 s. Un badge montre la jauge de présence ou de repos. |
+| **Personne** | Aucun animal, mais le joueur garde sa part : **+35 % de PV max et +20 % de dégâts**, toute la run (chantier 5 : c'était +12 % / +20 PV, jamais choisi). |
 
 Le bonus de « personne » est posé comme un buff de run (`roomOnly: false`) : posé par salle, il aurait sauté à la première porte, et le défaut ne se serait vu qu'en salle 2.
 
@@ -1169,6 +1169,30 @@ Tests : `mort.js` (la chute dessinée, l'écran de fin retardé, le clip « rama
 **Ménage.** Le corps dessiné en pixels et `BODY_PALETTES` (atteints seulement sans tileset), `Sprites.portrait()` (zéro appelant), `hold` sur `death`, `walkFrame` : supprimés. `gait` respire sur `Time.now` (figé en pause). Les vignettes (`sheetCanvas`) sont à un multiple entier de la case ou à sa moitié exacte, jamais ×0,71. `readSheet` devine la case de chaque planche et **refuse** une planche d'une autre case au lieu de la découper de travers.
 
 Test : `corps.js` — 23 mesures : les trois personnages, un sprite entier, un visage collé, la planche du jeu, les quatre animaux et un compagnon à image posent tous les pieds à y+25 ; le descripteur dit la bonne hauteur ; l'ordre de dessin ; le regard ; un geste par tir ; le dash animé.
+
+## 40. Chantier 5 — des compagnons qui comptent
+
+**Les trois modes sont un choix.** « Personne » valait +12 % de dégâts et +20 PV : personne ne le prenait. Il vaut maintenant **+35 % de PV max et +20 % de dégâts** (`PET_MODES.none.mods`, en multiplicateurs pour suivre les greffes). Mesuré au bot (TEST-REPORT §12) : à +25 %/+15 %, 1 victoire sur 8 contre 3 avec Uno ; à +35 %/+20 %, 3 sur 16 et le mini-boss une fois sur deux. Ça reste le mode dur pour le bot, qui n'esquive pas et à qui Uno épargne 200 à 600 dégâts par partie ; pour un joueur qui esquive, la part gardée pèse plus. Aller plus haut ferait du solo le meilleur choix pour lui — on s'arrête là et on écoute les amis. « À l'appel » ne se contentait pas d'arriver : **son arrivée est une onde de choc** autour du joueur (`PET_MODES.call.arrival` → `Combat.playerShockwave`), ce qui en fait un bouton de secours quand on est encerclé, avant même les 12 s de force. Le bot d'équilibrage appelle son compagnon dès qu'un ennemi est à 320 px et que l'appel est disponible (`botControl`), et le banc prend `MODE=always|call|none`.
+
+**Choupi va chercher.** `collect` aimantait passivement dans un rayon de 220 px autour d'un animal qui suivait le joueur : autant dire le rayon de ramassage du joueur, un peu plus loin. Maintenant le rapporteur **court vers le ramassable le plus proche** (dans `radius` = 260 px de lui, sans s'éloigner du joueur de plus de `leash` = 320 px) et tout ce qui passe à `reach` = 140 px de lui file vers le joueur. Tant qu'il est en course, un anneau pointillé au sol montre sa portée (`renderReach`). Fragments, armes, reliques, alliés et compagnons ne sont jamais aimantés (`NO_MAGNET`) : on les ramasse en se baissant.
+
+**ORI rend critique.** `mark` multipliait les dégâts de tout le monde par 1,3 sur la cible désignée — invisible, et 30 % ne se sent pas. Avec `markCrit: true`, **chaque coup du joueur sur la cible marquée est un coup critique** (`Combat.hitEnemy` : `e.markCrit && e.markUntil > Time.now` force `crit`), en plus des 30 %. Avec un critique à ×1,5, la cible marquée tombe ×1,95 plus vite de la main de Jean — c'est ce que promettait déjà « Œil pour œil ». La marque se voit : un anneau aux pieds de la cible et un losange au-dessus de sa tête, aux couleurs du chat, avec une petite jauge la dernière seconde (`renderMark`). Les compagnons qui mordent ou crachent passent en `noCrit` : la marque ne les concerne pas.
+
+**Un caractère par ami.** Les traits de Neuf et Marge, retirés au chantier 1, reviennent sur les amis avec de nouveaux noms, à réattribuer par eux (voir PLAN-CHANTIERS §5) :
+
+| Ami | Caractère | Ce que ça fait |
+|---|---|---|
+| Martin | **Bonne constitution** | +10 % de PV max soignés au début de chaque salle, +15 % d'expérience, +2 de chance |
+| Gabriel | **Pied sûr** | pièges ÷2, fragments ×2, sprint de 2 s (×1,2) quand un piège le touche |
+| Jean | **Sang-froid** | +10 % de chance de critique, critiques +25 % (nouveau) |
+
+L'atelier « Amis » propose les trois dans la liste des caractères (`TRAITS`, avec leurs `hooks` — avant, l'atelier n'exportait jamais de hook).
+
+**Des reliques hors élites.** Un ennemi ordinaire lâche une relique à 2 % (`BALANCE.relicDropChance`, toujours sous le plafond de 2 objets par salle), et **le mini-boss en lâche toujours une** (`BALANCE.relicOnBoss`, dans `Room.onBossDefeated`). Avant, seules les élites (35 %, un quart du temps une relique) en donnaient : une partie entière pouvait n'en voir aucune.
+
+**Une seule remise à zéro.** `Run.reset()` efface ennemis, compagnons, salle, tirs, ramassables, particules et chiffres flottants ; `Run.start` et `Run.toHub` l'appellent. Avant, `toHub` oubliait les compagnons et les particules : un chat fantôme pouvait réapparaître au hub, et les `snap()` de `Room.load` restent parce qu'ils **placent** (ils ne nettoient pas).
+
+Test : `compagnons.js` — 17 mesures : les deux bonus de « Personne » ; l'onde d'arrivée touche à 60 px et pas à 400 ; Choupi court vers une pièce à 234 px, dessine son anneau et la pièce finit ramassée ; ORI marque avec `markCrit`, 20 coups sur 20 sont critiques, 43 sur 200 sans la marque, le losange se dessine ; les trois caractères ; 12 reliques sur 600 ennemis ordinaires, une sur le mini-boss ; le retour au hub ne laisse rien.
 
 ## 39. Chantier 4 — le Normal gagnable
 

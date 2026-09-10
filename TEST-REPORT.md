@@ -535,3 +535,18 @@ Banc : `dev/test/bench/normal.js` — bot, mode Normal, profil neuf, Martin + Un
 Par arme (après) : chaîne 4/4, boomerang 3/4, lame 2/4, arc 2/4, pistolet 2/4, marteau 0/4, orbe 0/4, brûleur 0/4. Salle de mort : 5 (×7), 6 et 7 (×4 chacune), 3 (×3), 9 (×1).
 
 Les onze réglages et leur effet mesuré un par un sont dans CONTENT.md §39. Le réglage décisif : les salles de boss ne sont plus rampées (mini-boss 38 % → 81 % sur 16 parties). Le point ouvert : la salle 6 (modulaire), où le bot marche dans le sol électrifié ; l'orbe et le brûleur, qui n'en sortent pas.
+
+## 12. Chantier 5 — les trois modes de compagnon (10 septembre 2026)
+
+Banc : `MODE=always|call|none node normal.js` — bot, Normal, profil neuf, Martin + Uno, biome 1, lame et chaîne × graines 41-44 (8 parties par mode). En « à l'appel », le bot appelle Uno dès qu'un ennemi est à 320 px et que l'appel est disponible.
+
+| Mode | victoires | mini-boss tué | salle médiane | dégâts infligés (médiane) | dégâts subis (médiane) | Uno KO / partie |
+|---|---|---|---|---|---|---|
+| Tout le temps | 3/8 (38 %) | 7/8 (88 %) | 7 | 9 277 | 270 | 0,75 |
+| À l'appel (onde d'arrivée) | 4/8 (50 %) | 5/8 (63 %) | 9 | 9 487 | 197 | 0 |
+| Personne, +25 % PV / +15 % dégâts | 1/8 (13 %) | 3/8 (38 %) | 5 | 4 923 | 235 | — |
+| Personne, +35 % PV / +20 % dégâts (retenu) | 3/16 (19 %) | 8/16 (50 %) | 6 | 6 124 / 6 566 | 270 | — |
+
+La dernière ligne est mesurée sur 16 parties (graines 41-48). « Tout le temps » et « à l'appel » se valent (l'écart de mini-boss tient à 8 parties : sans Uno pour encaisser le Portier, le bot y meurt un peu plus). « Personne » reste en dessous : Uno prend 200 à 600 dégâts par partie à la place du bot, qui n'esquive pas. La cible du plan (les trois modes à ±15 % de dégâts) n'est pas atteinte pour le solo, et je ne pousse pas plus loin : au-delà de +35 %/+20 %, un joueur qui esquive n'aurait plus aucune raison de prendre un animal. À trancher après le retour des amis.
+
+Reliques : sur 600 ennemis ordinaires tués en salle 1, 12 reliques (2 %), et une sur le mini-boss à chaque fois (`compagnons.js`).

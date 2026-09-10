@@ -93,11 +93,15 @@ const Atelier = (() => {
     ['strike', 'pique en vol', { damage: 24, every: 8, range: 360, speed: 300, diveSpeed: 660, fly: true }],
     ['bite', 'mord et attire les coups', { damage: 14, every: 4, range: 280, speed: 320, taunt: 230, hp: 90, revive: 6 }],
     ['spit', 'crache à distance', { damage: 9, every: 2, range: 340, speed: 250, projSpeed: 480 }],
-    ['collect', 'ramasse à votre place', { damage: 0, every: 4, radius: 260, speed: 280 }],
+    ['collect', 'va chercher ce qui traîne', { damage: 0, every: 4, radius: 260, reach: 140, leash: 320, speed: 280 }],
     ['guard', 'brise les tirs ennemis', { damage: 0, every: 1, block: 2, dist: 56, spin: 1.7 }],
     ['mend', 'soigne', { damage: 0, every: 4, heal: 4, speed: 230 }],
     ['charge', 'charge en ligne droite', { damage: 18, every: 4, range: 420, speed: 240, rollSpeed: 560, rollTime: 0.8 }],
-    ['mark', 'désigne une cible', { damage: 0, every: 4, range: 420, markTime: 4, markMul: 1.3, speed: 280, fly: true }],
+    [
+      'mark',
+      'désigne une cible (vos coups dessus sont critiques)',
+      { damage: 0, every: 4, range: 420, markTime: 4, markMul: 1.3, markCrit: true, speed: 280, fly: true },
+    ],
     ['sting', 'harcèle sans relâche', { damage: 5, every: 1, range: 320, speed: 440, orbit: 26, spin: 5, fly: true }],
   ];
   const CADENCES = [
@@ -108,8 +112,33 @@ const Atelier = (() => {
     [16, 'toutes les quatre mesures'],
   ];
   /* Traits proposés pour un personnage : de quoi donner un caractère sans écrire de mods à la main. */
+  /* [id, libellé, mods, hooks] — les trois derniers sont les caractères des amis de l'auteur (content5.js), pour qu'un
+     copain créé ici puisse les prendre aussi */
   const TRAITS = [
     ['aucun', 'Aucun', []],
+    [
+      'constitution',
+      'Bonne constitution (+10 % PV par salle, +15 % XP, +2 chance)',
+      [
+        { stat: 'xpGain', mul: 1.15 },
+        { stat: 'luck', add: 2 },
+      ],
+      { onRoomStart: [{ effect: 'heal_on_room', fraction: 0.1 }] },
+    ],
+    [
+      'piedsur',
+      'Pied sûr (pièges ÷2, fragments ×2, sprint après un piège)',
+      [{ stat: 'trapDamageMul', mul: 0.5 }],
+      { passive: [{ effect: 'fragments_double' }], onTrapDamage: [{ effect: 'speed_burst', speedMul: 1.2, duration: 2 }] },
+    ],
+    [
+      'sangfroid',
+      'Sang-froid (+10 % de crit, crit +25 %)',
+      [
+        { stat: 'critChance', add: 0.1 },
+        { stat: 'critMult', add: 0.25 },
+      ],
+    ],
     [
       'xp',
       'Apprend vite (+15 % XP, +2 chance)',
@@ -418,7 +447,7 @@ const Atelier = (() => {
       atelier: true,
       desc: c.desc || '',
       stats: { maxHp: +c.maxHp || 100, speed: +c.speed || 260, damage: +c.damage || 1, luck: +c.luck || 2 },
-      trait: { id: 'trait_' + c.id, name: c.traitName || tr[1], desc: c.traitDesc || tr[1], mods: tr[2], hooks: {} },
+      trait: { id: 'trait_' + c.id, name: c.traitName || tr[1], desc: c.traitDesc || tr[1], mods: tr[2], hooks: tr[3] || {} },
       startWeapon: c.weapon || 'weapon_blade',
       unlocked: true,
       price: 0,

@@ -30,6 +30,9 @@ const BALANCE = {
   heartOnClear: 30,
   heartDropChance: 0.05,
   heartOnBossPhase: 30, // second souffle au changement de phase d'un boss (0 = jamais)
+  /* reliques hors élites : chance qu'un ennemi ordinaire en lâche une (2 objets max par salle), et relique sûre sur le mini-boss */
+  relicDropChance: 0.02,
+  relicOnBoss: true,
   /* montée de difficulté à l'intérieur d'un palier : multiplicateur (1 + rampPerRoom·(salle-1)) sur PV et dégâts des ennemis/pièges */
   rampPerRoom: 0.09,
   /* foudre ambiante : intervalle réel = every × [jitterMin, jitterMax] */

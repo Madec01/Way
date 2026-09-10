@@ -545,12 +545,17 @@ const Pickups = {
       )
     );
   },
-  /* tirage d'un objet à la mort d'un ennemi (élite : 35 % ; dernière vague : 6 % de bourse), 2 objets max par salle */
+  /* tirage d'un objet à la mort d'un ennemi : élite 35 % (bourse, relique, compagnon, allié) ; un ennemi ordinaire lâche
+     parfois une relique (BALANCE.relicDropChance) ; dernière vague : 6 % de bourse. 2 objets max par salle. Le mini-boss
+     ne passe pas ici : il lâche sa relique à coup sûr (Room.onBossDefeated). */
   maybeDrop(e) {
     const r = G.room;
     if (!r || r.drops >= 2 || e.isBoss) return;
     const lastWave = r.waves.length && r.waves.every(w => w.done);
-    if (e.elite && RNG.chance(0.35)) {
+    if (!e.elite && RNG.chance(BALANCE.relicDropChance)) {
+      r.drops++;
+      this.spawn(e.x, e.y, 'relic', 1, { relic: RNG.pick(RELICS).id });
+    } else if (e.elite && RNG.chance(0.35)) {
       const k = RNG();
       r.drops++;
       if (k < 0.5) this.spawn(e.x, e.y, 'purse', RNG.int(6, 14));
@@ -818,7 +823,8 @@ const Combat = {
     const pl = G.player;
     let d = dmg;
     if (!info.dot && !info.noCrit) {
-      const crit = info.crit != null ? info.crit : RNG.chance(pl.stats.critChance);
+      const marked = e.markCrit && e.markUntil > Time.now; // désigné par un guetteur : le coup du joueur est critique à coup sûr
+      const crit = info.crit != null ? info.crit : marked || RNG.chance(pl.stats.critChance);
       if (crit) {
         d *= pl.stats.critMult;
         info.crit = true;
