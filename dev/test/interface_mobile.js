@@ -35,6 +35,7 @@ test(
       const c = document.createElement('canvas');
       const ctx = c.getContext('2d');
       Pets.give('pet_uno');
+      G.enemies = [];
       UI.toast('Un message');
       UI.renderHud(ctx);
       UI.renderToasts(ctx);

@@ -1444,3 +1444,18 @@ Test : `bat.js` — 12 mesures (Beat.pulse ; luminance du sol entre battement pl
 
 Test : `hud.js` — 14 mesures (le rectangle central libre, les trois polices, la barre segmentée avec les chiffres dedans, la bande d'XP, la pastille qui grossit, la ligne du haut, l'anneau qui flashe, la grille des greffes avec ×n, la barre du boss dans le tiers supérieur segmentée par phase, l'entrée et le dégât retardé, les trois tailles de chiffres, le fondu à 45 % et sa remontée, les barres ennemies segmentées, les zones d'impact en alerte).
 
+## 52. Chantier I-6 — une seule voix
+
+**Une règle pour qui a le droit de parler pendant un combat.** Un seul point d'entrée, `UI.notify({ text, sub, color, level, key, secs, x, y })` (50_ui.js), et quatre niveaux :
+
+| Niveau | Nom | Ce que ça fait |
+|---|---|---|
+| 0 | vital | l'écran : flash blanc et secousse ; s'il y a un texte, un bandeau qui coupe tout |
+| 1 | danger | dans le monde : un chiffre flottant à `(x, y)` ; sans position, **un bandeau qui interrompt le courant** et passe devant la file (ENRAGÉS, Mauvais ordre, Renforts, changement de phase du boss) |
+| 2 | événement | **un seul bandeau à la fois**, 1,4 s, dans la zone libre ; les autres font la queue (six au plus) — vagues, défis, salle sécurisée, arme d'essai, relique, compagnon |
+| 3 | info | un toast en bas à droite, **trois au plus**, **retenu tant qu'un ennemi est à moins de 400 px** du joueur (`pendingToasts`), vidé par `UI.clearInfo()` quand la salle est sécurisée — compagnons, crédits, fragments, bonus d'XP |
+
+`banner(text, color, sub)` et `toast(text, secs)` restent : ce sont des enveloppes vers `notify` (niveau 2 et 3), et les textes restent dans le code qui les émet (le test du vocabulaire les balaie). **Déduplication** : deux messages de même clé (`key`, sinon le texte) à moins de 3 s n'en font qu'un (`seenKeys`, horloge murale) — la vague porte la clé `wave`, la phase du boss `phase<n>`. **Zone libre** (`UI.zoneLibre()`) : le bandeau vit au tiers supérieur, sauf si le joueur y est à l'écran (caméra bloquée par le bord de la salle) — alors au tiers inférieur ; jamais au centre. **Figé** : un panneau ouvert sur la partie (`G.overlay` en `run` : montée de niveau, coffre, pause) arrête l'horloge des messages. **Une nouvelle salle** appelle `UI.clearAll()` : rien de l'ancienne ne reste à dire. `UI.messages()` expose ce qui est visible et ce qui attend, pour les tests.
+
+Test : `messages.js` — 8 mesures (dix messages en une image → un bandeau, quatre en file, trois toasts ; doublon et même clé ; le niveau 1 coupe le courant ; le toast retenu près d'un ennemi puis libéré ; la salle sécurisée vide les infos ; le panneau fige ; le bandeau descend quand le joueur est en haut ; un seul `banners.push`).
+

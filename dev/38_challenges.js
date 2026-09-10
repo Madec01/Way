@@ -199,7 +199,7 @@ const Challenge = (() => {
       const pool = melee && cc.length && RNG.chance(0.8) ? cc : all;
       Room.spawnAt({ enemy: RNG.pick(pool), count: 1, x: -1, y: -1 });
     }
-    UI.banner('Renforts', '#ff6b6b');
+    UI.notify({ text: 'Renforts', color: '#ff6b6b', level: 1 });
   };
 
   /* ---------- update ---------- */
@@ -303,7 +303,7 @@ const Challenge = (() => {
           c.step = 0;
           Combat.hitPlayer(8, { type: 'trap', x: s.x, y: s.y, trapName: 'Décharge' });
           G.room.beams.push({ ax: s.x, ay: s.y, bx: pl.x, by: pl.y, t: 0, life: 0.25, color: '#c9a3ff', width: 4, jag: true });
-          UI.banner('Mauvais ordre', PAL.alert);
+          UI.notify({ text: 'Mauvais ordre', color: PAL.alert, level: 1, key: 'mauvais-ordre' });
           s.cool = 1;
         }
       }
@@ -403,7 +403,7 @@ const Challenge = (() => {
       }
       if (left <= 0 && !c.enraged) {
         c.enraged = true;
-        UI.banner('ENRAGÉS', PAL.alert);
+        UI.notify({ text: 'ENRAGÉS', color: PAL.alert, level: 1 });
         AudioEngine.bossRoar({});
         for (const e of G.enemies) enrage(e);
       }

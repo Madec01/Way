@@ -386,6 +386,7 @@ const Tempo = {
     const tp = room.tempo;
     room.doorOpen = false;
     tp.pendingDoor = true;
+    UI.clearInfo();
     const bonus = Math.round(Math.min(150, tp.onBeat * 4) * G.player.stats.xpGain * G.debug.xpMul);
     if (bonus > 0 && !G.attract) {
       Run.addXp(bonus);

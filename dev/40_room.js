@@ -120,6 +120,7 @@ const Room = {
     }
     G.run.roomIndex = index;
     applyDifficulty();
+    UI.clearAll(); // une nouvelle salle : les messages de l'ancienne n'ont plus lieu d'être
     G.enemies = [];
     Projectiles.list = [];
     Pickups.list = [];
@@ -310,7 +311,7 @@ const Room = {
           r.lastWaveT = r.stateT;
           for (const s of w.spawns) Room.spawnAt(s);
           if (w.at !== 'start') {
-            UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b');
+            UI.notify({ text: STR.wave + ' ' + (++r.waveIdx + 1), color: '#ff6b6b', level: 2, key: 'wave' });
           } else r.waveIdx = 0;
           break;
         }
@@ -551,6 +552,7 @@ const Room = {
     } // porte sur la mesure suivante
     /* la porte s'ouvre sur le temps fort suivant (F-5) : Room.update la guette ; le reste de la fin de salle est immédiat */
     r.pendingDoor = true;
+    UI.clearInfo(); // salle sécurisée : les infos retenues pendant le combat n'ont plus lieu d'être
     r.doorAt = Beat.t + Beat.timeToNextBar(); // un instant musical, pas une image : robuste aux grands pas de simulation
     UI.banner('Salle sécurisée — sortie ouverte', '#7fff9a');
     Music.calm();

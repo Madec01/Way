@@ -1087,7 +1087,12 @@ class Boss extends Enemy {
       Feel.stop(180);
       AudioEngine.bossPhase({});
       Music.tapeStop();
-      UI.banner(this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1), this.color);
+      UI.notify({
+        text: this.phaseText && this.phaseIdx === 1 ? this.phaseText : 'PHASE ' + (this.phaseIdx + 1),
+        color: this.color,
+        level: 1,
+        key: 'phase' + this.phaseIdx,
+      });
       /* second souffle : un cœur tombe au changement de phase. Tenir jusque-là se récompense, et le boss est la
          seule salle sans le cœur de fin de salle avant sa seconde moitié. */
       if (BALANCE.heartOnBossPhase && G.player) {

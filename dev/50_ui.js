@@ -1062,27 +1062,108 @@ const UI = (() => {
     show('credits');
   }
 
-  /* ---------- Bannières, toasts, transitions ---------- */
+  /* ---------- Une seule voix (chantier I-6) : bannières, toasts, transitions ----------
+     Un seul point d'entrée, notify({ text, sub, color, level, key, secs, x, y }), et quatre niveaux :
+       0 vital     — l'écran : flash, secousse (pas de texte, ou un bandeau qui coupe tout)
+       1 danger    — dans le monde : un chiffre flottant à (x, y) ; sans position, un bandeau qui interrompt le courant
+       2 événement — UN bandeau à la fois au tiers supérieur, 1,4 s, les autres font la queue
+       3 info      — un toast en bas à droite, 3 au plus, RETENU tant qu'un ennemi est à moins de 400 px,
+                     vidé quand la salle est sécurisée (clearInfo)
+     Deux messages de même clé (la clé, sinon le texte) à moins de 3 s n'en font qu'un. banner() et toast() sont des
+     enveloppes de compatibilité : elles gardent leur signature, les textes restent dans le code qui les émet. */
+  const pendingToasts = [];
+  const seenKeys = new Map();
+  const NEAR_ENEMY = 400;
+  function enemyNear() {
+    const pl = G.player;
+    if (!pl || G.state !== 'run') return false;
+    return G.enemies.some(e => !e.dead && dist(e.x, e.y, pl.x, pl.y) < NEAR_ENEMY);
+  }
+  function notify(o) {
+    const level = o.level == null ? 2 : o.level;
+    const key = o.key || o.text;
+    const now = performance.now() / 1000;
+    if (key) {
+      const last = seenKeys.get(key);
+      if (last != null && now - last < 3) return false; // déjà dit il y a moins de 3 s
+      seenKeys.set(key, now);
+      if (seenKeys.size > 200) seenKeys.delete(seenKeys.keys().next().value);
+    }
+    if (level === 0) {
+      flashScreen(0.35, 120);
+      Feel.shake(4, undefined, 160);
+      if (!o.text) return true;
+    }
+    if (level === 1 && o.x != null && o.y != null) {
+      Floaters.add(o.x, o.y, o.text, o.color || PAL.alert, o.size || 16, 'event');
+      return true;
+    }
+    if (level <= 2) {
+      const b = { text: o.text, color: o.color || '#fff', sub: o.sub || '', t: 0, life: o.secs || 1.4, level };
+      if (level < 2 && banners.length) banners[0].t = Math.max(banners[0].t, banners[0].life * 0.8); // le courant s'efface tout de suite
+      if (level < 2) banners.splice(1, 0, b);
+      else banners.push(b);
+      if (banners.length > 6) banners.splice(6);
+      return true;
+    }
+    const t = { text: o.text, t: 0, life: o.secs || 3.5 };
+    if (enemyNear()) pendingToasts.push(t);
+    else toasts.push(t);
+    if (toasts.length > 3) toasts.shift();
+    if (pendingToasts.length > 6) pendingToasts.shift();
+    return true;
+  }
   function banner(text, color = '#fff', sub = '') {
-    banners.push({ text, color, sub, t: 0, life: 2.2 });
-    if (banners.length > 3) banners.shift();
+    return notify({ text, color, sub, level: 2 });
   }
   function toast(text, secs = 3.5) {
-    toasts.push({ text, t: 0, life: secs });
-    if (toasts.length > 4) toasts.shift();
+    return notify({ text, secs, level: 3 });
+  }
+  /* la salle est sécurisée : les infos retenues n'ont plus lieu d'être */
+  function clearInfo() {
+    pendingToasts.length = 0;
+  }
+  /* une nouvelle salle : rien de l'ancienne ne reste à dire */
+  function clearAll() {
+    banners.length = 0;
+    toasts.length = 0;
+    pendingToasts.length = 0;
+    seenKeys.clear();
+  }
+  /* pour les tests : ce qui est visible et ce qui attend */
+  function messages() {
+    return { banner: banners[0] || null, queue: banners.slice(1), toasts: toasts.slice(), pending: pendingToasts.slice() };
+  }
+  /* où un bandeau a le droit de s'afficher : le tiers supérieur, sauf si le joueur y est — alors le tiers inférieur */
+  function zoneLibre() {
+    const V = Engine.view;
+    const T = -V.oy,
+      B = -V.oy + V.h;
+    const pl = G.player;
+    let haut = true;
+    if (pl && G.state === 'run') {
+      const sy = (pl.y - Camera.y) * Camera.zoom + H / 2; // position du joueur à l'écran
+      if (sy < T + V.h * 0.42) haut = false;
+    }
+    return { haut, y: haut ? T + V.h * 0.1 : B - V.h * 0.22 };
   }
   function transition(cb) {
     fade.dir = 1;
     fade.cb = cb;
   }
   function update(dt) {
-    for (let i = banners.length - 1; i >= 0; i--) {
-      banners[i].t += dt;
-      if (banners[i].t > banners[i].life) banners.splice(i, 1);
-    }
-    for (let i = toasts.length - 1; i >= 0; i--) {
-      toasts[i].t += dt;
-      if (toasts[i].t > toasts[i].life) toasts.splice(i, 1);
+    /* un panneau ouvert sur la partie (montée de niveau, coffre, pause) fige les messages */
+    const fige = G.state === 'run' && !!G.overlay;
+    if (!fige) {
+      if (banners.length) {
+        banners[0].t += dt; // un seul bandeau vit à la fois, les autres attendent leur tour
+        if (banners[0].t > banners[0].life) banners.shift();
+      }
+      for (let i = toasts.length - 1; i >= 0; i--) {
+        toasts[i].t += dt;
+        if (toasts[i].t > toasts[i].life) toasts.splice(i, 1);
+      }
+      while (pendingToasts.length && toasts.length < 3 && !enemyNear()) toasts.push(pendingToasts.shift());
     }
     if (menuActive()) menuUpdate(dt);
     if (fade.dir === 1) {
@@ -1440,9 +1521,9 @@ const UI = (() => {
     }
     ctx.globalAlpha = 1;
     /* bannières : le tiers supérieur, au-dessus de la zone de combat, jamais entre le joueur et les ennemis */
-    banners.forEach((b, bi) => {
+    banners.slice(0, 1).forEach(b => {
       const kk = b.t / b.life;
-      const y0 = T + V.h * 0.1 + bi * 40; // empilés serrés dans le tiers supérieur : jamais entre le joueur et les ennemis
+      const y0 = zoneLibre().y; // un seul bandeau, dans la zone libre : jamais entre le joueur et les ennemis
       const a = kk < 0.15 ? kk / 0.15 : kk > 0.75 ? (1 - kk) / 0.25 : 1;
       ctx.globalAlpha = a;
       ctx.shadowColor = b.color;
@@ -1627,6 +1708,11 @@ const UI = (() => {
     transition,
     update,
     renderHud,
+    notify,
+    clearInfo,
+    clearAll,
+    messages,
+    zoneLibre,
     hudAlpha,
     gauge,
     label,

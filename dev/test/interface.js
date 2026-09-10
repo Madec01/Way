@@ -83,6 +83,7 @@ test(async ({ page: p, ok, entrer, salle, run, sansPause }) => {
     pl.hp = pl.stats.maxHp * 0.15;
     const bas = sonde();
     pl.hp = pl.stats.maxHp;
+    G.enemies = []; // un toast est retenu tant qu'un ennemi est près (I-6) : ici on veut le voir tout de suite
     UI.toast('Un message court');
     const avecToast = sonde();
     const toast = avecToast.texts.find(t => t.t === 'Un message court');

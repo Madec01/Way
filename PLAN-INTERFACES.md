@@ -192,7 +192,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 **Taille** : 2 séances.
 **Bilan** : fait en une séance (CONTENT.md §51, test `hud.js`, 14 mesures). Le vocabulaire `panel` / `gauge` / `label` est là et les cinq `renderHud` l'utilisent, avec les trois polices du CSS et plus jamais la police système. Le bloc « moi » : pastille de niveau qui grossit à la montée, barre de PV segmentée tous les 25 PV avec les chiffres dedans, XP en bande de 4 px tout en haut. L'anneau de compétence de 34 px qui flashe en blanc puis en vert quand elle est prête, le nom seulement les trois premières salles. Une seule ligne « Salle 5/9 · 1:24 ». La barre du boss segmentée par phase, qui entre en 0,6 s, flashe à chaque coup et laisse un rouge sombre rattraper le dégât. Le badge du compagnon aligné, avec sa jauge d'appel. Le défi sous le métronome, avec sa jauge. Les greffes en grille d'icônes avec ×n et le nom au survol. Le HUD qui s'estompe à 45 % après 4 s de calme et remonte en 0,15 s. Dans le monde : barres ennemies segmentées, zones d'impact au sol (cône, bande, disque) dans la couleur d'alerte, pour tous les ennemis d'un coup puisqu'elles se déduisent de l'état (charge, visée, invocation, mèche). Déjà faits ailleurs et donc pas refaits : les chiffres flottants (F-2), le métronome et le compteur de série (I-1, F-5), la pulsation calée sur Beat (F-5). Pas fait, à dessein : la pulsation de 2 % du décor au temps fort — la lumière bat déjà, un zoom en plus fatiguerait. À vérifier à la main : la barre de PV en Silkscreen à 11 px, ça se lit sur ton écran ?
 
-## Chantier I-6 — Une seule voix
+## Chantier I-6 — Une seule voix ✔ *(fait le 10 septembre 2026)*
 
 **Objectif** : une règle pour qui a le droit de parler pendant un combat.
 
@@ -204,6 +204,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 **Fini quand** : un test `messages.js` déclenche dix messages en une image et vérifie qu'au plus un bandeau et trois toasts sont vivants, que deux messages identiques n'en font qu'un, et qu'aucun toast ne s'affiche pendant qu'un ennemi est à moins de 400 px ; le bot joue 9 salles sans erreur.
 **Taille** : 1 séance.
+**Bilan** : fait (CONTENT.md §52, test `messages.js`, 8 mesures). `notify` et ses quatre niveaux, un seul bandeau à la fois avec une file, trois toasts au plus retenus tant qu'un ennemi est près et vidés à la salle sécurisée, la déduplication par clé (vagues, phases), la zone libre qui descend le bandeau quand le joueur est en haut, les messages figés sous un panneau, et une nouvelle salle qui efface ce qui restait à dire. Les 62 appels existants passent par les enveloppes `banner` / `toast` (niveau 2 et 3) ; quatre sont passés explicitement au niveau 1 (ENRAGÉS, Mauvais ordre, Renforts, phase du boss). Pas fait : rien — le bot joue toujours ses 9 salles (`levels.js`). À vérifier à la main : 1,4 s par bandeau, c'est assez pour lire « DÉFI : Lumières coupées » et sa ligne ?
 
 ## Chantier I-7 — Choisir et finir en un coup d'œil
 
