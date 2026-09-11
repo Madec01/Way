@@ -270,6 +270,8 @@ const Sprites = (() => {
     hearts: { d: 'icons', color: '#7fff9a', px: 24 },
     hourglass: { d: 'icons', color: '#c9a3ff', px: 24 },
     upgrade: { d: 'icons', color: '#6ee7ff', px: 24 },
+    gears: { d: 'icons', color: '#9aa4c4', px: 24 },
+    'linked-rings': { d: 'icons', color: '#7fd8ff', px: 24 },
   };
   /* quelle icône pour quelle notion du jeu : un id d'arme, de compétence, une catégorie de greffe ou un mot */
   const ICONS = {
@@ -294,6 +296,8 @@ const Sprites = (() => {
     mobility: 'wingfoot',
     economy: 'two-coins',
     special: 'sparkles',
+    utility: 'gears',
+    synergy: 'linked-rings',
     coffre: 'locked-chest',
     vie: 'hearts',
     recharge: 'hourglass',

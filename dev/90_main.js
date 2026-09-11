@@ -49,7 +49,8 @@ function render(ctx) {
     ctx.restore();
     if (G.attract) {
       UI.renderAttractVeil(ctx);
-    } else {
+    } else if (G.overlay !== 'end') {
+      /* derrière l'écran de fin, le HUD de combat n'a plus rien à dire (I-7) */
       UI.renderHud(ctx);
       Pets.renderHud(ctx);
       if (G.room.challenge) Challenge.renderHud(ctx, G.room);

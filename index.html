@@ -468,6 +468,34 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
   .prep2 .prepsummary{text-align:left}
 }
 
+/* ---------- Chantier I-7 : choisir et finir en un coup d'œil ---------- */
+.choice h2 .choixn{font-size:.6em;font-weight:400;letter-spacing:0}
+.card.upg{position:relative;border-width:2px;background:color-mix(in srgb,var(--rc) 12%,rgba(10,13,24,.85));padding-top:2.2em;text-align:center}
+.card.upg .ribbon{position:absolute;left:0;right:0;top:0;padding:.25em 0;background:var(--rc);color:#07080d;font-size:max(11px,.72em);letter-spacing:.2em;text-transform:uppercase;font-weight:700;border-radius:10px 10px 0 0}
+.card.upg .iconround{width:calc(48px*var(--ui-scale));height:calc(48px*var(--ui-scale));margin:.4em auto .3em;border-radius:50%;background:color-mix(in srgb,var(--rc) 28%,#0b0d14);display:flex;align-items:center;justify-content:center}
+.card.upg .iconround canvas{image-rendering:pixelated;max-width:80%;max-height:80%}
+.card.upg .cardtitle{justify-content:center;font-family:"Pixelify Sans","Segoe UI",sans-serif;font-size:1.15em}
+.card.upg .now{font-size:max(12px,.82em);color:var(--gold);margin:.3em 0}
+.card.upg .key{top:2.6em}
+.end .bignums{display:flex;justify-content:center;gap:2.5em;margin:.6em 0 .2em;flex-wrap:wrap}
+.end .bignum{display:flex;flex-direction:column;align-items:center}
+.end .bignum .n{font-family:"Silkscreen",monospace;font-size:2.6em;color:var(--gold);text-shadow:0 0 18px rgba(255,209,102,.4);line-height:1.1}
+.end .bignum .l{font-size:max(12px,.85em);color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.end .progline{font-size:max(12px,.9em);margin:.2em 0 .6em}
+.end .petline{font-family:"VT323",monospace;font-size:1.45em;line-height:1.25;margin:.4em auto;max-width:34em}
+.end .enddetails{margin:.6em auto;max-width:40em}.end .enddetails summary{cursor:pointer;color:var(--accent)}
+.end .grid2{margin:.6em auto}
+.pauseinfo{display:grid;grid-template-columns:repeat(3,auto);gap:.3em 1.6em;justify-content:center;margin:.5em auto .6em}
+.pauseinfo .pi{display:flex;flex-direction:column;align-items:center}
+.pauseinfo .pl{font-size:max(11px,.72em);letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+.pauseinfo .pv{font-family:"Silkscreen",monospace;font-size:1.05em;color:var(--text)}
+.pausearme{font-size:max(12px,.9em);margin:.3em auto .4em;max-width:40em;line-height:1.5}
+.pause .commandes{margin:.4em 0 .6em}
+.sliders input[type=range]{accent-color:var(--accent);width:11em}
+.sliders select{background:rgba(8,10,18,.8);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:.2em .5em;font:inherit}
+#ui #screen-pause{background:rgba(3,4,8,.7)}
+@media (max-width:900px){.pauseinfo{grid-template-columns:repeat(2,auto)}.end .bignum .n{font-size:2em}}
+
 </style>
 </head>
 <body>
@@ -476,7 +504,7 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-11 05:12';</script>
+<script>window.WAY_BUILD = '2026-09-11 06:00';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -8621,6 +8649,8 @@ const Sprites = (() => {
     hearts: { d: 'icons', color: '#7fff9a', px: 24 },
     hourglass: { d: 'icons', color: '#c9a3ff', px: 24 },
     upgrade: { d: 'icons', color: '#6ee7ff', px: 24 },
+    gears: { d: 'icons', color: '#9aa4c4', px: 24 },
+    'linked-rings': { d: 'icons', color: '#7fd8ff', px: 24 },
   };
   /* quelle icône pour quelle notion du jeu : un id d'arme, de compétence, une catégorie de greffe ou un mot */
   const ICONS = {
@@ -8645,6 +8675,8 @@ const Sprites = (() => {
     mobility: 'wingfoot',
     economy: 'two-coins',
     special: 'sparkles',
+    utility: 'gears',
+    synergy: 'linked-rings',
     coffre: 'locked-chest',
     vie: 'hearts',
     recharge: 'hourglass',
@@ -20403,7 +20435,13 @@ const Run = {
     G.paused = true;
     UI.showChoice({
       title: STR.chest,
-      subtitle: `${win.label} · qualité ${Math.round(win.avg * 100)} % · ${opts.label}`,
+      subtitle:
+        {
+          'Sans dégât : Colossal garanti': 'Traversée sans dégât : une trouvaille Colossale garantie',
+          'Épique garanti': 'Belle traversée : une trouvaille Épique garantie',
+          'Rare garanti': 'Bonne traversée : une trouvaille Rare garantie',
+          'Mort récente : tirage dégradé': 'Une mort en route : rien de colossal cette fois',
+        }[opts.label] || 'Ce que la salle a gardé pour toi',
       choices,
       reroll: false,
       onPick: u => {
@@ -21479,13 +21517,21 @@ const UI = (() => {
     const s = screens.choice;
     const pl = G.player;
     const render = () => {
+      const prises = G.run.upgrades || [];
       s.innerHTML = `
         <div class="panel choice">
-          <div class="eyebrow">${esc(subtitle || '')}</div><h2>${esc(title)}</h2>
+          <div class="eyebrow">${esc(subtitle || '')}</div><h2>${esc(title)} <span class="muted choixn">— choix 1 sur ${choices.length}</span></h2>
+          <div class="upglist small">${prises.length ? '<span class="muted tiny">Déjà à toi :</span> ' + prises.map(u => `<span class="pill" style="--rc:${RARITY[u.def.rarity].color}">${esc(u.def.name)}${u.stacks > 1 ? ' ×' + u.stacks : ''}</span>`).join('') : '<span class="muted tiny">Première greffe de la partie</span>'}</div>
           <div class="cards" id="choice-cards">${choices.map((u, i) => cardHtml(u, i)).join('')}</div>
           <div class="row small">${reroll && pl.rerollsLeft > 0 ? `<button class="btn ghost" id="choice-reroll">Relancer (${pl.rerollsLeft}) — R</button>` : ''}<span class="muted tiny">1-${choices.length} : choisir</span></div>
         </div>`;
       s.querySelectorAll('[data-i]').forEach(c => (c.onclick = () => pick(choices[+c.dataset.i])));
+      /* l'icône de catégorie, depuis la planche (I-4) */
+      s.querySelectorAll('[data-i] .iconround').forEach(box => {
+        const ic = Sprites.icon(box.dataset.cat, 40);
+        if (ic) box.appendChild(ic);
+        else box.textContent = categorie(box.dataset.cat).slice(0, 1); // la planche n'est pas là : l'initiale de la catégorie
+      });
       const rb = s.querySelector('#choice-reroll');
       if (rb) rb.onclick = doReroll;
     };
@@ -21528,10 +21574,24 @@ const UI = (() => {
   };
   const categorie = c => CATEGORIES[c] || c;
   const famille = f => FAMILLES[f] || f;
+  /* où en est le joueur pour la stat qu'une greffe touche : « tu es à 17 % » — le bonus se lit par rapport à soi */
+  function etatActuel(u) {
+    const pl = G.player;
+    if (!pl || !u.mods || !u.mods.length) return '';
+    const m = u.mods[0];
+    const v = pl.stats[m.stat];
+    if (typeof v !== 'number') return '';
+    const label = (STAT_LABELS[m.stat] || m.stat).toLowerCase();
+    let txt;
+    if (m.mul != null || (m.add != null && Math.abs(m.add) < 1)) txt = `${Math.round(v * 100)} %`;
+    else txt = String(Math.round(v * 10) / 10);
+    return `${label} : tu es à ${txt}`;
+  }
   function cardHtml(u, i) {
     const r = RARITY[u.rarity];
     const ex = G.run.upgrades.find(x => x.def.id === u.id);
-    return `<div class="card upg r-${u.rarity}" data-i="${i}" style="--rc:${r.color};--rg:${r.glow}"><div class="rarity">${r.label}</div><div class="cardtitle">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div><div class="muted tiny">${categorie(u.category)}${u.weaponFamily ? ' · synergie ' + famille(u.weaponFamily) : ''}${ex ? ` · déjà prise ×${ex.stacks}` : ''}${u.maxStacks > 1 ? ` · ${u.maxStacks} paliers` : ''}</div><div class="key">${i + 1}</div></div>`;
+    const now = etatActuel(u);
+    return `<div class="card upg r-${u.rarity}" data-i="${i}" style="--rc:${r.color};--rg:${r.glow}"><div class="ribbon">${r.label}</div><div class="iconround" data-cat="${esc(u.category)}"></div><div class="cardtitle">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div>${now ? `<div class="now">${esc(now)}</div>` : ''}<div class="muted tiny">${categorie(u.category)}${u.weaponFamily ? ' · synergie ' + famille(u.weaponFamily) : ''}${ex ? ` · déjà prise ×${ex.stacks}` : ''}${u.maxStacks > 1 ? ` · ${u.maxStacks} paliers` : ''}</div><div class="key">${i + 1}</div></div>`;
   }
   function hideChoice() {
     state.choice = null;
@@ -21550,9 +21610,22 @@ const UI = (() => {
     const s = screens.pause;
     const v = Meta.profile.volume;
     const pl = G.player;
+    const rm = G.room,
+      r = G.run;
+    const touch = Input.touch.active;
+    const equipe = r.char.name + (G.pet ? ' + ' + G.pet.name : '');
     s.innerHTML = `<div class="panel center pause"><h2>${STR.paused}</h2>
-      <div class="muted small">${esc(pl.weapon.name)} · ${esc(pl.skill.name)} · niveau ${G.run.level}</div>
+      <div class="pauseinfo">
+        <div class="pi"><span class="pl">Salle</span><span class="pv">${rm ? rm.index : '–'} / 9</span></div>
+        <div class="pi"><span class="pl">Temps</span><span class="pv">${mmss(rm ? rm.time : 0)}</span></div>
+        <div class="pi"><span class="pl">PV</span><span class="pv">${Math.ceil(pl.hp)} / ${pl.stats.maxHp}</span></div>
+        <div class="pi"><span class="pl">Niveau</span><span class="pv">${r.level}</span></div>
+        <div class="pi"><span class="pl">Crédits en jeu</span><span class="pv">◈ ${fmt(r.coinsValidated + r.coinsPending)}</span></div>
+        <div class="pi"><span class="pl">Équipe</span><span class="pv">${esc(equipe)}</span></div>
+      </div>
+      <div class="pausearme"><b>${esc(pl.weapon.name)}</b> <span class="muted small">${esc(weaponStats(pl.weapon))}</span><br><b>${esc(pl.skill.name)}</b> <span class="muted small">${esc(pl.skill.desc)}</span></div>
       <div class="upglist">${G.run.upgrades.map(u => `<span class="pill" style="--rc:${RARITY[u.def.rarity].color}">${esc(u.def.name)}${u.stacks > 1 ? ' ×' + u.stacks : ''}</span>`).join('') || '<span class="muted tiny">aucune greffe</span>'}</div>
+      <div class="muted tiny commandes">${touch ? 'Joystick : bouger · TIR · COMP. · ACTION · ⏸ pause' : 'ZQSD ou flèches : bouger · clic gauche : tirer · clic droit, Espace ou Maj : compétence · E : agir · C : appeler · Échap : pause'}</div>
       <div class="sliders">
         <label>Général <input type="range" min="0" max="1" step="0.05" value="${v.master}" data-v="master"></label>
         <label>Effets <input type="range" min="0" max="1" step="0.05" value="${v.sfx}" data-v="sfx"></label>
@@ -21606,13 +21679,31 @@ const UI = (() => {
     const s = screens.end;
     const r = G.run;
     const st = r.stats;
-    /* « Rejouer » relance la même équipe, la même arme et la même compétence sur le même palier, sans passer par le hub */
+    /* « Repartir » relance la même équipe, la même arme et la même compétence sur le même palier, sans passer par le hub */
     const encore = { character: r.char.id, biome: r.biome.id, weapon: r.weapon, skill: r.skill };
     const equipe = r.char.name + (G.pet ? ' + ' + G.pet.name : '');
+    const salle = victory ? 9 : G.room ? G.room.index : st.deathRoom || 1;
+    const best = Math.max(Meta.profile.bestRoom || 0, salle);
+    /* un achat devient possible ? la moins chère des améliorations à portée */
+    let achat = null;
+    for (const m of Content.metaPassives()) {
+      const t = Meta.tierOf(m.id),
+        next = m.tiers[t];
+      if (next && Meta.coins >= next.price && (!achat || next.price < achat.price))
+        achat = { id: m.id, name: m.name, tier: t + 1, price: next.price };
+    }
+    const phrase = victory ? "Le palier suivant t'attend au camp de base." : Content.pick('death');
     s.innerHTML = `<div class="panel center end">
       <div class="eyebrow">${victory ? 'Neuf salles, une sortie' : 'Fin de la partie'}</div>
       <h2 class="${victory ? 'good' : 'bad'}">${victory ? STR.victory : STR.dead}</h2>
-      <p class="muted">${esc(victory ? "Le palier suivant t'attend au camp de base." : Content.pick('death'))}</p>
+      <div class="bignums">
+        <div class="bignum"><span class="n">◈ ${fmt(total)}</span><span class="l">crédits ramenés</span></div>
+        <div class="bignum"><span class="n">${salle} / 9</span><span class="l">${victory ? 'palier terminé' : 'salle atteinte'}</span></div>
+      </div>
+      <div class="progline muted">Meilleure tentative : salle ${best} · celle-ci : salle ${salle}</div>
+      <p class="petline">${G.pet ? `<b>${esc(G.pet.name)}</b> — ` : ''}${esc(phrase)}</p>
+      ${achat ? `<button class="btn ghost small" id="end-shop">Avec ${fmt(Meta.coins)} crédits tu peux prendre ${esc(achat.name)} ${achat.tier}</button>` : ''}
+      <details class="enddetails muted small"><summary>Le détail</summary>
       <div class="grid2">
         <div>Crédits en banque (salle 4)</div><div>◈ ${fmt(validated)}</div>
         <div>${victory ? 'Crédits en attente validés' : `Butin ramené — prime de mort + une part des ${fmt(pending)} crédits en attente`}</div><div>◈ ${fmt(kept)}</div>
@@ -21622,13 +21713,22 @@ const UI = (() => {
         <div>Ennemis neutralisés</div><div>${st.kills}</div>
         <div>Dégâts subis / coups</div><div>${fmt(Math.min(st.damageTaken, 9999))} / ${st.hitsTaken}</div>
       </div>
-      <div class="row"><button class="btn primary big" id="end-again">Rejouer — ${esc(equipe)}, ${esc(r.biome.name)}</button><button class="btn ghost" id="end-hub">${STR.toHub}</button><button class="btn ghost" id="end-report">Copier le rapport</button></div></div>`;
+      <div class="row small"><button class="btn ghost small" id="end-report">Copier le rapport</button></div></details>
+      <div class="row"><button class="btn primary big" id="end-again">Repartir tout de suite — ${esc(equipe)}, ${esc(r.biome.name)}</button><button class="btn ghost" id="end-hub">Camp de base</button></div></div>`;
     s.querySelector('#end-report').onclick = () =>
       Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));
     s.querySelector('#end-hub').onclick = () => {
       hideAll();
       Run.toHub();
     };
+    const shopBtn = s.querySelector('#end-shop');
+    if (shopBtn)
+      shopBtn.onclick = () => {
+        hideAll();
+        Run.toHub();
+        hubTab = 'passifs';
+        showShop();
+      };
     s.querySelector('#end-again').onclick = () => {
       hideAll();
       G.paused = false;
@@ -22766,6 +22866,7 @@ const Meta = (() => {
     wins: 0,
     deaths: 0,
     bestLevel: 0,
+    bestRoom: 0,
     character: null,
     volume: { master: 0.8, sfx: 0.9, music: 0.6 },
     zoom: 0, // 0 = automatique (1 au clavier, 1,5 au tactile)
@@ -22980,6 +23081,7 @@ const Meta = (() => {
       }
     } else profile.deaths++;
     if (G.run) profile.bestLevel = Math.max(profile.bestLevel, G.run.level);
+    if (G.run) profile.bestRoom = Math.max(profile.bestRoom || 0, win ? 9 : G.room ? G.room.index : 0); // la meilleure tentative, en salles
     save();
   }
   function unlockLore(id) {
@@ -25533,7 +25635,8 @@ function render(ctx) {
     ctx.restore();
     if (G.attract) {
       UI.renderAttractVeil(ctx);
-    } else {
+    } else if (G.overlay !== 'end') {
+      /* derrière l'écran de fin, le HUD de combat n'a plus rien à dire (I-7) */
       UI.renderHud(ctx);
       Pets.renderHud(ctx);
       if (G.room.challenge) Challenge.renderHud(ctx, G.room);

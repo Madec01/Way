@@ -1133,7 +1133,13 @@ const Run = {
     G.paused = true;
     UI.showChoice({
       title: STR.chest,
-      subtitle: `${win.label} · qualité ${Math.round(win.avg * 100)} % · ${opts.label}`,
+      subtitle:
+        {
+          'Sans dégât : Colossal garanti': 'Traversée sans dégât : une trouvaille Colossale garantie',
+          'Épique garanti': 'Belle traversée : une trouvaille Épique garantie',
+          'Rare garanti': 'Bonne traversée : une trouvaille Rare garantie',
+          'Mort récente : tirage dégradé': 'Une mort en route : rien de colossal cette fois',
+        }[opts.label] || 'Ce que la salle a gardé pour toi',
       choices,
       reroll: false,
       onPick: u => {

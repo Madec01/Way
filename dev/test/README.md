@@ -45,6 +45,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `coup` | chantier F-2 : cinq genres de chiffres flottants, Silkscreen à contour, sursaut, fusion, naissance au corps, plus de « +n XP » ; coup reçu : recul en courbe, vignette, ralenti, flash sur un gros coup, clignotement 6 Hz |
 | `duo` | l'attelage inséparable, les trois équipes, les modes de compagnon |
 | `etape0` | le socle rythmique : horloge musicale, pièges cadencés, tourniquet |
+| `fin` | chantier I-7 : la montée de niveau (ruban, icône, « choix 1 sur n », « tu es à … », greffes prises), le coffre en une phrase, la pause (infos de partie, stats d'arme, commandes, curseurs, fond), l'écran de fin (deux gros chiffres, progression, détail replié, suggestion d'achat, « Repartir » sans hub, HUD éteint) |
 | `gabriel` | Gabriel et Jean : planches, cases vides de fin, clips, pieds sur la ligne de sol |
 | `habits` | plus de palier de tenue : habillé dès la salle 1, même corps après 9 greffes |
 | `interface` | chantier I-1 : onglets dans le cadre, textes obsolètes partis, attraction figée, Uno par défaut, HUD sondé (textes dans leurs panneaux, tout dans la vue), PV vert/doré/rouge + vignette, un seul compteur de série, boss en haut sans bandeau, toasts en bas à droite, badge aligné, écran de fin vrai et « Rejouer » |

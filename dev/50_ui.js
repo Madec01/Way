@@ -888,13 +888,21 @@ const UI = (() => {
     const s = screens.choice;
     const pl = G.player;
     const render = () => {
+      const prises = G.run.upgrades || [];
       s.innerHTML = `
         <div class="panel choice">
-          <div class="eyebrow">${esc(subtitle || '')}</div><h2>${esc(title)}</h2>
+          <div class="eyebrow">${esc(subtitle || '')}</div><h2>${esc(title)} <span class="muted choixn">— choix 1 sur ${choices.length}</span></h2>
+          <div class="upglist small">${prises.length ? '<span class="muted tiny">Déjà à toi :</span> ' + prises.map(u => `<span class="pill" style="--rc:${RARITY[u.def.rarity].color}">${esc(u.def.name)}${u.stacks > 1 ? ' ×' + u.stacks : ''}</span>`).join('') : '<span class="muted tiny">Première greffe de la partie</span>'}</div>
           <div class="cards" id="choice-cards">${choices.map((u, i) => cardHtml(u, i)).join('')}</div>
           <div class="row small">${reroll && pl.rerollsLeft > 0 ? `<button class="btn ghost" id="choice-reroll">Relancer (${pl.rerollsLeft}) — R</button>` : ''}<span class="muted tiny">1-${choices.length} : choisir</span></div>
         </div>`;
       s.querySelectorAll('[data-i]').forEach(c => (c.onclick = () => pick(choices[+c.dataset.i])));
+      /* l'icône de catégorie, depuis la planche (I-4) */
+      s.querySelectorAll('[data-i] .iconround').forEach(box => {
+        const ic = Sprites.icon(box.dataset.cat, 40);
+        if (ic) box.appendChild(ic);
+        else box.textContent = categorie(box.dataset.cat).slice(0, 1); // la planche n'est pas là : l'initiale de la catégorie
+      });
       const rb = s.querySelector('#choice-reroll');
       if (rb) rb.onclick = doReroll;
     };
@@ -937,10 +945,24 @@ const UI = (() => {
   };
   const categorie = c => CATEGORIES[c] || c;
   const famille = f => FAMILLES[f] || f;
+  /* où en est le joueur pour la stat qu'une greffe touche : « tu es à 17 % » — le bonus se lit par rapport à soi */
+  function etatActuel(u) {
+    const pl = G.player;
+    if (!pl || !u.mods || !u.mods.length) return '';
+    const m = u.mods[0];
+    const v = pl.stats[m.stat];
+    if (typeof v !== 'number') return '';
+    const label = (STAT_LABELS[m.stat] || m.stat).toLowerCase();
+    let txt;
+    if (m.mul != null || (m.add != null && Math.abs(m.add) < 1)) txt = `${Math.round(v * 100)} %`;
+    else txt = String(Math.round(v * 10) / 10);
+    return `${label} : tu es à ${txt}`;
+  }
   function cardHtml(u, i) {
     const r = RARITY[u.rarity];
     const ex = G.run.upgrades.find(x => x.def.id === u.id);
-    return `<div class="card upg r-${u.rarity}" data-i="${i}" style="--rc:${r.color};--rg:${r.glow}"><div class="rarity">${r.label}</div><div class="cardtitle">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div><div class="muted tiny">${categorie(u.category)}${u.weaponFamily ? ' · synergie ' + famille(u.weaponFamily) : ''}${ex ? ` · déjà prise ×${ex.stacks}` : ''}${u.maxStacks > 1 ? ` · ${u.maxStacks} paliers` : ''}</div><div class="key">${i + 1}</div></div>`;
+    const now = etatActuel(u);
+    return `<div class="card upg r-${u.rarity}" data-i="${i}" style="--rc:${r.color};--rg:${r.glow}"><div class="ribbon">${r.label}</div><div class="iconround" data-cat="${esc(u.category)}"></div><div class="cardtitle">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div>${now ? `<div class="now">${esc(now)}</div>` : ''}<div class="muted tiny">${categorie(u.category)}${u.weaponFamily ? ' · synergie ' + famille(u.weaponFamily) : ''}${ex ? ` · déjà prise ×${ex.stacks}` : ''}${u.maxStacks > 1 ? ` · ${u.maxStacks} paliers` : ''}</div><div class="key">${i + 1}</div></div>`;
   }
   function hideChoice() {
     state.choice = null;
@@ -959,9 +981,22 @@ const UI = (() => {
     const s = screens.pause;
     const v = Meta.profile.volume;
     const pl = G.player;
+    const rm = G.room,
+      r = G.run;
+    const touch = Input.touch.active;
+    const equipe = r.char.name + (G.pet ? ' + ' + G.pet.name : '');
     s.innerHTML = `<div class="panel center pause"><h2>${STR.paused}</h2>
-      <div class="muted small">${esc(pl.weapon.name)} · ${esc(pl.skill.name)} · niveau ${G.run.level}</div>
+      <div class="pauseinfo">
+        <div class="pi"><span class="pl">Salle</span><span class="pv">${rm ? rm.index : '–'} / 9</span></div>
+        <div class="pi"><span class="pl">Temps</span><span class="pv">${mmss(rm ? rm.time : 0)}</span></div>
+        <div class="pi"><span class="pl">PV</span><span class="pv">${Math.ceil(pl.hp)} / ${pl.stats.maxHp}</span></div>
+        <div class="pi"><span class="pl">Niveau</span><span class="pv">${r.level}</span></div>
+        <div class="pi"><span class="pl">Crédits en jeu</span><span class="pv">◈ ${fmt(r.coinsValidated + r.coinsPending)}</span></div>
+        <div class="pi"><span class="pl">Équipe</span><span class="pv">${esc(equipe)}</span></div>
+      </div>
+      <div class="pausearme"><b>${esc(pl.weapon.name)}</b> <span class="muted small">${esc(weaponStats(pl.weapon))}</span><br><b>${esc(pl.skill.name)}</b> <span class="muted small">${esc(pl.skill.desc)}</span></div>
       <div class="upglist">${G.run.upgrades.map(u => `<span class="pill" style="--rc:${RARITY[u.def.rarity].color}">${esc(u.def.name)}${u.stacks > 1 ? ' ×' + u.stacks : ''}</span>`).join('') || '<span class="muted tiny">aucune greffe</span>'}</div>
+      <div class="muted tiny commandes">${touch ? 'Joystick : bouger · TIR · COMP. · ACTION · ⏸ pause' : 'ZQSD ou flèches : bouger · clic gauche : tirer · clic droit, Espace ou Maj : compétence · E : agir · C : appeler · Échap : pause'}</div>
       <div class="sliders">
         <label>Général <input type="range" min="0" max="1" step="0.05" value="${v.master}" data-v="master"></label>
         <label>Effets <input type="range" min="0" max="1" step="0.05" value="${v.sfx}" data-v="sfx"></label>
@@ -1015,13 +1050,31 @@ const UI = (() => {
     const s = screens.end;
     const r = G.run;
     const st = r.stats;
-    /* « Rejouer » relance la même équipe, la même arme et la même compétence sur le même palier, sans passer par le hub */
+    /* « Repartir » relance la même équipe, la même arme et la même compétence sur le même palier, sans passer par le hub */
     const encore = { character: r.char.id, biome: r.biome.id, weapon: r.weapon, skill: r.skill };
     const equipe = r.char.name + (G.pet ? ' + ' + G.pet.name : '');
+    const salle = victory ? 9 : G.room ? G.room.index : st.deathRoom || 1;
+    const best = Math.max(Meta.profile.bestRoom || 0, salle);
+    /* un achat devient possible ? la moins chère des améliorations à portée */
+    let achat = null;
+    for (const m of Content.metaPassives()) {
+      const t = Meta.tierOf(m.id),
+        next = m.tiers[t];
+      if (next && Meta.coins >= next.price && (!achat || next.price < achat.price))
+        achat = { id: m.id, name: m.name, tier: t + 1, price: next.price };
+    }
+    const phrase = victory ? "Le palier suivant t'attend au camp de base." : Content.pick('death');
     s.innerHTML = `<div class="panel center end">
       <div class="eyebrow">${victory ? 'Neuf salles, une sortie' : 'Fin de la partie'}</div>
       <h2 class="${victory ? 'good' : 'bad'}">${victory ? STR.victory : STR.dead}</h2>
-      <p class="muted">${esc(victory ? "Le palier suivant t'attend au camp de base." : Content.pick('death'))}</p>
+      <div class="bignums">
+        <div class="bignum"><span class="n">◈ ${fmt(total)}</span><span class="l">crédits ramenés</span></div>
+        <div class="bignum"><span class="n">${salle} / 9</span><span class="l">${victory ? 'palier terminé' : 'salle atteinte'}</span></div>
+      </div>
+      <div class="progline muted">Meilleure tentative : salle ${best} · celle-ci : salle ${salle}</div>
+      <p class="petline">${G.pet ? `<b>${esc(G.pet.name)}</b> — ` : ''}${esc(phrase)}</p>
+      ${achat ? `<button class="btn ghost small" id="end-shop">Avec ${fmt(Meta.coins)} crédits tu peux prendre ${esc(achat.name)} ${achat.tier}</button>` : ''}
+      <details class="enddetails muted small"><summary>Le détail</summary>
       <div class="grid2">
         <div>Crédits en banque (salle 4)</div><div>◈ ${fmt(validated)}</div>
         <div>${victory ? 'Crédits en attente validés' : `Butin ramené — prime de mort + une part des ${fmt(pending)} crédits en attente`}</div><div>◈ ${fmt(kept)}</div>
@@ -1031,13 +1084,22 @@ const UI = (() => {
         <div>Ennemis neutralisés</div><div>${st.kills}</div>
         <div>Dégâts subis / coups</div><div>${fmt(Math.min(st.damageTaken, 9999))} / ${st.hitsTaken}</div>
       </div>
-      <div class="row"><button class="btn primary big" id="end-again">Rejouer — ${esc(equipe)}, ${esc(r.biome.name)}</button><button class="btn ghost" id="end-hub">${STR.toHub}</button><button class="btn ghost" id="end-report">Copier le rapport</button></div></div>`;
+      <div class="row small"><button class="btn ghost small" id="end-report">Copier le rapport</button></div></details>
+      <div class="row"><button class="btn primary big" id="end-again">Repartir tout de suite — ${esc(equipe)}, ${esc(r.biome.name)}</button><button class="btn ghost" id="end-hub">Camp de base</button></div></div>`;
     s.querySelector('#end-report').onclick = () =>
       Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));
     s.querySelector('#end-hub').onclick = () => {
       hideAll();
       Run.toHub();
     };
+    const shopBtn = s.querySelector('#end-shop');
+    if (shopBtn)
+      shopBtn.onclick = () => {
+        hideAll();
+        Run.toHub();
+        hubTab = 'passifs';
+        showShop();
+      };
     s.querySelector('#end-again').onclick = () => {
       hideAll();
       G.paused = false;

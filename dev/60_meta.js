@@ -28,6 +28,7 @@ const Meta = (() => {
     wins: 0,
     deaths: 0,
     bestLevel: 0,
+    bestRoom: 0,
     character: null,
     volume: { master: 0.8, sfx: 0.9, music: 0.6 },
     zoom: 0, // 0 = automatique (1 au clavier, 1,5 au tactile)
@@ -242,6 +243,7 @@ const Meta = (() => {
       }
     } else profile.deaths++;
     if (G.run) profile.bestLevel = Math.max(profile.bestLevel, G.run.level);
+    if (G.run) profile.bestRoom = Math.max(profile.bestRoom || 0, win ? 9 : G.room ? G.room.index : 0); // la meilleure tentative, en salles
     save();
   }
   function unlockLore(id) {

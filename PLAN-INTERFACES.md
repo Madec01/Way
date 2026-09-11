@@ -206,7 +206,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 **Taille** : 1 séance.
 **Bilan** : fait (CONTENT.md §52, test `messages.js`, 8 mesures). `notify` et ses quatre niveaux, un seul bandeau à la fois avec une file, trois toasts au plus retenus tant qu'un ennemi est près et vidés à la salle sécurisée, la déduplication par clé (vagues, phases), la zone libre qui descend le bandeau quand le joueur est en haut, les messages figés sous un panneau, et une nouvelle salle qui efface ce qui restait à dire. Les 62 appels existants passent par les enveloppes `banner` / `toast` (niveau 2 et 3) ; quatre sont passés explicitement au niveau 1 (ENRAGÉS, Mauvais ordre, Renforts, phase du boss). Pas fait : rien — le bot joue toujours ses 9 salles (`levels.js`). À vérifier à la main : 1,4 s par bandeau, c'est assez pour lire « DÉFI : Lumières coupées » et sa ligne ?
 
-## Chantier I-7 — Choisir et finir en un coup d'œil
+## Chantier I-7 — Choisir et finir en un coup d'œil ✔ *(fait le 11 septembre 2026)*
 
 **Objectif** : les écrans qui interrompent la partie disent l'essentiel en une image, et la mort donne envie de repartir.
 
@@ -217,6 +217,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 **Fini quand** : les tests `mort.js` et `human.js` sont mis à jour et verts ; un test `fin.js` vérifie que « Repartir » relance la même équipe sur le même palier sans passer par le hub, et que les deux chiffres sont les plus grands textes de l'écran.
 **Taille** : 1 séance.
+**Bilan** : fait en une séance (CONTENT.md §55, test `fin.js`, 11 mesures). La montée de niveau avec le ruban de rareté, l'icône de catégorie dans son rond (deux icônes ajoutées à la planche pour Utilitaire et Synergie), « choix 1 sur n », la bande des greffes déjà prises et « tu es à … » ; le coffre en une phrase ; l'écran de fin avec ses deux gros chiffres, la ligne de progression (`bestRoom`, nouveau champ du profil), la phrase du compagnon, le détail replié, la suggestion d'achat qui ouvre la boutique, et « Repartir tout de suite » sans hub ; la pause avec les informations de partie, les stats de l'arme, les commandes, les curseurs stylés et le jeu assombri ; le HUD de combat éteint derrière la fin. `mort.js` et `human.js` n'ont pas eu à changer (ils l'avaient été en F-6). Pas fait : rien. À vérifier à la main : « tu es à 140 % » pour les dégâts, ça se comprend, ou il faut « ×1,4 » ?
 
 ## Chantier I-8 — Le pouce
 
