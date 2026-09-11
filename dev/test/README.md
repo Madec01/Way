@@ -43,6 +43,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `butin` | chantier F-4 : la mort en 220 ms (blanc puis écrasé, mesuré au pixel), couronne, onde à plat, tache plafonnée et purgée, drops en arc, étincelles à la taille de la série, cœur, relique, coffre qui s'ouvre en 300 ms |
 | `chats` | Choupi, Tanuki et ORI : planches, tailles, ligne de sol, clips, équipes |
 | `choix` | chantier 6 : tempo ±50 ms, série de 4, fausse note, bot à < 15 % ; 3 compétences et 2 paires en prépa ; 61 greffes sans dominance (`dev/check-greffes.js`), paliers à chance ; calibrations à un palier, migration v3 |
+| `comportements` | chantier 9 : 28 comportements distincts, puis chaque variante de biome en action (bond, rebond, ronces, nuage, soin, vol, fouet, piège à loup, replis, secousse, baril qui roule, relève, venin, feinte, dédoublement, tir en cloche, bouclier frontal, nappe de feu, charme, crachat, dans le dos) et le bot dans les trois biomes |
 | `compagnons` | chantier 5 : « Personne » à +25 % PV / +15 % dégâts, l'onde d'arrivée d'« À l'appel », Choupi qui court chercher, ORI qui rend critique, les trois caractères, reliques hors élites, `Run.reset` |
 | `coup` | chantier F-2 : cinq genres de chiffres flottants, Silkscreen à contour, sursaut, fusion, naissance au corps, plus de « +n XP » ; coup reçu : recul en courbe, vignette, ralenti, flash sur un gros coup, clignotement 6 Hz |
 | `duo` | l'attelage inséparable, les trois équipes, les modes de compagnon |

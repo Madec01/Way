@@ -74,6 +74,12 @@ class Enemy {
     this.acc = 0;
     this.hitWall = false;
     this.anim = RNG.range(0, 10);
+    /* chantier 9 : la variante de biome (un comportement neuf par archétype et par biome, CONTENT.md §60) */
+    this.variant = (def.behavior && def.behavior.variant) || null;
+    this.charmCd = 3;
+    this.spitCd = 1;
+    this.healCd = 3;
+    this.jumpK = 0;
     /* alias des paramètres de contenu */
     const b = this.behavior;
     if (b.lungeTime == null && b.lungeDuration != null) b.lungeTime = b.lungeDuration;
@@ -153,7 +159,10 @@ class Enemy {
     const d = dist(this.x, this.y, target.x, target.y);
     if (target.x < this.x - 2) this.facing = -1;
     else if (target.x > this.x + 2) this.facing = 1;
+    if (this.variant === 'dedouble' && !this.split && this.hp <= this.maxHp * 0.5) this.splitNow();
     this['ai_' + this.archetype](dt, target, d);
+    /* les moucherons volent, la ronce saute : pendant ce temps les obstacles ne les arrêtent pas */
+    this.noClip = this.variant === 'vol' || (this.variant === 'saut' && this.state === 'lunge');
     this.hitWall = false;
     resolveRoomCollision(this);
     /* anti-blocage : un ennemi immobile 6 s loin du joueur est relocalisé (recoin derrière un mur mobile, pile d'ennemis) */
@@ -182,6 +191,10 @@ class Enemy {
         const a = angleTo(pl.x, pl.y, this.x, this.y);
         this.kvx += Math.cos(a) * 120;
         this.kvy += Math.sin(a) * 120;
+        if (this.variant === 'venin') {
+          pl.venomUntil = Time.now + (this.behavior.venomTime || 1.5); // les scorpions : la morsure engourdit
+          Floaters.add(pl.x, pl.y - 34, 'VENIN', '#9cff57', 12);
+        }
       }
     }
     for (const dc of G.room.decoys)
@@ -289,10 +302,31 @@ class Enemy {
       const sp = (b.lungeSpeed || 620) * this.slow;
       this.x += Math.cos(this.lungeA) * sp * dt;
       this.y += Math.sin(this.lungeA) * sp * dt;
-      if (this.stateT > (b.lungeTime || 0.25) || this.hitWall) this.setState('recover');
+      /* la ronce (Serre) : sa ruée est un bond, elle passe par-dessus les obstacles (noClip) et le dessin décolle */
+      if (this.variant === 'saut') this.jumpK = clamp(this.stateT / (b.lungeTime || 0.25), 0, 1);
+      if (this.stateT > (b.lungeTime || 0.25) || (this.hitWall && this.variant !== 'saut')) {
+        this.setState('recover');
+        this.jumpK = 0;
+      }
     } else if (this.state === 'recover') {
       if (this.stateT > (b.recover || 0.5)) this.setState('chase');
     }
+  }
+  /* le derviche (Sérail) : à la moitié de ses PV il se dédouble, une fois — deux corps, les PV restants partagés */
+  splitNow() {
+    this.split = true;
+    const a = RNG.range(0, TAU);
+    const twin = Room.spawnEnemy(this.def, this.x + Math.cos(a) * 34, this.y + Math.sin(a) * 34, {});
+    if (!twin) return;
+    twin.split = true;
+    twin.maxHp = this.maxHp;
+    twin.hp = this.hp;
+    twin.xp = Math.round(this.xp * 0.5);
+    twin.coins = 0;
+    twin.spawnT = 0.25;
+    Particles.spawn(this.x, this.y, { count: 14, color: this.color, size: 3, glow: true });
+    Floaters.add(this.x, this.y - this.r - 18, 'SE DÉDOUBLE', this.color, 13);
+    AudioEngine.trapGas({ intensity: 0.5 });
   }
   ai_shooter(dt, t, d) {
     const b = this.behavior;
@@ -316,12 +350,81 @@ class Enemy {
         this.tele = 0;
         const n = b.count || 1,
           sp = b.spread || 0.3;
-        for (let i = 0; i < n; i++) enemyProjectile(this, this.aimA + (n > 1 ? lerp(-sp / 2, sp / 2, i / (n - 1)) : 0));
+        if (this.variant === 'cloche') this.lob(t);
+        else
+          for (let i = 0; i < n; i++)
+            enemyProjectile(
+              this,
+              this.aimA + (n > 1 ? lerp(-sp / 2, sp / 2, i / (n - 1)) : 0),
+              this.variant === 'rebond' ? { bounce: 1 } : {}
+            );
         this.fireCd = 1 / (b.fireRate || 0.8) / G.difficulty.fireRateMul;
         AudioEngine.shootPistol({ x: (this.x - W / 2) / (W / 2), intensity: 0.4 });
+        if (this.variant === 'replis' && this.pickCover(t)) this.setState('cover');
+        else this.setState('position');
+      }
+    } else if (this.state === 'cover') {
+      /* le bandit (Concession) : après sa salve, il court se mettre derrière l'obstacle le plus proche */
+      this.moveToward(this.cover.x, this.cover.y, dt, 1.2);
+      const arrived = dist(this.x, this.y, this.cover.x, this.cover.y) < 10;
+      if (this.stateT > (b.coverTime || 1.4) || (arrived && !lineOfSight(this.x, this.y, t.x, t.y) && this.stateT > 0.5))
         this.setState('position');
+    }
+  }
+  /* un point à l'abri : de l'autre côté de l'obstacle le plus proche, dos à la cible */
+  pickCover(t) {
+    let best = null,
+      bd = 1e9;
+    for (const o of G.room.obstacles) {
+      if (o.dyn || o.stopsShot === false || o.pw > TILE * 3 || o.ph > TILE * 3) continue;
+      const cx = o.px + o.pw / 2,
+        cy = o.py + o.ph / 2;
+      const d = dist(this.x, this.y, cx, cy);
+      if (d < bd && d < 360) {
+        bd = d;
+        best = o;
       }
     }
+    if (!best) return false;
+    const cx = best.px + best.pw / 2,
+      cy = best.py + best.ph / 2;
+    const a = angleTo(t.x, t.y, cx, cy);
+    const rr = Math.max(best.pw, best.ph) / 2 + this.r + 10;
+    this.cover = { x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr };
+    return !pointBlocked(this.cover.x, this.cover.y, this.r);
+  }
+  /* l'archer (Sérail) : tir en cloche — la flèche passe par-dessus les obstacles et retombe là où tu étais */
+  lob(t) {
+    const b = this.behavior;
+    const T = b.lobTime || 0.8;
+    const dmg = Math.round((b.projDamage || this.damage) * G.difficulty.damageMul);
+    Projectiles.spawn({
+      x: this.x,
+      y: this.y,
+      vx: (t.x - this.x) / T,
+      vy: (t.y - this.y) / T,
+      r: 5,
+      damage: dmg,
+      owner: 'enemy',
+      life: T,
+      color: this.projColor || '#ffd166',
+      kind: 'arrow',
+      ghost: true,
+      lob: T,
+      source: this,
+    });
+    G.room.hazards.push({
+      x: t.x,
+      y: t.y,
+      r: b.lobRadius || 44,
+      until: Time.now + T + 0.05,
+      boomAt: Time.now + T,
+      damage: dmg,
+      owner: 'enemy',
+      color: this.projColor || '#ffd166',
+      marker: true,
+      cd: new Map(),
+    });
   }
   ai_tank(dt, t, d) {
     const b = this.behavior;
@@ -352,6 +455,32 @@ class Enemy {
         if (this.hitWall) {
           Feel.shake(4, this.chargeA, 160);
           Particles.spawn(this.x, this.y, { count: 10, color: '#aaa', size: 3 });
+          /* le bison (Concession) : le choc contre le mur secoue le sol tout autour */
+          if (this.variant === 'secousse') {
+            const rr = b.quakeRadius || 150;
+            G.room.blasts.push({ x: this.x, y: this.y, r: rr, t: 0, life: 0.35, color: '#c9a56a', flat: true });
+            Feel.shake(9, undefined, 260);
+            if (!G.player.dead && dist(this.x, this.y, G.player.x, G.player.y) < rr)
+              Combat.hitPlayer(Math.round(this.damage * (b.quakeMul || 0.8)), { type: 'contact', source: this, x: this.x, y: this.y });
+          }
+        }
+        /* la racine (Serre) : au bout de sa charge elle s'enracine et le sol se couvre de ronces autour d'elle */
+        if (this.variant === 'enracine') {
+          for (let i = 0; i < 3; i++) {
+            const a = (i * TAU) / 3 + RNG.range(-0.4, 0.4);
+            G.room.hazards.push({
+              x: clamp(this.x + Math.cos(a) * 46, ROOM_X + 20, ROOM_X + ROOM_W - 20),
+              y: clamp(this.y + Math.sin(a) * 46, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
+              r: 34,
+              until: Time.now + (b.rootTime || 3),
+              dps: b.rootDps || 8,
+              slow: true,
+              owner: 'enemy',
+              color: '#7ed957',
+              cd: new Map(),
+            });
+          }
+          AudioEngine.trapGas({ intensity: 0.5 });
         }
       }
     } else if (this.state === 'stunned') {
@@ -363,7 +492,18 @@ class Enemy {
   }
   ai_kamikaze(dt, t, d) {
     const b = this.behavior;
-    if (this.state === 'spawn') this.setState('chase');
+    if (this.state === 'spawn') this.setState(this.variant === 'roule' ? 'roll' : 'chase');
+    if (this.state === 'roll') {
+      /* le baril (Concession) : il roule en ligne droite, rebondit sur ce qu'il heurte et éclate au contact */
+      if (this.rollA == null || this.hitWall)
+        this.rollA = angleTo(this.x, this.y, t.x, t.y) + (this.rollA == null ? 0 : RNG.range(-0.7, 0.7));
+      const sp = this.speed * (b.rollMul || 1.25) * this.slow;
+      this.x += Math.cos(this.rollA) * sp * dt;
+      this.y += Math.sin(this.rollA) * sp * dt;
+      this.tele = d < (b.triggerRange || 60) * 2 ? 1 : 0;
+      if (d < this.r + t.r + 8) this.explode();
+      return;
+    }
     if (this.state === 'chase') {
       this.moveToward(t.x, t.y, dt, 1.1);
       if (d < (b.triggerRange || 60)) this.setState('fuse');
@@ -386,6 +526,19 @@ class Enemy {
         e.flash = 0.1;
         if (e.hp <= 0) Combat.killEnemy(e);
       }
+    /* la spore (Serre) laisse un nuage qui ralentit ; la jarre (Sérail) une nappe de feu */
+    if (this.variant === 'nuage' || this.variant === 'nappe')
+      G.room.hazards.push({
+        x: this.x,
+        y: this.y,
+        r: r * 0.85,
+        until: Time.now + (b.cloudTime || 3),
+        dps: b.cloudDps || (this.variant === 'nappe' ? 9 : 6),
+        slow: this.variant === 'nuage',
+        owner: 'enemy',
+        color: this.variant === 'nappe' ? '#ff8c42' : '#b7ff7a',
+        cd: new Map(),
+      });
     this.hp = 0;
     this.xp = Math.round(this.xp * 0.5);
     Combat.killEnemy(this, { silent: true });
@@ -395,6 +548,21 @@ class Enemy {
     const keep = b.keepDistance || 340;
     if (this.state === 'spawn') this.setState('idle');
     this.summonCd -= dt;
+    /* le bourgeon (Serre) soigne ses moucherons d'une pulsation toutes les 3 s */
+    if (this.variant === 'soigne') {
+      this.healCd -= dt;
+      if (this.healCd <= 0) {
+        this.healCd = b.healEvery || 3;
+        let n = 0;
+        for (const e of this.summoned)
+          if (!e.dead && e.hp < e.maxHp && dist(this.x, this.y, e.x, e.y) < (b.healRange || 260)) {
+            e.hp = Math.min(e.maxHp, e.hp + Math.round(e.maxHp * (b.healFraction || 0.2)));
+            Particles.spawn(e.x, e.y - 8, { count: 4, color: '#7fff9a', size: 2, glow: true, speedMax: 60, life: 0.5 });
+            n++;
+          }
+        if (n) G.room.blasts.push({ x: this.x, y: this.y, r: b.healRange || 260, t: 0, life: 0.4, color: '#7fff9a' });
+      }
+    }
     if (this.state === 'idle') {
       if (d < keep) this.moveToward(this.x * 2 - t.x, this.y * 2 - t.y, dt, 0.8);
       else {
@@ -403,21 +571,53 @@ class Enemy {
         this.y += Math.sin(this.wander) * this.speed * 0.3 * dt;
       }
       this.summoned = this.summoned.filter(e => !e.dead);
-      if (this.summonCd <= 0 && this.summoned.length < (b.max || 4)) this.setState('summon');
+      /* le charmeur (Sérail) : sa flûte t'attire vers lui — télégraphie d'une seconde, puis la traction */
+      this.charmCd -= dt;
+      if (this.variant === 'charme' && this.charmCd <= 0 && d < (b.charmRange || 420) && lineOfSight(this.x, this.y, t.x, t.y)) {
+        this.setState('charm');
+        Floaters.add(this.x, this.y - this.r - 18, 'CHARME', '#c9a3ff', 13);
+      } else if (this.summonCd <= 0 && this.summoned.length < (b.max || 4)) this.setState('summon');
+    } else if (this.state === 'charm') {
+      this.tele = 1;
+      if (this.armed(b.charmWindup || 1.0)) {
+        this.tele = 0;
+        this.setState('pull');
+      }
+    } else if (this.state === 'pull') {
+      const pl = G.player;
+      const dur = b.charmPullTime || 0.35;
+      if (this.stateT < dur && !pl.dead && !pl.dashing) {
+        const a = angleTo(pl.x, pl.y, this.x, this.y);
+        const step = ((b.charmPull || 160) / dur) * dt;
+        pl.x += Math.cos(a) * Math.min(step, Math.max(0, dist(pl.x, pl.y, this.x, this.y) - this.r - pl.r));
+        pl.y += Math.sin(a) * Math.min(step, Math.max(0, dist(pl.x, pl.y, this.x, this.y) - this.r - pl.r));
+        resolveRoomCollision(pl);
+        if (RNG.chance(0.5)) Particles.spawn(pl.x, pl.y, { count: 1, color: '#c9a3ff', size: 2, glow: true, life: 0.3 });
+      } else {
+        this.charmCd = (b.charmEvery || 6) / G.difficulty.fireRateMul;
+        this.setState('idle');
+      }
     } else if (this.state === 'summon') {
       this.tele = 1;
       if (this.armed(this.telegraph.time)) {
         this.tele = 0;
-        const def = Content.enemy(b.summon);
-        const n = b.count || 2;
+        /* le croquemort (Concession) relève le dernier ennemi tombé près de lui, plutôt que d'invoquer */
+        const raised = this.variant === 'releve' && this.raise;
+        const def = raised ? this.raise : Content.enemy(b.summon);
+        const n = raised ? 1 : b.count || 2;
         for (let i = 0; i < n; i++) {
           const a = RNG.range(0, TAU);
-          const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 40, this.y + Math.sin(a) * 40, { hpMul: 0.7 });
+          const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 40, this.y + Math.sin(a) * 40, { hpMul: raised ? 0.5 : 0.7 });
           if (e) {
             e.xp = Math.round(e.xp * 0.4);
             e.coins = 0;
+            e.raised = !!raised;
             this.summoned.push(e);
           }
+        }
+        if (raised) {
+          Floaters.add(this.x, this.y - this.r - 18, 'RELEVÉ', '#cfd6e6', 13);
+          this.raise = null;
         }
         this.summonCd = (b.every || 5) / G.difficulty.fireRateMul;
         this.setState('idle');
@@ -433,6 +633,20 @@ class Enemy {
     const sp = this.speed * this.slow;
     this.x += Math.cos(a) * sp * dt;
     this.y += Math.sin(a) * sp * dt;
+    /* les cobras (Sérail) crachent de loin avant de mordre */
+    if (this.variant === 'crachat') {
+      this.spitCd -= dt;
+      if (this.spitCd <= 0 && d < (b.spitRange || 240) && d > 40 && lineOfSight(this.x, this.y, t.x, t.y)) {
+        enemyProjectile(this, angleTo(this.x, this.y, t.x, t.y), {
+          speed: b.spitSpeed || 210,
+          damage: b.spitDamage || 5,
+          r: 5,
+          color: '#9cff57',
+          life: 2,
+        });
+        this.spitCd = (b.spitEvery || 2.5) / G.difficulty.fireRateMul;
+      }
+    }
   }
   ai_dasher(dt, t, d) {
     const b = this.behavior;
@@ -449,8 +663,16 @@ class Enemy {
       this.dashA = angleTo(this.x, this.y, t.x, t.y);
       if (this.armed(this.telegraph.time)) {
         this.tele = 0;
+        /* le crotale (Concession) feinte : une fois sur deux il surgit de côté ; le djinn (Sérail) réapparaît dans ton dos */
+        if (this.variant === 'feinte' && RNG.chance(0.5))
+          this.blinkTo(this.x + Math.cos(this.dashA + Math.PI / 2) * 110, this.y + Math.sin(this.dashA + Math.PI / 2) * 110, t);
+        else if (this.variant === 'dos') {
+          const back = t === G.player ? G.player.aim + Math.PI : angleTo(this.x, this.y, t.x, t.y);
+          this.blinkTo(t.x + Math.cos(back) * 90, t.y + Math.sin(back) * 90, t);
+        }
         this.setState('dash');
         this.dashed = 0;
+        this.whipAcc = 0;
         Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true });
       }
     } else if (this.state === 'dash') {
@@ -459,11 +681,41 @@ class Enemy {
       this.x += Math.cos(this.dashA) * step;
       this.y += Math.sin(this.dashA) * step;
       this.dashed += step;
+      /* la liane (Serre) : sa course laisse un fouet au sol, une seconde */
+      if (this.variant === 'fouet') {
+        this.whipAcc += step;
+        if (this.whipAcc >= 34) {
+          this.whipAcc = 0;
+          G.room.hazards.push({
+            x: this.x,
+            y: this.y,
+            r: 16,
+            until: Time.now + (b.whipTime || 1),
+            dps: b.whipDps || 9,
+            owner: 'enemy',
+            color: this.color,
+            cd: new Map(),
+          });
+        }
+      }
       if (this.dashed >= this.dashLen || this.hitWall) {
         this.setState('wait');
         this.stateT = -(b.postDashPause || 0);
       }
     }
+  }
+  /* se déplacer d'un coup en (x, y) si la place est libre, puis viser la cible de là */
+  blinkTo(x, y, t) {
+    x = clamp(x, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
+    y = clamp(y, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
+    if (pointBlocked(x, y, this.r)) return false;
+    Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true, life: 0.4 });
+    this.x = x;
+    this.y = y;
+    this.blinked = Time.now;
+    this.dashA = angleTo(this.x, this.y, t.x, t.y);
+    this.dashLen = Math.min(dist(this.x, this.y, t.x, t.y) + 60, this.behavior.dashDistance || 300);
+    return true;
   }
   /* --- rendu commun --- */
   render(ctx) {
@@ -586,6 +838,18 @@ class Enemy {
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.r + 3, 0, TAU);
+      ctx.stroke();
+    }
+    /* le bond de la ronce et le vol des moucherons : le corps décolle, l'ombre reste au sol */
+    const lift = this.jumpK > 0 ? Math.sin(this.jumpK * Math.PI) * 46 : this.variant === 'vol' ? 10 + Math.sin(this.anim * 9) * 3 : 0;
+    if (lift) ctx.translate(0, -lift);
+    /* le colosse (Sérail) : son bouclier frontal, un arc de pierre du côté où il regarde (rien quand il est sonné) */
+    if (this.variant === 'bouclier' && this.state !== 'stunned') {
+      const fa = this.facing < 0 ? Math.PI : 0;
+      ctx.strokeStyle = '#e0cfa8';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r + 6, fa - 1.0, fa + 1.0);
       ctx.stroke();
     }
     const flash = this.flash > 0.07 ? 1 : this.flash > 0 ? 0.35 : 0; // flash en deux temps

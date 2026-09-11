@@ -1565,3 +1565,21 @@ Test : `allerretour.js` — 11 mesures (l'export identique au fichier, point fix
 - **Reste pour ce chantier** : un comportement neuf par archétype et par biome (28), les quatre salles cadencées, les lumières et le flash précalculés, et un habillage des wagons.
 
 Test : `biomes.js` — 12 mesures (quatre ordres distincts, 4 et 8 en combat, la salle unique une seule fois, deux coffres par biome, salles modulaires distinctes, le sous-sol dans le noir, le défi par type, les wagons en boucle, le coffre devant la porte et le coffre caché, les phases de la rév. B dans les quatre biomes, la Serriste rév. B qui ouvre sur ses ronces). `spawncheck.js` couvre les 36 salles, `levels.js` fait traverser le biome 1 au bot.
+
+## 60. Chantier 9, deuxième séance — un comportement neuf par archétype et par biome
+
+**Vingt-huit comportements distincts : les sept archétypes du biome 1 et vingt et une variantes pour les trois autres.** Une variante est un mot dans la définition de l'ennemi (`behavior.variant`), lue par la même machine d'archétype (`Enemy`, 32_enemies.js) : pas de sous-classe par biome, une branche par variante là où elle change quelque chose. Les descriptions du contenu disent maintenant ce que le jeu fait — plusieurs promettaient déjà ces comportements sans les tenir (le bandit « se replie », la spore « laisse un nuage », le djinn « dans ton dos »).
+
+| Archétype | LA SERRE | LA CONCESSION | LE SÉRAIL |
+|---|---|---|---|
+| fonceur | **saut** — la ronce bondit par-dessus les obstacles (`noClip` pendant la ruée, le corps décolle de 46 px) | **piège** — le coyote laisse un piège à loup 8 s là où il tombe (`hazards` avec `trap`, mord une fois) | **dédouble** — le derviche à 50 % de PV se scinde une fois (`splitNow`, PV partagés) |
+| tireur | **rebond** — les spores rebondissent une fois sur les murs (`bounce: 1`) | **replis** — le bandit court derrière l'obstacle le plus proche après sa salve (état `cover`, `pickCover`) | **cloche** — la flèche passe par-dessus les colonnes (`ghost`, `lob`) et retombe dans un cercle annoncé (`hazards` avec `marker` + `boomAt`) |
+| tank | **enracine** — trois ronces (ralentissent, blessent) autour de la racine au bout de sa charge | **secousse** — le bison sonné contre un mur secoue le sol à 150 px (`quakeRadius`) | **bouclier** — le colosse encaisse moitié moins de face (`Combat.hitEnemy`, signe de `vx` contre `facing`), tout de dos ou sonné ; un arc de pierre le montre |
+| kamikaze | **nuage** — l'explosion laisse un nuage qui ralentit 3 s | **roule** — le baril roule en ligne droite (état `roll`), rebondit sur ce qu'il heurte, éclate au contact | **nappe** — l'explosion laisse une nappe de feu 3 s |
+| invocateur | **soigne** — le bourgeon rend 20 % de PV à ses moucherons toutes les 3 s | **relève** — le croquemort relève à moitié de ses PV le dernier ennemi tombé à moins de 320 px (`raise`, posé par `Combat.killEnemy`) | **charme** — toutes les 6 s, une seconde de flûte puis le joueur est tiré de 160 px vers lui (états `charm` / `pull`) |
+| nuée | **vol** — les moucherons passent par-dessus les obstacles (`noClip`, dessinés 10 px au-dessus du sol) | **venin** — la piqûre engourdit : `pl.venomUntil`, marche à 65 % pendant 1,5 s | **crachat** — les cobras crachent de loin (`spitRange` 240, toutes les 2,5 s) avant de mordre |
+| esquiveur | **fouet** — la course de la liane laisse un fouet au sol (un disque tous les 34 px, 1 s) | **feinte** — une fois sur deux, le crotale surgit de côté (`blinkTo` à 110 px perpendiculaires) | **dos** — le djinn réapparaît 90 px derrière le joueur (`G.player.aim`), puis le traverse |
+
+Côté moteur : `resolveRoomCollision` ignore les obstacles pour ce qui porte `noClip` ; les pièges à loup et les points de chute sont des `hazards` à part (`trap`, `marker`), dessinés en anneau plutôt qu'en disque ; le venin est un multiplicateur de vitesse du joueur.
+
+Test : `comportements.js` — 22 mesures (le compte de 28, puis chaque variante en action dans une salle vide, et le bot qui joue 7 s dans une salle des trois biomes sans erreur).

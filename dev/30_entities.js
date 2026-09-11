@@ -147,6 +147,7 @@ function resolveRoomCollision(e) {
   e.y = clamp(e.y, ROOM_Y + r, ROOM_Y + ROOM_H - r);
   for (const o of G.room.obstacles) {
     if (o.dashOver && e === G.player && e.dashing) continue; // le dash franchit les murets : c'est ce qui leur donne leur intérêt
+    if (e.noClip) continue; // ce qui vole ou saute (chantier 9) passe par-dessus
     if (!circleRect(e.x, e.y, r, o.px, o.py, o.pw, o.ph)) continue;
     /* pousser hors du bloc selon l'axe de moindre pénétration */
     const cx = o.px + o.pw / 2,
@@ -969,6 +970,19 @@ const Combat = {
       if (fb) d *= fb.mul || 1.3;
     }
     if (e.markUntil > Time.now) d *= e.markMul || 1.3; // désigné par un compagnon guetteur
+    /* le colosse (Sérail) : de face, sa pierre encaisse la moitié ; de dos ou sonné, tout passe */
+    if (
+      e.variant === 'bouclier' &&
+      !info.dot &&
+      e.state !== 'stunned' &&
+      info.vx != null &&
+      Math.abs(info.vx) > 1e-6 &&
+      Math.sign(info.vx) === -e.facing
+    ) {
+      d *= e.behavior.shieldMul || 0.5;
+      info.shielded = true;
+      Particles.spawn(info.x || e.x, info.y || e.y, { count: 3, color: '#e0cfa8', size: 2, life: 0.3 });
+    }
     if (e.isBoss) {
       if (e.shieldUntil > Time.now) {
         d *= 0.15;
@@ -1130,6 +1144,22 @@ const Combat = {
     for (let i = 0; i < coins; i++) Pickups.spawn(e.x, e.y, 'coin', 1);
     if (!e.isBoss && RNG.chance(BALANCE.heartDropChance)) Pickups.spawn(e.x, e.y, 'heart', 15);
     if (!info.silent || e.elite) Pickups.maybeDrop(e);
+    /* le coyote (Concession) laisse un piège à loup là où il tombe ; le croquemort retient qui vient de tomber près de lui */
+    if (e.variant === 'piege')
+      G.room.hazards.push({
+        x: e.x,
+        y: e.y,
+        r: 24,
+        until: Time.now + 8,
+        trap: true,
+        damage: e.damage,
+        owner: 'enemy',
+        color: '#cfd6e6',
+        cd: new Map(),
+      });
+    if (!e.isBoss && !e.raised)
+      for (const s of G.enemies)
+        if (s !== e && !s.dead && s.variant === 'releve' && dist(s.x, s.y, e.x, e.y) < (s.behavior.raiseRange || 320)) s.raise = e.def;
     for (const h of pl.hooks.onKill) {
       if (h.effect === 'explode')
         Combat.explosion(e.x, e.y, (h.radius || 80) * pl.stats.areaSize, Math.round(e.maxHp * (h.damageMul || 0.3)) + 5, '#ff8c42', true);
@@ -2045,6 +2075,7 @@ class Player {
       if (this.gasSlowUntil > Time.now) sp *= 0.7;
       if (this.jamUntil > Time.now) sp *= this.jamScale || 0.55;
       if (G.room && G.room.grid) sp *= Terrain.speedAt(this.x, this.y); // eau, boue : on ralentit sans rien perdre
+      if (Time.now < this.venomUntil) sp *= 0.65; // le venin des scorpions (chantier 9)
       if (Time.now < Time.slowUntil && this.slowImmune > Time.now) sp /= Time.slow; // ralenti du temps : le joueur garde sa vitesse
       this.vx = mv.x * sp;
       this.vy = mv.y * sp;

@@ -527,7 +527,7 @@ body.touch .shoppanel{max-width:none;width:100%;min-height:100%;border-radius:0;
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-11 10:00';</script>
+<script>window.WAY_BUILD = '2026-09-11 11:53';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -5665,7 +5665,7 @@ CONTENT.enemies.push(
     id: 'enemy_ronce',
     name: 'Ronce',
     archetype: 'rusher',
-    desc: 'Rôdeur envahi par les lianes : plus vif, ruée plus longue.',
+    desc: "Rôdeur envahi par les lianes : sa ruée est un bond, qui passe par-dessus les obstacles. On l'esquive de côté, pas derrière un bloc.",
     hp: 46,
     speed: 215,
     damage: 11,
@@ -5674,14 +5674,14 @@ CONTENT.enemies.push(
     coins: 2,
     color: '#7ed957',
     sprite: 'enemy_rusher2',
-    behavior: { lungeRange: 115, lungeWindup: 0.32, lungeSpeed: 600, lungeDuration: 0.3, lungeCooldown: 1.3 },
+    behavior: { variant: 'saut', lungeRange: 115, lungeWindup: 0.32, lungeSpeed: 600, lungeDuration: 0.3, lungeCooldown: 1.3 },
     telegraph: { time: 0.3, color: '#b7ff7a' },
   },
   {
     id: 'enemy_pollinisateur',
     name: 'Pollinisateur',
     archetype: 'shooter',
-    desc: 'Tire une salve de 3 spores en éventail. Reste à distance.',
+    desc: 'Tire une salve de 3 spores en éventail, qui rebondissent une fois sur les murs. Reste à distance.',
     hp: 36,
     speed: 140,
     damage: 8,
@@ -5691,14 +5691,24 @@ CONTENT.enemies.push(
     color: '#c9a3ff',
     projColor: '#e2c6ff',
     sprite: 'enemy_shooter2',
-    behavior: { fireRate: 0.8, projSpeed: 340, projDamage: 9, projSize: 7, keepDistance: 320, aimTime: 0.45, burst: 3, spread: 0.4 },
+    behavior: {
+      variant: 'rebond',
+      fireRate: 0.8,
+      projSpeed: 340,
+      projDamage: 9,
+      projSize: 7,
+      keepDistance: 320,
+      aimTime: 0.45,
+      burst: 3,
+      spread: 0.4,
+    },
     telegraph: { time: 0.45, color: '#e2c6ff' },
   },
   {
     id: 'enemy_racine',
     name: 'Racine',
     archetype: 'tank',
-    desc: 'Bloc végétal : charge plus vite, encaisse beaucoup.',
+    desc: "Bloc végétal : charge vite, et au bout de sa charge s'enracine — trois ronces poussent autour de lui, qui blessent et ralentissent 3 s.",
     hp: 240,
     speed: 95,
     damage: 16,
@@ -5707,14 +5717,22 @@ CONTENT.enemies.push(
     coins: 5,
     color: '#5aa06a',
     sprite: 'enemy_tank2',
-    behavior: { chargeWindup: 0.7, chargeSpeed: 620, chargeDuration: 0.8, chargeCooldown: 2.6, stunOnWallHit: 1.0, chargeDamageMul: 1.5 },
+    behavior: {
+      variant: 'enracine',
+      chargeWindup: 0.7,
+      chargeSpeed: 620,
+      chargeDuration: 0.8,
+      chargeCooldown: 2.6,
+      stunOnWallHit: 1.0,
+      chargeDamageMul: 1.5,
+    },
     telegraph: { time: 0.7, color: '#ffd166' },
   },
   {
     id: 'enemy_spore',
     name: 'Spore',
     archetype: 'kamikaze',
-    desc: 'Explose dans un rayon plus large et laisse un nuage.',
+    desc: 'Explose dans un rayon plus large et laisse un nuage 3 s : dedans on souffre et on ralentit.',
     hp: 24,
     speed: 260,
     damage: 6,
@@ -5723,14 +5741,14 @@ CONTENT.enemies.push(
     coins: 2,
     color: '#b7ff7a',
     sprite: 'enemy_kamikaze2',
-    behavior: { fuse: 0.8, radius: 100, explosionDamage: 26, triggerRange: 70, explodeOnDeath: true },
+    behavior: { variant: 'nuage', fuse: 0.8, radius: 100, explosionDamage: 26, triggerRange: 70, explodeOnDeath: true },
     telegraph: { time: 0.8, color: '#eaffb0' },
   },
   {
     id: 'enemy_bourgeon',
     name: 'Bourgeon',
     archetype: 'summoner',
-    desc: "Libère des moucherons par paquets de 3, jusqu'à 6.",
+    desc: "Libère des moucherons par paquets de 3, jusqu'à 6, et les soigne d'une pulsation toutes les 3 s. À abattre en premier.",
     hp: 110,
     speed: 65,
     damage: 8,
@@ -5739,14 +5757,14 @@ CONTENT.enemies.push(
     coins: 6,
     color: '#ff9adb',
     sprite: 'enemy_summoner2',
-    behavior: { summon: 'enemy_moucherons', every: 3.5, max: 6, count: 3, keepDistance: 360, summonWindup: 0.6 },
+    behavior: { variant: 'soigne', summon: 'enemy_moucherons', every: 3.5, max: 6, count: 3, keepDistance: 360, summonWindup: 0.6 },
     telegraph: { time: 0.6, color: '#ffc4ea' },
   },
   {
     id: 'enemy_moucherons',
     name: 'Moucherons',
     archetype: 'swarm',
-    desc: 'Nuée de 5, plus rapide.',
+    desc: 'Nuée de 5, plus rapide, qui vole : les obstacles ne les arrêtent pas.',
     hp: 10,
     speed: 300,
     damage: 5,
@@ -5755,14 +5773,14 @@ CONTENT.enemies.push(
     coins: 1,
     color: '#9cff57',
     sprite: 'enemy_swarm2',
-    behavior: { groupSize: 5, jitter: 45, biteWindup: 0.2, biteCooldown: 0.7 },
+    behavior: { variant: 'vol', groupSize: 5, jitter: 45, biteWindup: 0.2, biteCooldown: 0.7 },
     telegraph: { time: 0.2, color: '#d0ff9a' },
   },
   {
     id: 'enemy_liane',
     name: 'Liane',
     archetype: 'dasher',
-    desc: 'Fonce plus loin, plus souvent.',
+    desc: 'Fonce plus loin, plus souvent, et sa course laisse un fouet au sol pendant une seconde.',
     hp: 55,
     speed: 190,
     damage: 13,
@@ -5771,7 +5789,15 @@ CONTENT.enemies.push(
     coins: 4,
     color: '#66e0c8',
     sprite: 'enemy_dasher2',
-    behavior: { blinkRange: 300, blinkWindup: 0.4, blinkCooldown: 1.7, dashSpeed: 780, dashDuration: 0.32, postDashPause: 0.5 },
+    behavior: {
+      variant: 'fouet',
+      blinkRange: 300,
+      blinkWindup: 0.4,
+      blinkCooldown: 1.7,
+      dashSpeed: 780,
+      dashDuration: 0.32,
+      postDashPause: 0.5,
+    },
     telegraph: { time: 0.4, color: '#a8fff0' },
   }
 );
@@ -6479,7 +6505,7 @@ CONTENT.enemies.push(
     id: 'enemy_coyote',
     name: 'Coyote',
     archetype: 'rusher',
-    desc: 'Chasse en meute, ruée courte et rapide, revient vite à la charge.',
+    desc: 'Chasse en meute, ruée courte et rapide. En tombant il laisse un piège à loup, qui mord le premier qui marche dessus.',
     hp: 52,
     speed: 235,
     damage: 12,
@@ -6488,14 +6514,14 @@ CONTENT.enemies.push(
     coins: 2,
     color: '#d8a25a',
     sprite: 'enemy_rusher3',
-    behavior: { lungeRange: 120, lungeWindup: 0.28, lungeSpeed: 640, lungeDuration: 0.28, lungeCooldown: 1.1 },
+    behavior: { variant: 'piege', lungeRange: 120, lungeWindup: 0.28, lungeSpeed: 640, lungeDuration: 0.28, lungeCooldown: 1.1 },
     telegraph: { time: 0.28, color: '#ffd9a0' },
   },
   {
     id: 'enemy_bandit',
     name: 'Bandit',
     archetype: 'shooter',
-    desc: 'Tire deux balles rapides puis se replie derrière un obstacle.',
+    desc: 'Tire deux balles rapides puis court se mettre derrière l’obstacle le plus proche.',
     hp: 44,
     speed: 150,
     damage: 9,
@@ -6505,14 +6531,24 @@ CONTENT.enemies.push(
     color: '#8a5a3a',
     projColor: '#ffe08a',
     sprite: 'enemy_shooter3',
-    behavior: { fireRate: 0.9, projSpeed: 420, projDamage: 10, projSize: 6, keepDistance: 340, aimTime: 0.4, burst: 2, spread: 0.15 },
+    behavior: {
+      variant: 'replis',
+      fireRate: 0.9,
+      projSpeed: 420,
+      projDamage: 10,
+      projSize: 6,
+      keepDistance: 340,
+      aimTime: 0.4,
+      burst: 2,
+      spread: 0.15,
+    },
     telegraph: { time: 0.4, color: '#ffe08a' },
   },
   {
     id: 'enemy_bison',
     name: 'Bison',
     archetype: 'tank',
-    desc: 'Charge de loin, très lourd, sonné 1 s contre un mur.',
+    desc: 'Charge de loin, très lourd. Contre un mur il est sonné 1 s, mais le choc secoue le sol tout autour : reste à plus de trois tuiles.',
     hp: 300,
     speed: 90,
     damage: 18,
@@ -6522,6 +6558,7 @@ CONTENT.enemies.push(
     color: '#6b4a2a',
     sprite: 'enemy_tank3',
     behavior: {
+      variant: 'secousse',
       chargeRange: 380,
       chargeWindup: 0.7,
       chargeSpeed: 680,
@@ -6536,7 +6573,7 @@ CONTENT.enemies.push(
     id: 'enemy_baril',
     name: 'Baril de poudre',
     archetype: 'kamikaze',
-    desc: 'Roule vers toi et explose. Explose aussi quand on le tue.',
+    desc: 'Roule en ligne droite, rebondit sur ce qu’il heurte et éclate au contact. Explose aussi quand on le tue.',
     hp: 26,
     speed: 250,
     damage: 6,
@@ -6545,14 +6582,14 @@ CONTENT.enemies.push(
     coins: 2,
     color: '#a8402e',
     sprite: 'enemy_kamikaze3',
-    behavior: { fuse: 0.75, radius: 105, explosionDamage: 30, triggerRange: 70, explodeOnDeath: true },
+    behavior: { variant: 'roule', fuse: 0.75, radius: 105, explosionDamage: 30, triggerRange: 70, explodeOnDeath: true },
     telegraph: { time: 0.75, color: '#ff9a3c' },
   },
   {
     id: 'enemy_croquemort',
     name: 'Croque-mort',
     archetype: 'summoner',
-    desc: "Reste loin et lâche des scorpions par paquets de 3, jusqu'à 6.",
+    desc: "Reste loin et lâche des scorpions par paquets de 3. Quand un ennemi tombe près de lui, il le relève à moitié de ses PV au lieu d'invoquer.",
     hp: 120,
     speed: 70,
     damage: 8,
@@ -6561,14 +6598,14 @@ CONTENT.enemies.push(
     coins: 7,
     color: '#2a2a3a',
     sprite: 'enemy_summoner3',
-    behavior: { summon: 'enemy_scorpions', every: 3.2, max: 6, count: 3, keepDistance: 380, summonWindup: 0.6 },
+    behavior: { variant: 'releve', summon: 'enemy_scorpions', every: 3.2, max: 6, count: 3, keepDistance: 380, summonWindup: 0.6 },
     telegraph: { time: 0.6, color: '#c9a3ff' },
   },
   {
     id: 'enemy_scorpions',
     name: 'Scorpions',
     archetype: 'swarm',
-    desc: 'Nuée de 5, piqûre rapide.',
+    desc: 'Nuée de 5, piqûre rapide : le venin engourdit, on marche à 65 % pendant 1,5 s.',
     hp: 11,
     speed: 310,
     damage: 6,
@@ -6577,14 +6614,14 @@ CONTENT.enemies.push(
     coins: 1,
     color: '#3a2a1a',
     sprite: 'enemy_swarm3',
-    behavior: { groupSize: 5, jitter: 50, biteWindup: 0.18, biteCooldown: 0.65 },
+    behavior: { variant: 'venin', groupSize: 5, jitter: 50, biteWindup: 0.18, biteCooldown: 0.65 },
     telegraph: { time: 0.18, color: '#ffb347' },
   },
   {
     id: 'enemy_crotale',
     name: 'Crotale',
     archetype: 'dasher',
-    desc: "Sonne, puis fond sur toi d'un coup. Longue pause après.",
+    desc: "Sonne, puis fond sur toi d'un coup — une fois sur deux il surgit de côté, pas d'où il visait. Longue pause après.",
     hp: 60,
     speed: 180,
     damage: 15,
@@ -6593,7 +6630,15 @@ CONTENT.enemies.push(
     coins: 4,
     color: '#9a9a3a',
     sprite: 'enemy_dasher3',
-    behavior: { blinkRange: 320, blinkWindup: 0.45, blinkCooldown: 1.6, dashSpeed: 820, dashDuration: 0.3, postDashPause: 0.6 },
+    behavior: {
+      variant: 'feinte',
+      blinkRange: 320,
+      blinkWindup: 0.45,
+      blinkCooldown: 1.6,
+      dashSpeed: 820,
+      dashDuration: 0.3,
+      postDashPause: 0.6,
+    },
     telegraph: { time: 0.45, color: '#e8ff8a' },
   }
 );
@@ -7526,7 +7571,7 @@ CONTENT.enemies.push(
     id: 'enemy_derviche',
     name: 'Derviche',
     archetype: 'rusher',
-    desc: 'Tourne sur lui-même puis fond sur toi, lames tendues. Enchaîne vite.',
+    desc: 'Tourne sur lui-même puis fond sur toi, lames tendues. À la moitié de ses PV il se dédouble, une fois.',
     hp: 62,
     speed: 250,
     damage: 14,
@@ -7535,14 +7580,14 @@ CONTENT.enemies.push(
     coins: 3,
     color: '#ffd166',
     sprite: 'enemy_rusher4',
-    behavior: { lungeRange: 140, lungeWindup: 0.26, lungeSpeed: 680, lungeDuration: 0.3, lungeCooldown: 1.15 },
+    behavior: { variant: 'dedouble', lungeRange: 140, lungeWindup: 0.26, lungeSpeed: 680, lungeDuration: 0.3, lungeCooldown: 1.15 },
     telegraph: { time: 0.26, color: '#ffe8a8' },
   },
   {
     id: 'enemy_archer',
     name: 'Archer du sérail',
     archetype: 'shooter',
-    desc: 'Deux flèches en éventail, puis il recule derrière une colonne.',
+    desc: 'Tire en cloche : la flèche passe par-dessus les colonnes et retombe là où tu étais, dans le cercle annoncé. Bouge.',
     hp: 52,
     speed: 155,
     damage: 10,
@@ -7553,6 +7598,7 @@ CONTENT.enemies.push(
     projColor: '#a8f0e8',
     sprite: 'enemy_shooter4',
     behavior: {
+      variant: 'cloche',
       fireRate: 1.35,
       projSpeed: 430,
       projDamage: 10,
@@ -7569,7 +7615,7 @@ CONTENT.enemies.push(
     id: 'enemy_colosse',
     name: "Colosse d'argile",
     archetype: 'tank',
-    desc: 'Statue de terre cuite : charge droit devant, se fend contre un mur.',
+    desc: 'Statue de terre cuite : de face, sa pierre encaisse moitié moins. Frappe-le de dos, ou quand il est sonné contre un mur.',
     hp: 360,
     speed: 92,
     damage: 20,
@@ -7579,6 +7625,7 @@ CONTENT.enemies.push(
     color: '#c67440',
     sprite: 'enemy_tank4',
     behavior: {
+      variant: 'bouclier',
       chargeRange: 400,
       chargeWindup: 0.65,
       chargeSpeed: 700,
@@ -7593,7 +7640,7 @@ CONTENT.enemies.push(
     id: 'enemy_jarre',
     name: 'Jarre de naphte',
     archetype: 'kamikaze',
-    desc: "Roule vers toi et s'ouvre en nappe de feu. Éclate aussi quand on la brise.",
+    desc: "Roule vers toi et s'ouvre en nappe de feu, qui brûle 3 s au sol. Éclate aussi quand on la brise.",
     hp: 30,
     speed: 260,
     damage: 7,
@@ -7602,14 +7649,14 @@ CONTENT.enemies.push(
     coins: 2,
     color: '#ff8c42',
     sprite: 'enemy_kamikaze4',
-    behavior: { fuse: 0.7, radius: 110, explosionDamage: 34, triggerRange: 74, explodeOnDeath: true },
+    behavior: { variant: 'nappe', fuse: 0.7, radius: 110, explosionDamage: 34, triggerRange: 74, explodeOnDeath: true },
     telegraph: { time: 0.7, color: '#ffb347' },
   },
   {
     id: 'enemy_charmeur',
     name: 'Charmeur',
     archetype: 'summoner',
-    desc: "Reste au loin, joue de la flûte et fait sortir des cobras par paquets de 3, jusqu'à 6.",
+    desc: "Reste au loin, joue de la flûte : les cobras sortent par paquets de 3, et toutes les 6 s sa musique t'attire vers lui d'un coup.",
     hp: 140,
     speed: 72,
     damage: 9,
@@ -7618,14 +7665,14 @@ CONTENT.enemies.push(
     coins: 8,
     color: '#9a7aff',
     sprite: 'enemy_summoner4',
-    behavior: { summon: 'enemy_cobras', every: 3.0, max: 6, count: 3, keepDistance: 390, summonWindup: 0.6 },
+    behavior: { variant: 'charme', summon: 'enemy_cobras', every: 3.0, max: 6, count: 3, keepDistance: 390, summonWindup: 0.6 },
     telegraph: { time: 0.6, color: '#c9a3ff' },
   },
   {
     id: 'enemy_cobras',
     name: 'Cobras',
     archetype: 'swarm',
-    desc: 'Nuée de 5, morsure sèche et venimeuse.',
+    desc: 'Nuée de 5 : ils crachent de loin, puis mordent.',
     hp: 13,
     speed: 320,
     damage: 7,
@@ -7634,7 +7681,7 @@ CONTENT.enemies.push(
     coins: 1,
     color: '#3aa06a',
     sprite: 'enemy_swarm4',
-    behavior: { groupSize: 5, jitter: 55, biteWindup: 0.17, biteCooldown: 0.6 },
+    behavior: { variant: 'crachat', groupSize: 5, jitter: 55, biteWindup: 0.17, biteCooldown: 0.6 },
     telegraph: { time: 0.17, color: '#7ed957' },
   },
   {
@@ -7650,7 +7697,15 @@ CONTENT.enemies.push(
     coins: 5,
     color: '#9a7aff',
     sprite: 'enemy_dasher4',
-    behavior: { blinkRange: 340, blinkWindup: 0.42, blinkCooldown: 1.5, dashSpeed: 860, dashDuration: 0.3, postDashPause: 0.6 },
+    behavior: {
+      variant: 'dos',
+      blinkRange: 340,
+      blinkWindup: 0.42,
+      blinkCooldown: 1.5,
+      dashSpeed: 860,
+      dashDuration: 0.3,
+      postDashPause: 0.6,
+    },
     telegraph: { time: 0.42, color: '#c9a3ff' },
   }
 );
@@ -11193,6 +11248,7 @@ function resolveRoomCollision(e) {
   e.y = clamp(e.y, ROOM_Y + r, ROOM_Y + ROOM_H - r);
   for (const o of G.room.obstacles) {
     if (o.dashOver && e === G.player && e.dashing) continue; // le dash franchit les murets : c'est ce qui leur donne leur intérêt
+    if (e.noClip) continue; // ce qui vole ou saute (chantier 9) passe par-dessus
     if (!circleRect(e.x, e.y, r, o.px, o.py, o.pw, o.ph)) continue;
     /* pousser hors du bloc selon l'axe de moindre pénétration */
     const cx = o.px + o.pw / 2,
@@ -12015,6 +12071,19 @@ const Combat = {
       if (fb) d *= fb.mul || 1.3;
     }
     if (e.markUntil > Time.now) d *= e.markMul || 1.3; // désigné par un compagnon guetteur
+    /* le colosse (Sérail) : de face, sa pierre encaisse la moitié ; de dos ou sonné, tout passe */
+    if (
+      e.variant === 'bouclier' &&
+      !info.dot &&
+      e.state !== 'stunned' &&
+      info.vx != null &&
+      Math.abs(info.vx) > 1e-6 &&
+      Math.sign(info.vx) === -e.facing
+    ) {
+      d *= e.behavior.shieldMul || 0.5;
+      info.shielded = true;
+      Particles.spawn(info.x || e.x, info.y || e.y, { count: 3, color: '#e0cfa8', size: 2, life: 0.3 });
+    }
     if (e.isBoss) {
       if (e.shieldUntil > Time.now) {
         d *= 0.15;
@@ -12176,6 +12245,22 @@ const Combat = {
     for (let i = 0; i < coins; i++) Pickups.spawn(e.x, e.y, 'coin', 1);
     if (!e.isBoss && RNG.chance(BALANCE.heartDropChance)) Pickups.spawn(e.x, e.y, 'heart', 15);
     if (!info.silent || e.elite) Pickups.maybeDrop(e);
+    /* le coyote (Concession) laisse un piège à loup là où il tombe ; le croquemort retient qui vient de tomber près de lui */
+    if (e.variant === 'piege')
+      G.room.hazards.push({
+        x: e.x,
+        y: e.y,
+        r: 24,
+        until: Time.now + 8,
+        trap: true,
+        damage: e.damage,
+        owner: 'enemy',
+        color: '#cfd6e6',
+        cd: new Map(),
+      });
+    if (!e.isBoss && !e.raised)
+      for (const s of G.enemies)
+        if (s !== e && !s.dead && s.variant === 'releve' && dist(s.x, s.y, e.x, e.y) < (s.behavior.raiseRange || 320)) s.raise = e.def;
     for (const h of pl.hooks.onKill) {
       if (h.effect === 'explode')
         Combat.explosion(e.x, e.y, (h.radius || 80) * pl.stats.areaSize, Math.round(e.maxHp * (h.damageMul || 0.3)) + 5, '#ff8c42', true);
@@ -13091,6 +13176,7 @@ class Player {
       if (this.gasSlowUntil > Time.now) sp *= 0.7;
       if (this.jamUntil > Time.now) sp *= this.jamScale || 0.55;
       if (G.room && G.room.grid) sp *= Terrain.speedAt(this.x, this.y); // eau, boue : on ralentit sans rien perdre
+      if (Time.now < this.venomUntil) sp *= 0.65; // le venin des scorpions (chantier 9)
       if (Time.now < Time.slowUntil && this.slowImmune > Time.now) sp /= Time.slow; // ralenti du temps : le joueur garde sa vitesse
       this.vx = mv.x * sp;
       this.vy = mv.y * sp;
@@ -14538,6 +14624,12 @@ class Enemy {
     this.acc = 0;
     this.hitWall = false;
     this.anim = RNG.range(0, 10);
+    /* chantier 9 : la variante de biome (un comportement neuf par archétype et par biome, CONTENT.md §60) */
+    this.variant = (def.behavior && def.behavior.variant) || null;
+    this.charmCd = 3;
+    this.spitCd = 1;
+    this.healCd = 3;
+    this.jumpK = 0;
     /* alias des paramètres de contenu */
     const b = this.behavior;
     if (b.lungeTime == null && b.lungeDuration != null) b.lungeTime = b.lungeDuration;
@@ -14617,7 +14709,10 @@ class Enemy {
     const d = dist(this.x, this.y, target.x, target.y);
     if (target.x < this.x - 2) this.facing = -1;
     else if (target.x > this.x + 2) this.facing = 1;
+    if (this.variant === 'dedouble' && !this.split && this.hp <= this.maxHp * 0.5) this.splitNow();
     this['ai_' + this.archetype](dt, target, d);
+    /* les moucherons volent, la ronce saute : pendant ce temps les obstacles ne les arrêtent pas */
+    this.noClip = this.variant === 'vol' || (this.variant === 'saut' && this.state === 'lunge');
     this.hitWall = false;
     resolveRoomCollision(this);
     /* anti-blocage : un ennemi immobile 6 s loin du joueur est relocalisé (recoin derrière un mur mobile, pile d'ennemis) */
@@ -14646,6 +14741,10 @@ class Enemy {
         const a = angleTo(pl.x, pl.y, this.x, this.y);
         this.kvx += Math.cos(a) * 120;
         this.kvy += Math.sin(a) * 120;
+        if (this.variant === 'venin') {
+          pl.venomUntil = Time.now + (this.behavior.venomTime || 1.5); // les scorpions : la morsure engourdit
+          Floaters.add(pl.x, pl.y - 34, 'VENIN', '#9cff57', 12);
+        }
       }
     }
     for (const dc of G.room.decoys)
@@ -14753,10 +14852,31 @@ class Enemy {
       const sp = (b.lungeSpeed || 620) * this.slow;
       this.x += Math.cos(this.lungeA) * sp * dt;
       this.y += Math.sin(this.lungeA) * sp * dt;
-      if (this.stateT > (b.lungeTime || 0.25) || this.hitWall) this.setState('recover');
+      /* la ronce (Serre) : sa ruée est un bond, elle passe par-dessus les obstacles (noClip) et le dessin décolle */
+      if (this.variant === 'saut') this.jumpK = clamp(this.stateT / (b.lungeTime || 0.25), 0, 1);
+      if (this.stateT > (b.lungeTime || 0.25) || (this.hitWall && this.variant !== 'saut')) {
+        this.setState('recover');
+        this.jumpK = 0;
+      }
     } else if (this.state === 'recover') {
       if (this.stateT > (b.recover || 0.5)) this.setState('chase');
     }
+  }
+  /* le derviche (Sérail) : à la moitié de ses PV il se dédouble, une fois — deux corps, les PV restants partagés */
+  splitNow() {
+    this.split = true;
+    const a = RNG.range(0, TAU);
+    const twin = Room.spawnEnemy(this.def, this.x + Math.cos(a) * 34, this.y + Math.sin(a) * 34, {});
+    if (!twin) return;
+    twin.split = true;
+    twin.maxHp = this.maxHp;
+    twin.hp = this.hp;
+    twin.xp = Math.round(this.xp * 0.5);
+    twin.coins = 0;
+    twin.spawnT = 0.25;
+    Particles.spawn(this.x, this.y, { count: 14, color: this.color, size: 3, glow: true });
+    Floaters.add(this.x, this.y - this.r - 18, 'SE DÉDOUBLE', this.color, 13);
+    AudioEngine.trapGas({ intensity: 0.5 });
   }
   ai_shooter(dt, t, d) {
     const b = this.behavior;
@@ -14780,12 +14900,81 @@ class Enemy {
         this.tele = 0;
         const n = b.count || 1,
           sp = b.spread || 0.3;
-        for (let i = 0; i < n; i++) enemyProjectile(this, this.aimA + (n > 1 ? lerp(-sp / 2, sp / 2, i / (n - 1)) : 0));
+        if (this.variant === 'cloche') this.lob(t);
+        else
+          for (let i = 0; i < n; i++)
+            enemyProjectile(
+              this,
+              this.aimA + (n > 1 ? lerp(-sp / 2, sp / 2, i / (n - 1)) : 0),
+              this.variant === 'rebond' ? { bounce: 1 } : {}
+            );
         this.fireCd = 1 / (b.fireRate || 0.8) / G.difficulty.fireRateMul;
         AudioEngine.shootPistol({ x: (this.x - W / 2) / (W / 2), intensity: 0.4 });
+        if (this.variant === 'replis' && this.pickCover(t)) this.setState('cover');
+        else this.setState('position');
+      }
+    } else if (this.state === 'cover') {
+      /* le bandit (Concession) : après sa salve, il court se mettre derrière l'obstacle le plus proche */
+      this.moveToward(this.cover.x, this.cover.y, dt, 1.2);
+      const arrived = dist(this.x, this.y, this.cover.x, this.cover.y) < 10;
+      if (this.stateT > (b.coverTime || 1.4) || (arrived && !lineOfSight(this.x, this.y, t.x, t.y) && this.stateT > 0.5))
         this.setState('position');
+    }
+  }
+  /* un point à l'abri : de l'autre côté de l'obstacle le plus proche, dos à la cible */
+  pickCover(t) {
+    let best = null,
+      bd = 1e9;
+    for (const o of G.room.obstacles) {
+      if (o.dyn || o.stopsShot === false || o.pw > TILE * 3 || o.ph > TILE * 3) continue;
+      const cx = o.px + o.pw / 2,
+        cy = o.py + o.ph / 2;
+      const d = dist(this.x, this.y, cx, cy);
+      if (d < bd && d < 360) {
+        bd = d;
+        best = o;
       }
     }
+    if (!best) return false;
+    const cx = best.px + best.pw / 2,
+      cy = best.py + best.ph / 2;
+    const a = angleTo(t.x, t.y, cx, cy);
+    const rr = Math.max(best.pw, best.ph) / 2 + this.r + 10;
+    this.cover = { x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr };
+    return !pointBlocked(this.cover.x, this.cover.y, this.r);
+  }
+  /* l'archer (Sérail) : tir en cloche — la flèche passe par-dessus les obstacles et retombe là où tu étais */
+  lob(t) {
+    const b = this.behavior;
+    const T = b.lobTime || 0.8;
+    const dmg = Math.round((b.projDamage || this.damage) * G.difficulty.damageMul);
+    Projectiles.spawn({
+      x: this.x,
+      y: this.y,
+      vx: (t.x - this.x) / T,
+      vy: (t.y - this.y) / T,
+      r: 5,
+      damage: dmg,
+      owner: 'enemy',
+      life: T,
+      color: this.projColor || '#ffd166',
+      kind: 'arrow',
+      ghost: true,
+      lob: T,
+      source: this,
+    });
+    G.room.hazards.push({
+      x: t.x,
+      y: t.y,
+      r: b.lobRadius || 44,
+      until: Time.now + T + 0.05,
+      boomAt: Time.now + T,
+      damage: dmg,
+      owner: 'enemy',
+      color: this.projColor || '#ffd166',
+      marker: true,
+      cd: new Map(),
+    });
   }
   ai_tank(dt, t, d) {
     const b = this.behavior;
@@ -14816,6 +15005,32 @@ class Enemy {
         if (this.hitWall) {
           Feel.shake(4, this.chargeA, 160);
           Particles.spawn(this.x, this.y, { count: 10, color: '#aaa', size: 3 });
+          /* le bison (Concession) : le choc contre le mur secoue le sol tout autour */
+          if (this.variant === 'secousse') {
+            const rr = b.quakeRadius || 150;
+            G.room.blasts.push({ x: this.x, y: this.y, r: rr, t: 0, life: 0.35, color: '#c9a56a', flat: true });
+            Feel.shake(9, undefined, 260);
+            if (!G.player.dead && dist(this.x, this.y, G.player.x, G.player.y) < rr)
+              Combat.hitPlayer(Math.round(this.damage * (b.quakeMul || 0.8)), { type: 'contact', source: this, x: this.x, y: this.y });
+          }
+        }
+        /* la racine (Serre) : au bout de sa charge elle s'enracine et le sol se couvre de ronces autour d'elle */
+        if (this.variant === 'enracine') {
+          for (let i = 0; i < 3; i++) {
+            const a = (i * TAU) / 3 + RNG.range(-0.4, 0.4);
+            G.room.hazards.push({
+              x: clamp(this.x + Math.cos(a) * 46, ROOM_X + 20, ROOM_X + ROOM_W - 20),
+              y: clamp(this.y + Math.sin(a) * 46, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
+              r: 34,
+              until: Time.now + (b.rootTime || 3),
+              dps: b.rootDps || 8,
+              slow: true,
+              owner: 'enemy',
+              color: '#7ed957',
+              cd: new Map(),
+            });
+          }
+          AudioEngine.trapGas({ intensity: 0.5 });
         }
       }
     } else if (this.state === 'stunned') {
@@ -14827,7 +15042,18 @@ class Enemy {
   }
   ai_kamikaze(dt, t, d) {
     const b = this.behavior;
-    if (this.state === 'spawn') this.setState('chase');
+    if (this.state === 'spawn') this.setState(this.variant === 'roule' ? 'roll' : 'chase');
+    if (this.state === 'roll') {
+      /* le baril (Concession) : il roule en ligne droite, rebondit sur ce qu'il heurte et éclate au contact */
+      if (this.rollA == null || this.hitWall)
+        this.rollA = angleTo(this.x, this.y, t.x, t.y) + (this.rollA == null ? 0 : RNG.range(-0.7, 0.7));
+      const sp = this.speed * (b.rollMul || 1.25) * this.slow;
+      this.x += Math.cos(this.rollA) * sp * dt;
+      this.y += Math.sin(this.rollA) * sp * dt;
+      this.tele = d < (b.triggerRange || 60) * 2 ? 1 : 0;
+      if (d < this.r + t.r + 8) this.explode();
+      return;
+    }
     if (this.state === 'chase') {
       this.moveToward(t.x, t.y, dt, 1.1);
       if (d < (b.triggerRange || 60)) this.setState('fuse');
@@ -14850,6 +15076,19 @@ class Enemy {
         e.flash = 0.1;
         if (e.hp <= 0) Combat.killEnemy(e);
       }
+    /* la spore (Serre) laisse un nuage qui ralentit ; la jarre (Sérail) une nappe de feu */
+    if (this.variant === 'nuage' || this.variant === 'nappe')
+      G.room.hazards.push({
+        x: this.x,
+        y: this.y,
+        r: r * 0.85,
+        until: Time.now + (b.cloudTime || 3),
+        dps: b.cloudDps || (this.variant === 'nappe' ? 9 : 6),
+        slow: this.variant === 'nuage',
+        owner: 'enemy',
+        color: this.variant === 'nappe' ? '#ff8c42' : '#b7ff7a',
+        cd: new Map(),
+      });
     this.hp = 0;
     this.xp = Math.round(this.xp * 0.5);
     Combat.killEnemy(this, { silent: true });
@@ -14859,6 +15098,21 @@ class Enemy {
     const keep = b.keepDistance || 340;
     if (this.state === 'spawn') this.setState('idle');
     this.summonCd -= dt;
+    /* le bourgeon (Serre) soigne ses moucherons d'une pulsation toutes les 3 s */
+    if (this.variant === 'soigne') {
+      this.healCd -= dt;
+      if (this.healCd <= 0) {
+        this.healCd = b.healEvery || 3;
+        let n = 0;
+        for (const e of this.summoned)
+          if (!e.dead && e.hp < e.maxHp && dist(this.x, this.y, e.x, e.y) < (b.healRange || 260)) {
+            e.hp = Math.min(e.maxHp, e.hp + Math.round(e.maxHp * (b.healFraction || 0.2)));
+            Particles.spawn(e.x, e.y - 8, { count: 4, color: '#7fff9a', size: 2, glow: true, speedMax: 60, life: 0.5 });
+            n++;
+          }
+        if (n) G.room.blasts.push({ x: this.x, y: this.y, r: b.healRange || 260, t: 0, life: 0.4, color: '#7fff9a' });
+      }
+    }
     if (this.state === 'idle') {
       if (d < keep) this.moveToward(this.x * 2 - t.x, this.y * 2 - t.y, dt, 0.8);
       else {
@@ -14867,21 +15121,53 @@ class Enemy {
         this.y += Math.sin(this.wander) * this.speed * 0.3 * dt;
       }
       this.summoned = this.summoned.filter(e => !e.dead);
-      if (this.summonCd <= 0 && this.summoned.length < (b.max || 4)) this.setState('summon');
+      /* le charmeur (Sérail) : sa flûte t'attire vers lui — télégraphie d'une seconde, puis la traction */
+      this.charmCd -= dt;
+      if (this.variant === 'charme' && this.charmCd <= 0 && d < (b.charmRange || 420) && lineOfSight(this.x, this.y, t.x, t.y)) {
+        this.setState('charm');
+        Floaters.add(this.x, this.y - this.r - 18, 'CHARME', '#c9a3ff', 13);
+      } else if (this.summonCd <= 0 && this.summoned.length < (b.max || 4)) this.setState('summon');
+    } else if (this.state === 'charm') {
+      this.tele = 1;
+      if (this.armed(b.charmWindup || 1.0)) {
+        this.tele = 0;
+        this.setState('pull');
+      }
+    } else if (this.state === 'pull') {
+      const pl = G.player;
+      const dur = b.charmPullTime || 0.35;
+      if (this.stateT < dur && !pl.dead && !pl.dashing) {
+        const a = angleTo(pl.x, pl.y, this.x, this.y);
+        const step = ((b.charmPull || 160) / dur) * dt;
+        pl.x += Math.cos(a) * Math.min(step, Math.max(0, dist(pl.x, pl.y, this.x, this.y) - this.r - pl.r));
+        pl.y += Math.sin(a) * Math.min(step, Math.max(0, dist(pl.x, pl.y, this.x, this.y) - this.r - pl.r));
+        resolveRoomCollision(pl);
+        if (RNG.chance(0.5)) Particles.spawn(pl.x, pl.y, { count: 1, color: '#c9a3ff', size: 2, glow: true, life: 0.3 });
+      } else {
+        this.charmCd = (b.charmEvery || 6) / G.difficulty.fireRateMul;
+        this.setState('idle');
+      }
     } else if (this.state === 'summon') {
       this.tele = 1;
       if (this.armed(this.telegraph.time)) {
         this.tele = 0;
-        const def = Content.enemy(b.summon);
-        const n = b.count || 2;
+        /* le croquemort (Concession) relève le dernier ennemi tombé près de lui, plutôt que d'invoquer */
+        const raised = this.variant === 'releve' && this.raise;
+        const def = raised ? this.raise : Content.enemy(b.summon);
+        const n = raised ? 1 : b.count || 2;
         for (let i = 0; i < n; i++) {
           const a = RNG.range(0, TAU);
-          const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 40, this.y + Math.sin(a) * 40, { hpMul: 0.7 });
+          const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 40, this.y + Math.sin(a) * 40, { hpMul: raised ? 0.5 : 0.7 });
           if (e) {
             e.xp = Math.round(e.xp * 0.4);
             e.coins = 0;
+            e.raised = !!raised;
             this.summoned.push(e);
           }
+        }
+        if (raised) {
+          Floaters.add(this.x, this.y - this.r - 18, 'RELEVÉ', '#cfd6e6', 13);
+          this.raise = null;
         }
         this.summonCd = (b.every || 5) / G.difficulty.fireRateMul;
         this.setState('idle');
@@ -14897,6 +15183,20 @@ class Enemy {
     const sp = this.speed * this.slow;
     this.x += Math.cos(a) * sp * dt;
     this.y += Math.sin(a) * sp * dt;
+    /* les cobras (Sérail) crachent de loin avant de mordre */
+    if (this.variant === 'crachat') {
+      this.spitCd -= dt;
+      if (this.spitCd <= 0 && d < (b.spitRange || 240) && d > 40 && lineOfSight(this.x, this.y, t.x, t.y)) {
+        enemyProjectile(this, angleTo(this.x, this.y, t.x, t.y), {
+          speed: b.spitSpeed || 210,
+          damage: b.spitDamage || 5,
+          r: 5,
+          color: '#9cff57',
+          life: 2,
+        });
+        this.spitCd = (b.spitEvery || 2.5) / G.difficulty.fireRateMul;
+      }
+    }
   }
   ai_dasher(dt, t, d) {
     const b = this.behavior;
@@ -14913,8 +15213,16 @@ class Enemy {
       this.dashA = angleTo(this.x, this.y, t.x, t.y);
       if (this.armed(this.telegraph.time)) {
         this.tele = 0;
+        /* le crotale (Concession) feinte : une fois sur deux il surgit de côté ; le djinn (Sérail) réapparaît dans ton dos */
+        if (this.variant === 'feinte' && RNG.chance(0.5))
+          this.blinkTo(this.x + Math.cos(this.dashA + Math.PI / 2) * 110, this.y + Math.sin(this.dashA + Math.PI / 2) * 110, t);
+        else if (this.variant === 'dos') {
+          const back = t === G.player ? G.player.aim + Math.PI : angleTo(this.x, this.y, t.x, t.y);
+          this.blinkTo(t.x + Math.cos(back) * 90, t.y + Math.sin(back) * 90, t);
+        }
         this.setState('dash');
         this.dashed = 0;
+        this.whipAcc = 0;
         Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true });
       }
     } else if (this.state === 'dash') {
@@ -14923,11 +15231,41 @@ class Enemy {
       this.x += Math.cos(this.dashA) * step;
       this.y += Math.sin(this.dashA) * step;
       this.dashed += step;
+      /* la liane (Serre) : sa course laisse un fouet au sol, une seconde */
+      if (this.variant === 'fouet') {
+        this.whipAcc += step;
+        if (this.whipAcc >= 34) {
+          this.whipAcc = 0;
+          G.room.hazards.push({
+            x: this.x,
+            y: this.y,
+            r: 16,
+            until: Time.now + (b.whipTime || 1),
+            dps: b.whipDps || 9,
+            owner: 'enemy',
+            color: this.color,
+            cd: new Map(),
+          });
+        }
+      }
       if (this.dashed >= this.dashLen || this.hitWall) {
         this.setState('wait');
         this.stateT = -(b.postDashPause || 0);
       }
     }
+  }
+  /* se déplacer d'un coup en (x, y) si la place est libre, puis viser la cible de là */
+  blinkTo(x, y, t) {
+    x = clamp(x, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
+    y = clamp(y, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
+    if (pointBlocked(x, y, this.r)) return false;
+    Particles.spawn(this.x, this.y, { count: 8, color: this.color, glow: true, life: 0.4 });
+    this.x = x;
+    this.y = y;
+    this.blinked = Time.now;
+    this.dashA = angleTo(this.x, this.y, t.x, t.y);
+    this.dashLen = Math.min(dist(this.x, this.y, t.x, t.y) + 60, this.behavior.dashDistance || 300);
+    return true;
   }
   /* --- rendu commun --- */
   render(ctx) {
@@ -15050,6 +15388,18 @@ class Enemy {
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.r + 3, 0, TAU);
+      ctx.stroke();
+    }
+    /* le bond de la ronce et le vol des moucherons : le corps décolle, l'ombre reste au sol */
+    const lift = this.jumpK > 0 ? Math.sin(this.jumpK * Math.PI) * 46 : this.variant === 'vol' ? 10 + Math.sin(this.anim * 9) * 3 : 0;
+    if (lift) ctx.translate(0, -lift);
+    /* le colosse (Sérail) : son bouclier frontal, un arc de pierre du côté où il regarde (rien quand il est sonné) */
+    if (this.variant === 'bouclier' && this.state !== 'stunned') {
+      const fa = this.facing < 0 ? Math.PI : 0;
+      ctx.strokeStyle = '#e0cfa8';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r + 6, fa - 1.0, fa + 1.0);
       ctx.stroke();
     }
     const flash = this.flash > 0.07 ? 1 : this.flash > 0 ? 0.35 : 0; // flash en deux temps
@@ -20371,6 +20721,14 @@ const Room = {
         continue;
       }
       if (h.owner === 'enemy') {
+        /* piège à loup (le coyote, chantier 9) : mord une fois celui qui marche dessus, puis disparaît */
+        if (h.trap) {
+          if (!pl.dead && dist(h.x, h.y, pl.x, pl.y) < h.r + pl.r * 0.5) {
+            Combat.hitPlayer(Math.round(h.damage * G.difficulty.damageMul), { type: 'trap', x: h.x, y: h.y, trapName: 'Piège à loup' });
+            h.until = 0;
+          }
+          continue;
+        }
         /* zone posée par un boss : mine qui saute à l'heure dite, ou ronces qui blessent et ralentissent tant qu'on reste dedans */
         if (h.boomAt && Time.now >= h.boomAt) {
           h.boomAt = 0;
@@ -20688,6 +21046,25 @@ const Room = {
     /* zones */
     for (const h of r.hazards) {
       ctx.save();
+      if (h.trap || h.marker) {
+        /* un piège à loup : deux mâchoires ; un point de chute : un cercle qui se referme */
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = h.color;
+        ctx.lineWidth = h.trap ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, h.trap ? h.r * 0.7 : h.r * clamp((h.boomAt - Time.now) / 0.8, 0.15, 1), 0, TAU);
+        ctx.stroke();
+        if (h.trap)
+          for (let i = 0; i < 8; i++) {
+            const a = (i * TAU) / 8;
+            ctx.beginPath();
+            ctx.moveTo(h.x + Math.cos(a) * h.r * 0.5, h.y + Math.sin(a) * h.r * 0.5);
+            ctx.lineTo(h.x + Math.cos(a) * h.r * 0.85, h.y + Math.sin(a) * h.r * 0.85);
+            ctx.stroke();
+          }
+        ctx.restore();
+        continue;
+      }
       ctx.globalAlpha = 0.45 * clamp((h.until - Time.now) / 1, 0.3, 1);
       ctx.fillStyle = h.color;
       ctx.shadowColor = h.color;

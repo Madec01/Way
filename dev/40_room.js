@@ -413,6 +413,14 @@ const Room = {
         continue;
       }
       if (h.owner === 'enemy') {
+        /* piège à loup (le coyote, chantier 9) : mord une fois celui qui marche dessus, puis disparaît */
+        if (h.trap) {
+          if (!pl.dead && dist(h.x, h.y, pl.x, pl.y) < h.r + pl.r * 0.5) {
+            Combat.hitPlayer(Math.round(h.damage * G.difficulty.damageMul), { type: 'trap', x: h.x, y: h.y, trapName: 'Piège à loup' });
+            h.until = 0;
+          }
+          continue;
+        }
         /* zone posée par un boss : mine qui saute à l'heure dite, ou ronces qui blessent et ralentissent tant qu'on reste dedans */
         if (h.boomAt && Time.now >= h.boomAt) {
           h.boomAt = 0;
@@ -730,6 +738,25 @@ const Room = {
     /* zones */
     for (const h of r.hazards) {
       ctx.save();
+      if (h.trap || h.marker) {
+        /* un piège à loup : deux mâchoires ; un point de chute : un cercle qui se referme */
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = h.color;
+        ctx.lineWidth = h.trap ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, h.trap ? h.r * 0.7 : h.r * clamp((h.boomAt - Time.now) / 0.8, 0.15, 1), 0, TAU);
+        ctx.stroke();
+        if (h.trap)
+          for (let i = 0; i < 8; i++) {
+            const a = (i * TAU) / 8;
+            ctx.beginPath();
+            ctx.moveTo(h.x + Math.cos(a) * h.r * 0.5, h.y + Math.sin(a) * h.r * 0.5);
+            ctx.lineTo(h.x + Math.cos(a) * h.r * 0.85, h.y + Math.sin(a) * h.r * 0.85);
+            ctx.stroke();
+          }
+        ctx.restore();
+        continue;
+      }
       ctx.globalAlpha = 0.45 * clamp((h.until - Time.now) / 1, 0.3, 1);
       ctx.fillStyle = h.color;
       ctx.shadowColor = h.color;
