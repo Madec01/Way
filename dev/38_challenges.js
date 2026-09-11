@@ -872,19 +872,19 @@ const Challenge = (() => {
     }
     for (const p of Projectiles.list) {
       if (p.owner !== 'player') continue;
+      const pr = Math.max(2, p.r * 0.8);
+      Halo.draw(ctx, p.x, p.y, pr, p.color || '#fff', 10); // lueur collée, pas de flou par balle
       ctx.fillStyle = p.color || '#fff';
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(2, p.r * 0.8), 0, TAU);
+      ctx.arc(p.x, p.y, pr, 0, TAU);
       ctx.fill();
     }
     /* yeux des ennemis */
     for (const e of G.enemies) {
       if (e.dead) continue;
       ctx.fillStyle = e.tele ? PAL.alert : PAL.danger; // les yeux dans le noir : corail, et LA couleur d'alerte quand ça va frapper
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = 8;
+      Halo.draw(ctx, e.x - 4, e.y - 4, 2.2, ctx.fillStyle, 8);
+      Halo.draw(ctx, e.x + 4, e.y - 4, 2.2, ctx.fillStyle, 8);
       ctx.beginPath();
       ctx.arc(e.x - 4, e.y - 4, 2.2, 0, TAU);
       ctx.arc(e.x + 4, e.y - 4, 2.2, 0, TAU);

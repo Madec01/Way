@@ -516,13 +516,9 @@ class Enemy {
     /* télégraphie : halo pulsant + ligne d'intention */
     if (this.tele) {
       const k = Beat.pulse(2); // la télégraphie bat à la croche : la parade s'apprend avec la musique
-      ctx.strokeStyle = PAL.alert; // LA couleur d'alerte, la même pour tous : le joueur apprend « rouge vif = évite »
-      ctx.lineWidth = 2 + k * 2;
-      ctx.shadowColor = ctx.strokeStyle;
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.r + 6 + k * 4, 0, TAU);
-      ctx.stroke();
+      /* LA couleur d'alerte, la même pour tous : le joueur apprend « rouge vif = évite » ; lueur sans shadowBlur */
+      Halo.ring(ctx, this.x, this.y, this.r + 6 + k * 4, null, PAL.alert, 2 + k * 2, 12, alpha);
+      ctx.strokeStyle = PAL.alert;
       const a =
         this.lungeA != null && this.state === 'windup'
           ? this.lungeA

@@ -527,7 +527,7 @@ body.touch .shoppanel{max-width:none;width:100%;min-height:100%;border-radius:0;
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-11 06:35';</script>
+<script>window.WAY_BUILD = '2026-09-11 07:33';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -792,6 +792,56 @@ const FONT_TEXT = '"VT323", "Segoe UI", monospace';
 const FONT_TITLE = '"Pixelify Sans", "Segoe UI", sans-serif'; // les titres du HUD (nom du boss, bandeaux)
 /* chantier F-4 : les traces qui restent et l'ouverture du coffre */
 const DECAL_MAX = 60;
+/* ---------- Halo : les lueurs pré-dessinées ----------
+   `ctx.shadowBlur` coûte un flou gaussien à chaque forme, et le prix explose sous une transparence ou une rotation :
+   trois ennemis qui meurent, c'est cent particules floutées par image. Ici, la lueur d'un disque est dessinée une fois
+   par (couleur, rayon, flou) dans un petit canvas, puis collée d'un `drawImage` : le même halo, pour presque rien. */
+const Halo = (() => {
+  const cache = new Map();
+  const MAX = 200; // au-delà, le plus vieux part (les rayons continus sont arrondis, on n'y arrive pas en pratique)
+  function disc(color, r, blur) {
+    const key = color + '|' + r + '|' + blur;
+    let c = cache.get(key);
+    if (c) return c;
+    const pad = blur * 2 + 2,
+      size = (r + pad) * 2;
+    c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    /* la forme est dessinée hors du canvas, seule son ombre tombe dedans : on ne garde que la lueur */
+    g.shadowColor = color;
+    g.shadowBlur = blur;
+    g.shadowOffsetX = size * 2;
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(size / 2 - size * 2, size / 2, r, 0, TAU);
+    g.fill();
+    if (cache.size >= MAX) cache.delete(cache.keys().next().value);
+    cache.set(key, c);
+    return c;
+  }
+  /* colle la lueur d'un disque de rayon r (arrondi au demi-pixel) ; la forme nette se dessine ensuite par-dessus */
+  function draw(ctx, x, y, r, color, blur = 10) {
+    const c = disc(color, Math.max(1, Math.round(r * 2) / 2), Math.round(blur));
+    ctx.drawImage(c, x - c.width / 2, y - c.height / 2);
+  }
+  /* un anneau qui luit : un trait large et pâle sous le trait net, à la place d'un flou de 24 px par onde ;
+     ry (optionnel) en fait une ellipse à plat sur le sol */
+  function ring(ctx, x, y, rx, ry, color, width, blur, alpha = 1) {
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha * 0.28;
+    ctx.lineWidth = width + blur;
+    ctx.beginPath();
+    if (ry != null) ctx.ellipse(x, y, rx, ry, 0, 0, TAU);
+    else ctx.arc(x, y, rx, 0, TAU);
+    ctx.stroke();
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
+    ctx.stroke();
+  }
+  return { draw, ring, disc, cache };
+})();
+
 const CHEST_OPEN_MS = 300;
 const Feel = {
   lastStop: -9,
@@ -10482,16 +10532,13 @@ const Particles = {
   render(ctx) {
     for (const p of this.list) {
       const k = 1 - p.t / p.life;
+      const r = p.r * (0.4 + 0.6 * k);
       ctx.globalAlpha = k;
-      if (p.glow) {
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = p.color;
-      }
+      if (p.glow) Halo.draw(ctx, p.x, p.y, r, p.color, 10); // la lueur pré-dessinée, jamais shadowBlur ici
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * (0.4 + 0.6 * k), 0, TAU);
+      ctx.arc(p.x, p.y, r, 0, TAU);
       ctx.fill();
-      ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = 1;
   },
@@ -10884,14 +10931,14 @@ const Projectiles = {
   },
   render(ctx) {
     for (const p of this.list) {
+      /* la lueur d'abord, collée (Halo) : un flou sous une rotation coûtait 0,2 ms par projectile */
+      Halo.draw(ctx, p.x, p.y, p.kind === 'arrow' || p.kind === 'boomerang' ? 9 : p.r || 4, p.color, 12);
       ctx.save();
       ctx.translate(p.x, p.y);
       if (p.kind === 'arrow' || (p.kind === 'bullet' && p.owner === 'player')) {
         ctx.rotate(Math.atan2(p.vy, p.vx));
       }
       if (p.spin != null) ctx.rotate(p.spin);
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = p.color;
       ctx.fillStyle = p.color;
       if (p.kind === 'arrow') {
         ctx.fillRect(-10, -2, 20, 4);
@@ -10934,7 +10981,6 @@ const Projectiles = {
       }
       ctx.restore();
     }
-    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
   },
 };
@@ -11206,28 +11252,25 @@ const Pickups = {
       if (p.kind === 'glint') {
         const k = 1 - p.t / (p.life || 0.9);
         ctx.globalAlpha = Math.min(1, k * 2);
+        Halo.draw(ctx, p.x, p.y + p.z, 4, PAL.gold, 8);
         ctx.fillStyle = PAL.gold;
-        ctx.shadowColor = PAL.gold;
-        ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.arc(p.x, p.y + p.z, 4, 0, TAU);
         ctx.fill();
-        ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
         continue;
       }
       const bob = (p.z === 0 && !p.magnet ? -3 * (1 - Ease.outCubic((Beat.phase() + (p.ph || 0)) % 1)) : 0) + p.z; // posé : un petit saut sur chaque temps
       if (p.kind === 'xp') {
+        const rr = 4 + Math.min(3, p.value / 6);
+        Halo.draw(ctx, p.x, p.y + bob, rr, '#7ef0ff', 8);
         ctx.fillStyle = '#7ef0ff';
-        ctx.shadowColor = '#7ef0ff';
-        ctx.shadowBlur = 8;
         ctx.beginPath();
-        ctx.arc(p.x, p.y + bob, 4 + Math.min(3, p.value / 6), 0, TAU);
+        ctx.arc(p.x, p.y + bob, rr, 0, TAU);
         ctx.fill();
       } else if (p.kind === 'coin') {
+        Halo.draw(ctx, p.x, p.y + bob, 5, '#ffd166', 8);
         ctx.fillStyle = '#ffd166';
-        ctx.shadowColor = '#ffd166';
-        ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob, 5, 0, TAU);
         ctx.fill();
@@ -11237,17 +11280,15 @@ const Pickups = {
         ctx.save();
         ctx.translate(p.x, p.y + bob);
         ctx.rotate(Time.now * 2);
+        Halo.draw(ctx, 0, 0, 9, '#c8ff5a', 16);
         ctx.fillStyle = '#c8ff5a';
-        ctx.shadowColor = '#c8ff5a';
-        ctx.shadowBlur = 16;
         ctx.fillRect(-7, -7, 14, 14);
         ctx.fillStyle = '#fff';
         ctx.fillRect(-3, -3, 6, 6);
         ctx.restore();
       } else if (p.kind === 'purse') {
+        Halo.draw(ctx, p.x, p.y + bob + 1, 9, '#ffd166', 10);
         ctx.fillStyle = '#8b5a2b';
-        ctx.shadowColor = '#ffd166';
-        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob + 2, 8, 0, TAU);
         ctx.fill();
@@ -11263,11 +11304,10 @@ const Pickups = {
         ctx.save();
         ctx.translate(p.x, p.y + bob);
         ctx.rotate(Math.PI / 4);
+        Halo.draw(ctx, 0, 0, 15, col, 16 + Math.sin(Time.now * 5) * 6);
         ctx.fillStyle = 'rgba(8,10,18,.8)';
         ctx.strokeStyle = col;
         ctx.lineWidth = 2;
-        ctx.shadowColor = col;
-        ctx.shadowBlur = 16 + Math.sin(Time.now * 5) * 6;
         ctx.fillRect(-12, -12, 24, 24);
         ctx.strokeRect(-12, -12, 24, 24);
         ctx.rotate(-Math.PI / 4);
@@ -11282,9 +11322,8 @@ const Pickups = {
         ctx.textAlign = 'center';
         ctx.fillText(w ? w.name : '', p.x, p.y + bob - 20);
       } else if (p.kind === 'ally') {
+        Halo.draw(ctx, p.x, p.y + bob, 9, '#9ff', 12);
         ctx.fillStyle = '#3a4260';
-        ctx.shadowColor = '#9ff';
-        ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob - 6, 5, 0, TAU);
         ctx.fill();
@@ -11317,9 +11356,8 @@ const Pickups = {
         ctx.save();
         ctx.translate(p.x, p.y + bob);
         ctx.rotate(Time.now * 1.5);
+        Halo.draw(ctx, 0, 0, 9, '#c9a3ff', 16);
         ctx.fillStyle = '#c9a3ff';
-        ctx.shadowColor = '#c9a3ff';
-        ctx.shadowBlur = 16;
         ctx.beginPath();
         for (let i = 0; i < 10; i++) {
           const a = (i * TAU) / 10,
@@ -11334,9 +11372,8 @@ const Pickups = {
         ctx.textAlign = 'center';
         ctx.fillText(rl ? rl.name : 'Relique', p.x, p.y + bob - 18);
       } else if (p.kind === 'heart') {
+        Halo.draw(ctx, p.x, p.y + bob, 7, PAL.life, 10);
         ctx.fillStyle = PAL.life; // un cœur, c'est la vie qui revient : vert, pas corail (le corail est le danger)
-        ctx.shadowColor = PAL.life;
-        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(p.x - 3, p.y + bob - 2, 4, 0, TAU);
         ctx.arc(p.x + 3, p.y + bob - 2, 4, 0, TAU);
@@ -11348,7 +11385,6 @@ const Pickups = {
         ctx.fill();
       }
     }
-    ctx.shadowBlur = 0;
   },
 };
 
@@ -13186,6 +13222,7 @@ class Pet {
         UI.toast(this.name + ' est de retour');
       }
       this.moving = false;
+      this.animStep(dt, false); // sonné : la planche « hurt » se joue (elle restait figée sur le clip d'avant)
       return;
     }
     const tick = this.beatTick();
@@ -14384,13 +14421,9 @@ class Enemy {
     /* télégraphie : halo pulsant + ligne d'intention */
     if (this.tele) {
       const k = Beat.pulse(2); // la télégraphie bat à la croche : la parade s'apprend avec la musique
-      ctx.strokeStyle = PAL.alert; // LA couleur d'alerte, la même pour tous : le joueur apprend « rouge vif = évite »
-      ctx.lineWidth = 2 + k * 2;
-      ctx.shadowColor = ctx.strokeStyle;
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.r + 6 + k * 4, 0, TAU);
-      ctx.stroke();
+      /* LA couleur d'alerte, la même pour tous : le joueur apprend « rouge vif = évite » ; lueur sans shadowBlur */
+      Halo.ring(ctx, this.x, this.y, this.r + 6 + k * 4, null, PAL.alert, 2 + k * 2, 12, alpha);
+      ctx.strokeStyle = PAL.alert;
       const a =
         this.lungeA != null && this.state === 'windup'
           ? this.lungeA
@@ -18405,19 +18438,19 @@ const Challenge = (() => {
     }
     for (const p of Projectiles.list) {
       if (p.owner !== 'player') continue;
+      const pr = Math.max(2, p.r * 0.8);
+      Halo.draw(ctx, p.x, p.y, pr, p.color || '#fff', 10); // lueur collée, pas de flou par balle
       ctx.fillStyle = p.color || '#fff';
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(2, p.r * 0.8), 0, TAU);
+      ctx.arc(p.x, p.y, pr, 0, TAU);
       ctx.fill();
     }
     /* yeux des ennemis */
     for (const e of G.enemies) {
       if (e.dead) continue;
       ctx.fillStyle = e.tele ? PAL.alert : PAL.danger; // les yeux dans le noir : corail, et LA couleur d'alerte quand ça va frapper
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = 8;
+      Halo.draw(ctx, e.x - 4, e.y - 4, 2.2, ctx.fillStyle, 8);
+      Halo.draw(ctx, e.x + 4, e.y - 4, 2.2, ctx.fillStyle, 8);
       ctx.beginPath();
       ctx.arc(e.x - 4, e.y - 4, 2.2, 0, TAU);
       ctx.arc(e.x + 4, e.y - 4, 2.2, 0, TAU);
@@ -20173,16 +20206,11 @@ const Room = {
         ctx.fill();
         ctx.globalCompositeOperation = 'source-over';
       }
-      ctx.globalAlpha = 1 - k;
-      ctx.strokeStyle = b.color;
-      ctx.lineWidth = (b.flat ? 3 : 7) * (1 - k) + 1;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = b.flat ? 8 : 24;
-      ctx.beginPath();
+      /* l'anneau et sa lueur (Halo.ring) : quarante ramassages en une seconde, c'était quarante flous de 24 px par image */
+      const rr = b.r * (0.3 + 0.7 * k);
       if (b.flat)
-        ctx.ellipse(b.x, b.y, b.r * (0.3 + 0.7 * k), b.r * (0.3 + 0.7 * k) * 0.4, 0, 0, TAU); // une onde à plat sur le sol
-      else ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU);
-      ctx.stroke();
+        Halo.ring(ctx, b.x, b.y, rr, rr * 0.4, b.color, 3 * (1 - k) + 1, 8, 1 - k); // une onde à plat sur le sol
+      else Halo.ring(ctx, b.x, b.y, rr, null, b.color, 7 * (1 - k) + 1, 24, 1 - k);
       ctx.restore();
     }
   },

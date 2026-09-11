@@ -261,6 +261,7 @@ class Pet {
         UI.toast(this.name + ' est de retour');
       }
       this.moving = false;
+      this.animStep(dt, false); // sonné : la planche « hurt » se joue (elle restait figée sur le clip d'avant)
       return;
     }
     const tick = this.beatTick();

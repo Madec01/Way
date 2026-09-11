@@ -157,7 +157,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 - [2] Un ordre de salles propre à chaque biome ; une salle unique par biome (le pont de LA SERRE, le train de LA CONCESSION, le bazar du SÉRAIL, le sous-sol du biome 1) ; un comportement neuf par archétype et par biome (le rusher du 2 saute, celui du 3 pose un piège en mourant, celui du 4 se dédouble).
 - [14] Salles 4 et 8 remplacées par des salles de combat ; coffre offert en fin de 3 et 7 ; boss de salle 9 différent de celui de salle 5 (deuxième boss par biome, ou le mini-boss promu).
 - [24] Terrain de salle : étendu à toutes les salles de combat du biome 1, puis des autres — ou retiré.
-- [29] `lightMask` : disques pré-rendus, masque au demi-temps.
+- [29] `lightMask` : disques pré-rendus, masque au demi-temps. *Les balles et les yeux du défi sont déjà en `Halo` (CONTENT.md §57).*
 - [41] Flash ennemi précalculé.
 - [12] Quatre salles cadencées si la décision est « livrer ».
 
@@ -170,7 +170,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
 - [63] Mesure sur téléphone réel avant tout : fps du menu, de la salle 2, du défi lumières.
 - [25] Refonte de l'interface tactile (PLAN.md §8) : joystick fixe à gauche, tir auto par défaut, compétence et appel du compagnon à droite, HUD réduit, prépa et hub en une colonne.
-- [66] `shadowBlur` et `backdrop-filter` remplacés par des ombres pré-rendues là où la mesure le demande.
+- [66] `shadowBlur` et `backdrop-filter` remplacés par des ombres pré-rendues là où la mesure le demande. *Entamé le 11 septembre 2026 (CONTENT.md §57) : particules, projectiles, objets au sol, ondes et télégraphies passent par `Halo` ; restent pièges, blocs modulaires, porte, coffre, boss, tempo, et `backdrop-filter`.*
 
 **Fini quand** : ≥ 50 fps en salle 2 sur un téléphone de milieu de gamme ; une run complète jouable au pouce sans toucher au clavier.
 **Taille** : 2 à 3 séances.

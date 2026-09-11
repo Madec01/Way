@@ -45,16 +45,13 @@ const Particles = {
   render(ctx) {
     for (const p of this.list) {
       const k = 1 - p.t / p.life;
+      const r = p.r * (0.4 + 0.6 * k);
       ctx.globalAlpha = k;
-      if (p.glow) {
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = p.color;
-      }
+      if (p.glow) Halo.draw(ctx, p.x, p.y, r, p.color, 10); // la lueur pré-dessinée, jamais shadowBlur ici
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * (0.4 + 0.6 * k), 0, TAU);
+      ctx.arc(p.x, p.y, r, 0, TAU);
       ctx.fill();
-      ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = 1;
   },
@@ -447,14 +444,14 @@ const Projectiles = {
   },
   render(ctx) {
     for (const p of this.list) {
+      /* la lueur d'abord, collée (Halo) : un flou sous une rotation coûtait 0,2 ms par projectile */
+      Halo.draw(ctx, p.x, p.y, p.kind === 'arrow' || p.kind === 'boomerang' ? 9 : p.r || 4, p.color, 12);
       ctx.save();
       ctx.translate(p.x, p.y);
       if (p.kind === 'arrow' || (p.kind === 'bullet' && p.owner === 'player')) {
         ctx.rotate(Math.atan2(p.vy, p.vx));
       }
       if (p.spin != null) ctx.rotate(p.spin);
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = p.color;
       ctx.fillStyle = p.color;
       if (p.kind === 'arrow') {
         ctx.fillRect(-10, -2, 20, 4);
@@ -497,7 +494,6 @@ const Projectiles = {
       }
       ctx.restore();
     }
-    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
   },
 };
@@ -769,28 +765,25 @@ const Pickups = {
       if (p.kind === 'glint') {
         const k = 1 - p.t / (p.life || 0.9);
         ctx.globalAlpha = Math.min(1, k * 2);
+        Halo.draw(ctx, p.x, p.y + p.z, 4, PAL.gold, 8);
         ctx.fillStyle = PAL.gold;
-        ctx.shadowColor = PAL.gold;
-        ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.arc(p.x, p.y + p.z, 4, 0, TAU);
         ctx.fill();
-        ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
         continue;
       }
       const bob = (p.z === 0 && !p.magnet ? -3 * (1 - Ease.outCubic((Beat.phase() + (p.ph || 0)) % 1)) : 0) + p.z; // posé : un petit saut sur chaque temps
       if (p.kind === 'xp') {
+        const rr = 4 + Math.min(3, p.value / 6);
+        Halo.draw(ctx, p.x, p.y + bob, rr, '#7ef0ff', 8);
         ctx.fillStyle = '#7ef0ff';
-        ctx.shadowColor = '#7ef0ff';
-        ctx.shadowBlur = 8;
         ctx.beginPath();
-        ctx.arc(p.x, p.y + bob, 4 + Math.min(3, p.value / 6), 0, TAU);
+        ctx.arc(p.x, p.y + bob, rr, 0, TAU);
         ctx.fill();
       } else if (p.kind === 'coin') {
+        Halo.draw(ctx, p.x, p.y + bob, 5, '#ffd166', 8);
         ctx.fillStyle = '#ffd166';
-        ctx.shadowColor = '#ffd166';
-        ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob, 5, 0, TAU);
         ctx.fill();
@@ -800,17 +793,15 @@ const Pickups = {
         ctx.save();
         ctx.translate(p.x, p.y + bob);
         ctx.rotate(Time.now * 2);
+        Halo.draw(ctx, 0, 0, 9, '#c8ff5a', 16);
         ctx.fillStyle = '#c8ff5a';
-        ctx.shadowColor = '#c8ff5a';
-        ctx.shadowBlur = 16;
         ctx.fillRect(-7, -7, 14, 14);
         ctx.fillStyle = '#fff';
         ctx.fillRect(-3, -3, 6, 6);
         ctx.restore();
       } else if (p.kind === 'purse') {
+        Halo.draw(ctx, p.x, p.y + bob + 1, 9, '#ffd166', 10);
         ctx.fillStyle = '#8b5a2b';
-        ctx.shadowColor = '#ffd166';
-        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob + 2, 8, 0, TAU);
         ctx.fill();
@@ -826,11 +817,10 @@ const Pickups = {
         ctx.save();
         ctx.translate(p.x, p.y + bob);
         ctx.rotate(Math.PI / 4);
+        Halo.draw(ctx, 0, 0, 15, col, 16 + Math.sin(Time.now * 5) * 6);
         ctx.fillStyle = 'rgba(8,10,18,.8)';
         ctx.strokeStyle = col;
         ctx.lineWidth = 2;
-        ctx.shadowColor = col;
-        ctx.shadowBlur = 16 + Math.sin(Time.now * 5) * 6;
         ctx.fillRect(-12, -12, 24, 24);
         ctx.strokeRect(-12, -12, 24, 24);
         ctx.rotate(-Math.PI / 4);
@@ -845,9 +835,8 @@ const Pickups = {
         ctx.textAlign = 'center';
         ctx.fillText(w ? w.name : '', p.x, p.y + bob - 20);
       } else if (p.kind === 'ally') {
+        Halo.draw(ctx, p.x, p.y + bob, 9, '#9ff', 12);
         ctx.fillStyle = '#3a4260';
-        ctx.shadowColor = '#9ff';
-        ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob - 6, 5, 0, TAU);
         ctx.fill();
@@ -880,9 +869,8 @@ const Pickups = {
         ctx.save();
         ctx.translate(p.x, p.y + bob);
         ctx.rotate(Time.now * 1.5);
+        Halo.draw(ctx, 0, 0, 9, '#c9a3ff', 16);
         ctx.fillStyle = '#c9a3ff';
-        ctx.shadowColor = '#c9a3ff';
-        ctx.shadowBlur = 16;
         ctx.beginPath();
         for (let i = 0; i < 10; i++) {
           const a = (i * TAU) / 10,
@@ -897,9 +885,8 @@ const Pickups = {
         ctx.textAlign = 'center';
         ctx.fillText(rl ? rl.name : 'Relique', p.x, p.y + bob - 18);
       } else if (p.kind === 'heart') {
+        Halo.draw(ctx, p.x, p.y + bob, 7, PAL.life, 10);
         ctx.fillStyle = PAL.life; // un cœur, c'est la vie qui revient : vert, pas corail (le corail est le danger)
-        ctx.shadowColor = PAL.life;
-        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(p.x - 3, p.y + bob - 2, 4, 0, TAU);
         ctx.arc(p.x + 3, p.y + bob - 2, 4, 0, TAU);
@@ -911,7 +898,6 @@ const Pickups = {
         ctx.fill();
       }
     }
-    ctx.shadowBlur = 0;
   },
 };
 

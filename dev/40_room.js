@@ -814,16 +814,11 @@ const Room = {
         ctx.fill();
         ctx.globalCompositeOperation = 'source-over';
       }
-      ctx.globalAlpha = 1 - k;
-      ctx.strokeStyle = b.color;
-      ctx.lineWidth = (b.flat ? 3 : 7) * (1 - k) + 1;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = b.flat ? 8 : 24;
-      ctx.beginPath();
+      /* l'anneau et sa lueur (Halo.ring) : quarante ramassages en une seconde, c'était quarante flous de 24 px par image */
+      const rr = b.r * (0.3 + 0.7 * k);
       if (b.flat)
-        ctx.ellipse(b.x, b.y, b.r * (0.3 + 0.7 * k), b.r * (0.3 + 0.7 * k) * 0.4, 0, 0, TAU); // une onde à plat sur le sol
-      else ctx.arc(b.x, b.y, b.r * (0.3 + 0.7 * k), 0, TAU);
-      ctx.stroke();
+        Halo.ring(ctx, b.x, b.y, rr, rr * 0.4, b.color, 3 * (1 - k) + 1, 8, 1 - k); // une onde à plat sur le sol
+      else Halo.ring(ctx, b.x, b.y, rr, null, b.color, 7 * (1 - k) + 1, 24, 1 - k);
       ctx.restore();
     }
   },

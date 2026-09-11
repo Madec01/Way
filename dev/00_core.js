@@ -260,6 +260,56 @@ const FONT_TEXT = '"VT323", "Segoe UI", monospace';
 const FONT_TITLE = '"Pixelify Sans", "Segoe UI", sans-serif'; // les titres du HUD (nom du boss, bandeaux)
 /* chantier F-4 : les traces qui restent et l'ouverture du coffre */
 const DECAL_MAX = 60;
+/* ---------- Halo : les lueurs pré-dessinées ----------
+   `ctx.shadowBlur` coûte un flou gaussien à chaque forme, et le prix explose sous une transparence ou une rotation :
+   trois ennemis qui meurent, c'est cent particules floutées par image. Ici, la lueur d'un disque est dessinée une fois
+   par (couleur, rayon, flou) dans un petit canvas, puis collée d'un `drawImage` : le même halo, pour presque rien. */
+const Halo = (() => {
+  const cache = new Map();
+  const MAX = 200; // au-delà, le plus vieux part (les rayons continus sont arrondis, on n'y arrive pas en pratique)
+  function disc(color, r, blur) {
+    const key = color + '|' + r + '|' + blur;
+    let c = cache.get(key);
+    if (c) return c;
+    const pad = blur * 2 + 2,
+      size = (r + pad) * 2;
+    c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    /* la forme est dessinée hors du canvas, seule son ombre tombe dedans : on ne garde que la lueur */
+    g.shadowColor = color;
+    g.shadowBlur = blur;
+    g.shadowOffsetX = size * 2;
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(size / 2 - size * 2, size / 2, r, 0, TAU);
+    g.fill();
+    if (cache.size >= MAX) cache.delete(cache.keys().next().value);
+    cache.set(key, c);
+    return c;
+  }
+  /* colle la lueur d'un disque de rayon r (arrondi au demi-pixel) ; la forme nette se dessine ensuite par-dessus */
+  function draw(ctx, x, y, r, color, blur = 10) {
+    const c = disc(color, Math.max(1, Math.round(r * 2) / 2), Math.round(blur));
+    ctx.drawImage(c, x - c.width / 2, y - c.height / 2);
+  }
+  /* un anneau qui luit : un trait large et pâle sous le trait net, à la place d'un flou de 24 px par onde ;
+     ry (optionnel) en fait une ellipse à plat sur le sol */
+  function ring(ctx, x, y, rx, ry, color, width, blur, alpha = 1) {
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha * 0.28;
+    ctx.lineWidth = width + blur;
+    ctx.beginPath();
+    if (ry != null) ctx.ellipse(x, y, rx, ry, 0, 0, TAU);
+    else ctx.arc(x, y, rx, 0, TAU);
+    ctx.stroke();
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
+    ctx.stroke();
+  }
+  return { draw, ring, disc, cache };
+})();
+
 const CHEST_OPEN_MS = 300;
 const Feel = {
   lastStop: -9,

@@ -54,6 +54,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `hub` | chantier I-3 : le camp en trois questions, moins de 250 mots, une seule zone de défilement, Gabriel avec ses chats en deux clics, la carte d'équipe, la carte « Seul », les paliers verrouillés à moitié largeur, la boutique et les fragments hors du camp, le défilement gardé |
 | `human` | une partie au clavier et à la souris en mode Normal : bouger, tirer, compétence, pause, mort, crédits, achat |
 | `levels` | le bot joue 4 armes sur 9 salles (mode test) — équilibrage, pas de plantage |
+| `lueurs` | les lueurs pré-dessinées (`Halo`) : le canvas du halo, plus de `shadowBlur` sur particules, projectiles, objets au sol et ondes, cache borné, et la planche « hurt » du compagnon sonné qui défile |
 | `martin` | Martin : cinq clips, boucle de marche, mort figée, retournement, pieds |
 | `messages` | chantier I-6 : notify et ses quatre niveaux, un bandeau à la fois, trois toasts retenus près d'un ennemi, doublons, interruption, gel sous un panneau, zone libre |
 | `palette` | chantier F-3 : plus de rouge en dur hors de PAL, télégraphies en PAL.alert, barre ennemie en blanc cassé, cœurs verts, ennemis en rouges sourds, couleurs des animaux, dégât d'Uno en orange, PV hachurés sous 25 % |
@@ -67,3 +68,5 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `vocabulaire` | chantier I-2 : le contenu, les écrans rendus et les messages du code passés à la liste des mots bannis ; un mot par notion ; descriptions ≤ 90 caractères |
 | `uno` | Uno : planches, équipe avec Martin, morsure, mode « à l'appel », mode « personne » |
 | `vues` | trois images (sud, est, nord) pour quatre directions, retournement ouest |
+
+Hors batterie : `node dev/perf-ab.js` compare le rendu du build courant à une copie `index_ancien.html` (mode d'emploi en tête du fichier).
