@@ -884,7 +884,18 @@ const Room = {
 const Run = {
   start({ character, biome, weapon, skill, seed }) {
     Attract.stop();
-    if (seed != null) RNG.reseed(seed);
+    /* la graine (chantier 7) : donnée (bot, atelier), sinon celle collée d'une ligne de résultat (une fois), sinon la
+       graine du jour si l'option est cochée, sinon au hasard — et toujours notée, pour la ligne de résultat */
+    if (seed == null) {
+      const p = Meta.profile;
+      if (p.seedNext != null) {
+        seed = +p.seedNext;
+        p.seedNext = null;
+        Meta.save();
+      } else if (p.dailySeed) seed = Meta.dailySeed();
+      else seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+    }
+    RNG.reseed(seed);
     const charDef = Content.character(character);
     const biomeDef = Content.biome(biome);
     const rooms = Content.roomsOf(biomeDef.id);
@@ -899,6 +910,7 @@ const Run = {
       rooms,
       roomIndex: 0,
       pairChoices,
+      seed,
       levelPassive: { bonus: Object.assign({ id: 'lp_bonus' }, pair.bonus), malus: Object.assign({ id: 'lp_malus' }, pair.malus) },
       level: 1,
       xp: 0,
@@ -1258,7 +1270,7 @@ const Run = {
     const kept = Progression.coinsKeptOnDeath(r.coinsPending, G.room.index, r.lastCheckpoint);
     const total = r.coinsValidated + kept;
     Meta.addCoins(total);
-    Meta.recordRun(false);
+    Meta.recordRun(false, Run.summary(false));
     Meta.unlockLore('deaths_3');
     /* Le personnage tombe avant que l'écran de fin ne s'affiche : la durée de sa planche de mort, plus un temps
        d'arrêt sur la dernière image. Sans planche (ou pour le bot), tout de suite, comme avant. */
@@ -1291,7 +1303,7 @@ const Run = {
     const bonus = Math.round(BALANCE.levelEndBonus * G.player.stats.coinGain * G.debug.coinMul);
     const total = r.coinsValidated + r.coinsPending + bonus;
     Meta.addCoins(total);
-    Meta.recordRun(true);
+    Meta.recordRun(true, Run.summary(true));
     const fin = () => {
       if (G.overlay === 'end') return;
       G.paused = true;
@@ -1340,6 +1352,53 @@ const Run = {
     Music.resetState();
     Music.play('hub');
     Attract.start();
+  },
+  /* le score et le résumé d'une partie (chantier 7) : ce que l'écran de fin affiche et ce que le tableau garde */
+  score(win) {
+    const r = G.run;
+    if (!r) return 0;
+    return Progression.runScore({
+      scores: r.scores,
+      reached: win ? 9 : G.room ? G.room.index : r.stats.deathRoom || 1,
+      level: r.level,
+      time: Time.now - r.startedAt,
+      win: !!win,
+    });
+  },
+  summary(win) {
+    const r = G.run;
+    if (!r) return null;
+    const room = win ? 9 : G.room ? G.room.index : r.stats.deathRoom || 1;
+    r.summary = {
+      score: Run.score(win),
+      room,
+      win: !!win,
+      time: Math.round(Time.now - r.startedAt),
+      seed: r.seed,
+      biome: r.biome.id,
+      char: r.char.id,
+      pet: G.pet ? G.pet.id : null,
+    };
+    return r.summary;
+  },
+  /* « WAY · Martin + Uno · ADMISSION · salle 9 · 4 min 12 · 18 430 pts · graine 20260911 » : à coller à un ami ; la graine se relit */
+  resultLine(s) {
+    s = s || (G.run && G.run.summary) || Run.summary(false);
+    if (!s) return '';
+    const ch = Content.character(s.char),
+      pet = s.pet ? Content.pet(s.pet) : null,
+      bio = Content.biome(s.biome);
+    const t = `${Math.floor(s.time / 60)} min ${String(s.time % 60).padStart(2, '0')}`;
+    const pts = String(s.score).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return `WAY · ${ch ? ch.name : s.char}${pet ? ' + ' + pet.name : ''} · ${bio ? bio.name : s.biome} · salle ${s.room}${s.win ? ' (fini)' : ''} · ${t} · ${pts} pts · graine ${s.seed}`;
+  },
+  /* relit une ligne collée : la graine, et le palier s'il est reconnu */
+  parseResult(text) {
+    const m = /graine\s+(\d+)/i.exec(text || '');
+    if (!m) return null;
+    const out = { seed: +m[1] };
+    for (const b of Content.biomes()) if (text.toUpperCase().includes(b.name.toUpperCase())) out.biome = b.id;
+    return out;
   },
   qualityAvg() {
     const r = G.run;

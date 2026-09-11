@@ -126,13 +126,13 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Taille** : 1 séance.
 **Bilan** : les trois cibles sont tenues (CONTENT.md §41, test `choix.js`, 17 mesures). Tempo : ±50 ms, bonus dès la 4e note, et une règle de plus que prévu — **une action hors du temps casse la série** — sans elle, un pistolet au bouton tenu tombait sur chaque fenêtre et construisait la série tout seul ; le bot passe de 38-53 % à **0 %** de tirs bonifiés. Prépa : 3 compétences, 2 paires bonus/malus au choix (étape 0 « Ton départ »). Greffes : 74 → **61** (pas 45 : les 8 synergies d'arme et les 6 colossales sont chacune uniques, et fondre plus loin aurait retiré des choix, pas des doublons), une par effet, 13 anciens ids résolus par alias, `dev/check-greffes.js` à 0 dominance dans la même rareté ; la chance d'un effet suit maintenant ses paliers. Calibrations : Mémoire sélective, Aperçu du coffre et Quatrième choix à un palier, fiches honnêtes, sauvegarde v3 qui rembourse. À regarder à la main : la fausse note est-elle trop sévère avec une lame (tenir le bouton = jamais de série) ? Si oui, tolérer une note hors temps par mesure plutôt qu'élargir la fenêtre.
 
-## Chantier 7 — Se comparer entre amis
+## Chantier 7 — Se comparer entre amis ✔ *(fait le 11 septembre 2026)*
 
 **Objectif** : la raison de rejouer.
 
 - [4] Score de run (qualité × niveau × temps), temps total, graine sur l'écran de fin ; tableau local des 10 meilleures par personnage ; **graine du jour** (même run pour tout le monde, un jour donné) ; résultat copiable en une ligne (« Martin + Uno · biome 1 · salle 9 · 4 min 12 · 18 430 pts · graine 20260909 ») ; export/import de la sauvegarde en un fichier.
 
-**Fini quand** : deux profils sur la même graine du jour voient la même salle 1 ; la ligne copiée se recolle dans un autre navigateur et rejoue la graine.
+**Fini quand** : deux profils sur la même graine du jour voient la même salle 1 ; la ligne copiée se recolle dans un autre navigateur et rejoue la graine. **Bilan** : fait en une séance (CONTENT.md §62, test `comparer.js`, 8 mesures). Score de run (`Progression.runScore`), graine notée à chaque partie et graine du jour cochable dans le camp, ligne de résultat copiable et relisable (la graine et le palier), dix meilleures parties par personnage dans le camp, sauvegarde v4 qui se télécharge, se copie et s'importe (fichier ou texte) avec copie de secours.
 **Taille** : 1 séance.
 
 ## Chantier 8 — L'atelier honnête ✔ *(fait le 11 septembre 2026)*

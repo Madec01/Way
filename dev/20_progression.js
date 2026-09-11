@@ -240,6 +240,18 @@ const Progression = (() => {
     const combo = clamp(r.bestCombo / Math.max(1, r.comboTarget || 8), 0, 1);
     return clamp((dmg * 0.8 + time * 0.1 + combo * 0.1) * (0.85 + 0.15 * fragK), 0, 0.99);
   }
+  /* Le score d'une partie (chantier 7) : chaque salle sécurisée vaut 400 + 600 × sa qualité (les deux salles de boss
+     comptent double), chaque salle atteinte 200, chaque niveau 150, et une victoire ajoute un bonus de temps
+     (6 000 − 4 par seconde, jamais négatif). Arrondi à la dizaine. Une partie complète bien jouée tourne autour de
+     15 à 20 000 points, une mort en salle 3 autour de 2 000 : les chiffres se comparent d'un ami à l'autre. */
+  function runScore(s) {
+    let pts = 0;
+    for (const r of s.scores || []) pts += (r.index === 5 || r.index === 9 ? 2 : 1) * (400 + 600 * clamp(r.score || 0, 0, 1));
+    pts += 200 * (s.reached || 0);
+    pts += 150 * (s.level || 1);
+    if (s.win) pts += Math.max(0, 6000 - 4 * (s.time || 0));
+    return Math.round(pts / 10) * 10;
+  }
   function avgScore(scores) {
     return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 1;
   }
@@ -269,6 +281,7 @@ const Progression = (() => {
     chestOptions,
     xpForLevel,
     roomScore,
+    runScore,
     avgScore,
     bestN,
     coinsKeptOnDeath,

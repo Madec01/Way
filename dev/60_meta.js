@@ -10,7 +10,7 @@
    `sfx` et `music`, et un profil d'une autre version repartait à zéro sans un mot. */
 const SAVE_KEY = 'way_save';
 const SAVE_KEYS_ANCIENNES = ['sujet_neuf_save_v1'];
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 const Meta = (() => {
   const fresh = () => ({
     v: SAVE_VERSION,
@@ -29,6 +29,9 @@ const Meta = (() => {
     deaths: 0,
     bestLevel: 0,
     bestRoom: 0,
+    best: {}, // chantier 7 : les 10 meilleures parties par personnage ({ charId: [{ score, room, win, time, seed, biome, pet, date }] })
+    dailySeed: false, // la graine du jour : la même partie pour tout le monde un jour donné
+    seedNext: null, // une graine collée depuis une ligne de résultat, jouée une fois
     touchAutoFire: true, // au pouce, on tire tout seul par défaut (I-8) — la pause permet de l'éteindre
     touchHinted: false, // « pose ton pouce ici » ne se montre qu'au premier lancement
     character: null,
@@ -68,6 +71,7 @@ const Meta = (() => {
       if (rembourse) d.coins = (+d.coins || 0) + rembourse;
       return d;
     },
+    3: d => d, // v3 → v4 (chantier 7) : `best`, `dailySeed` et `seedNext` arrivent avec leurs défauts par la fusion
   };
   function migrate(d) {
     let v = +d.v || 1;
@@ -235,8 +239,54 @@ const Meta = (() => {
     profile.coins += Math.max(0, Math.round(n));
     save();
   }
-  function recordRun(win) {
+  /* la graine du jour : la date locale en chiffres (20260911) — deux amis qui jouent le même jour ont la même partie */
+  function dailySeed(d = new Date()) {
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  }
+  /* range une partie dans les dix meilleures de son personnage ; renvoie son rang (1 = record), 0 si elle n'y entre pas */
+  function recordScore(entry) {
+    if (!entry || !entry.char) return 0;
+    profile.best = profile.best || {};
+    const list = (profile.best[entry.char] = profile.best[entry.char] || []);
+    list.push(entry);
+    list.sort((a, b) => b.score - a.score || b.room - a.room || a.time - b.time);
+    if (list.length > 10) list.length = 10;
+    return list.indexOf(entry) + 1;
+  }
+  /* la sauvegarde en texte, pour changer de navigateur — toujours le profil Normal, jamais le profil de test */
+  function exportText() {
+    return JSON.stringify({ way: 'sauvegarde', v: SAVE_VERSION, at: new Date().toISOString(), profile: normal }, null, 1);
+  }
+  /* relit un texte exporté (ou un blob brut), le migre comme au chargement, remplace le profil Normal — l'ancien est copié avant */
+  function importText(text) {
+    let d;
+    try {
+      d = JSON.parse(text);
+    } catch (e) {
+      return { ok: false, why: 'ce texte n’est pas une sauvegarde' };
+    }
+    if (estObjet(d) && estObjet(d.profile) && d.way === 'sauvegarde') d = d.profile;
+    if (!estObjet(d) || d.coins === undefined || d.v === undefined) return { ok: false, why: 'ce texte n’est pas une sauvegarde WAY' };
+    try {
+      localStorage.setItem('way_save_secours_import', JSON.stringify(normal));
+    } catch (e) {
+      /* la copie de secours est un confort */
+    }
+    normal = fusion(fresh(), migrate(d));
+    ensureDefaults(normal);
+    if (G.mode !== 'test') profile = normal;
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(normal)); // même depuis le mode test : c'est le profil Normal qu'on importe
+    } catch (e) {
+      /* stockage indisponible */
+    }
+    return { ok: true, parties: normal.runs, credits: normal.coins };
+  }
+  function recordRun(win, summary) {
     profile.runs++;
+    let rank = 0;
+    if (summary) rank = recordScore(Object.assign({ date: new Date().toISOString().slice(0, 10) }, summary));
+    if (G.run) G.run.rank = rank;
     if (win) {
       profile.wins++;
       if (G.run && G.run.biome) {
@@ -277,6 +327,10 @@ const Meta = (() => {
     rerolls,
     addCoins,
     recordRun,
+    recordScore,
+    dailySeed,
+    exportText,
+    importText,
     unlockLore,
     get profile() {
       return profile;

@@ -412,6 +412,19 @@ const UI = (() => {
     const w = Math.max(v > 0 ? 6 : 0, Math.round(clamp(v / max, 0, 1) * 100)); // une valeur non nulle se voit toujours
     return `<div class="jauge"><span class="jl">${label}</span><span class="jb"><i style="width:${w}%"></i></span>${txt === '' ? '' : `<span class="jv">${txt != null ? txt : v}</span>`}</div>`;
   }
+  /* les dix meilleures parties d'un personnage (chantier 7) : rang, points, salle, temps, palier, compagnon, date, graine */
+  function bestTable(charId) {
+    const list = ((Meta.profile.best || {})[charId] || []).slice(0, 10);
+    if (!list.length) return '<div class="muted small">Aucune partie finie pour l’instant : la première s’inscrira ici.</div>';
+    const rows = list
+      .map((b, i) => {
+        const bio = Content.biome(b.biome),
+          pet = b.pet ? Content.pet(b.pet) : null;
+        return `<tr><td class="rang">${i + 1}</td><td class="pts">${fmt(b.score)}</td><td>${b.win ? 'fini' : 'salle ' + b.room}</td><td>${mmss(b.time || 0)}</td><td>${esc(bio ? bio.name : b.biome)}</td><td>${pet ? esc(pet.name) : 'seul'}</td><td class="muted">${esc(b.date || '')}</td><td class="muted graine-cell" title="rejouer cette graine" data-seed="${b.seed}">${b.seed}</td></tr>`;
+      })
+      .join('');
+    return `<div class="tablewrap"><table class="bests"><thead><tr><th>#</th><th>points</th><th>où</th><th>temps</th><th>palier</th><th>avec</th><th>date</th><th>graine</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
   function showHub() {
     G.state = 'hub';
     const p = Meta.profile;
@@ -433,8 +446,13 @@ const UI = (() => {
         <header class="hubhead">
           <div class="hubid"><div class="stamp"><span>WAY</span><span class="sep">·</span><span>Camp de base</span></div><div class="intercom">« ${esc(Content.pick('hub'))} »</div></div>
           <div class="hubcoins"><div class="credits">${fmt(p.coins)} crédits</div>${G.mode === 'test' ? '<span class="tag test">MODE TEST</span>' : ''}</div>
-          <div class="hubactions"><button class="btn small" id="hub-shop-open">Boutique${achetable ? ' <span class="dot" title="quelque chose est achetable"></span>' : ''}</button><button class="btn ghost small" id="hub-menu">Menu</button></div>
+          <div class="hubactions"><button class="btn small" id="hub-shop-open">Boutique${achetable ? ' <span class="dot" title="quelque chose est achetable"></span>' : ''}</button><button class="btn ghost small" id="hub-save-open" title="Emporter ta sauvegarde dans un autre navigateur, ou en reprendre une">Sauvegarde</button><button class="btn ghost small" id="hub-menu">Menu</button></div>
         </header>
+        <div class="sauvegarde" id="hub-save" hidden>
+          <div class="muted small">Ta progression vit dans ce navigateur. Télécharge-la ou copie-la, puis importe-la ailleurs (l'ancienne y est gardée en copie).</div>
+          <div class="row small"><button class="btn small" id="save-download">Télécharger la sauvegarde</button><button class="btn ghost small" id="save-copy">Copier la sauvegarde</button><label class="btn ghost small">Importer un fichier <input type="file" id="save-file" accept=".json,application/json" hidden></label></div>
+          <div class="row small"><textarea id="save-paste" rows="2" placeholder="… ou colle ici une sauvegarde copiée"></textarea><button class="btn small" id="save-import">Importer ce texte</button></div>
+        </div>
         <div class="hubbody" id="hub-body">
           <section class="hstep qui">
             <h2><span class="stepnum">1</span> Qui part ?</h2>
@@ -487,7 +505,13 @@ const UI = (() => {
                   `<span class="pairchip" title="${esc(lp.bonus.desc)} · ${esc(lp.malus.desc)}"><span class="good">${esc(lp.bonus.name)}</span> ⇄ <span class="bad">${esc(lp.malus.name)}</span></span>`
               )
               .join('')}</div>
+            <div class="row small graine">
+              <label class="pairchip graine-jour" title="Tout le monde a la même partie aujourd'hui : mêmes salles, mêmes tirages"><input type="checkbox" id="hub-daily" ${p.dailySeed ? 'checked' : ''}> Graine du jour <b>${Meta.dailySeed()}</b></label>
+              ${p.seedNext != null ? `<span class="pairchip good" id="hub-seednext">Prochaine partie : graine <b>${p.seedNext}</b> <button class="btn tiny ghost" id="hub-seednext-off" title="oublier">×</button></span>` : ''}
+              <span class="pairchip graine-coller"><input type="text" id="hub-seed-text" placeholder="colle ici la ligne d’un ami (… graine 20260911)" size="34"><button class="btn tiny" id="hub-seed-go">Rejouer</button></span>
+            </div>
           </section>
+          <details class="bests"><summary>★ Les meilleures parties de ${esc(cur.name)}</summary>${bestTable(cur.id)}</details>
         </div>
         <button class="cta big" id="hub-enter"><span class="l">▶ PARTIR — ${esc(biome.name)}, 9 salles</span><span class="d">${esc(cur.name)}${pet ? ' + ' + esc(pet.duoName || pet.name) : ', seul'} · arme et compétence ensuite</span></button>
       </div>`;
@@ -589,6 +613,91 @@ const UI = (() => {
     s.querySelector('#hub-enter').onclick = () => {
       hideAll();
       Run.start({ character: p.character, biome: biome.id });
+    };
+    /* la graine du jour, et une ligne d'ami à rejouer */
+    s.querySelector('#hub-daily').onchange = e => {
+      p.dailySeed = !!e.target.checked;
+      Meta.save();
+      toast(p.dailySeed ? `Graine du jour : ${Meta.dailySeed()} — la même partie que tes amis aujourd'hui` : 'Parties tirées au hasard', 4);
+    };
+    const seedGo = () => {
+      const r = Run.parseResult(s.querySelector('#hub-seed-text').value);
+      if (!r) {
+        toast('Pas de graine dans ce texte : il faut une ligne de résultat (… graine 20260911)', 5);
+        return;
+      }
+      p.seedNext = r.seed;
+      if (r.biome && Meta.biomeUnlocked(Content.biome(r.biome))) p.biome = r.biome;
+      Meta.save();
+      showHub();
+      toast(`Prochaine partie : graine ${r.seed}${r.biome ? ', ' + Content.biome(r.biome).name : ''}`, 4);
+    };
+    s.querySelector('#hub-seed-go').onclick = seedGo;
+    s.querySelector('#hub-seed-text').onkeydown = e => {
+      if (e.key === 'Enter') seedGo();
+    };
+    s.querySelectorAll('.graine-cell').forEach(td => {
+      td.onclick = () => {
+        p.seedNext = +td.dataset.seed;
+        Meta.save();
+        showHub();
+        toast(`Prochaine partie : graine ${td.dataset.seed}`, 3);
+      };
+    });
+    const off = s.querySelector('#hub-seednext-off');
+    if (off)
+      off.onclick = () => {
+        p.seedNext = null;
+        Meta.save();
+        showHub();
+      };
+    /* la sauvegarde : télécharger, copier, importer */
+    const saveBox = s.querySelector('#hub-save');
+    s.querySelector('#hub-save-open').onclick = () => (saveBox.hidden = !saveBox.hidden);
+    s.querySelector('#save-download').onclick = () => {
+      const blob = new Blob([Meta.exportText()], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `way-sauvegarde-${Meta.dailySeed()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 1000);
+      toast('Sauvegarde téléchargée', 3);
+    };
+    s.querySelector('#save-copy').onclick = async () => {
+      let ok = false;
+      try {
+        await navigator.clipboard.writeText(Meta.exportText());
+        ok = true;
+      } catch (e) {
+        s.querySelector('#save-paste').value = Meta.exportText();
+      }
+      toast(
+        ok
+          ? 'Sauvegarde copiée — colle-la dans l’autre navigateur'
+          : 'Presse-papiers indisponible : le texte est dans la case, copie-le à la main',
+        5
+      );
+    };
+    const importer = text => {
+      const r = Meta.importText(text);
+      if (!r.ok) {
+        toast('Import refusé : ' + r.why, 5);
+        return;
+      }
+      toast(`Sauvegarde importée : ${r.parties} partie(s), ${fmt(r.credits)} crédits`, 5);
+      showHub();
+    };
+    s.querySelector('#save-import').onclick = () => importer(s.querySelector('#save-paste').value);
+    s.querySelector('#save-file').onchange = e => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => importer(rd.result);
+      rd.readAsText(f);
     };
     const body = s.querySelector('#hub-body');
     body.scrollTop = hubScroll;
@@ -1064,14 +1173,18 @@ const UI = (() => {
         achat = { id: m.id, name: m.name, tier: t + 1, price: next.price };
     }
     const phrase = victory ? "Le palier suivant t'attend au camp de base." : Content.pick('death');
+    const resume = r.summary || Run.summary(victory);
+    const ligne = Run.resultLine(resume);
     s.innerHTML = `<div class="panel center end">
       <div class="eyebrow">${victory ? 'Neuf salles, une sortie' : 'Fin de la partie'}</div>
       <h2 class="${victory ? 'good' : 'bad'}">${victory ? STR.victory : STR.dead}</h2>
       <div class="bignums">
         <div class="bignum"><span class="n">◈ ${fmt(total)}</span><span class="l">crédits ramenés</span></div>
         <div class="bignum"><span class="n">${salle} / 9</span><span class="l">${victory ? 'palier terminé' : 'salle atteinte'}</span></div>
+        <div class="bignum score"><span class="n">${fmt(resume ? resume.score : 0)}</span><span class="l">points${r.rank === 1 ? ' — nouveau record' : r.rank ? ` — ${r.rank}ᵉ meilleure partie` : ''}</span></div>
       </div>
-      <div class="progline muted">Meilleure tentative : salle ${best} · celle-ci : salle ${salle}</div>
+      <div class="progline muted">Meilleure tentative : salle ${best} · celle-ci : salle ${salle} · ${resume ? mmss(resume.time) : ''} · graine ${r.seed}</div>
+      <div class="row small resultline"><code id="end-line">${esc(ligne)}</code><button class="btn small" id="end-copy" title="À coller à un ami : il pourra rejouer la même graine">Copier le résultat</button></div>
       <p class="petline">${G.pet ? `<b>${esc(G.pet.name)}</b> — ` : ''}${esc(phrase)}</p>
       ${achat ? `<button class="btn ghost small" id="end-shop">Avec ${fmt(Meta.coins)} crédits tu peux prendre ${esc(achat.name)} ${achat.tier}</button>` : ''}
       <details class="enddetails muted small"><summary>Le détail</summary>
@@ -1088,6 +1201,16 @@ const UI = (() => {
       <div class="row"><button class="btn primary big" id="end-again">Repartir tout de suite — ${esc(equipe)}, ${esc(r.biome.name)}</button><button class="btn ghost" id="end-hub">Camp de base</button></div></div>`;
     s.querySelector('#end-report').onclick = () =>
       Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));
+    s.querySelector('#end-copy').onclick = async () => {
+      let ok = false;
+      try {
+        await navigator.clipboard.writeText(ligne);
+        ok = true;
+      } catch (e) {
+        /* pas de presse-papiers : la ligne est affichée, à copier à la main */
+      }
+      toast(ok ? 'Résultat copié — colle-le à un ami' : 'Presse-papiers indisponible : copie la ligne à la main', 4);
+    };
     s.querySelector('#end-hub').onclick = () => {
       hideAll();
       Run.toHub();

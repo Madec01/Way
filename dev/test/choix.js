@@ -202,8 +202,8 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
   await p.waitForTimeout(2500);
   const migre = await p.evaluate(() => ({ v: Meta.profile.v, coins: Meta.profile.coins, tiers: Meta.profile.metaTiers }));
   ok(
-    'v2 → v3 : les paliers fantômes sont remboursés (80+150 + 70 + 100+170) et ramenés à 1',
-    migre.v === 3 &&
+    'v2 → v3 (puis v4) : les paliers fantômes sont remboursés (80+150 + 70 + 100+170) et ramenés à 1',
+    migre.v === 4 && // la version courante (v4 depuis le chantier 7) : la migration v2 → v3 est passée en chemin
       migre.coins === 100 + 230 + 70 + 270 &&
       migre.tiers.meta_memoire_selective === 1 &&
       migre.tiers.meta_apercu_coffre === 1 &&

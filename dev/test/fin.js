@@ -133,7 +133,7 @@ test(async ({ page: p, ok, entrer, run }) => {
     const r = {
       overlay: G.overlay,
       nums: nums.map(n => n.textContent.trim()),
-      plusGrands: nums.length === 2 && minBig > maxAutre,
+      plusGrands: nums.length === 3 && minBig > maxAutre, // crédits, salle, et le score depuis le chantier 7
       minBig,
       maxAutre,
       prog: /Meilleure tentative : salle \d/.test(s.textContent),
@@ -162,8 +162,8 @@ test(async ({ page: p, ok, entrer, run }) => {
     return r;
   });
   ok(
-    'deux gros chiffres (crédits ramenés, salle atteinte) sont les plus grands textes de l’écran',
-    fin.overlay === 'end' && fin.plusGrands && /◈/.test(fin.nums[0]) && /\/ 9/.test(fin.nums[1]),
+    'trois gros chiffres (crédits ramenés, salle atteinte, points) sont les plus grands textes de l’écran',
+    fin.overlay === 'end' && fin.plusGrands && /◈/.test(fin.nums[0]) && /\/ 9/.test(fin.nums[1]) && /^\d[\d ]*$/.test(fin.nums[2]),
     `${fin.nums.join(' · ')} — ${fin.minBig} px contre ${fin.maxAutre} px au plus ailleurs`
   );
   ok('la ligne de progression, le détail replié, la phrase du compagnon en grand', fin.prog && fin.repli && fin.compagnon);
