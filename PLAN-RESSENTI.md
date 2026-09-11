@@ -145,7 +145,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 **Taille** : 2 séances.
 **Bilan** : fait en une séance (CONTENT.md §53, test `scenes.js`, 10 mesures — un fichier à part, `ressenti.js` reste celui de F-1). Les quatre scènes sont là : la montée de niveau avec son anneau, sa silhouette blanche, son compagnon qui saute et l'écran sur le temps fort ; l'arrivée du boss avec le rideau, la caméra, le zoom, la descente et les trois secousses au temps ; sa mort en 1,6 s avec les cinq explosions et le compagnon qui court au corps ; la mort du joueur avec le ralenti, les ennemis figés, le voile, le zoom et le compagnon qui vient s'asseoir (Uno se couche, ORI se pose, les chats tournent) ; la victoire à l'envers ; l'entrée de salle en marchant avec un seul texte. Deux écarts au plan, à dessein : l'écran de fin de la **mort** vient en temps réel (après la chute, au moins 1,4 s) et non sur le temps fort — la bande ralentit à la mort, un temps fort n'y a plus de sens ; celui de la victoire, lui, attend le temps fort. Et les scènes vivent en temps réel sous les ralentis, sinon 1,6 s à ×0,25 en faisaient 6. La décision « le compagnon dans la mort » est appliquée (1,4 s). À vérifier à la main : la descente du boss se lit-elle comme une arrivée, ou comme un saut ?
 
-## Chantier F-7 — Les compagnons et le dash
+## Chantier F-7 — Les compagnons et le dash ✔ *(fait le 11 septembre 2026)*
 
 **Objectif** : qu'un ami qui a joué cinq minutes se souvienne de son animal.
 
@@ -158,6 +158,7 @@ Un point déjà tranché par le plan des interfaces et partagé ici : **les poli
 **Taille** : 1 à 2 séances.
 
 ---
+**Bilan** : fait en une séance (CONTENT.md §54, test `animaux.js`, 8 mesures — un fichier à part, `ressenti.js` reste celui de F-1). Uno s'accroupit et mord sur le temps avec son étincelle, son arrêt et ses trois particules ; Choupi s'allonge, traîne ses fantômes et rapporte en deux temps ; Tanuki flashe, roule en tournant avec ses six fantômes et son onde ; ORI trace son trait, sa marque bat, il flotte pour de bon ; l'appel entre par le bord avec le nom en couleur ; le repos après 3 s (Uno assis, les chats en toilette, ORI posé — les poses par défaut, faute d'une ligne de l'auteur : une ligne par animal les change) ; la ruée avec ses cinq fantômes, son onde, sa poussière, son étirement, dorée et une quinte plus haut en rythme. La décision « dash en rythme purement visuel » est appliquée. Pas fait, à dessein : rien. Les quatre tests des compagnons (`pets`, `uno`, `chats`, `compagnons`) passent sans changement. À vérifier à la main : l'or des fantômes se voit-il assez sur 180 ms ?
 
 ## L'ordre, et pourquoi
 

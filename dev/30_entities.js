@@ -700,6 +700,24 @@ const Pickups = {
         if (p.t > (p.life || 0.9)) this.list.splice(i, 1);
         continue;
       }
+      /* porté par un compagnon (F-7) : l'objet vole vers lui, puis part vers le joueur */
+      if (p.carrier) {
+        const c = p.carrier;
+        const dc = dist(p.x, p.y, c.x, c.y);
+        const a = angleTo(p.x, p.y, c.x, c.y);
+        const sp = 380;
+        p.vx = Math.cos(a) * sp;
+        p.vy = Math.sin(a) * sp;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (dc < 14 || c.down || (c.mode === 'call' && c.away)) {
+          p.carrier = null;
+          p.magnet = true;
+          p.trail = [];
+          if (p.stages) p.stages.push('player');
+        }
+        continue;
+      }
       const d = dist(p.x, p.y, pl.x, pl.y);
       if (p.magnet || (d < pl.stats.pickupRadius && !NO_MAGNET.has(p.kind)) || (always && !NO_MAGNET.has(p.kind))) {
         if (!p.trail) p.trail = []; // l'aimantation peut venir d'ailleurs (fin de salle, tempo, compagnon) : la traînée naît ici
@@ -1642,7 +1660,15 @@ const Skills = {
         const mv = pl.moveDir.x || pl.moveDir.y ? Math.atan2(pl.moveDir.y, pl.moveDir.x) : aim;
         pl.dashVx = (Math.cos(mv) * d) / pl.dashDur;
         pl.dashVy = (Math.sin(mv) * d) / pl.dashDur;
-        AudioEngine.dash({});
+        /* la ruée (F-7) : onde blanche au départ, coup de zoom inversé, fantômes ; en rythme (à moins de 90 ms d'un
+           temps) les fantômes sont dorés et le son une quinte plus haut — rien de plus, c'est ce qui donne envie */
+        pl.dashOnBeat = Beat.distToBeat(1) <= 0.09;
+        pl.dashA = mv;
+        pl.dashTrail = [{ x: pl.x, y: pl.y, t: Time.now }]; // le premier fantôme au départ, quatre autres en route
+        pl.dashTrailT = 0;
+        G.room.blasts.push({ x: pl.x, y: pl.y, r: 26, t: 0, life: 0.2, color: '#ffffff' });
+        Camera.pulse = -0.015;
+        AudioEngine.dash({ pitch: pl.dashOnBeat ? 1.5 : 1 });
         for (const h of pl.hooks.onDash) Skills.dashHook(pl, h);
         break;
       }
@@ -1963,7 +1989,11 @@ class Player {
       this.x += this.dashVx * dt;
       this.y += this.dashVy * dt;
       this.animStep(dt, true, false); // le personnage court pendant le dash au lieu de se figer
-      Particles.spawn(this.x, this.y, { count: 2, color: '#9ff', size: 3, speedMax: 30, life: 0.3 });
+      this.dashTrailT += dt;
+      if (this.dashTrailT >= this.dashDur / 5 && (this.dashTrail || []).length < 5) {
+        this.dashTrailT = 0;
+        this.dashTrail.push({ x: this.x, y: this.y, t: Time.now });
+      }
       if (this.trail && Time.now < this.trail.until)
         G.room.hazards.push({
           x: this.x,
@@ -1975,7 +2005,19 @@ class Player {
           owner: 'player',
           cd: new Map(),
         });
-      if (this.dashT >= this.dashDur) this.dashing = false;
+      if (this.dashT >= this.dashDur) {
+        this.dashing = false;
+        Particles.spawn(this.x, this.y + Sprites.SOL - 4, {
+          count: 8,
+          color: '#b8b0a0',
+          size: 2,
+          speedMin: 40,
+          speedMax: 120,
+          angle: (this.dashA || 0) + Math.PI,
+          spread: 0.5,
+          life: 0.4,
+        }); // la poussière, à l'opposé
+      }
     } else {
       let sp = this.stats.speed;
       if (Time.now < this.killSpeedUntil) sp *= this.killSpeedMul;
@@ -2240,6 +2282,22 @@ class Player {
     const kb = Beat.pulse();
     const idle = !this.movingNow && !this.dead && !this.dashing;
     if (idle) ctx.translate(0, -2.2 * kb);
+    /* les fantômes de la ruée (F-7) : cinq silhouettes, dorées si elle est partie en rythme, effacées en 300 ms */
+    if (this.dashTrail && this.dashTrail.length) {
+      ctx.save();
+      for (const g of this.dashTrail) {
+        const age = Time.now - g.t;
+        if (age > 0.3) continue;
+        ctx.globalAlpha = 0.35 * (1 - age / 0.3);
+        ctx.fillStyle = this.dashOnBeat ? PAL.gold : PAL.self;
+        ctx.beginPath();
+        ctx.ellipse(g.x, g.y + Sprites.SOL - this.r, this.r * 0.8, this.r * 1.3, 0, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+      if (!this.dashing && Time.now - this.dashTrail[this.dashTrail.length - 1].t > 0.3) this.dashTrail = null;
+    }
+    const dashH = this.dashing ? Math.abs(Math.cos(this.dashA || 0)) : 0; // étirement orienté : le long du dash
     Sprites.drawBody(ctx, (this.char && this.char.sprite) || 'player', this.x, this.y, {
       face: this.char && this.char.face,
       body: this.char && this.char.body,
@@ -2253,8 +2311,8 @@ class Player {
       walk: this.walkT,
       flash: this.hurtFlash > 0 || this.whiteT > 0, // blessé, ou la silhouette blanche de la montée de niveau (F-6)
       scale: 1 + 0.04 * kb,
-      sx: idle ? 1 - 0.03 * kb : undefined,
-      sy: idle ? 1 + 0.035 * kb : undefined,
+      sx: this.dashing ? 1 + 0.22 * dashH - 0.1 * (1 - dashH) : idle ? 1 - 0.03 * kb : undefined,
+      sy: this.dashing ? 0.9 * dashH + 1.22 * (1 - dashH) : idle ? 1 + 0.035 * kb : undefined,
       fallback: () => {
         ctx.fillStyle = this.hurtFlash > 0 ? '#ff9db0' : '#e8ecf7';
         ctx.shadowColor = '#6ee7ff';

@@ -36,6 +36,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `acces` | un profil neuf a bien les personnages et les animaux de l'auteur, et entre en salle 1 avec son équipe |
 | `amis` | l'établi Amis : créer un animal et un copain, export de `content5.js`, rechargement |
 | `arme` | l'arme part de la main, à 45 % du corps, pour chaque type de corps |
+| `animaux` | chantier F-7 : Uno accroupi puis sa morsure sur le temps, le repos assis, l'appel depuis le bord, la ruée et ses fantômes (dorés en rythme), Choupi allongée et la collecte en deux temps, Tanuki qui tourne, le trait d'ORI |
 | `bat` | chantier F-5 : Beat.pulse, la passe de lumière mesurée au pixel, la respiration du joueur et des ennemis, l'anneau de mesure, les télégraphies et annonces sur le tempo, la partition sans or, la porte sur le temps fort, les drops déphasés, les lumières de salle |
 | `butin` | chantier F-4 : la mort en 220 ms (blanc puis écrasé, mesuré au pixel), couronne, onde à plat, tache plafonnée et purgée, drops en arc, étincelles à la taille de la série, cœur, relique, coffre qui s'ouvre en 300 ms |
 | `chats` | Choupi, Tanuki et ORI : planches, tailles, ligne de sol, clips, équipes |

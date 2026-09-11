@@ -108,12 +108,30 @@ class Pet {
     this.callT = m.dur;
     this.boost = m.boost;
     this.snap();
+    /* il entre par le bord de l'écran (F-7) : 250 ms depuis le côté le plus proche, huit fantômes derrière lui */
+    const pl = G.player;
+    if (pl) {
+      const V = Engine.view;
+      const hw = V.w / (2 * Camera.zoom);
+      const fromX = pl.x < Camera.x ? Camera.x - hw - 40 : Camera.x + hw + 40;
+      this.arrive = { t: 0, dur: 0.25, fx: fromX, fy: pl.y, tx: pl.x - 34, ty: pl.y };
+      this.x = fromX;
+      this.y = pl.y;
+      this.trail = [];
+    }
     if (m.arrival && G.room) Combat.playerShockwave(m.arrival); // il déboule : tout ce qui entoure le joueur est repoussé
-    UI.toast(this.name + ' arrive');
+    UI.notify({ text: this.name, color: this.color, level: 2, secs: 1.0, key: 'appel-' + this.id });
     AudioEngine.levelUp({ intensity: 0.4 });
     return true;
   }
   /* replacé à côté du joueur : changement de salle, ou trop distancé */
+  /* une traînée de fantômes : les dernières positions, n au plus (course, roulade, arrivée) */
+  pushTrail(n) {
+    if (!this.trail) this.trail = [];
+    this.trail.unshift({ x: this.x, y: this.y, dx: this.dx });
+    if (this.trail.length > n) this.trail.length = n;
+    this.trailUntil = performance.now() + 220;
+  }
   /* un petit saut : l'animal fait son action et bondit (montée de niveau, victoire, boss abattu) */
   hop() {
     this.act = 1;
@@ -233,6 +251,7 @@ class Pet {
     this.px = this.x;
     this.py = this.y;
     this.t += dt;
+    Feel.tick(this, dt);
     this.act = Math.max(0, this.act - dt * 3);
     if (this.downT > 0) {
       this.downT -= dt;
@@ -249,6 +268,33 @@ class Pet {
     if (this.jumpT > 0) this.jumpT -= dt;
     /* les scènes (F-6) : courir vers le corps du boss, ou venir s'asseoir près du joueur mort */
     const raw = Run.rawDt(dt); // les scènes se jouent en temps réel, ralenti ou pas
+    if (this.arrive) {
+      const ar = this.arrive;
+      ar.t += raw;
+      const k = Ease.outCubic(clamp(ar.t / ar.dur, 0, 1));
+      this.pushTrail(8);
+      this.x = lerp(ar.fx, ar.tx, k);
+      this.y = lerp(ar.fy, ar.ty, k);
+      this.dx = ar.tx > ar.fx ? 1 : -1;
+      this.moving = true;
+      if (k >= 1) this.arrive = null;
+      this.animStep(dt, true);
+      return;
+    }
+    /* le repos (F-7) : après 3 s sans rien faire, il se tourne vers le joueur et prend sa pose */
+    const occupe = this.act > 0.05 || this.target || this.fetching || this.state === 'roll';
+    /* « sans rien faire » se mesure au déplacement depuis le point de repos, pas au drapeau de marche : une caisse qui le
+       repousse d'un pixel ne réveille pas un chien assis */
+    if (occupe || !this.restAnchor || dist(this.x, this.y, this.restAnchor.x, this.restAnchor.y) > 12) {
+      this.idleT = 0;
+      this.restAnchor = { x: this.x, y: this.y };
+    } else this.idleT += dt;
+    this.rest = this.idleT > 3;
+    if (this.rest) {
+      this.dx = pl && pl.x < this.x ? -1 : 1;
+      this.facing = this.dx;
+      this.restPose = this.def.rest || (this.def.behavior === 'bite' ? 'sit' : this.airborne ? 'perch' : 'groom');
+    } else this.restPose = null;
     if (this.mourn && pl && pl.dead) {
       this.mournStep(raw, pl);
       return;
@@ -317,10 +363,28 @@ class Pet {
             this.moving = true;
           } else {
             this.moving = false;
+            /* il anticipe (F-7) : accroupi dans les 200 ms qui précèdent le temps de sa morsure */
+            const ev = this.every();
+            const nextIsBite = (((Beat.index() + 1) % ev) + ev) % ev === 0;
+            this.crouch = nextIsBite && Beat.distToBeat(1) < 0.2 && Beat.phase() > 0.5;
             if (tick) {
+              this.crouch = false;
               Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true, color: this.color });
-              Particles.spawn(e.x, e.y, { count: 5, color: this.color, speedMax: 120, life: 0.3, size: 2 });
+              Particles.spawn(e.x, e.y, {
+                count: 3,
+                color: this.color,
+                speedMin: 90,
+                speedMax: 180,
+                angle: a,
+                spread: 0.5,
+                life: 0.3,
+                size: 3,
+              });
+              G.room.blasts.push({ x: e.x, y: e.y - e.r * 0.4, r: 16, t: 0, life: 0.12, color: '#ffffff' });
+              Feel.stop(40);
+              Feel.pop(this, 0.35, 160);
               this.act = 1;
+              this.lastBite = { t: Beat.t, phase: Beat.phase(), bib: Beat.beatInBar(), dist: Beat.distToBeat(1) };
             }
           }
           resolveRoomCollision(this);
@@ -366,10 +430,13 @@ class Pet {
         let best = null,
           bd = R;
         for (const p of Pickups.list) {
-          if (p.magnet || p.ghost || NO_MAGNET.has(p.kind)) continue; // un éclat de décor ne se rapporte pas
+          if (p.magnet || p.carrier || p.ghost || NO_MAGNET.has(p.kind)) continue; // un éclat de décor ne se rapporte pas
           const d = dist(p.x, p.y, this.x, this.y);
           if (d < reach) {
-            p.magnet = true;
+            /* en deux temps (F-7) : l'objet vole vers elle en arc, puis d'elle vers le joueur */
+            p.carrier = this;
+            p.vz = -160;
+            p.stages = ['pet'];
             this.act = Math.max(this.act, 0.6);
           } else if (d < bd) {
             bd = d;
@@ -384,8 +451,13 @@ class Pet {
           this.y += Math.sin(a) * sp * dt;
           this.facing = Math.cos(a) > 0 ? 1 : -1;
           this.moving = true;
+          this.stretch = true; // allongée en course (F-7)
+          this.pushTrail(4);
           if (!this.airborne) resolveRoomCollision(this);
-        } else this.follow(dt);
+        } else {
+          this.stretch = false;
+          this.follow(dt);
+        }
         if (tick) this.act = Math.max(this.act, 0.5);
         break;
       }
@@ -419,6 +491,8 @@ class Pet {
           this.y += Math.sin(this.rollA) * sp * dt;
           this.moving = true;
           this.act = 1;
+          this.rollSpin = (this.rollSpin || 0) + dt * 14 * (Math.cos(this.rollA) < 0 ? -1 : 1); // il tourne vraiment (F-7)
+          this.pushTrail(6);
           for (const e of G.enemies) {
             if (e.dead || this.rolled.has(e) || dist(this.x, this.y, e.x, e.y) > e.r + this.r) continue;
             this.rolled.add(e);
@@ -432,6 +506,10 @@ class Pet {
           }
         } else {
           this.follow(dt);
+          /* un demi-temps avant de partir, il flashe : on sait qu'il va rouler */
+          const ev = this.every();
+          const nextIsRoll = (((Beat.index() + 1) % ev) + ev) % ev === 0;
+          this.preRoll = nextIsRoll && Beat.phase() > 0.5 && !!nearestEnemy(this.x, this.y, this.def.range || 420);
           if (tick) {
             const e = nearestEnemy(this.x, this.y, this.def.range || 420);
             if (e) {
@@ -439,6 +517,10 @@ class Pet {
               this.facing = Math.cos(this.rollA) > 0 ? 1 : -1;
               this.rolled = new Set();
               this.rollT = this.def.rollTime || 0.8;
+              this.rollSpin = 0;
+              this.preRoll = false;
+              this.trail = [];
+              G.room.blasts.push({ x: this.x, y: this.y + Sprites.SOL - 3, r: 30, t: 0, life: 0.25, color: this.color, flat: true }); // l'onde du départ
               this.state = 'roll';
               AudioEngine.trapSaw && AudioEngine.trapSaw({ intensity: 0.3 });
             }
@@ -461,6 +543,7 @@ class Pet {
             t.markCrit = !!this.def.markCrit;
             t.markColor = this.color;
             this.target = t;
+            this.markT = 0; // le trait pointillé part maintenant (F-7)
             this.act = 1;
             Particles.spawn(t.x, t.y - 24, { count: 6, color: this.color, glow: true, speedMax: 60, life: 0.6, size: 2 });
           }
@@ -540,8 +623,10 @@ class Pet {
   render(ctx) {
     const s = this.def.size || 48;
     const jump = this.jumpT > 0 ? Math.sin((1 - this.jumpT / (this.jumpD || 0.4)) * Math.PI) * 26 : 0; // le bond
-    const pose = this.mournPose;
-    const lift = (this.airborne && pose !== 'perch' ? 15 : 0) + jump;
+    const pose = this.mournPose || (this.rest ? this.restPose : null);
+    const lift = (this.airborne && pose !== 'perch' ? 15 + Math.sin(this.t * 2.2) * 5 : 0) + jump; // ORI flotte pour de bon (F-7)
+    if (this.trail && this.trail.length && performance.now() < this.trailUntil) this.renderTrail(ctx, s);
+    if (this.markT != null && this.target && !this.target.dead) this.renderLine(ctx);
     const bob =
       pose === 'lie' || pose === 'perch'
         ? Math.sin(this.t * 1.4) * 0.6
@@ -558,13 +643,27 @@ class Pet {
     if (this.fetching && !this.down) this.renderReach(ctx, sol);
     if (this.target && this.target.markUntil > Time.now && !this.target.dead) this.renderMark(ctx, this.target);
     ctx.save();
-    ctx.globalAlpha = this.down ? 0.15 : 0.32;
+    ctx.globalAlpha = this.down ? 0.15 : this.airborne ? 0.18 : 0.32; // en l'air : une ombre plus petite et plus floue
     ctx.fillStyle = '#05070c';
+    if (this.airborne) {
+      ctx.shadowColor = '#05070c';
+      ctx.shadowBlur = 8;
+    }
     ctx.beginPath();
-    ctx.ellipse(this.x, this.y + sol, s * 0.28, s * 0.1, 0, 0, TAU);
+    ctx.ellipse(this.x, this.y + sol, s * (this.airborne ? 0.2 : 0.28), s * (this.airborne ? 0.07 : 0.1), 0, 0, TAU);
     ctx.fill();
     ctx.restore();
-    const pop = 1 + this.act * 0.22;
+    const pop = 1 + this.act * 0.22 + (this.popD ? Feel.popK(this) : 0);
+    /* les déformations (F-7) : accroupi avant la morsure, allongée en course, assis ou en toilette au repos */
+    let sx = 1,
+      sy = 1;
+    if (this.crouch) ((sx = 1.14), (sy = 0.86));
+    else if (this.stretch) ((sx = 1.18), (sy = 0.86));
+    else if (pose === 'lie') ((sx = 1.25), (sy = 0.55));
+    else if (pose === 'sit') ((sx = 1.06), (sy = 0.9));
+    else if (pose === 'groom') ((sx = 0.96), (sy = 1 + (Math.sin(this.t * 6) > 0.6 ? 0.03 : 0)));
+    const rot = this.state === 'roll' ? this.rollSpin || 0 : 0;
+    const flash = !!this.preRoll;
     if (planche) {
       const cf = Sprites.CLIPS[this.clip] || Sprites.CLIPS.idle;
       const inf = planche;
@@ -574,13 +673,15 @@ class Pet {
         foot: true,
         flip: dv.flip,
         alpha: this.down ? 0.5 : 1,
-        sx: pose === 'lie' ? 1.25 : undefined,
-        sy: pose === 'lie' ? 0.55 : undefined,
+        sx: sx !== 1 ? sx : undefined,
+        sy: sy !== 1 ? sy : undefined,
+        rot: rot || undefined,
+        flash,
       });
       this.renderTags(ctx, s, lift);
       return;
     }
-    const opts = { flip: dv.flip, rot: this.down ? 1.4 : 0, alpha: this.down ? 0.5 : 1 };
+    const opts = { flip: dv.flip, rot: this.down ? 1.4 : rot, alpha: this.down ? 0.5 : 1, flash };
     /* image fixe : dessinée centrée, donc remontée d'une demi-taille pour que son bas touche la ligne de sol */
     const cy = this.y + sol - (s * pop) / 2 - bob - lift;
     if (!Sprites.drawProp(ctx, sprite, this.x, cy, s * pop, s * pop, opts)) {
@@ -595,6 +696,35 @@ class Pet {
       ctx.restore();
     }
     this.renderTags(ctx, s, lift);
+  }
+  /* les fantômes derrière lui : de plus en plus pâles, dans sa couleur */
+  renderTrail(ctx, s) {
+    ctx.save();
+    const n = this.trail.length;
+    this.trail.forEach((q, i) => {
+      ctx.globalAlpha = 0.28 * (1 - i / n);
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.ellipse(q.x, q.y + Sprites.SOL - s * 0.3, s * 0.26, s * 0.2, 0, 0, TAU);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+  /* ORI : un trait pointillé animé vers sa cible, franc pendant 150 ms puis discret */
+  renderLine(ctx) {
+    const t = this.target;
+    this.markT += 1 / 60;
+    ctx.save();
+    ctx.strokeStyle = this.color;
+    ctx.globalAlpha = this.markT < 0.15 ? 0.9 : 0.35;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 8]);
+    ctx.lineDashOffset = -Time.now * 60;
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y - 10);
+    ctx.lineTo(t.x, t.y - t.r);
+    ctx.stroke();
+    ctx.restore();
   }
   /* rapporteur en course : sa portée d'aimant, un anneau au sol qui respire */
   renderReach(ctx, sol) {
@@ -612,7 +742,7 @@ class Pet {
   /* guetteur : la cible marquée porte un anneau aux pieds et un losange au-dessus de la tête, aux couleurs du compagnon */
   renderMark(ctx, t) {
     const left = Math.max(0, t.markUntil - Time.now);
-    const pulse = 0.5 + Math.sin(this.t * 9) * 0.5;
+    const pulse = Beat.pulse(2); // la marque clignote à la croche (F-7)
     ctx.save();
     ctx.strokeStyle = this.color;
     ctx.fillStyle = this.color;

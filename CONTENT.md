@@ -1476,3 +1476,19 @@ Le bot (`G.autoplay`) saute les scènes qui attendent : montée de niveau et éc
 
 Test : `scenes.js` — 10 mesures (l'entrée en marchant, la place finale, le texte unique ; la scène de montée de niveau et son écran sur le temps fort ; l'arrivée du boss et ses trois secousses au temps ; sa mort en 1,6 s avec le compagnon au corps ; la mort du joueur avec le voile, les ennemis figés, le compagnon couché ; l'écran de fin après 1,4 s).
 
+## 54. Chantier F-7 — les compagnons et le dash (ressenti)
+
+**Qu'un ami qui a joué cinq minutes se souvienne de son animal.** Tout est dans 31_pets.js, sauf le dash (30_entities.js) et le porteur (Pickups).
+
+| Qui | Ce qu'il fait maintenant |
+|---|---|
+| **Uno** (bite) | au contact, il **s'accroupit** (`crouch` : sx 1,14 / sy 0,86) dans les 200 ms qui précèdent le temps de sa morsure (le prochain temps est un multiple de `every` et `distToBeat < 0,2`) ; à la morsure : pop de 0,35 (`Feel.pop`), étincelle blanche de 16 px au point de morsure, `Feel.stop(40)`, 3 particules orange en cône, son chiffre en orange (F-3). `lastBite` garde l'instant pour les tests. |
+| **Choupi** (collect) | **allongée en course** (`stretch` : sx 1,18 / sy 0,86) avec 4 fantômes (`pushTrail`) ; la collecte se fait **en deux temps** : l'objet reçoit `carrier = elle` et vole vers elle (en arc, `vz = −160`), puis passe en `magnet` vers le joueur (`p.stages = ['pet', 'player']`). Un porteur sonné ou reparti lâche l'objet au joueur. |
+| **Tanuki** (charge) | un **flash** d'anticipation un demi-temps avant de partir (`preRoll`), une onde à plat dans sa couleur au départ, **il tourne** pendant la roulade (`rollSpin += dt × 14`, dans le sens de la course, `rot` passé à `drawSheet` / `drawProp`), 6 fantômes. |
+| **ORI** (mark) | un **trait pointillé animé** vers sa cible (`renderLine` : `lineDashOffset` qui court, franc 150 ms puis discret), la marque qui bat à la croche (`Beat.pulse(2)`), un flottement propre (`sin(t × 2,2) × 5`) et une ombre plus petite et plus floue en l'air. |
+| **l'appel** | le compagnon **entre par le bord de l'écran** le plus proche (`arrive`, 250 ms en outCubic, 8 fantômes), l'onde de choc à l'arrivée (déjà là), et **son nom en bandeau dans sa couleur** (`notify` niveau 2) — plus un toast gris. |
+| **le repos** | après 3 s sans agir ni se déplacer de plus de 12 px de son point de repos (`idleT`, `restAnchor`), il se tourne vers le joueur et prend sa pose (`restPose`, ou `def.rest`) : **Uno s'assied** (sx 1,06 / sy 0,9), les chats **font leur toilette** (un hochement toutes les secondes), ORI **se pose** (plus de flottement). Sans description de l'auteur, ce sont les poses par défaut — une ligne par animal les change. |
+| **la ruée** | 5 fantômes du sprite (le premier au départ, quatre en route, effacés en 300 ms), **étirement orienté** (sx 1,22 / sy 0,90 le long du dash), onde blanche de 26 px au départ, `Camera.pulse −0,015`, 8 grains de poussière en cône opposé à l'arrivée. **En rythme** (à moins de 90 ms d'un temps, `dashOnBeat`) : fantômes **dorés** et le son **une quinte plus haut** (`AudioEngine.dash({ pitch: 1.5 })`) — rien de plus, la décision « purement visuel » est appliquée. |
+
+Test : `animaux.js` — 8 mesures (l'accroupissement et la morsure à moins de 30 ms d'un temps, le repos assis tourné vers le joueur, l'appel depuis le bord avec le nom en couleur, la ruée et ses cinq fantômes, l'or sur le temps, Choupi allongée et la collecte en deux temps, Tanuki qui flashe puis tourne, le trait d'ORI).
+
