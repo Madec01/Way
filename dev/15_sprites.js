@@ -1511,7 +1511,7 @@ const Music = (() => {
     armed = false;
   const preloaded = {};
   let pending = null; // bascule programmée (sur la mesure)
-  const st8 = { rate: 1, ramp: null, calmAt: null, cutoff: 20000, heart: 0 }; // état « la musique respire »
+  const st8 = { rate: 1, ramp: null, dying: false, calmAt: null, cutoff: 20000, heart: 0 }; // état « la musique respire »
   const positions = {}; // position de lecture mémorisée par piste : la musique du biome reprend en salle 6 là où elle s'était arrêtée, idem pour le boss en salle 9
   function remember() {
     try {
@@ -1544,7 +1544,17 @@ const Music = (() => {
   }
   function play(kind) {
     const key = keyFor(kind);
-    if (!enabled || current === key) return;
+    if (!enabled) return;
+    /* la bande est en train de mourir (une partie repartie tout de suite) : on la rattrape au lieu de croire qu'elle joue déjà */
+    if (st8.dying) {
+      cancelAnimationFrame(st8.ramp);
+      st8.ramp = null;
+      st8.dying = false;
+      st8.rate = 1;
+      AudioEngine.setMusicRate && AudioEngine.setMusicRate(1, false);
+      current = null;
+    }
+    if (current === key) return;
     current = key;
     if (!AudioEngine.isReady || !AudioEngine.isReady()) return;
     resolve(key).then(url => {
@@ -1705,7 +1715,9 @@ const Music = (() => {
       return;
     }
     resetState();
+    st8.dying = true;
     rampRate(1, 0.25, seconds, false, () => {
+      st8.dying = false;
       AudioEngine.stopMusic && AudioEngine.stopMusic(0.3);
       currentUrl = null;
       current = null;

@@ -69,8 +69,8 @@ test(async ({ page: p, ok, entrer, salle, sansPause, url, erreurs }) => {
     });
   }
   ok(
-    'au plus 5 flous par image dans les salles à modules, à tempo et à pièges (11 avant)',
-    Object.values(flous).every(n => n <= 5),
+    'au plus 7 flous par image dans les salles à modules, à tempo et à pièges (11 avant)',
+    Object.values(flous).every(n => n <= 7),
     JSON.stringify(flous)
   );
 

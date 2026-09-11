@@ -2953,7 +2953,7 @@ body.eco .hubcol {
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-11 16:18';</script>
+<script>window.WAY_BUILD = '2026-09-11 23:02';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -3589,21 +3589,35 @@ const Camera = {
     this.zoomFxTarget = z;
     this.zoomFxSpeed = speed;
   },
+  /* fin de scène : plus de point à regarder, zoom de scène à 1 — appelé à chaque entrée de salle */
+  resetScene() {
+    this.focus = null;
+    this.zoomFx = 1;
+    this.zoomFxTarget = 1;
+    this.pulse = 0;
+  },
+  /* le zoom réellement appliqué : le réglage × l'impulsion × le zoom de scène */
+  effectiveZoom() {
+    return this.zoom * (1 + (this.pulse || 0)) * (this.zoomFx || 1);
+  },
+  /* le cadrage ne montre jamais au-delà de la salle, quel que soit le zoom en cours (scène comprise) */
   clamp() {
     const v = Engine.view;
-    const hw = v.w / (2 * this.zoom),
-      hh = v.h / (2 * this.zoom);
+    const z = this.effectiveZoom();
+    const hw = v.w / (2 * z),
+      hh = v.h / (2 * z);
     this.x = hw >= W / 2 ? W / 2 : clamp(this.x, hw, W - hw);
     this.y = hh >= H / 2 ? H / 2 : clamp(this.y, hh, H - hh);
   },
   apply(ctx) {
-    const z = this.zoom * (1 + (this.pulse || 0)) * (this.zoomFx || 1);
+    const z = this.effectiveZoom();
     ctx.translate(W / 2, H / 2);
     ctx.scale(z, z);
     ctx.translate(-this.x, -this.y);
   },
   toWorld(sx, sy) {
-    return { x: this.x + (sx - W / 2) / this.zoom, y: this.y + (sy - H / 2) / this.zoom };
+    const z = this.effectiveZoom();
+    return { x: this.x + (sx - W / 2) / z, y: this.y + (sy - H / 2) / z };
   },
   setZoom(z) {
     this.zoom = clamp(z || 1, 1, 2.5);
@@ -13394,7 +13408,7 @@ const Music = (() => {
     armed = false;
   const preloaded = {};
   let pending = null; // bascule programmée (sur la mesure)
-  const st8 = { rate: 1, ramp: null, calmAt: null, cutoff: 20000, heart: 0 }; // état « la musique respire »
+  const st8 = { rate: 1, ramp: null, dying: false, calmAt: null, cutoff: 20000, heart: 0 }; // état « la musique respire »
   const positions = {}; // position de lecture mémorisée par piste : la musique du biome reprend en salle 6 là où elle s'était arrêtée, idem pour le boss en salle 9
   function remember() {
     try {
@@ -13427,7 +13441,17 @@ const Music = (() => {
   }
   function play(kind) {
     const key = keyFor(kind);
-    if (!enabled || current === key) return;
+    if (!enabled) return;
+    /* la bande est en train de mourir (une partie repartie tout de suite) : on la rattrape au lieu de croire qu'elle joue déjà */
+    if (st8.dying) {
+      cancelAnimationFrame(st8.ramp);
+      st8.ramp = null;
+      st8.dying = false;
+      st8.rate = 1;
+      AudioEngine.setMusicRate && AudioEngine.setMusicRate(1, false);
+      current = null;
+    }
+    if (current === key) return;
     current = key;
     if (!AudioEngine.isReady || !AudioEngine.isReady()) return;
     resolve(key).then(url => {
@@ -13588,7 +13612,9 @@ const Music = (() => {
       return;
     }
     resetState();
+    st8.dying = true;
     rampRate(1, 0.25, seconds, false, () => {
+      st8.dying = false;
       AudioEngine.stopMusic && AudioEngine.stopMusic(0.3);
       currentUrl = null;
       current = null;
@@ -23291,6 +23317,7 @@ const Room = {
     pl.orbs = null;
     pl.charge = 0;
     Camera.pulse = 0;
+    Camera.resetScene(); // le zoom de la mort (1,3) ou de la victoire (1,15) ne doit pas survivre à la partie d'avant
     Camera.snap(pl.x, pl.y);
     for (const pe of G.pets) pe.snap(); // les compagnons franchissent la porte avec le joueur — après qu'il a pris sa place
     /* fin des effets « cette salle seulement » : arme d'essai rendue, reliques retirées */

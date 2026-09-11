@@ -148,6 +148,7 @@ const Room = {
     pl.orbs = null;
     pl.charge = 0;
     Camera.pulse = 0;
+    Camera.resetScene(); // le zoom de la mort (1,3) ou de la victoire (1,15) ne doit pas survivre à la partie d'avant
     Camera.snap(pl.x, pl.y);
     for (const pe of G.pets) pe.snap(); // les compagnons franchissent la porte avec le joueur — après qu'il a pris sa place
     /* fin des effets « cette salle seulement » : arme d'essai rendue, reliques retirées */

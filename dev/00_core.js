@@ -631,21 +631,35 @@ const Camera = {
     this.zoomFxTarget = z;
     this.zoomFxSpeed = speed;
   },
+  /* fin de scène : plus de point à regarder, zoom de scène à 1 — appelé à chaque entrée de salle */
+  resetScene() {
+    this.focus = null;
+    this.zoomFx = 1;
+    this.zoomFxTarget = 1;
+    this.pulse = 0;
+  },
+  /* le zoom réellement appliqué : le réglage × l'impulsion × le zoom de scène */
+  effectiveZoom() {
+    return this.zoom * (1 + (this.pulse || 0)) * (this.zoomFx || 1);
+  },
+  /* le cadrage ne montre jamais au-delà de la salle, quel que soit le zoom en cours (scène comprise) */
   clamp() {
     const v = Engine.view;
-    const hw = v.w / (2 * this.zoom),
-      hh = v.h / (2 * this.zoom);
+    const z = this.effectiveZoom();
+    const hw = v.w / (2 * z),
+      hh = v.h / (2 * z);
     this.x = hw >= W / 2 ? W / 2 : clamp(this.x, hw, W - hw);
     this.y = hh >= H / 2 ? H / 2 : clamp(this.y, hh, H - hh);
   },
   apply(ctx) {
-    const z = this.zoom * (1 + (this.pulse || 0)) * (this.zoomFx || 1);
+    const z = this.effectiveZoom();
     ctx.translate(W / 2, H / 2);
     ctx.scale(z, z);
     ctx.translate(-this.x, -this.y);
   },
   toWorld(sx, sy) {
-    return { x: this.x + (sx - W / 2) / this.zoom, y: this.y + (sy - H / 2) / this.zoom };
+    const z = this.effectiveZoom();
+    return { x: this.x + (sx - W / 2) / z, y: this.y + (sy - H / 2) / z };
   },
   setZoom(z) {
     this.zoom = clamp(z || 1, 1, 2.5);
