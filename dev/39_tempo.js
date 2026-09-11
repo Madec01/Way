@@ -602,14 +602,7 @@ const Tempo = {
     Tempo.renderEq(ctx, room);
     ctx.save();
     if (pl && !pl.dead) {
-      ctx.strokeStyle = Tempo.COLOR;
-      ctx.shadowColor = Tempo.COLOR;
-      ctx.shadowBlur = 10;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.25 + 0.55 * Math.max(0, 1 - ph * 2);
-      ctx.beginPath();
-      ctx.arc(pl.x, pl.y, pl.r + 8 + (1 - ph) * 8, 0, TAU);
-      ctx.stroke();
+      Halo.ring(ctx, pl.x, pl.y, pl.r + 8 + (1 - ph) * 8, null, Tempo.COLOR, 2, 10, 0.25 + 0.55 * Math.max(0, 1 - ph * 2));
       for (const f of tp.flashes) {
         const k = f.t / 0.35;
         ctx.globalAlpha = 0.8 * (1 - k);
@@ -628,14 +621,7 @@ const Tempo = {
       if (pp) {
         const seg = pp.p < pp.smallEnd ? 0 : pp.p < pp.bigBeat ? 1 : b.cur ? 2 : 3;
         const col = ['#e8ecf7', '#ffb347', PAL.alert, '#7fff9a'][seg];
-        ctx.strokeStyle = col;
-        ctx.shadowColor = col;
-        ctx.shadowBlur = 12;
-        ctx.lineWidth = seg === 1 ? 4 : 2.5;
-        ctx.globalAlpha = 0.35 + 0.55 * Math.max(0, 1 - ph * 2);
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r + 14 + (1 - ph) * 6, 0, TAU);
-        ctx.stroke();
+        Halo.ring(ctx, b.x, b.y, b.r + 14 + (1 - ph) * 6, null, col, seg === 1 ? 4 : 2.5, 12, 0.35 + 0.55 * Math.max(0, 1 - ph * 2));
         if (seg === 1) {
           const k = (pp.p - pp.smallEnd) / (pp.bigBeat - pp.smallEnd);
           ctx.globalAlpha = 0.9;
@@ -742,13 +728,11 @@ const Tempo = {
       const rr = (i === 0 ? 7 : 6) + (on ? (1 - ph) * 4 : 0);
       ctx.globalAlpha = on ? 1 : 0.4;
       ctx.fillStyle = i === 0 ? Tempo.COLOR : '#e8ecf7';
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = on ? 14 : 0;
+      if (on) Halo.draw(ctx, x, y, rr, ctx.fillStyle, 14);
       ctx.beginPath();
       ctx.arc(x, y, rr, 0, TAU);
       ctx.fill();
     }
-    ctx.shadowBlur = 0;
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = '#fff';
     ctx.fillRect(cx - 1.5 * sp + (bib + ph) * sp - 1, y - 12, 2, 24);

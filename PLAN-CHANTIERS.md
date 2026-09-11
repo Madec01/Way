@@ -164,16 +164,16 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Fini quand** : bot sur les 4 biomes : ordres de salles distincts, 0 élément modulaire identique entre deux biomes en salle 6, 28 comportements d'ennemi distincts au grep ; rendu < 2 ms par image sur « lumières coupées ».
 **Taille** : 3 à 4 séances. **Séance 1 (11 septembre 2026, CONTENT.md §59)** : [2] structure faite — quatre ordres de salles distincts, une salle unique par biome (sous-sol, pont, train, bazar) ; [14] fait — 4 et 8 en combat, coffres offerts en fin de 3 et 7 (au bazar pour le Sérail), boss de salle 9 à ses propres phases (`revenge.phases`) ; salles modulaires à éléments distincts par biome. **Séance 2 (CONTENT.md §60)** : [2] comportements faits — 21 variantes, 28 comportements distincts, chacun mesuré par `comportements.js`. **Séance 3 (CONTENT.md §61)** : [12] quatre salles cadencées de l'Admission jouées, [29] masque des lumières une image sur deux avec disque pré-dessiné (1,28 → 0,97 ms au banc A/B, 1,45 ms avec les faisceaux : sous les 2 ms visés), [41] flash précalculé, wagons habillés. **Non fait** : [24] le terrain de salle, à trancher (étendre aux salles de combat ou retirer) — il ne bloque rien.
 
-## Chantier 10 — Le téléphone
+## Chantier 10 — Le téléphone ✔ (côté code ; la mesure sur un vrai téléphone reste à faire)
 
 **Objectif** : la moitié des amis ouvrira le lien sur un téléphone.
 
-- [63] Mesure sur téléphone réel avant tout : fps du menu, de la salle 2, du défi lumières.
-- [25] Refonte de l'interface tactile (PLAN.md §8) : joystick fixe à gauche, tir auto par défaut, compétence et appel du compagnon à droite, HUD réduit, prépa et hub en une colonne.
-- [66] `shadowBlur` et `backdrop-filter` remplacés par des ombres pré-rendues là où la mesure le demande. *Entamé le 11 septembre 2026 (CONTENT.md §57) : particules, projectiles, objets au sol, ondes et télégraphies passent par `Halo` ; restent pièges, blocs modulaires, porte, coffre, boss, tempo, et `backdrop-filter`.*
+- [63] ✔ Mesure sur téléphone réel avant tout : fps du menu, de la salle 2, du défi lumières. *Le jeu se mesure lui-même (`Perf`, CONTENT.md §63) : compteur en bas de l'écran (pause ou `?perf`), ligne « WAY perf · … » à copier depuis la pause, reprise dans le rapport. Reste à la lire sur ton téléphone.*
+- [25] ✔ Refonte de l'interface tactile (PLAN.md §8) — faite en I-8.
+- [66] ✔ `shadowBlur` et `backdrop-filter` remplacés par des ombres pré-rendues là où la mesure le demande. *Pièges, modules, tempo, défis, porte, flaques, lames : `Halo.line` / `Halo.rect` / `Halo.draw`. Par image : salle 6 → 5 flous (11 avant), salle 8 → 3 (11). Les boutons tactiles n'ont plus de flou d'arrière-plan. Un **rendu économe** (flous coupés, un pixel par pixel, écrans sans flou) s'allume tout seul au tactile sous 45 i/s pendant 3 s, ou depuis la pause.*
 
-**Fini quand** : ≥ 50 fps en salle 2 sur un téléphone de milieu de gamme ; une run complète jouable au pouce sans toucher au clavier.
-**Taille** : 2 à 3 séances.
+**Fini quand** : ≥ 50 fps en salle 2 sur un téléphone de milieu de gamme ; une run complète jouable au pouce sans toucher au clavier. *Le second point est fait (I-8) ; le premier attend ta mesure — si elle tombe sous 50, le rendu économe est le premier levier, et la ligne copiée dira lequel actionner ensuite.*
+**Taille** : 2 à 3 séances — **1 séance faite le 11 septembre 2026**, plus la mesure.
 
 ## Chantier 11 — La dette, au fil de l'eau
 

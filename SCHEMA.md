@@ -186,10 +186,12 @@ Clé **`way_save`** (anciennement `sujet_neuf_save_v1`, encore relue). Version c
 | `best` | 4 | `{ charId: [{ score, room, win, time, seed, biome, pet, date }] }` — les dix meilleures parties par personnage (chantier 7) |
 | `dailySeed` | 4 | la graine du jour est cochée (la même partie pour tout le monde un jour donné) |
 | `seedNext` | 4 | une graine collée d'une ligne de résultat, jouée une fois puis remise à `null` |
+| `perfMode` | 4 | rendu : `auto` (économe dès que le tactile ralentit), `eco`, `full` (chantier 10) |
+| `perfShow` | 4 | le compteur d'images par seconde est affiché |
 
 Migrations : v1 → v2 sans changement de champ ; v2 → v3 (chantier 6) ramène `metaTiers` de `meta_memoire_selective`, `meta_apercu_coffre` et `meta_quatrieme_choix` à 1 au plus et rembourse dans `coins` les paliers 2 et 3 payés (80 + 150, 70 + 130, 100 + 170).
 
-Migration v3 → v4 : sans changement de champ (`best`, `dailySeed`, `seedNext` arrivent par la fusion). Export : `Meta.exportText()` → `{ way: 'sauvegarde', v, at, profile }` ; import : `Meta.importText()` garde l'ancienne sous `way_save_secours_import` puis migre et écrit `way_save`.
+Migration v3 → v4 : sans changement de champ (`best`, `dailySeed`, `seedNext`, puis `perfMode` et `perfShow`, arrivent par la fusion). Export : `Meta.exportText()` → `{ way: 'sauvegarde', v, at, profile }` ; import : `Meta.importText()` garde l'ancienne sous `way_save_secours_import` puis migre et écrit `way_save`.
 
 Autres clés du navigateur : `way_journal` (les 20 dernières erreurs, voir `Rapport`).
 

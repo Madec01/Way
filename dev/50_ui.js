@@ -1112,7 +1112,16 @@ const UI = (() => {
         <label>Musique <input type="range" min="0" max="1" step="0.05" value="${v.music}" data-v="music"></label>
         ${Input.touch.active ? `<label>Tir automatique (tactile) <input type="checkbox" id="pause-autofire" ${Input.touch.autoFire ? 'checked' : ''}></label>` : ''}
         <label>Zoom caméra <select id="pause-zoom">${[1, 1.25, 1.5, 1.75, 2].map(z => `<option value="${z}" ${Math.abs(Camera.zoom - z) < 0.01 ? 'selected' : ''}>${z}×</option>`).join('')}</select></label>
+        <label>Rendu <select id="pause-perf">${[
+          ['auto', 'automatique'],
+          ['eco', 'économe'],
+          ['full', 'complet'],
+        ]
+          .map(([v, l]) => `<option value="${v}" ${Perf.mode === v ? 'selected' : ''}>${l}</option>`)
+          .join('')}</select></label>
+        <label>Compteur d'images par seconde <input type="checkbox" id="pause-fps" ${Perf.show ? 'checked' : ''}></label>
       </div>
+      <div class="perfline" id="pause-perfline">${esc(Perf.line())} <button class="btn small ghost" id="pause-perfcopy" title="Met la mesure dans le presse-papiers, à coller dans un message">Copier la mesure</button></div>
       <div class="row small"><button class="btn ghost" id="pause-fs">${Fullscreen.active ? 'Quitter le plein écran' : 'Plein écran'}</button><button class="btn ghost" id="pause-report" title="Met dans le presse-papiers un rapport à envoyer si quelque chose a cassé">Copier le rapport</button></div>
       <div class="row"><button class="btn primary" id="pause-resume">${STR.resume}</button><button class="btn ghost" id="pause-quit">${STR.quit}</button></div></div>`;
     s.querySelectorAll('input[type=range]').forEach(
@@ -1127,6 +1136,25 @@ const UI = (() => {
       Camera.setZoom(+e.target.value);
       Meta.profile.zoom = +e.target.value;
       Meta.save();
+    };
+    s.querySelector('#pause-perf').onchange = e => {
+      Meta.profile.perfMode = e.target.value;
+      Perf.setMode(e.target.value);
+      Meta.save();
+    };
+    s.querySelector('#pause-fps').onchange = e => {
+      Perf.show = e.target.checked;
+      Meta.profile.perfShow = e.target.checked;
+      Meta.save();
+    };
+    s.querySelector('#pause-perfcopy').onclick = async () => {
+      const t = Perf.line();
+      try {
+        await navigator.clipboard.writeText(t);
+        toast('Mesure copiée — colle-la dans un message à Martin');
+      } catch (e) {
+        window.prompt('Copie cette mesure :', t);
+      }
     };
     s.querySelector('#pause-report').onclick = () =>
       Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));

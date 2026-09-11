@@ -534,7 +534,6 @@ h3 {
     system-ui,
     sans-serif;
   letter-spacing: 0.05em;
-  backdrop-filter: blur(4px);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -2913,4 +2912,23 @@ table.bests td.graine-cell {
 }
 .end .bignum.score .n {
   color: var(--gold);
+}
+
+/* ---- chantier 10 : rendu économe ---- */
+/* un flou d'arrière-plan se recalcule à chaque image du canvas sous lui : sur un téléphone, il coûte plus que le jeu.
+   Les boutons tactiles n'en ont jamais ; en mode économe, aucun écran n'en a. */
+body.eco #ui .screen,
+body.eco .panel,
+body.eco .storybox,
+body.eco .introbox,
+body.eco .hubhead,
+body.eco .hubcol {
+  backdrop-filter: none;
+}
+.pause .perfline {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8em;
+  opacity: 0.8;
+  margin-top: 0.4em;
+  word-break: break-word;
 }

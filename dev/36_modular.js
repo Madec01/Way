@@ -243,15 +243,19 @@ const Modular = (() => {
         ctx.fillRect(o.px, o.py, o.pw, o.ph);
         ctx.fillStyle = '#2a3048';
         ctx.fillRect(o.px + 4, o.py + 4, o.pw - 8, o.ph - 8);
-        ctx.strokeStyle = m.warn ? '#ffb347' : 'rgba(110,231,255,.45)';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = ctx.strokeStyle;
-        ctx.shadowBlur = m.warn || m.moving ? 14 : 4;
-        ctx.strokeRect(o.px + 1, o.py + 1, o.pw - 2, o.ph - 2);
+        Halo.rect(
+          ctx,
+          o.px + 1,
+          o.py + 1,
+          o.pw - 2,
+          o.ph - 2,
+          m.warn ? '#ffb347' : 'rgba(110,231,255,.45)',
+          2,
+          m.warn || m.moving ? 14 : 4
+        );
         /* rail */
         ctx.setLineDash([4, 8]);
         ctx.strokeStyle = 'rgba(255,255,255,.15)';
-        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.moveTo(m.ax + o.pw / 2, m.ay + o.ph / 2);
         ctx.lineTo(m.bx + o.pw / 2, m.by + o.ph / 2);
@@ -267,15 +271,7 @@ const Modular = (() => {
           ctx.moveTo(c.ax, c.ay);
           ctx.lineTo(c.bx, c.by);
           ctx.stroke();
-          ctx.strokeStyle = 'rgba(110,231,255,.55)';
-          ctx.lineWidth = 2;
-          ctx.shadowColor = '#6ee7ff';
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.moveTo(c.ax, c.ay);
-          ctx.lineTo(c.bx, c.by);
-          ctx.stroke();
-          ctx.shadowBlur = 0;
+          Halo.line(ctx, c.ax, c.ay, c.bx, c.by, 'rgba(110,231,255,.55)', 2, 8);
           ctx.strokeStyle = 'rgba(255,255,255,.12)';
           ctx.lineWidth = 1;
           for (let k = 0.25; k < 1; k += 0.25) {
@@ -291,24 +287,16 @@ const Modular = (() => {
         ctx.arc(cx, cy, TILE * 0.45, 0, TAU);
         ctx.fill();
         ctx.fillStyle = '#6ee7ff';
-        ctx.shadowColor = '#6ee7ff';
-        ctx.shadowBlur = 12;
+        Halo.draw(ctx, cx, cy, 6, '#6ee7ff', 12);
         ctx.beginPath();
         ctx.arc(cx, cy, 6, 0, TAU);
         ctx.fill();
       } else if (m.kind === 'floor_cycle') {
-        if (m.cur >= 0)
-          for (const o of m.configs[m.cur]) {
-            ctx.shadowBlur = 0;
-            Sprites.drawBlock(ctx, o);
-          }
+        if (m.cur >= 0) for (const o of m.configs[m.cur]) Sprites.drawBlock(ctx, o);
         if (m.warn > 0 && m.next != null) {
           ctx.setLineDash([6, 6]);
-          ctx.strokeStyle = `rgba(255,179,71,${0.3 + 0.6 * m.warn})`;
-          ctx.lineWidth = 2;
-          ctx.shadowColor = '#ffb347';
-          ctx.shadowBlur = 10 * m.warn;
-          for (const o of m.configs[m.next]) ctx.strokeRect(o.px + 2, o.py + 2, o.pw - 4, o.ph - 4);
+          for (const o of m.configs[m.next])
+            Halo.rect(ctx, o.px + 2, o.py + 2, o.pw - 4, o.ph - 4, '#ffb347', 2, 10 * m.warn, 0.3 + 0.6 * m.warn);
         }
       } else if (m.kind === 'safe_zone') {
         const col = m.color || '#ff9a3c';
@@ -329,14 +317,8 @@ const Modular = (() => {
           ctx.arc(m.zx, m.zy, m.r, 0, TAU);
           ctx.fill();
         }
-        ctx.strokeStyle = warn ? '#7fff9a' : 'rgba(127,255,154,.45)';
-        ctx.lineWidth = warn ? 3 : 2;
-        ctx.shadowColor = '#7fff9a';
-        ctx.shadowBlur = warn ? 18 : 6;
         ctx.setLineDash(warn ? [] : [8, 8]);
-        ctx.beginPath();
-        ctx.arc(m.zx, m.zy, m.r, 0, TAU);
-        ctx.stroke();
+        Halo.ring(ctx, m.zx, m.zy, m.r, null, warn ? '#7fff9a' : 'rgba(127,255,154,.45)', warn ? 3 : 2, warn ? 18 : 6);
         if (warn) {
           ctx.setLineDash([]);
           ctx.strokeStyle = col;

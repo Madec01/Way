@@ -715,11 +715,7 @@ const Room = {
     ctx.fillStyle = r.doorOpen ? '#0b0d14' : '#2b3350';
     ctx.fillRect(dx - 4, dy - TILE, TILE + 8, TILE * 2);
     if (r.doorOpen) {
-      ctx.strokeStyle = '#7fff9a';
-      ctx.shadowColor = '#7fff9a';
-      ctx.shadowBlur = 12 + 10 * Beat.pulse(); // la porte bat
-      ctx.lineWidth = 3;
-      ctx.strokeRect(dx - 2, dy - TILE + 2, TILE + 4, TILE * 2 - 4);
+      Halo.rect(ctx, dx - 2, dy - TILE + 2, TILE + 4, TILE * 2 - 4, '#7fff9a', 3, 12 + 10 * Beat.pulse()); // la porte bat
       ctx.fillStyle = '#7fff9a';
       ctx.font = `bold 24px ${FONT_PIXEL}`;
       ctx.textAlign = 'center';
@@ -759,8 +755,7 @@ const Room = {
       }
       ctx.globalAlpha = 0.45 * clamp((h.until - Time.now) / 1, 0.3, 1);
       ctx.fillStyle = h.color;
-      ctx.shadowColor = h.color;
-      ctx.shadowBlur = 12;
+      Halo.draw(ctx, h.x, h.y, h.r, h.color, 12);
       ctx.beginPath();
       ctx.arc(h.x, h.y, h.r, 0, TAU);
       ctx.fill();
@@ -794,8 +789,7 @@ const Room = {
         ctx.arc(t.x, t.y, 12, 0, TAU);
         ctx.fill();
         ctx.fillStyle = '#9ff';
-        ctx.shadowColor = '#9ff';
-        ctx.shadowBlur = 10;
+        Halo.draw(ctx, t.x, t.y, 5, '#9ff', 10);
         ctx.beginPath();
         ctx.arc(t.x, t.y, 5, 0, TAU);
         ctx.fill();
@@ -806,8 +800,7 @@ const Room = {
       ctx.save();
       ctx.globalAlpha = 0.6;
       ctx.fillStyle = '#c9a3ff';
-      ctx.shadowColor = '#c9a3ff';
-      ctx.shadowBlur = 14;
+      Halo.draw(ctx, d.x, d.y, d.r, '#c9a3ff', 14);
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.r, 0, TAU);
       ctx.fill();
@@ -823,12 +816,19 @@ const Room = {
       ctx.save();
       ctx.globalAlpha = 1 - k;
       ctx.strokeStyle = s.color;
-      ctx.shadowColor = s.color;
-      ctx.shadowBlur = 14;
       ctx.lineWidth = s.spark ? 3 * (1 - k) + 1 : s.slam ? 8 * (1 - k) + 1 : 7 * (1 - k) + 1; // il s'affine en s'effaçant
-      ctx.beginPath();
-      if (s.slam) ctx.arc(s.cx, s.cy, s.range * (0.5 + 0.5 * k), 0, TAU);
-      else ctx.arc(s.x, s.y, s.range * (0.7 + 0.3 * k), s.a - s.arc / 2, s.a + s.arc / 2);
+      const arc = () => {
+        ctx.beginPath();
+        if (s.slam) ctx.arc(s.cx, s.cy, s.range * (0.5 + 0.5 * k), 0, TAU);
+        else ctx.arc(s.x, s.y, s.range * (0.7 + 0.3 * k), s.a - s.arc / 2, s.a + s.arc / 2);
+      };
+      ctx.globalAlpha = (1 - k) * 0.28;
+      ctx.lineWidth += 14;
+      arc();
+      ctx.stroke();
+      ctx.globalAlpha = 1 - k;
+      ctx.lineWidth -= 14;
+      arc();
       ctx.stroke();
       ctx.restore();
     }

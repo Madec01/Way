@@ -546,7 +546,6 @@ h3 {
     system-ui,
     sans-serif;
   letter-spacing: 0.05em;
-  backdrop-filter: blur(4px);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -2927,6 +2926,25 @@ table.bests td.graine-cell {
   color: var(--gold);
 }
 
+/* ---- chantier 10 : rendu économe ---- */
+/* un flou d'arrière-plan se recalcule à chaque image du canvas sous lui : sur un téléphone, il coûte plus que le jeu.
+   Les boutons tactiles n'en ont jamais ; en mode économe, aucun écran n'en a. */
+body.eco #ui .screen,
+body.eco .panel,
+body.eco .storybox,
+body.eco .introbox,
+body.eco .hubhead,
+body.eco .hubcol {
+  backdrop-filter: none;
+}
+.pause .perfline {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8em;
+  opacity: 0.8;
+  margin-top: 0.4em;
+  word-break: break-word;
+}
+
 </style>
 </head>
 <body>
@@ -2935,7 +2953,7 @@ table.bests td.graine-cell {
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-11 15:09';</script>
+<script>window.WAY_BUILD = '2026-09-11 16:18';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -3137,6 +3155,7 @@ const Rapport = (() => {
       r
         ? `partie : ${r.biome ? r.biome.id : '?'} salle ${G_.room ? G_.room.index : '?'}, niveau ${r.level}, ${r.weapon || '?'} + ${r.skill || '?'}`
         : 'partie : aucune',
+      typeof Perf !== 'undefined' ? Perf.line() : '',
       '',
       'journal (' + lire().length + ') :',
     ];
@@ -3252,7 +3271,214 @@ const Halo = (() => {
     ctx.lineWidth = width;
     ctx.stroke();
   }
-  return { draw, ring, disc, cache };
+  /* un trait qui luit (laser, rail, bord de zone) : même recette que l'anneau. Le tiret en cours ne s'applique qu'au
+     trait net, la lueur reste continue */
+  function glow(ctx, color, width, blur, alpha, path) {
+    const dash = ctx.getLineDash();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha * 0.28;
+    ctx.lineWidth = width + blur;
+    ctx.setLineDash([]);
+    path();
+    ctx.stroke();
+    ctx.setLineDash(dash);
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
+    path();
+    ctx.stroke();
+  }
+  function line(ctx, ax, ay, bx, by, color, width, blur, alpha = 1) {
+    glow(ctx, color, width, blur, alpha, () => {
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+    });
+  }
+  function rect(ctx, x, y, w, h, color, width, blur, alpha = 1) {
+    glow(ctx, color, width, blur, alpha, () => {
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+    });
+  }
+  return { draw, ring, line, rect, disc, cache };
+})();
+
+/* ---- Perf : la mesure des images par seconde et le rendu économe (chantier 10) ----
+   Le jeu ne sait pas ce qu'il coûte sur un téléphone sans le mesurer sur place : ce module compte les images par
+   seconde (et le pire des dix dernières secondes), le temps passé à dessiner, et le nombre de flous (shadowBlur)
+   posés par image — chaque flou coûte une passe de plus par forme. Le rendu économe coupe ces flous à la source
+   (le réglage du contexte est intercepté), plafonne la densité de pixels à 1 et retire les flous d'arrière-plan
+   des écrans (body.eco). Il s'allume tout seul au tactile quand le jeu tient moins de 45 images par seconde
+   pendant 3 secondes, ou à la demande depuis la pause (profil : perfMode 'auto' | 'eco' | 'full'). */
+const Perf = (() => {
+  const SEUIL = 45; // images par seconde en dessous desquelles le rendu économe s'allume (au tactile, en 'auto')
+  const TENIR = 3; // secondes consécutives sous le seuil
+  const P = {
+    fps: 0, // images par seconde sur la dernière seconde
+    min: 0, // le pire des dix dernières secondes
+    renderMs: 0, // temps moyen passé dans render() par image (commandes ; la rastérisation vient après)
+    blurs: 0, // flous posés par la dernière image
+    eco: false, // rendu économe actif
+    why: '', // 'auto' (le jeu ralentissait) ou 'choix' (la pause)
+    mode: 'auto',
+    show: false, // compteur affiché en haut de l'écran
+    low: 0,
+    seuil: SEUIL,
+  };
+  const seconds = [];
+  let frames = 0,
+    t = 0,
+    renderAcc = 0,
+    blursFrame = 0,
+    hooked = null;
+  /* intercepte shadowBlur sur ce contexte : compté, et ramené à 0 en mode économe */
+  function hook(ctx) {
+    if (!ctx || hooked === ctx) return;
+    const proto = Object.getPrototypeOf(ctx);
+    const d = Object.getOwnPropertyDescriptor(proto, 'shadowBlur');
+    if (!d || !d.set) return;
+    hooked = ctx;
+    Object.defineProperty(ctx, 'shadowBlur', {
+      configurable: true,
+      get() {
+        return d.get.call(this);
+      },
+      set(v) {
+        if (v > 0) {
+          blursFrame++;
+          if (P.eco) v = 0;
+        }
+        d.set.call(this, v);
+      },
+    });
+  }
+  function setEco(on, why) {
+    if (P.eco === on) return;
+    P.eco = on;
+    P.why = on ? why : '';
+    P.low = 0;
+    try {
+      document.body.classList.toggle('eco', on);
+    } catch (e) {
+      /* pas de document */
+    }
+    if (typeof Engine !== 'undefined' && Engine.canvas) Engine.resize();
+    if (on && why === 'auto') {
+      try {
+        UI.toast('Le jeu ralentissait : rendu économe activé (réglable dans la pause).', 5);
+      } catch (e) {
+        /* l'interface n'est pas encore là */
+      }
+    }
+  }
+  function setMode(m) {
+    P.mode = m === 'eco' || m === 'full' ? m : 'auto';
+    if (P.mode === 'eco') setEco(true, 'choix');
+    else setEco(false);
+  }
+  const touch = () => typeof Input !== 'undefined' && Input.touch && Input.touch.active;
+  function frame(dt, renderMs) {
+    frames++;
+    t += dt;
+    renderAcc += renderMs;
+    P.blurs = blursFrame;
+    blursFrame = 0;
+    if (t < 1) return;
+    P.fps = Math.round(frames / t);
+    P.renderMs = renderAcc / frames;
+    seconds.push(P.fps);
+    while (seconds.length > 10) seconds.shift();
+    P.min = Math.min(...seconds);
+    frames = 0;
+    t = 0;
+    renderAcc = 0;
+    /* automatique : seulement en jeu, au tactile, hors pause — un onglet caché ou un menu ne comptent pas */
+    const enJeu = typeof G !== 'undefined' && G.state === 'run' && !G.paused && !document.hidden;
+    if (P.mode === 'auto' && !P.eco && enJeu && touch()) {
+      P.low = P.fps < P.seuil ? P.low + 1 : 0;
+      if (P.low >= TENIR) setEco(true, 'auto');
+    } else P.low = 0;
+  }
+  function reset() {
+    seconds.length = 0;
+    P.min = 0;
+    P.low = 0;
+  }
+  /* une ligne à coller dans un message : ce que le téléphone a mesuré */
+  function line() {
+    const G_ = typeof G !== 'undefined' ? G : null;
+    const dpr = Math.round((window.devicePixelRatio || 1) * 10) / 10;
+    const ou = G_ && G_.room ? `salle ${G_.room.index}` : 'hors partie';
+    return (
+      `WAY perf · ${P.fps} i/s · min ${P.min} sur 10 s · rendu ${P.renderMs.toFixed(1)} ms · ${P.blurs} flous · ` +
+      `${P.eco ? 'économe (' + P.why + ')' : 'complet'} · ${ou} · ${window.innerWidth}×${window.innerHeight} ×${dpr}` +
+      `${touch() ? ' tactile' : ''} · ${(navigator.userAgent.match(/\(([^)]*)\)/) || [0, ''])[1].slice(0, 60)}`
+    );
+  }
+  /* le compteur : en bas au centre, entre le stick et les boutons au tactile, sous le HUD au clavier ; en rouge quand
+     la dernière seconde est passée sous le seuil */
+  function render(ctx) {
+    if (!P.show) return;
+    const V = Engine.view;
+    const txt = `${P.fps} i/s · min ${P.min} · ${P.renderMs.toFixed(1)} ms · ${P.blurs} flous${P.eco ? ' · éco' : ''}`;
+    ctx.save();
+    ctx.font = `12px ${FONT_PIXEL}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const w = ctx.measureText(txt).width + 16,
+      x = W / 2,
+      y = H + V.oy - 12;
+    ctx.fillStyle = 'rgba(4,5,9,.7)';
+    ctx.fillRect(x - w / 2, y - 9, w, 18);
+    ctx.fillStyle = P.fps && P.fps < P.seuil ? '#ff6b6b' : '#7fff9a';
+    ctx.fillText(txt, x, y + 1);
+    ctx.restore();
+  }
+  return {
+    hook,
+    frame,
+    render,
+    setEco,
+    setMode,
+    reset,
+    line,
+    get fps() {
+      return P.fps;
+    },
+    get min() {
+      return P.min;
+    },
+    get renderMs() {
+      return P.renderMs;
+    },
+    get blurs() {
+      return P.blurs;
+    },
+    get eco() {
+      return P.eco;
+    },
+    get why() {
+      return P.why;
+    },
+    get mode() {
+      return P.mode;
+    },
+    get show() {
+      return P.show;
+    },
+    set show(v) {
+      P.show = !!v;
+    },
+    get seuil() {
+      return P.seuil;
+    },
+    set seuil(v) {
+      P.seuil = v;
+    },
+    get low() {
+      return P.low;
+    },
+  };
 })();
 
 const CHEST_OPEN_MS = 300;
@@ -3546,7 +3772,7 @@ const Engine = (() => {
      la fenêtre plus large ou plus haute montre du décor autour (vue logique étendue : view.w × view.h, décalage view.ox/oy). */
   const view = { w: W, h: H, ox: 0, oy: 0, scale: 1 };
   function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, Perf.eco ? 1 : 2); // économe : un pixel physique par pixel CSS
     const ww = window.innerWidth,
       wh = window.innerHeight;
     const s = Math.min(ww / W, wh / H);
@@ -3599,7 +3825,9 @@ const Engine = (() => {
     }
     if (steps === maxStepsPerFrame) acc = 0;
     stats.steps = steps;
+    const t0 = performance.now();
     if (!headless) renderFn(ctx, acc / FIXED_DT);
+    Perf.frame(frameDt, performance.now() - t0);
     if (steps > 0 || G.paused) Input.endFrame(); // ne pas perdre un appui entre deux pas (écrans 120/144 Hz)
   }
   function start(u, r) {
@@ -3626,6 +3854,7 @@ const Engine = (() => {
     init,
     start,
     stop,
+    resize,
     stats,
     view,
     get ctx() {
@@ -19820,14 +20049,8 @@ class Trap {
     }
     const on = s.stage === 'on';
     ctx.globalAlpha = on ? 1 : 0.4 + 0.4 * (2 * Beat.pulse(4) - 1);
-    ctx.lineWidth = on ? 5 : 2;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = on ? 20 : 6;
     if (!on) ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.moveTo(s.ax, s.ay);
-    ctx.lineTo(s.bx, s.by);
-    ctx.stroke();
+    Halo.line(ctx, s.ax, s.ay, s.bx, s.by, this.color, on ? 5 : 2, on ? 20 : 6, ctx.globalAlpha);
     ctx.setLineDash([]);
     ctx.fillStyle = this.color;
     [
@@ -19882,17 +20105,10 @@ class Trap {
     ctx.arc(this.cx, this.cy, 12, 0, TAU);
     ctx.fill();
     ctx.globalAlpha = c.stage === 'idle' ? 0.25 : c.stage === 'warn' ? 0.4 + 0.4 * (2 * Beat.pulse(4) - 1) : 1;
-    ctx.strokeStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = arm ? 16 : 6;
-    ctx.lineWidth = arm ? 5 : 2;
     if (!arm) ctx.setLineDash([6, 6]);
     for (let i = 0; i < (this.p.arms || 1); i++) {
       const s = this.rotSeg(rt, i);
-      ctx.beginPath();
-      ctx.moveTo(s.ax, s.ay);
-      ctx.lineTo(s.bx, s.by);
-      ctx.stroke();
+      Halo.line(ctx, s.ax, s.ay, s.bx, s.by, this.color, arm ? 5 : 2, arm ? 16 : 6, ctx.globalAlpha);
     }
     ctx.restore();
   }
@@ -19934,19 +20150,21 @@ class Trap {
     const { c, par } = this.gridActive(rt);
     ctx.save();
     ctx.strokeStyle = this.color;
-    ctx.shadowColor = this.color;
     this.gridLines().forEach((s, i) => {
       const mine = i % 2 === par;
       const on = c.stage === 'on' && mine;
       const warn = c.stage === 'warn' && mine;
-      ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.12;
-      ctx.lineWidth = on ? 4 : 2;
-      ctx.shadowBlur = on ? 14 : 0;
+      const alpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.12;
       ctx.setLineDash(on ? [] : [4, 8]);
-      ctx.beginPath();
-      ctx.moveTo(s.ax, s.ay);
-      ctx.lineTo(s.bx, s.by);
-      ctx.stroke();
+      if (on) Halo.line(ctx, s.ax, s.ay, s.bx, s.by, this.color, 4, 14, 1);
+      else {
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(s.ax, s.ay);
+        ctx.lineTo(s.bx, s.by);
+        ctx.stroke();
+      }
     });
     ctx.restore();
   }
@@ -20006,8 +20224,7 @@ class Trap {
     ctx.fillStyle = '#3a3f55';
     ctx.fillRect(this.x + 6, this.y + 6, this.w - 12, this.h - 12);
     ctx.fillStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = 8 + warm * 18;
+    Halo.draw(ctx, this.cx, this.cy, 8 + warm * 6, this.color, 8 + warm * 18);
     ctx.beginPath();
     ctx.arc(this.cx, this.cy, 8 + warm * 6, 0, TAU);
     ctx.fill();
@@ -20206,8 +20423,7 @@ class Trap {
     ctx.translate(s.x, s.y);
     ctx.rotate(rt * 14);
     ctx.fillStyle = '#cfd6e6';
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = 10;
+    Halo.draw(ctx, 0, 0, R, this.color, 10);
     ctx.beginPath();
     for (let i = 0; i < 16; i++) {
       const a = (i * TAU) / 16,
@@ -20277,8 +20493,7 @@ class Trap {
     ctx.fillStyle = warm ? `rgb(255,${Math.round(200 - warm * 120)},80)` : '#8890aa';
     ctx.fillRect(0, -5, 24, 10);
     ctx.fillStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = warm * 16;
+    if (warm > 0.05) Halo.draw(ctx, 0, 0, 6 + warm * 3, this.color, warm * 16);
     ctx.beginPath();
     ctx.arc(0, 0, 6 + warm * 3, 0, TAU);
     ctx.fill();
@@ -20372,11 +20587,10 @@ class Trap {
     const arc = p.arc != null ? p.arc : TAU;
     const full = Math.abs(arc - TAU) < 1e-6;
     ctx.fillStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = 6 + warm * 16;
     for (let i = 0; i < n; i++) {
       const k = full ? i / n : n > 1 ? i / (n - 1) - 0.5 : 0;
       const a = arc * k;
+      Halo.draw(ctx, Math.cos(a) * 13, Math.sin(a) * 13, 2 + warm * 2.5, this.color, 6 + warm * 16);
       ctx.beginPath();
       ctx.arc(Math.cos(a) * 13, Math.sin(a) * 13, 2 + warm * 2.5, 0, TAU);
       ctx.fill();
@@ -20417,16 +20631,18 @@ class Trap {
     ctx.beginPath();
     ctx.arc(s.ax, s.ay, 11, 0, TAU);
     ctx.fill();
-    ctx.strokeStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.14;
-    ctx.lineWidth = on ? (this.p.thickness || 0.4) * TILE * 0.55 : 2;
-    ctx.shadowBlur = on ? 18 : 4;
     if (!on) ctx.setLineDash([5, 9]);
-    ctx.beginPath();
-    ctx.moveTo(s.ax, s.ay);
-    ctx.lineTo(s.bx, s.by);
-    ctx.stroke();
+    Halo.line(
+      ctx,
+      s.ax,
+      s.ay,
+      s.bx,
+      s.by,
+      this.color,
+      on ? (this.p.thickness || 0.4) * TILE * 0.55 : 2,
+      on ? 18 : 4,
+      on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.14
+    );
     if (on) {
       ctx.setLineDash([]);
       ctx.fillStyle = this.color;
@@ -20971,15 +21187,19 @@ const Modular = (() => {
         ctx.fillRect(o.px, o.py, o.pw, o.ph);
         ctx.fillStyle = '#2a3048';
         ctx.fillRect(o.px + 4, o.py + 4, o.pw - 8, o.ph - 8);
-        ctx.strokeStyle = m.warn ? '#ffb347' : 'rgba(110,231,255,.45)';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = ctx.strokeStyle;
-        ctx.shadowBlur = m.warn || m.moving ? 14 : 4;
-        ctx.strokeRect(o.px + 1, o.py + 1, o.pw - 2, o.ph - 2);
+        Halo.rect(
+          ctx,
+          o.px + 1,
+          o.py + 1,
+          o.pw - 2,
+          o.ph - 2,
+          m.warn ? '#ffb347' : 'rgba(110,231,255,.45)',
+          2,
+          m.warn || m.moving ? 14 : 4
+        );
         /* rail */
         ctx.setLineDash([4, 8]);
         ctx.strokeStyle = 'rgba(255,255,255,.15)';
-        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.moveTo(m.ax + o.pw / 2, m.ay + o.ph / 2);
         ctx.lineTo(m.bx + o.pw / 2, m.by + o.ph / 2);
@@ -20995,15 +21215,7 @@ const Modular = (() => {
           ctx.moveTo(c.ax, c.ay);
           ctx.lineTo(c.bx, c.by);
           ctx.stroke();
-          ctx.strokeStyle = 'rgba(110,231,255,.55)';
-          ctx.lineWidth = 2;
-          ctx.shadowColor = '#6ee7ff';
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.moveTo(c.ax, c.ay);
-          ctx.lineTo(c.bx, c.by);
-          ctx.stroke();
-          ctx.shadowBlur = 0;
+          Halo.line(ctx, c.ax, c.ay, c.bx, c.by, 'rgba(110,231,255,.55)', 2, 8);
           ctx.strokeStyle = 'rgba(255,255,255,.12)';
           ctx.lineWidth = 1;
           for (let k = 0.25; k < 1; k += 0.25) {
@@ -21019,24 +21231,16 @@ const Modular = (() => {
         ctx.arc(cx, cy, TILE * 0.45, 0, TAU);
         ctx.fill();
         ctx.fillStyle = '#6ee7ff';
-        ctx.shadowColor = '#6ee7ff';
-        ctx.shadowBlur = 12;
+        Halo.draw(ctx, cx, cy, 6, '#6ee7ff', 12);
         ctx.beginPath();
         ctx.arc(cx, cy, 6, 0, TAU);
         ctx.fill();
       } else if (m.kind === 'floor_cycle') {
-        if (m.cur >= 0)
-          for (const o of m.configs[m.cur]) {
-            ctx.shadowBlur = 0;
-            Sprites.drawBlock(ctx, o);
-          }
+        if (m.cur >= 0) for (const o of m.configs[m.cur]) Sprites.drawBlock(ctx, o);
         if (m.warn > 0 && m.next != null) {
           ctx.setLineDash([6, 6]);
-          ctx.strokeStyle = `rgba(255,179,71,${0.3 + 0.6 * m.warn})`;
-          ctx.lineWidth = 2;
-          ctx.shadowColor = '#ffb347';
-          ctx.shadowBlur = 10 * m.warn;
-          for (const o of m.configs[m.next]) ctx.strokeRect(o.px + 2, o.py + 2, o.pw - 4, o.ph - 4);
+          for (const o of m.configs[m.next])
+            Halo.rect(ctx, o.px + 2, o.py + 2, o.pw - 4, o.ph - 4, '#ffb347', 2, 10 * m.warn, 0.3 + 0.6 * m.warn);
         }
       } else if (m.kind === 'safe_zone') {
         const col = m.color || '#ff9a3c';
@@ -21057,14 +21261,8 @@ const Modular = (() => {
           ctx.arc(m.zx, m.zy, m.r, 0, TAU);
           ctx.fill();
         }
-        ctx.strokeStyle = warn ? '#7fff9a' : 'rgba(127,255,154,.45)';
-        ctx.lineWidth = warn ? 3 : 2;
-        ctx.shadowColor = '#7fff9a';
-        ctx.shadowBlur = warn ? 18 : 6;
         ctx.setLineDash(warn ? [] : [8, 8]);
-        ctx.beginPath();
-        ctx.arc(m.zx, m.zy, m.r, 0, TAU);
-        ctx.stroke();
+        Halo.ring(ctx, m.zx, m.zy, m.r, null, warn ? '#7fff9a' : 'rgba(127,255,154,.45)', warn ? 3 : 2, warn ? 18 : 6);
         if (warn) {
           ctx.setLineDash([]);
           ctx.strokeStyle = col;
@@ -21772,15 +21970,9 @@ const Challenge = (() => {
       ctx.beginPath();
       ctx.arc(z.x, z.y, c.r, 0, TAU);
       ctx.fill();
-      ctx.strokeStyle = '#7fff9a';
-      ctx.lineWidth = 3;
-      ctx.shadowColor = '#7fff9a';
-      ctx.shadowBlur = 14;
       ctx.setLineDash([10, 8]);
       ctx.lineDashOffset = -Time.now * 40;
-      ctx.beginPath();
-      ctx.arc(z.x, z.y, c.r, 0, TAU);
-      ctx.stroke();
+      Halo.ring(ctx, z.x, z.y, c.r, null, '#7fff9a', 3, 14);
       ctx.setLineDash([]);
       ctx.lineWidth = 6;
       ctx.beginPath();
@@ -21804,12 +21996,7 @@ const Challenge = (() => {
       for (const s of c.sw) {
         ctx.fillStyle = s.on ? '#2a6a3a' : '#3a4260';
         ctx.fillRect(s.x - 20, s.y - 20, 40, 40);
-        ctx.strokeStyle = s.on ? '#7fff9a' : '#c9a3ff';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = ctx.strokeStyle;
-        ctx.shadowBlur = 12;
-        ctx.strokeRect(s.x - 20, s.y - 20, 40, 40);
-        ctx.shadowBlur = 0;
+        Halo.rect(ctx, s.x - 20, s.y - 20, 40, 40, s.on ? '#7fff9a' : '#c9a3ff', 2, 12);
         ctx.fillStyle = s.on ? '#7fff9a' : '#e8ecf7';
         ctx.font = `bold 20px ${FONT_PIXEL}`;
         ctx.textAlign = 'center';
@@ -22009,8 +22196,8 @@ const Challenge = (() => {
     if (!pl.dead && !lit(c, pl.x, pl.y)) {
       const f = pl.facing < 0 ? -1 : 1;
       ctx.fillStyle = '#fff';
-      ctx.shadowColor = '#cfe8ff';
-      ctx.shadowBlur = 10;
+      Halo.draw(ctx, pl.x - 4 * f, pl.y - 6, 2.4, '#cfe8ff', 10);
+      Halo.draw(ctx, pl.x + 4 * f, pl.y - 6, 2.4, '#cfe8ff', 10);
       ctx.beginPath();
       ctx.arc(pl.x - 4 * f, pl.y - 6, 2.4, 0, TAU);
       ctx.arc(pl.x + 4 * f, pl.y - 6, 2.4, 0, TAU);
@@ -22757,14 +22944,7 @@ const Tempo = {
     Tempo.renderEq(ctx, room);
     ctx.save();
     if (pl && !pl.dead) {
-      ctx.strokeStyle = Tempo.COLOR;
-      ctx.shadowColor = Tempo.COLOR;
-      ctx.shadowBlur = 10;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.25 + 0.55 * Math.max(0, 1 - ph * 2);
-      ctx.beginPath();
-      ctx.arc(pl.x, pl.y, pl.r + 8 + (1 - ph) * 8, 0, TAU);
-      ctx.stroke();
+      Halo.ring(ctx, pl.x, pl.y, pl.r + 8 + (1 - ph) * 8, null, Tempo.COLOR, 2, 10, 0.25 + 0.55 * Math.max(0, 1 - ph * 2));
       for (const f of tp.flashes) {
         const k = f.t / 0.35;
         ctx.globalAlpha = 0.8 * (1 - k);
@@ -22783,14 +22963,7 @@ const Tempo = {
       if (pp) {
         const seg = pp.p < pp.smallEnd ? 0 : pp.p < pp.bigBeat ? 1 : b.cur ? 2 : 3;
         const col = ['#e8ecf7', '#ffb347', PAL.alert, '#7fff9a'][seg];
-        ctx.strokeStyle = col;
-        ctx.shadowColor = col;
-        ctx.shadowBlur = 12;
-        ctx.lineWidth = seg === 1 ? 4 : 2.5;
-        ctx.globalAlpha = 0.35 + 0.55 * Math.max(0, 1 - ph * 2);
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r + 14 + (1 - ph) * 6, 0, TAU);
-        ctx.stroke();
+        Halo.ring(ctx, b.x, b.y, b.r + 14 + (1 - ph) * 6, null, col, seg === 1 ? 4 : 2.5, 12, 0.35 + 0.55 * Math.max(0, 1 - ph * 2));
         if (seg === 1) {
           const k = (pp.p - pp.smallEnd) / (pp.bigBeat - pp.smallEnd);
           ctx.globalAlpha = 0.9;
@@ -22897,13 +23070,11 @@ const Tempo = {
       const rr = (i === 0 ? 7 : 6) + (on ? (1 - ph) * 4 : 0);
       ctx.globalAlpha = on ? 1 : 0.4;
       ctx.fillStyle = i === 0 ? Tempo.COLOR : '#e8ecf7';
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = on ? 14 : 0;
+      if (on) Halo.draw(ctx, x, y, rr, ctx.fillStyle, 14);
       ctx.beginPath();
       ctx.arc(x, y, rr, 0, TAU);
       ctx.fill();
     }
-    ctx.shadowBlur = 0;
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = '#fff';
     ctx.fillRect(cx - 1.5 * sp + (bib + ph) * sp - 1, y - 12, 2, 24);
@@ -23687,11 +23858,7 @@ const Room = {
     ctx.fillStyle = r.doorOpen ? '#0b0d14' : '#2b3350';
     ctx.fillRect(dx - 4, dy - TILE, TILE + 8, TILE * 2);
     if (r.doorOpen) {
-      ctx.strokeStyle = '#7fff9a';
-      ctx.shadowColor = '#7fff9a';
-      ctx.shadowBlur = 12 + 10 * Beat.pulse(); // la porte bat
-      ctx.lineWidth = 3;
-      ctx.strokeRect(dx - 2, dy - TILE + 2, TILE + 4, TILE * 2 - 4);
+      Halo.rect(ctx, dx - 2, dy - TILE + 2, TILE + 4, TILE * 2 - 4, '#7fff9a', 3, 12 + 10 * Beat.pulse()); // la porte bat
       ctx.fillStyle = '#7fff9a';
       ctx.font = `bold 24px ${FONT_PIXEL}`;
       ctx.textAlign = 'center';
@@ -23731,8 +23898,7 @@ const Room = {
       }
       ctx.globalAlpha = 0.45 * clamp((h.until - Time.now) / 1, 0.3, 1);
       ctx.fillStyle = h.color;
-      ctx.shadowColor = h.color;
-      ctx.shadowBlur = 12;
+      Halo.draw(ctx, h.x, h.y, h.r, h.color, 12);
       ctx.beginPath();
       ctx.arc(h.x, h.y, h.r, 0, TAU);
       ctx.fill();
@@ -23766,8 +23932,7 @@ const Room = {
         ctx.arc(t.x, t.y, 12, 0, TAU);
         ctx.fill();
         ctx.fillStyle = '#9ff';
-        ctx.shadowColor = '#9ff';
-        ctx.shadowBlur = 10;
+        Halo.draw(ctx, t.x, t.y, 5, '#9ff', 10);
         ctx.beginPath();
         ctx.arc(t.x, t.y, 5, 0, TAU);
         ctx.fill();
@@ -23778,8 +23943,7 @@ const Room = {
       ctx.save();
       ctx.globalAlpha = 0.6;
       ctx.fillStyle = '#c9a3ff';
-      ctx.shadowColor = '#c9a3ff';
-      ctx.shadowBlur = 14;
+      Halo.draw(ctx, d.x, d.y, d.r, '#c9a3ff', 14);
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.r, 0, TAU);
       ctx.fill();
@@ -23795,12 +23959,19 @@ const Room = {
       ctx.save();
       ctx.globalAlpha = 1 - k;
       ctx.strokeStyle = s.color;
-      ctx.shadowColor = s.color;
-      ctx.shadowBlur = 14;
       ctx.lineWidth = s.spark ? 3 * (1 - k) + 1 : s.slam ? 8 * (1 - k) + 1 : 7 * (1 - k) + 1; // il s'affine en s'effaçant
-      ctx.beginPath();
-      if (s.slam) ctx.arc(s.cx, s.cy, s.range * (0.5 + 0.5 * k), 0, TAU);
-      else ctx.arc(s.x, s.y, s.range * (0.7 + 0.3 * k), s.a - s.arc / 2, s.a + s.arc / 2);
+      const arc = () => {
+        ctx.beginPath();
+        if (s.slam) ctx.arc(s.cx, s.cy, s.range * (0.5 + 0.5 * k), 0, TAU);
+        else ctx.arc(s.x, s.y, s.range * (0.7 + 0.3 * k), s.a - s.arc / 2, s.a + s.arc / 2);
+      };
+      ctx.globalAlpha = (1 - k) * 0.28;
+      ctx.lineWidth += 14;
+      arc();
+      ctx.stroke();
+      ctx.globalAlpha = 1 - k;
+      ctx.lineWidth -= 14;
+      arc();
       ctx.stroke();
       ctx.restore();
     }
@@ -25521,7 +25692,16 @@ const UI = (() => {
         <label>Musique <input type="range" min="0" max="1" step="0.05" value="${v.music}" data-v="music"></label>
         ${Input.touch.active ? `<label>Tir automatique (tactile) <input type="checkbox" id="pause-autofire" ${Input.touch.autoFire ? 'checked' : ''}></label>` : ''}
         <label>Zoom caméra <select id="pause-zoom">${[1, 1.25, 1.5, 1.75, 2].map(z => `<option value="${z}" ${Math.abs(Camera.zoom - z) < 0.01 ? 'selected' : ''}>${z}×</option>`).join('')}</select></label>
+        <label>Rendu <select id="pause-perf">${[
+          ['auto', 'automatique'],
+          ['eco', 'économe'],
+          ['full', 'complet'],
+        ]
+          .map(([v, l]) => `<option value="${v}" ${Perf.mode === v ? 'selected' : ''}>${l}</option>`)
+          .join('')}</select></label>
+        <label>Compteur d'images par seconde <input type="checkbox" id="pause-fps" ${Perf.show ? 'checked' : ''}></label>
       </div>
+      <div class="perfline" id="pause-perfline">${esc(Perf.line())} <button class="btn small ghost" id="pause-perfcopy" title="Met la mesure dans le presse-papiers, à coller dans un message">Copier la mesure</button></div>
       <div class="row small"><button class="btn ghost" id="pause-fs">${Fullscreen.active ? 'Quitter le plein écran' : 'Plein écran'}</button><button class="btn ghost" id="pause-report" title="Met dans le presse-papiers un rapport à envoyer si quelque chose a cassé">Copier le rapport</button></div>
       <div class="row"><button class="btn primary" id="pause-resume">${STR.resume}</button><button class="btn ghost" id="pause-quit">${STR.quit}</button></div></div>`;
     s.querySelectorAll('input[type=range]').forEach(
@@ -25536,6 +25716,25 @@ const UI = (() => {
       Camera.setZoom(+e.target.value);
       Meta.profile.zoom = +e.target.value;
       Meta.save();
+    };
+    s.querySelector('#pause-perf').onchange = e => {
+      Meta.profile.perfMode = e.target.value;
+      Perf.setMode(e.target.value);
+      Meta.save();
+    };
+    s.querySelector('#pause-fps').onchange = e => {
+      Perf.show = e.target.checked;
+      Meta.profile.perfShow = e.target.checked;
+      Meta.save();
+    };
+    s.querySelector('#pause-perfcopy').onclick = async () => {
+      const t = Perf.line();
+      try {
+        await navigator.clipboard.writeText(t);
+        toast('Mesure copiée — colle-la dans un message à Martin');
+      } catch (e) {
+        window.prompt('Copie cette mesure :', t);
+      }
     };
     s.querySelector('#pause-report').onclick = () =>
       Rapport.copier().then(ok => toast(ok ? 'Rapport copié — colle-le dans un message à Martin' : 'Rapport affiché'));
@@ -26862,6 +27061,8 @@ const Meta = (() => {
     volume: { master: 0.8, sfx: 0.9, music: 0.6 },
     zoom: 0, // 0 = automatique (1 au clavier, 1,5 au tactile)
     lag: 0, // décalage son/image calibré dans l'atelier, en secondes
+    perfMode: 'auto', // chantier 10 : 'auto' (économe dès que le tactile ralentit), 'eco', 'full'
+    perfShow: false, // le compteur d'images par seconde en haut de l'écran
   });
   let normal = fresh();
   let test = null;
@@ -30235,11 +30436,15 @@ function render(ctx) {
   UI.renderMenuFx(ctx);
   UI.renderToasts(ctx);
   UI.renderFade(ctx);
+  Perf.render(ctx);
 }
 async function boot() {
   const canvas = document.getElementById('c');
   Engine.init(canvas);
+  Perf.hook(Engine.ctx);
   Meta.load();
+  Perf.setMode(Meta.profile.perfMode);
+  Perf.show = !!Meta.profile.perfShow || /[?&]perf(=1)?(&|$)/.test(location.search); // ?perf : le compteur sans passer par la pause
   Content.validate();
   /* Le son ne peut démarrer qu'après un geste de l'utilisateur (règle des navigateurs) : clic, toucher ou touche du clavier.
      On tente quand même un démarrage immédiat : Chrome l'autorise sur les sites où l'on a déjà joué du son (indice d'engagement). */

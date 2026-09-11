@@ -197,6 +197,7 @@ const Rapport = (() => {
       r
         ? `partie : ${r.biome ? r.biome.id : '?'} salle ${G_.room ? G_.room.index : '?'}, niveau ${r.level}, ${r.weapon || '?'} + ${r.skill || '?'}`
         : 'partie : aucune',
+      typeof Perf !== 'undefined' ? Perf.line() : '',
       '',
       'journal (' + lire().length + ') :',
     ];
@@ -312,7 +313,214 @@ const Halo = (() => {
     ctx.lineWidth = width;
     ctx.stroke();
   }
-  return { draw, ring, disc, cache };
+  /* un trait qui luit (laser, rail, bord de zone) : même recette que l'anneau. Le tiret en cours ne s'applique qu'au
+     trait net, la lueur reste continue */
+  function glow(ctx, color, width, blur, alpha, path) {
+    const dash = ctx.getLineDash();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha * 0.28;
+    ctx.lineWidth = width + blur;
+    ctx.setLineDash([]);
+    path();
+    ctx.stroke();
+    ctx.setLineDash(dash);
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
+    path();
+    ctx.stroke();
+  }
+  function line(ctx, ax, ay, bx, by, color, width, blur, alpha = 1) {
+    glow(ctx, color, width, blur, alpha, () => {
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+    });
+  }
+  function rect(ctx, x, y, w, h, color, width, blur, alpha = 1) {
+    glow(ctx, color, width, blur, alpha, () => {
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+    });
+  }
+  return { draw, ring, line, rect, disc, cache };
+})();
+
+/* ---- Perf : la mesure des images par seconde et le rendu économe (chantier 10) ----
+   Le jeu ne sait pas ce qu'il coûte sur un téléphone sans le mesurer sur place : ce module compte les images par
+   seconde (et le pire des dix dernières secondes), le temps passé à dessiner, et le nombre de flous (shadowBlur)
+   posés par image — chaque flou coûte une passe de plus par forme. Le rendu économe coupe ces flous à la source
+   (le réglage du contexte est intercepté), plafonne la densité de pixels à 1 et retire les flous d'arrière-plan
+   des écrans (body.eco). Il s'allume tout seul au tactile quand le jeu tient moins de 45 images par seconde
+   pendant 3 secondes, ou à la demande depuis la pause (profil : perfMode 'auto' | 'eco' | 'full'). */
+const Perf = (() => {
+  const SEUIL = 45; // images par seconde en dessous desquelles le rendu économe s'allume (au tactile, en 'auto')
+  const TENIR = 3; // secondes consécutives sous le seuil
+  const P = {
+    fps: 0, // images par seconde sur la dernière seconde
+    min: 0, // le pire des dix dernières secondes
+    renderMs: 0, // temps moyen passé dans render() par image (commandes ; la rastérisation vient après)
+    blurs: 0, // flous posés par la dernière image
+    eco: false, // rendu économe actif
+    why: '', // 'auto' (le jeu ralentissait) ou 'choix' (la pause)
+    mode: 'auto',
+    show: false, // compteur affiché en haut de l'écran
+    low: 0,
+    seuil: SEUIL,
+  };
+  const seconds = [];
+  let frames = 0,
+    t = 0,
+    renderAcc = 0,
+    blursFrame = 0,
+    hooked = null;
+  /* intercepte shadowBlur sur ce contexte : compté, et ramené à 0 en mode économe */
+  function hook(ctx) {
+    if (!ctx || hooked === ctx) return;
+    const proto = Object.getPrototypeOf(ctx);
+    const d = Object.getOwnPropertyDescriptor(proto, 'shadowBlur');
+    if (!d || !d.set) return;
+    hooked = ctx;
+    Object.defineProperty(ctx, 'shadowBlur', {
+      configurable: true,
+      get() {
+        return d.get.call(this);
+      },
+      set(v) {
+        if (v > 0) {
+          blursFrame++;
+          if (P.eco) v = 0;
+        }
+        d.set.call(this, v);
+      },
+    });
+  }
+  function setEco(on, why) {
+    if (P.eco === on) return;
+    P.eco = on;
+    P.why = on ? why : '';
+    P.low = 0;
+    try {
+      document.body.classList.toggle('eco', on);
+    } catch (e) {
+      /* pas de document */
+    }
+    if (typeof Engine !== 'undefined' && Engine.canvas) Engine.resize();
+    if (on && why === 'auto') {
+      try {
+        UI.toast('Le jeu ralentissait : rendu économe activé (réglable dans la pause).', 5);
+      } catch (e) {
+        /* l'interface n'est pas encore là */
+      }
+    }
+  }
+  function setMode(m) {
+    P.mode = m === 'eco' || m === 'full' ? m : 'auto';
+    if (P.mode === 'eco') setEco(true, 'choix');
+    else setEco(false);
+  }
+  const touch = () => typeof Input !== 'undefined' && Input.touch && Input.touch.active;
+  function frame(dt, renderMs) {
+    frames++;
+    t += dt;
+    renderAcc += renderMs;
+    P.blurs = blursFrame;
+    blursFrame = 0;
+    if (t < 1) return;
+    P.fps = Math.round(frames / t);
+    P.renderMs = renderAcc / frames;
+    seconds.push(P.fps);
+    while (seconds.length > 10) seconds.shift();
+    P.min = Math.min(...seconds);
+    frames = 0;
+    t = 0;
+    renderAcc = 0;
+    /* automatique : seulement en jeu, au tactile, hors pause — un onglet caché ou un menu ne comptent pas */
+    const enJeu = typeof G !== 'undefined' && G.state === 'run' && !G.paused && !document.hidden;
+    if (P.mode === 'auto' && !P.eco && enJeu && touch()) {
+      P.low = P.fps < P.seuil ? P.low + 1 : 0;
+      if (P.low >= TENIR) setEco(true, 'auto');
+    } else P.low = 0;
+  }
+  function reset() {
+    seconds.length = 0;
+    P.min = 0;
+    P.low = 0;
+  }
+  /* une ligne à coller dans un message : ce que le téléphone a mesuré */
+  function line() {
+    const G_ = typeof G !== 'undefined' ? G : null;
+    const dpr = Math.round((window.devicePixelRatio || 1) * 10) / 10;
+    const ou = G_ && G_.room ? `salle ${G_.room.index}` : 'hors partie';
+    return (
+      `WAY perf · ${P.fps} i/s · min ${P.min} sur 10 s · rendu ${P.renderMs.toFixed(1)} ms · ${P.blurs} flous · ` +
+      `${P.eco ? 'économe (' + P.why + ')' : 'complet'} · ${ou} · ${window.innerWidth}×${window.innerHeight} ×${dpr}` +
+      `${touch() ? ' tactile' : ''} · ${(navigator.userAgent.match(/\(([^)]*)\)/) || [0, ''])[1].slice(0, 60)}`
+    );
+  }
+  /* le compteur : en bas au centre, entre le stick et les boutons au tactile, sous le HUD au clavier ; en rouge quand
+     la dernière seconde est passée sous le seuil */
+  function render(ctx) {
+    if (!P.show) return;
+    const V = Engine.view;
+    const txt = `${P.fps} i/s · min ${P.min} · ${P.renderMs.toFixed(1)} ms · ${P.blurs} flous${P.eco ? ' · éco' : ''}`;
+    ctx.save();
+    ctx.font = `12px ${FONT_PIXEL}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const w = ctx.measureText(txt).width + 16,
+      x = W / 2,
+      y = H + V.oy - 12;
+    ctx.fillStyle = 'rgba(4,5,9,.7)';
+    ctx.fillRect(x - w / 2, y - 9, w, 18);
+    ctx.fillStyle = P.fps && P.fps < P.seuil ? '#ff6b6b' : '#7fff9a';
+    ctx.fillText(txt, x, y + 1);
+    ctx.restore();
+  }
+  return {
+    hook,
+    frame,
+    render,
+    setEco,
+    setMode,
+    reset,
+    line,
+    get fps() {
+      return P.fps;
+    },
+    get min() {
+      return P.min;
+    },
+    get renderMs() {
+      return P.renderMs;
+    },
+    get blurs() {
+      return P.blurs;
+    },
+    get eco() {
+      return P.eco;
+    },
+    get why() {
+      return P.why;
+    },
+    get mode() {
+      return P.mode;
+    },
+    get show() {
+      return P.show;
+    },
+    set show(v) {
+      P.show = !!v;
+    },
+    get seuil() {
+      return P.seuil;
+    },
+    set seuil(v) {
+      P.seuil = v;
+    },
+    get low() {
+      return P.low;
+    },
+  };
 })();
 
 const CHEST_OPEN_MS = 300;
@@ -606,7 +814,7 @@ const Engine = (() => {
      la fenêtre plus large ou plus haute montre du décor autour (vue logique étendue : view.w × view.h, décalage view.ox/oy). */
   const view = { w: W, h: H, ox: 0, oy: 0, scale: 1 };
   function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, Perf.eco ? 1 : 2); // économe : un pixel physique par pixel CSS
     const ww = window.innerWidth,
       wh = window.innerHeight;
     const s = Math.min(ww / W, wh / H);
@@ -659,7 +867,9 @@ const Engine = (() => {
     }
     if (steps === maxStepsPerFrame) acc = 0;
     stats.steps = steps;
+    const t0 = performance.now();
     if (!headless) renderFn(ctx, acc / FIXED_DT);
+    Perf.frame(frameDt, performance.now() - t0);
     if (steps > 0 || G.paused) Input.endFrame(); // ne pas perdre un appui entre deux pas (écrans 120/144 Hz)
   }
   function start(u, r) {
@@ -686,6 +896,7 @@ const Engine = (() => {
     init,
     start,
     stop,
+    resize,
     stats,
     view,
     get ctx() {

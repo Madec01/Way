@@ -38,6 +38,8 @@ const Meta = (() => {
     volume: { master: 0.8, sfx: 0.9, music: 0.6 },
     zoom: 0, // 0 = automatique (1 au clavier, 1,5 au tactile)
     lag: 0, // décalage son/image calibré dans l'atelier, en secondes
+    perfMode: 'auto', // chantier 10 : 'auto' (économe dès que le tactile ralentit), 'eco', 'full'
+    perfShow: false, // le compteur d'images par seconde en haut de l'écran
   });
   let normal = fresh();
   let test = null;

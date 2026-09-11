@@ -652,15 +652,9 @@ const Challenge = (() => {
       ctx.beginPath();
       ctx.arc(z.x, z.y, c.r, 0, TAU);
       ctx.fill();
-      ctx.strokeStyle = '#7fff9a';
-      ctx.lineWidth = 3;
-      ctx.shadowColor = '#7fff9a';
-      ctx.shadowBlur = 14;
       ctx.setLineDash([10, 8]);
       ctx.lineDashOffset = -Time.now * 40;
-      ctx.beginPath();
-      ctx.arc(z.x, z.y, c.r, 0, TAU);
-      ctx.stroke();
+      Halo.ring(ctx, z.x, z.y, c.r, null, '#7fff9a', 3, 14);
       ctx.setLineDash([]);
       ctx.lineWidth = 6;
       ctx.beginPath();
@@ -684,12 +678,7 @@ const Challenge = (() => {
       for (const s of c.sw) {
         ctx.fillStyle = s.on ? '#2a6a3a' : '#3a4260';
         ctx.fillRect(s.x - 20, s.y - 20, 40, 40);
-        ctx.strokeStyle = s.on ? '#7fff9a' : '#c9a3ff';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = ctx.strokeStyle;
-        ctx.shadowBlur = 12;
-        ctx.strokeRect(s.x - 20, s.y - 20, 40, 40);
-        ctx.shadowBlur = 0;
+        Halo.rect(ctx, s.x - 20, s.y - 20, 40, 40, s.on ? '#7fff9a' : '#c9a3ff', 2, 12);
         ctx.fillStyle = s.on ? '#7fff9a' : '#e8ecf7';
         ctx.font = `bold 20px ${FONT_PIXEL}`;
         ctx.textAlign = 'center';
@@ -889,8 +878,8 @@ const Challenge = (() => {
     if (!pl.dead && !lit(c, pl.x, pl.y)) {
       const f = pl.facing < 0 ? -1 : 1;
       ctx.fillStyle = '#fff';
-      ctx.shadowColor = '#cfe8ff';
-      ctx.shadowBlur = 10;
+      Halo.draw(ctx, pl.x - 4 * f, pl.y - 6, 2.4, '#cfe8ff', 10);
+      Halo.draw(ctx, pl.x + 4 * f, pl.y - 6, 2.4, '#cfe8ff', 10);
       ctx.beginPath();
       ctx.arc(pl.x - 4 * f, pl.y - 6, 2.4, 0, TAU);
       ctx.arc(pl.x + 4 * f, pl.y - 6, 2.4, 0, TAU);

@@ -266,14 +266,8 @@ class Trap {
     }
     const on = s.stage === 'on';
     ctx.globalAlpha = on ? 1 : 0.4 + 0.4 * (2 * Beat.pulse(4) - 1);
-    ctx.lineWidth = on ? 5 : 2;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = on ? 20 : 6;
     if (!on) ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.moveTo(s.ax, s.ay);
-    ctx.lineTo(s.bx, s.by);
-    ctx.stroke();
+    Halo.line(ctx, s.ax, s.ay, s.bx, s.by, this.color, on ? 5 : 2, on ? 20 : 6, ctx.globalAlpha);
     ctx.setLineDash([]);
     ctx.fillStyle = this.color;
     [
@@ -328,17 +322,10 @@ class Trap {
     ctx.arc(this.cx, this.cy, 12, 0, TAU);
     ctx.fill();
     ctx.globalAlpha = c.stage === 'idle' ? 0.25 : c.stage === 'warn' ? 0.4 + 0.4 * (2 * Beat.pulse(4) - 1) : 1;
-    ctx.strokeStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = arm ? 16 : 6;
-    ctx.lineWidth = arm ? 5 : 2;
     if (!arm) ctx.setLineDash([6, 6]);
     for (let i = 0; i < (this.p.arms || 1); i++) {
       const s = this.rotSeg(rt, i);
-      ctx.beginPath();
-      ctx.moveTo(s.ax, s.ay);
-      ctx.lineTo(s.bx, s.by);
-      ctx.stroke();
+      Halo.line(ctx, s.ax, s.ay, s.bx, s.by, this.color, arm ? 5 : 2, arm ? 16 : 6, ctx.globalAlpha);
     }
     ctx.restore();
   }
@@ -380,19 +367,21 @@ class Trap {
     const { c, par } = this.gridActive(rt);
     ctx.save();
     ctx.strokeStyle = this.color;
-    ctx.shadowColor = this.color;
     this.gridLines().forEach((s, i) => {
       const mine = i % 2 === par;
       const on = c.stage === 'on' && mine;
       const warn = c.stage === 'warn' && mine;
-      ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.12;
-      ctx.lineWidth = on ? 4 : 2;
-      ctx.shadowBlur = on ? 14 : 0;
+      const alpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.12;
       ctx.setLineDash(on ? [] : [4, 8]);
-      ctx.beginPath();
-      ctx.moveTo(s.ax, s.ay);
-      ctx.lineTo(s.bx, s.by);
-      ctx.stroke();
+      if (on) Halo.line(ctx, s.ax, s.ay, s.bx, s.by, this.color, 4, 14, 1);
+      else {
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(s.ax, s.ay);
+        ctx.lineTo(s.bx, s.by);
+        ctx.stroke();
+      }
     });
     ctx.restore();
   }
@@ -452,8 +441,7 @@ class Trap {
     ctx.fillStyle = '#3a3f55';
     ctx.fillRect(this.x + 6, this.y + 6, this.w - 12, this.h - 12);
     ctx.fillStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = 8 + warm * 18;
+    Halo.draw(ctx, this.cx, this.cy, 8 + warm * 6, this.color, 8 + warm * 18);
     ctx.beginPath();
     ctx.arc(this.cx, this.cy, 8 + warm * 6, 0, TAU);
     ctx.fill();
@@ -652,8 +640,7 @@ class Trap {
     ctx.translate(s.x, s.y);
     ctx.rotate(rt * 14);
     ctx.fillStyle = '#cfd6e6';
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = 10;
+    Halo.draw(ctx, 0, 0, R, this.color, 10);
     ctx.beginPath();
     for (let i = 0; i < 16; i++) {
       const a = (i * TAU) / 16,
@@ -723,8 +710,7 @@ class Trap {
     ctx.fillStyle = warm ? `rgb(255,${Math.round(200 - warm * 120)},80)` : '#8890aa';
     ctx.fillRect(0, -5, 24, 10);
     ctx.fillStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = warm * 16;
+    if (warm > 0.05) Halo.draw(ctx, 0, 0, 6 + warm * 3, this.color, warm * 16);
     ctx.beginPath();
     ctx.arc(0, 0, 6 + warm * 3, 0, TAU);
     ctx.fill();
@@ -818,11 +804,10 @@ class Trap {
     const arc = p.arc != null ? p.arc : TAU;
     const full = Math.abs(arc - TAU) < 1e-6;
     ctx.fillStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.shadowBlur = 6 + warm * 16;
     for (let i = 0; i < n; i++) {
       const k = full ? i / n : n > 1 ? i / (n - 1) - 0.5 : 0;
       const a = arc * k;
+      Halo.draw(ctx, Math.cos(a) * 13, Math.sin(a) * 13, 2 + warm * 2.5, this.color, 6 + warm * 16);
       ctx.beginPath();
       ctx.arc(Math.cos(a) * 13, Math.sin(a) * 13, 2 + warm * 2.5, 0, TAU);
       ctx.fill();
@@ -863,16 +848,18 @@ class Trap {
     ctx.beginPath();
     ctx.arc(s.ax, s.ay, 11, 0, TAU);
     ctx.fill();
-    ctx.strokeStyle = this.color;
-    ctx.shadowColor = this.color;
-    ctx.globalAlpha = on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.14;
-    ctx.lineWidth = on ? (this.p.thickness || 0.4) * TILE * 0.55 : 2;
-    ctx.shadowBlur = on ? 18 : 4;
     if (!on) ctx.setLineDash([5, 9]);
-    ctx.beginPath();
-    ctx.moveTo(s.ax, s.ay);
-    ctx.lineTo(s.bx, s.by);
-    ctx.stroke();
+    Halo.line(
+      ctx,
+      s.ax,
+      s.ay,
+      s.bx,
+      s.by,
+      this.color,
+      on ? (this.p.thickness || 0.4) * TILE * 0.55 : 2,
+      on ? 18 : 4,
+      on ? 1 : warn ? 0.35 + 0.35 * (2 * Beat.pulse(4) - 1) : 0.14
+    );
     if (on) {
       ctx.setLineDash([]);
       ctx.fillStyle = this.color;

@@ -62,11 +62,15 @@ function render(ctx) {
   UI.renderMenuFx(ctx);
   UI.renderToasts(ctx);
   UI.renderFade(ctx);
+  Perf.render(ctx);
 }
 async function boot() {
   const canvas = document.getElementById('c');
   Engine.init(canvas);
+  Perf.hook(Engine.ctx);
   Meta.load();
+  Perf.setMode(Meta.profile.perfMode);
+  Perf.show = !!Meta.profile.perfShow || /[?&]perf(=1)?(&|$)/.test(location.search); // ?perf : le compteur sans passer par la pause
   Content.validate();
   /* Le son ne peut démarrer qu'après un geste de l'utilisateur (règle des navigateurs) : clic, toucher ou touche du clavier.
      On tente quand même un démarrage immédiat : Chrome l'autorise sur les sites où l'on a déjà joué du son (indice d'engagement). */
