@@ -35,6 +35,11 @@ const ROOM_TYPES = {
   COMBAT_TRAP_MODULAR: { label: 'Combat + Pièges + Modulaire', phase: 2 },
   CHEST_FINAL: { label: 'Coffre final', phase: 2 },
   BOSS_REVENGE: { label: 'Revanche', phase: 2 },
+  /* chantier 9 : une salle unique par biome (les coffres ne sont plus des salles : ils sont offerts en fin de 3 et 7) */
+  SOUS_SOL: { label: 'Le sous-sol', phase: 1 },
+  TRAIN: { label: 'Le train', phase: 1 },
+  PONT: { label: 'Le pont', phase: 2 },
+  BAZAR: { label: 'Le bazar', phase: 2 },
 };
 
 /* ---------- Utilitaires ---------- */

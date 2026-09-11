@@ -39,6 +39,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `arme` | l'arme part de la main, à 45 % du corps, pour chaque type de corps |
 | `animaux` | chantier F-7 : Uno accroupi puis sa morsure sur le temps, le repos assis, l'appel depuis le bord, la ruée et ses fantômes (dorés en rythme), Choupi allongée et la collecte en deux temps, Tanuki qui tourne, le trait d'ORI |
 | `bat` | chantier F-5 : Beat.pulse, la passe de lumière mesurée au pixel, la respiration du joueur et des ennemis, l'anneau de mesure, les télégraphies et annonces sur le tempo, la partition sans or, la porte sur le temps fort, les drops déphasés, les lumières de salle |
+| `biomes` | chantier 9 : quatre ordres de salles, 4 et 8 en combat, une salle unique par biome (sous-sol, pont, train, bazar), deux coffres offerts, salles modulaires distinctes, sous-sol dans le noir, défi par type, wagons en boucle, coffre devant la porte et caché au bazar, boss de salle 9 à ses propres phases |
 | `butin` | chantier F-4 : la mort en 220 ms (blanc puis écrasé, mesuré au pixel), couronne, onde à plat, tache plafonnée et purgée, drops en arc, étincelles à la taille de la série, cœur, relique, coffre qui s'ouvre en 300 ms |
 | `chats` | Choupi, Tanuki et ORI : planches, tailles, ligne de sol, clips, équipes |
 | `choix` | chantier 6 : tempo ±50 ms, série de 4, fausse note, bot à < 15 % ; 3 compétences et 2 paires en prépa ; 61 greffes sans dominance (`dev/check-greffes.js`), paliers à chance ; calibrations à un palier, migration v3 |

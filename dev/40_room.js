@@ -594,6 +594,35 @@ const Room = {
        on arrivait au mini-boss avec 40 PV et aucun moyen d'en regagner — c'est là que mouraient 13 parties sur 16. */
     if (BALANCE.heartOnClear && r.index > 0)
       Pickups.spawn(ROOM_X + 22 * TILE + TILE / 2, ROOM_Y + 6 * TILE + TILE / 2, 'heart', BALANCE.heartOnClear);
+    if (r.def.chest && !r.chest) Room.offerChest();
+  },
+  /* chantier 9 : le coffre n'est plus une salle, il est offert en fin de salle 3 et 7 (devant la porte, à gauche du cœur) ;
+     au bazar il est caché derrière un étal, loin de la porte — on le cherche */
+  offerChest() {
+    const r = G.room;
+    let x = tileX(19),
+      y = tileY(6);
+    if (r.def.chestHidden) {
+      for (let k = 0; k < 60; k++) {
+        const tx = RNG.int(2, 15),
+          ty = RNG.int(1, 11);
+        const px = tileX(tx),
+          py = tileY(ty);
+        if (!pointBlocked(px, py, 26)) {
+          x = px;
+          y = py;
+          break;
+        }
+      }
+    }
+    r.chest = { x, y, r: 22, opened: false, offered: true };
+    r.blasts.push({ x, y, r: 40, t: 0, life: 0.4, color: PAL.gold });
+    UI.notify({
+      text: r.def.chestHidden ? 'Un coffre, quelque part entre les étals' : 'Un coffre vous attend',
+      color: PAL.gold,
+      level: 2,
+      key: 'chest',
+    });
   },
   openDoor() {
     const r = G.room;

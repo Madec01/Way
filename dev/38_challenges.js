@@ -29,7 +29,7 @@ const CHALLENGE_DEFS = {
   lights: {
     name: 'Lumières coupées',
     desc: "Noir complet : des projecteurs balaient la salle en musique, à toi de suivre la lumière. Les ennemis se trahissent par leurs yeux. Tuer dans la lumière : +50 % d'XP. XP +25 %.",
-    rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'],
+    rooms: ['COMBAT_CHALLENGE', 'COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR', 'SOUS_SOL'],
     color: '#9fd8ff',
   },
   timer: {
@@ -39,7 +39,10 @@ const CHALLENGE_DEFS = {
     color: PAL.danger,
   },
 };
-const CHALLENGE_ROOMS = [2, 6]; // salle 2 : toujours un défi ; 6 : 60 % de chance (la salle 7 est la salle du tempo)
+/* chantier 9 : le défi suit le TYPE de la salle, plus son numéro — chaque biome a son ordre. « Salle aléatoire » : toujours
+   un défi ; modulaire (avec ou sans pièges) : 60 % ; le sous-sol du biome 1 : toujours « lumières coupées ». */
+const CHALLENGE_ALWAYS = ['COMBAT_CHALLENGE', 'SOUS_SOL'];
+const CHALLENGE_MAYBE = ['COMBAT_MODULAR', 'COMBAT_TRAP_MODULAR'];
 const CHALLENGE_CHANCE = 0.6;
 
 const Challenge = (() => {
@@ -55,9 +58,10 @@ const Challenge = (() => {
 
   /* choix du défi pour une salle (null si aucun) */
   function pick(def, rng, used) {
-    if (!CHALLENGE_ROOMS.includes(def.index)) return null;
+    if (!CHALLENGE_ALWAYS.includes(def.type) && !CHALLENGE_MAYBE.includes(def.type)) return null;
     if (G.debug.forceChallenge) return G.debug.forceChallenge === 'none' ? null : G.debug.forceChallenge;
-    if (def.type !== 'COMBAT_CHALLENGE' && !rng.chance(CHALLENGE_CHANCE)) return null;
+    if (def.type === 'SOUS_SOL') return 'lights';
+    if (CHALLENGE_MAYBE.includes(def.type) && !rng.chance(CHALLENGE_CHANCE)) return null;
     let ids = Object.keys(CHALLENGE_DEFS).filter(id => CHALLENGE_DEFS[id].rooms.includes(def.type) && !used.includes(id));
     if (!ids.length && def.type === 'COMBAT_CHALLENGE')
       ids = Object.keys(CHALLENGE_DEFS).filter(id => CHALLENGE_DEFS[id].rooms.includes(def.type));

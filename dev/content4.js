@@ -469,6 +469,60 @@ CONTENT.bosses.push({
     name: 'Étalon 27 / rév. B',
     phaseText: 'DONNÉES CHARGÉES',
     mimic: true,
+    /* chantier 9 : ses propres phases — les mirages d'abord, la tempête et la spirale ensuite */
+    phases: [
+      {
+        hpBelow: 1,
+        patterns: [
+          {
+            kind: 'mirage',
+            telegraph: 0.7,
+            duration: 1.4,
+            cooldown: 5.5,
+            count: 4,
+            spread: 240,
+            hold: 0.85,
+            bullets: 3,
+            arc: 0.5,
+            projSpeed: 340,
+            projDamage: 16,
+            projSize: 7,
+          },
+          { kind: 'ring', telegraph: 0.6, duration: 0.3, cooldown: 3.0, count: 14, projSpeed: 300, projDamage: 16, projSize: 8 },
+          { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 5.0, radius: 150, damage: 26, knockback: 3.0 },
+        ],
+      },
+      {
+        hpBelow: 0.55,
+        patterns: [
+          {
+            kind: 'sandstorm',
+            telegraph: 1.2,
+            duration: 4,
+            cooldown: 6.0,
+            speed: 480,
+            thickness: 50,
+            gap: 130,
+            damage: 26,
+            label: 'TEMPÊTE',
+          },
+          {
+            kind: 'spiral',
+            telegraph: 0.6,
+            duration: 2.6,
+            cooldown: 4.5,
+            arms: 3,
+            rate: 13,
+            angularSpeed: 2.3,
+            projSpeed: 240,
+            projDamage: 15,
+            projSize: 7,
+          },
+          { kind: 'charge', telegraph: 0.8, duration: 0.8, cooldown: 4.5, speed: 700, damage: 28, stopOnWall: true, stunTime: 1.2 },
+          { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 7, enemy: 'enemy_cobras', count: 1 },
+        ],
+      },
+    ],
     extraPhases: [
       {
         hpBelow: 0.3,
@@ -633,9 +687,9 @@ CONTENT.rooms.push(
      (la vue ne passe pas, tout le reste si). Le combat ne s'interrompt jamais, mais chaque déplacement demande
      un détour — ou un dash, qui franchit les murets. */
   {
-    id: 'room_b4_3',
+    id: 'room_b4_4',
     biome: 'biome_4',
-    index: 3,
+    index: 4,
     type: 'COMBAT_TRAP',
     refTime: 108,
     terrain: [
@@ -705,28 +759,6 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b4_4',
-    biome: 'biome_4',
-    index: 4,
-    type: 'CHEST',
-    refTime: 20,
-    obstacles: [
-      { x: 8, y: 4, w: 1, h: 1, kind: 'jar' },
-      { x: 8, y: 8, w: 1, h: 1, kind: 'jar' },
-      { x: 15, y: 4, w: 1, h: 1, kind: 'brazier' },
-      { x: 15, y: 8, w: 1, h: 1, kind: 'brazier' },
-    ],
-    deco: [
-      { x: 3, y: 2, kind: 'chalice' },
-      { x: 20, y: 10, kind: 'gems' },
-      { x: 12, y: 10, kind: 'carpet' },
-    ],
-    waves: [],
-    traps: [],
-    fragments: [],
-    modular: [],
-  },
-  {
     id: 'room_b4_5',
     biome: 'biome_4',
     index: 5,
@@ -752,10 +784,11 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b4_6',
+    id: 'room_b4_3',
     biome: 'biome_4',
-    index: 6,
+    index: 3,
     type: 'COMBAT_MODULAR',
+    chest: true, // coffre offert en fin de salle (chantier 9)
     refTime: 100,
     obstacles: [{ x: 11, y: 5, w: 2, h: 3, kind: 'basin' }],
     deco: [],
@@ -796,29 +829,10 @@ CONTENT.rooms.push(
     ],
     fragments: [],
     modular: [
-      { kind: 'slide_wall', x: 3, y: 1, w: 1, h: 5, dx: 0, dy: 6, period: 6.5, phase: 0 },
-      { kind: 'slide_wall', x: 20, y: 7, w: 1, h: 5, dx: 0, dy: -6, period: 6.5, phase: 3.2 },
-      { kind: 'rotor', cx: 12, cy: 6.5, arms: 4, length: 4, angularSpeed: 0.8 },
-      {
-        kind: 'floor_cycle',
-        period: 7.5,
-        telegraph: 1.5,
-        configs: [
-          [
-            { x: 7, y: 3, w: 1, h: 1 },
-            { x: 16, y: 3, w: 1, h: 1 },
-            { x: 7, y: 9, w: 1, h: 1 },
-            { x: 16, y: 9, w: 1, h: 1 },
-            { x: 11, y: 1, w: 2, h: 1 },
-          ],
-          [
-            { x: 5, y: 6, w: 2, h: 1 },
-            { x: 17, y: 6, w: 2, h: 1 },
-            { x: 9, y: 2, w: 1, h: 2 },
-            { x: 14, y: 9, w: 1, h: 2 },
-          ],
-        ],
-      },
+      /* le Sérail : deux tentures qui coulissent en travers et un grand rotor à trois pales au centre */
+      { kind: 'slide_wall', x: 3, y: 2, w: 4, h: 1, dx: 14, dy: 0, period: 9, phase: 0 },
+      { kind: 'slide_wall', x: 17, y: 10, w: 4, h: 1, dx: -14, dy: 0, period: 9, phase: 4.5 },
+      { kind: 'rotor', cx: 12, cy: 6.5, arms: 3, length: 4, angularSpeed: 0.5 },
     ],
   },
   {
@@ -878,28 +892,6 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b4_8',
-    biome: 'biome_4',
-    index: 8,
-    type: 'CHEST_FINAL',
-    refTime: 20,
-    obstacles: [
-      { x: 8, y: 4, w: 1, h: 1, kind: 'basket' },
-      { x: 8, y: 8, w: 1, h: 1, kind: 'basket' },
-      { x: 15, y: 4, w: 1, h: 1, kind: 'vase' },
-      { x: 15, y: 8, w: 1, h: 1, kind: 'vase' },
-    ],
-    deco: [
-      { x: 3, y: 10, kind: 'chalice' },
-      { x: 20, y: 2, kind: 'lamp' },
-      { x: 12, y: 10, kind: 'carpet' },
-    ],
-    waves: [],
-    traps: [],
-    fragments: [],
-    modular: [],
-  },
-  {
     id: 'room_b4_9',
     biome: 'biome_4',
     index: 9,
@@ -925,5 +917,144 @@ CONTENT.rooms.push(
     ],
     fragments: [],
     modular: [],
+  },
+  // ---------- SALLE 6 : LE BAZAR (unique au Sérail) — un damier d'étals, et le coffre caché derrière l'un d'eux ----------
+  {
+    id: 'room_b4_6',
+    biome: 'biome_4',
+    index: 6,
+    type: 'BAZAR',
+    chest: true, // coffre offert en fin de salle (chantier 9)
+    chestHidden: true, // caché entre les étals
+    refTime: 90,
+    obstacles: [
+      { x: 4, y: 2, w: 1, h: 1 },
+      { x: 7, y: 2, w: 1, h: 1 },
+      { x: 10, y: 2, w: 2, h: 1 },
+      { x: 13, y: 2, w: 1, h: 1 },
+      { x: 16, y: 2, w: 1, h: 1 },
+      { x: 19, y: 2, w: 1, h: 1 },
+      { x: 4, y: 4, w: 1, h: 1 },
+      { x: 7, y: 4, w: 1, h: 1 },
+      { x: 13, y: 4, w: 1, h: 1 },
+      { x: 16, y: 4, w: 2, h: 1 },
+      { x: 19, y: 4, w: 1, h: 1 },
+      { x: 4, y: 8, w: 1, h: 1 },
+      { x: 7, y: 8, w: 2, h: 1 },
+      { x: 10, y: 8, w: 1, h: 1 },
+      { x: 13, y: 8, w: 1, h: 1 },
+      { x: 16, y: 8, w: 1, h: 1 },
+      { x: 19, y: 8, w: 1, h: 1 },
+      { x: 4, y: 10, w: 1, h: 1 },
+      { x: 7, y: 10, w: 1, h: 1 },
+      { x: 10, y: 10, w: 1, h: 1 },
+      { x: 13, y: 10, w: 2, h: 1 },
+      { x: 16, y: 10, w: 1, h: 1 },
+      { x: 19, y: 10, w: 1, h: 1 },
+    ],
+    waves: [
+      {
+        at: 'start',
+        spawns: [
+          { enemy: 'enemy_cobras', count: 2, x: 20, y: 6 },
+          { enemy: 'enemy_derviche', count: 2, x: 21, y: 3 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_charmeur', count: 1, x: 21, y: 9 },
+          { enemy: 'enemy_derviche', count: 3, x: -1, y: -1 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_djinn', count: 2, x: -1, y: -1 },
+          { enemy: 'enemy_archer', count: 2, x: 21, y: 3 },
+          { enemy: 'enemy_cobras', count: 1, x: 2, y: 9 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_jarre', count: 3, x: -1, y: -1 },
+          { enemy: 'enemy_derviche', count: 3, x: 21, y: 9 },
+          { enemy: 'enemy_charmeur', count: 1, x: 21, y: 3 },
+        ],
+      },
+    ],
+    traps: [],
+    fragments: [],
+    modular: [],
+  },
+  // ---------- SALLE 8 : COMBAT + PIÈGES + MODULAIRE — la zone sûre du Site et un rotor ----------
+  {
+    id: 'room_b4_8',
+    biome: 'biome_4',
+    index: 8,
+    type: 'COMBAT_TRAP_MODULAR',
+    refTime: 95,
+    obstacles: [
+      { x: 2, y: 2, w: 1, h: 1 },
+      { x: 21, y: 2, w: 1, h: 1 },
+      { x: 2, y: 10, w: 1, h: 1 },
+      { x: 21, y: 10, w: 1, h: 1 },
+    ],
+    waves: [
+      {
+        at: 'start',
+        spawns: [
+          { enemy: 'enemy_colosse', count: 1, x: 21, y: 6 },
+          { enemy: 'enemy_archer', count: 2, x: 20, y: 3 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_jarre', count: 3, x: -1, y: -1 },
+          { enemy: 'enemy_derviche', count: 3, x: 20, y: 9 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_charmeur', count: 1, x: 21, y: 6 },
+          { enemy: 'enemy_djinn', count: 2, x: -1, y: -1 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_archer', count: 2, x: 3, y: 2 },
+          { enemy: 'enemy_derviche', count: 4, x: -1, y: -1 },
+          { enemy: 'enemy_cobras', count: 1, x: 20, y: 9 },
+        ],
+      },
+    ],
+    traps: [
+      { trap: 'trap_meurtriere', x: 7, y: 0, phase: 0 },
+      { trap: 'trap_meurtriere', x: 16, y: 12, phase: 1.2 },
+      { trap: 'trap_pieux', x: 1, y: 1, w: 3, h: 3, phase: 0 },
+      { trap: 'trap_pieux', x: 20, y: 9, w: 3, h: 3, phase: 1 },
+    ],
+    fragments: [],
+    modular: [
+      {
+        kind: 'safe_zone',
+        path: [
+          { x: 6, y: 6 },
+          { x: 18, y: 6 },
+          { x: 12, y: 2 },
+          { x: 12, y: 10 },
+        ],
+        radius: 3,
+        period: 8,
+        telegraph: 1.5,
+        speed: 120,
+        damage: 15,
+      },
+      { kind: 'rotor', cx: 12, cy: 6.5, arms: 2, length: 3, angularSpeed: 0.9 },
+    ],
   }
 );

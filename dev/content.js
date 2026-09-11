@@ -1430,6 +1430,59 @@ const CONTENT = {
         name: 'Étalon 07 / rév. B',
         phaseText: 'DONNÉES CHARGÉES',
         mimic: true,
+        /* chantier 9 : la revanche ne rejoue pas la salle 5 — le Portier reconditionné balaie au laser, sème des charges
+           et ne charge qu'en seconde phase */
+        phases: [
+          {
+            hpBelow: 1.0,
+            patterns: [
+              { kind: 'laser_sweep', telegraph: 1.0, duration: 2.2, cooldown: 6.0, angularSpeed: 1.4, length: 700, damage: 16 },
+              {
+                kind: 'mines',
+                telegraph: 0.9,
+                duration: 0.5,
+                cooldown: 5.0,
+                count: 3,
+                spread: 140,
+                radius: 66,
+                fuse: 1.5,
+                damage: 22,
+                color: '#9fd8ff',
+                label: 'CHARGES',
+              },
+              { kind: 'ring', telegraph: 0.7, duration: 0.3, cooldown: 3.2, count: 14, projSpeed: 280, projDamage: 16, projSize: 8 },
+            ],
+          },
+          {
+            hpBelow: 0.55,
+            patterns: [
+              { kind: 'charge', telegraph: 0.7, duration: 0.8, cooldown: 3.6, speed: 720, damage: 30, stopOnWall: true, stunTime: 1.3 },
+              {
+                kind: 'quake',
+                telegraph: 0.9,
+                duration: 2.0,
+                cooldown: 5.0,
+                speed: 660,
+                damage: 24,
+                range: 900,
+                color: '#9fd8ff',
+                label: 'ONDE DE CHOC',
+              },
+              {
+                kind: 'fan',
+                telegraph: 0.6,
+                duration: 0.5,
+                cooldown: 2.0,
+                count: 9,
+                spread: 1.4,
+                projSpeed: 300,
+                projDamage: 18,
+                projSize: 8,
+              },
+              { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 7.0, enemy: 'enemy_meche', count: 2 },
+            ],
+          },
+        ],
         extraPhases: [
           {
             hpBelow: 0.3,
@@ -1848,6 +1901,7 @@ const CONTENT = {
       biome: 'biome_1',
       index: 3,
       type: 'COMBAT_TRAP',
+      chest: true, // coffre offert en fin de salle (chantier 9)
       refTime: 75,
       obstacles: [
         { x: 4, y: 2, w: 2, h: 1 },
@@ -1897,25 +1951,6 @@ const CONTENT = {
       modular: [],
     },
 
-    // ---------- SALLE 4 : COFFRE (checkpoint) ----------
-    {
-      id: 'room_b1_4',
-      biome: 'biome_1',
-      index: 4,
-      type: 'CHEST',
-      refTime: 20,
-      obstacles: [
-        { x: 8, y: 4, w: 1, h: 1 },
-        { x: 8, y: 8, w: 1, h: 1 },
-        { x: 15, y: 4, w: 1, h: 1 },
-        { x: 15, y: 8, w: 1, h: 1 },
-      ],
-      waves: [],
-      traps: [],
-      fragments: [],
-      modular: [],
-    },
-
     // ---------- SALLE 5 : MINI-BOSS ----------
     {
       id: 'room_b1_5',
@@ -1935,7 +1970,6 @@ const CONTENT = {
       modular: [],
     },
 
-    // ---------- SALLES 6-9 : squelettes (phase 2) ----------
     {
       id: 'room_b1_6',
       biome: 'biome_1',
@@ -2006,6 +2040,7 @@ const CONTENT = {
       biome: 'biome_1',
       index: 7,
       type: 'COMBAT_TEMPO',
+      chest: true, // coffre offert en fin de salle (chantier 9)
       refTime: 95,
       obstacles: [
         { x: 5, y: 3, w: 1, h: 1 },
@@ -2056,23 +2091,6 @@ const CONTENT = {
       modular: [],
     },
     {
-      id: 'room_b1_8',
-      biome: 'biome_1',
-      index: 8,
-      type: 'CHEST_FINAL',
-      refTime: 20,
-      obstacles: [
-        { x: 8, y: 4, w: 1, h: 1 },
-        { x: 8, y: 8, w: 1, h: 1 },
-        { x: 15, y: 4, w: 1, h: 1 },
-        { x: 15, y: 8, w: 1, h: 1 },
-      ],
-      waves: [],
-      traps: [],
-      fragments: [],
-      modular: [],
-    },
-    {
       id: 'room_b1_9',
       biome: 'biome_1',
       index: 9,
@@ -2091,6 +2109,125 @@ const CONTENT = {
       ],
       fragments: [],
       modular: [],
+    },
+    // ---------- SALLE 4 : LE SOUS-SOL (unique au biome 1) — piliers et conduites, lumières coupées ----------
+    {
+      id: 'room_b1_4',
+      biome: 'biome_1',
+      index: 4,
+      type: 'SOUS_SOL',
+      refTime: 80,
+      obstacles: [
+        { x: 4, y: 1, w: 1, h: 2 },
+        { x: 8, y: 1, w: 1, h: 2 },
+        { x: 12, y: 1, w: 1, h: 2 },
+        { x: 16, y: 1, w: 1, h: 2 },
+        { x: 20, y: 1, w: 1, h: 2 },
+        { x: 4, y: 10, w: 1, h: 2 },
+        { x: 8, y: 10, w: 1, h: 2 },
+        { x: 12, y: 10, w: 1, h: 2 },
+        { x: 16, y: 10, w: 1, h: 2 },
+        { x: 20, y: 10, w: 1, h: 2 },
+        { x: 7, y: 5, w: 2, h: 3 },
+        { x: 15, y: 5, w: 2, h: 3 },
+      ],
+      waves: [
+        {
+          at: 'start',
+          spawns: [
+            { enemy: 'enemy_rodeur', count: 2, x: 20, y: 6 },
+            { enemy: 'enemy_eclipse', count: 1, x: 21, y: 3 },
+          ],
+        },
+        {
+          at: 'clear',
+          spawns: [
+            { enemy: 'enemy_nuee', count: 2, x: -1, y: -1 },
+            { enemy: 'enemy_rodeur', count: 3, x: 21, y: 9 },
+          ],
+        },
+        {
+          at: 'clear',
+          spawns: [
+            { enemy: 'enemy_eclipse', count: 2, x: -1, y: -1 },
+            { enemy: 'enemy_sentinelle', count: 2, x: 21, y: 3 },
+            { enemy: 'enemy_meche', count: 2, x: 2, y: 10 },
+          ],
+        },
+      ],
+      traps: [],
+      fragments: [],
+      modular: [],
+    },
+    // ---------- SALLE 8 : COMBAT + PIÈGES + MODULAIRE ----------
+    {
+      id: 'room_b1_8',
+      biome: 'biome_1',
+      index: 8,
+      type: 'COMBAT_TRAP_MODULAR',
+      refTime: 90,
+      obstacles: [
+        { x: 2, y: 2, w: 1, h: 1 },
+        { x: 21, y: 2, w: 1, h: 1 },
+        { x: 2, y: 10, w: 1, h: 1 },
+        { x: 21, y: 10, w: 1, h: 1 },
+      ],
+      waves: [
+        {
+          at: 'start',
+          spawns: [
+            { enemy: 'enemy_bloc', count: 1, x: 21, y: 6 },
+            { enemy: 'enemy_sentinelle', count: 2, x: 21, y: 3 },
+          ],
+        },
+        {
+          at: 'clear',
+          spawns: [
+            { enemy: 'enemy_meche', count: 3, x: -1, y: -1 },
+            { enemy: 'enemy_rodeur', count: 3, x: 21, y: 9 },
+          ],
+        },
+        {
+          at: 'clear',
+          spawns: [
+            { enemy: 'enemy_incubateur', count: 1, x: 21, y: 6 },
+            { enemy: 'enemy_eclipse', count: 2, x: -1, y: -1 },
+          ],
+        },
+        {
+          at: 'clear',
+          spawns: [
+            { enemy: 'enemy_sentinelle', count: 2, x: 3, y: 3 },
+            { enemy: 'enemy_rodeur', count: 4, x: -1, y: -1 },
+            { enemy: 'enemy_nuee', count: 1, x: 21, y: 9 },
+          ],
+        },
+      ],
+      traps: [
+        { trap: 'trap_tourelle', x: 6, y: 0, phase: 0 },
+        { trap: 'trap_tourelle', x: 17, y: 12, phase: 1.5 },
+        { trap: 'trap_dalles', x: 9, y: 1, w: 3, h: 2, phase: 0 },
+        { trap: 'trap_dalles', x: 12, y: 10, w: 3, h: 2, phase: 1 },
+      ],
+      fragments: [],
+      modular: [
+        { kind: 'rotor', cx: 12, cy: 6.5, arms: 3, length: 3, angularSpeed: 0.7 },
+        {
+          kind: 'floor_cycle',
+          period: 9,
+          telegraph: 1.5,
+          configs: [
+            [
+              { x: 5, y: 4, w: 2, h: 1 },
+              { x: 17, y: 8, w: 2, h: 1 },
+            ],
+            [
+              { x: 5, y: 8, w: 2, h: 1 },
+              { x: 17, y: 4, w: 2, h: 1 },
+            ],
+          ],
+        },
+      ],
     },
   ],
 };

@@ -270,6 +270,61 @@ CONTENT.bosses.push({
     name: 'Étalon 12 / rév. B',
     phaseText: 'DONNÉES CHARGÉES',
     mimic: true,
+    /* chantier 9 : ses propres phases — ronces et spores d'abord, le laser et la charge ensuite */
+    phases: [
+      {
+        hpBelow: 1,
+        patterns: [
+          { kind: 'roots', telegraph: 0.8, duration: 0.6, cooldown: 4.5, count: 4, radius: 66, dps: 12, color: '#7ed957', label: 'RONCES' },
+          {
+            kind: 'spiral',
+            telegraph: 0.7,
+            duration: 2.4,
+            cooldown: 4.5,
+            arms: 2,
+            rate: 12,
+            angularSpeed: -2.2,
+            projSpeed: 240,
+            projDamage: 14,
+            projSize: 7,
+            color: '#b7ff7a',
+          },
+          {
+            kind: 'mines',
+            telegraph: 0.9,
+            duration: 0.5,
+            cooldown: 5.5,
+            count: 4,
+            spread: 160,
+            radius: 64,
+            fuse: 1.6,
+            damage: 22,
+            color: '#b7ff7a',
+            label: 'SPORES',
+          },
+        ],
+      },
+      {
+        hpBelow: 0.55,
+        patterns: [
+          { kind: 'laser_sweep', telegraph: 1.0, duration: 2.4, cooldown: 6.5, angularSpeed: 1.5, length: 700, damage: 16 },
+          {
+            kind: 'fan',
+            telegraph: 0.5,
+            duration: 0.6,
+            cooldown: 2.2,
+            count: 9,
+            spread: 1.5,
+            projSpeed: 300,
+            projDamage: 16,
+            projSize: 8,
+            color: '#b7ff7a',
+          },
+          { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 7, enemy: 'enemy_moucherons', count: 1 },
+          { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 5.0, radius: 150, damage: 26, knockback: 3.0 },
+        ],
+      },
+    ],
     extraPhases: [
       {
         hpBelow: 0.3,
@@ -378,10 +433,11 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b2_2',
+    id: 'room_b2_3',
     biome: 'biome_2',
-    index: 2,
+    index: 3,
     type: 'COMBAT_CHALLENGE',
+    chest: true, // coffre offert en fin de salle (chantier 9)
     refTime: 75,
     obstacles: [
       { x: 6, y: 4, w: 1, h: 1 },
@@ -419,9 +475,9 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b2_3',
+    id: 'room_b2_2',
     biome: 'biome_2',
-    index: 3,
+    index: 2,
     type: 'COMBAT_TRAP',
     refTime: 85,
     obstacles: [
@@ -482,23 +538,6 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b2_4',
-    biome: 'biome_2',
-    index: 4,
-    type: 'CHEST',
-    refTime: 20,
-    obstacles: [
-      { x: 8, y: 4, w: 1, h: 1 },
-      { x: 8, y: 8, w: 1, h: 1 },
-      { x: 15, y: 4, w: 1, h: 1 },
-      { x: 15, y: 8, w: 1, h: 1 },
-    ],
-    waves: [],
-    traps: [],
-    fragments: [],
-    modular: [],
-  },
-  {
     id: 'room_b2_5',
     biome: 'biome_2',
     index: 5,
@@ -520,9 +559,9 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b2_6',
+    id: 'room_b2_4',
     biome: 'biome_2',
-    index: 6,
+    index: 4,
     type: 'COMBAT_MODULAR',
     refTime: 90,
     obstacles: [{ x: 11, y: 5, w: 2, h: 3 }],
@@ -563,35 +602,27 @@ CONTENT.rooms.push(
     ],
     fragments: [],
     modular: [
-      { kind: 'slide_wall', x: 3, y: 1, w: 1, h: 5, dx: 0, dy: 6, period: 7, phase: 0 },
-      { kind: 'slide_wall', x: 20, y: 7, w: 1, h: 5, dx: 0, dy: -6, period: 7, phase: 3.5 },
-      { kind: 'rotor', cx: 12, cy: 6.5, arms: 3, length: 4, angularSpeed: 0.7 },
+      /* la Serre : deux rotors de lianes qui tournent en sens inverse, et un sol de racines qui change de dessin */
+      { kind: 'rotor', cx: 7, cy: 6.5, arms: 2, length: 3, angularSpeed: 0.6 },
+      { kind: 'rotor', cx: 17, cy: 6.5, arms: 2, length: 3, angularSpeed: -0.6 },
       {
         kind: 'floor_cycle',
-        period: 8,
+        period: 9,
         telegraph: 1.5,
         configs: [
           [
-            { x: 7, y: 3, w: 1, h: 1 },
-            { x: 16, y: 3, w: 1, h: 1 },
-            { x: 7, y: 9, w: 1, h: 1 },
-            { x: 16, y: 9, w: 1, h: 1 },
-            { x: 11, y: 1, w: 2, h: 1 },
+            { x: 11, y: 2, w: 2, h: 1 },
+            { x: 11, y: 10, w: 2, h: 1 },
           ],
-          [
-            { x: 5, y: 6, w: 2, h: 1 },
-            { x: 17, y: 6, w: 2, h: 1 },
-            { x: 9, y: 2, w: 1, h: 2 },
-            { x: 14, y: 9, w: 1, h: 2 },
-          ],
+          [{ x: 11, y: 5, w: 2, h: 3 }],
         ],
       },
     ],
   },
   {
-    id: 'room_b2_7',
+    id: 'room_b2_6',
     biome: 'biome_2',
-    index: 7,
+    index: 6,
     type: 'COMBAT_TEMPO',
     refTime: 105,
     obstacles: [
@@ -645,23 +676,6 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b2_8',
-    biome: 'biome_2',
-    index: 8,
-    type: 'CHEST_FINAL',
-    refTime: 20,
-    obstacles: [
-      { x: 8, y: 4, w: 1, h: 1 },
-      { x: 8, y: 8, w: 1, h: 1 },
-      { x: 15, y: 4, w: 1, h: 1 },
-      { x: 15, y: 8, w: 1, h: 1 },
-    ],
-    waves: [],
-    traps: [],
-    fragments: [],
-    modular: [],
-  },
-  {
     id: 'room_b2_9',
     biome: 'biome_2',
     index: 9,
@@ -679,6 +693,123 @@ CONTENT.rooms.push(
       { trap: 'trap_tourelle', x: 12, y: 12, phase: 1.2 },
       { trap: 'trap_nappe', x: 3, y: 6, phase: 4 },
       { trap: 'trap_nappe', x: 20, y: 6, phase: 8 },
+    ],
+    fragments: [],
+    modular: [],
+  },
+  // ---------- SALLE 7 : COMBAT + PIÈGES + MODULAIRE ----------
+  {
+    id: 'room_b2_7',
+    biome: 'biome_2',
+    index: 7,
+    type: 'COMBAT_TRAP_MODULAR',
+    chest: true, // coffre offert en fin de salle (chantier 9)
+    refTime: 90,
+    obstacles: [
+      { x: 2, y: 2, w: 1, h: 1 },
+      { x: 21, y: 2, w: 1, h: 1 },
+      { x: 2, y: 10, w: 1, h: 1 },
+      { x: 21, y: 10, w: 1, h: 1 },
+    ],
+    waves: [
+      {
+        at: 'start',
+        spawns: [
+          { enemy: 'enemy_ronce', count: 3, x: 20, y: 6 },
+          { enemy: 'enemy_pollinisateur', count: 1, x: 20, y: 3 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_spore', count: 3, x: -1, y: -1 },
+          { enemy: 'enemy_liane', count: 1, x: 20, y: 9 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_bourgeon', count: 1, x: 21, y: 6 },
+          { enemy: 'enemy_ronce', count: 3, x: -1, y: -1 },
+          { enemy: 'enemy_pollinisateur', count: 2, x: 3, y: 10 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_liane', count: 2, x: -1, y: -1 },
+          { enemy: 'enemy_moucherons', count: 1, x: 20, y: 3 },
+          { enemy: 'enemy_racine', count: 1, x: 21, y: 6 },
+        ],
+      },
+    ],
+    traps: [
+      { trap: 'trap_tourelle', x: 8, y: 0, phase: 0 },
+      { trap: 'trap_tourelle', x: 15, y: 12, phase: 1.2 },
+      { trap: 'trap_nappe', x: 12, y: 3, phase: 0 },
+      { trap: 'trap_nappe', x: 12, y: 9, phase: 1 },
+    ],
+    fragments: [],
+    modular: [{ kind: 'slide_wall', x: 3, y: 6, w: 3, h: 1, dx: 15, dy: 0, period: 10, phase: 0 }],
+  },
+  // ---------- SALLE 8 : LE PONT (unique à la Serre) — une passerelle de trois tuiles entre deux bassins, pris des deux côtés ----------
+  {
+    id: 'room_b2_8',
+    biome: 'biome_2',
+    index: 8,
+    type: 'PONT',
+    refTime: 85,
+    /* deux bassins et une passerelle de trois tuiles : l'eau se traverse, mais à 72 % de la vitesse — on y est une cible */
+    obstacles: [{ x: 11, y: 6, w: 1, h: 1 }],
+    terrain: [
+      '...~~~~~~~~~~~~~~~~~~...',
+      '...~~~~~~~~~~~~~~~~~~...',
+      '...~~~~~~~~~~~~~~~~~~...',
+      '...~~~~~~~~~~~~~~~~~~...',
+      '...~~~~~~~~~~~~~~~~~~...',
+      '...==================...',
+      '...==================...',
+      '...==================...',
+      '...~~~~~~~~~~~~~~~~~~...',
+      '...~~~~~~~~~~~~~~~~~~...',
+      '...~~~~~~~~~~~~~~~~~~...',
+      '...~~~~~~~~~~~~~~~~~~...',
+      '...~~~~~~~~~~~~~~~~~~...',
+    ],
+    waves: [
+      {
+        at: 'start',
+        spawns: [
+          { enemy: 'enemy_ronce', count: 3, x: 20, y: 6 },
+          { enemy: 'enemy_pollinisateur', count: 2, x: 21, y: 5 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_racine', count: 1, x: 21, y: 6 },
+          { enemy: 'enemy_spore', count: 3, x: 2, y: 7 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_liane', count: 2, x: -1, y: -1 },
+          { enemy: 'enemy_moucherons', count: 2, x: 21, y: 7 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_bourgeon', count: 1, x: 21, y: 6 },
+          { enemy: 'enemy_ronce', count: 4, x: -1, y: -1 },
+          { enemy: 'enemy_pollinisateur', count: 2, x: 2, y: 5 },
+        ],
+      },
+    ],
+    traps: [
+      { trap: 'trap_tourelle', x: 11, y: 0, phase: 0 },
+      { trap: 'trap_tourelle', x: 12, y: 12, phase: 1.2 },
     ],
     fragments: [],
     modular: [],

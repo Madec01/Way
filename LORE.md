@@ -215,3 +215,10 @@ Ancienne technicienne de maintenance du Site, affectée aux pièges du palier AD
 1. « Étalon retiré au seuil critique. Il sera mis à jour. »
 2. « Confrontation validée. Vos données seront utiles. À lui. »
 3. « Case 5 cochée. L'Étalon vous remercie pour l'entraînement. »
+
+## Les salles uniques (chantier 9)
+
+- **Le sous-sol** (ADMISSION, salle 4) — Sous le service d'accueil, la réserve technique : piliers, conduites, et un tableau électrique que personne n'entretient. Les néons ne tiennent pas ; on avance dans le halo des projecteurs de secours. Les rôdeurs y chassent à l'oreille.
+- **Le pont** (LA SERRE, salle 8) — Une passerelle de service au-dessus des bassins d'irrigation. Trois tuiles de large, de l'eau des deux côtés : on peut y descendre, mais on y patauge, et tout ce qui vit dans la Serre le sait.
+- **Le train** (LA CONCESSION, salle 2) — La voie ferrée coupe la ville en deux et les wagons de minerai ne s'arrêtent pas pour un sujet d'essai. Trois convois, trois rythmes : on traverse entre deux.
+- **Le bazar** (LE SÉRAIL, salle 6) — Le marché couvert, ses étals en damier et ses recoins. Le Bureau y a égaré une caisse de consignation : elle est quelque part derrière un étal, et les cobras aussi.

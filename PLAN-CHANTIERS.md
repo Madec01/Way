@@ -162,7 +162,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 - [12] Quatre salles cadencées si la décision est « livrer ».
 
 **Fini quand** : bot sur les 4 biomes : ordres de salles distincts, 0 élément modulaire identique entre deux biomes en salle 6, 28 comportements d'ennemi distincts au grep ; rendu < 2 ms par image sur « lumières coupées ».
-**Taille** : 3 à 4 séances.
+**Taille** : 3 à 4 séances. **Séance 1 (11 septembre 2026, CONTENT.md §59)** : [2] structure faite — quatre ordres de salles distincts, une salle unique par biome (sous-sol, pont, train, bazar) ; [14] fait — 4 et 8 en combat, coffres offerts en fin de 3 et 7 (au bazar pour le Sérail), boss de salle 9 à ses propres phases (`revenge.phases`) ; salles modulaires à éléments distincts par biome. Restent [2] comportements (28), [12] quatre salles cadencées, [29] et [41] performance, [24] terrain.
 
 ## Chantier 10 — Le téléphone
 

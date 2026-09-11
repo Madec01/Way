@@ -115,7 +115,9 @@ const Modular = (() => {
       const t = Math.max(0, rt - m.phase);
       switch (m.kind) {
         case 'slide_wall': {
-          const k = slideK(t, m.period || 8);
+          /* `loop` (le train, chantier 9) : le mur traverse d'un trait et repart du début, sans aller-retour */
+          const P = m.period || 8;
+          const k = m.loop ? (((t % P) + P) % P) / P : slideK(t, P);
           const o = m.obs[0];
           const nx = lerp(m.ax, m.bx, k),
             ny = lerp(m.ay, m.by, k);
@@ -124,7 +126,7 @@ const Modular = (() => {
           m.vy = (ny - o.py) / dt;
           place(o, nx, ny);
           const kk = (t % (m.period || 8)) / (m.period || 8);
-          m.warn = (kk > 0.32 && kk < 0.4) || (kk > 0.82 && kk < 0.9);
+          m.warn = m.loop ? kk < 0.08 : (kk > 0.32 && kk < 0.4) || (kk > 0.82 && kk < 0.9);
           if (m.warn && m.warned !== Math.floor(kk * 2) + Math.floor(t / (m.period || 8)) * 2) {
             m.warned = Math.floor(kk * 2) + Math.floor(t / (m.period || 8)) * 2;
             AudioEngine.trapWarn({ intensity: 0.3 });

@@ -426,6 +426,91 @@ CONTENT.bosses.push({
     name: 'Étalon 19 / rév. B',
     phaseText: 'DONNÉES CHARGÉES',
     mimic: true,
+    /* chantier 9 : ses propres phases — le duel d'abord, les mines et la spirale ensuite */
+    phases: [
+      {
+        hpBelow: 1,
+        patterns: [
+          {
+            kind: 'duel',
+            telegraph: 1.3,
+            duration: 1.6,
+            cooldown: 6.0,
+            projSpeed: 1000,
+            projDamage: 30,
+            projSize: 5,
+            reload: 1.1,
+            color: '#ffe08a',
+            label: 'DUEL',
+          },
+          {
+            kind: 'ring',
+            telegraph: 0.6,
+            duration: 0.3,
+            cooldown: 3.0,
+            count: 12,
+            projSpeed: 300,
+            projDamage: 16,
+            projSize: 8,
+            color: '#ffe08a',
+          },
+          { kind: 'charge', telegraph: 0.8, duration: 0.8, cooldown: 4.2, speed: 700, damage: 28, stopOnWall: true, stunTime: 1.3 },
+        ],
+      },
+      {
+        hpBelow: 0.55,
+        patterns: [
+          {
+            kind: 'mines',
+            telegraph: 0.9,
+            duration: 0.5,
+            cooldown: 5.0,
+            count: 5,
+            spread: 170,
+            radius: 70,
+            fuse: 1.5,
+            damage: 26,
+            color: '#ff6b3c',
+          },
+          {
+            kind: 'spiral',
+            telegraph: 0.6,
+            duration: 2.6,
+            cooldown: 4.8,
+            arms: 3,
+            rate: 13,
+            angularSpeed: 2.2,
+            projSpeed: 250,
+            projDamage: 15,
+            projSize: 7,
+            color: '#ffe08a',
+          },
+          {
+            kind: 'fan',
+            telegraph: 0.5,
+            duration: 0.5,
+            cooldown: 2.0,
+            count: 8,
+            spread: 1.3,
+            projSpeed: 320,
+            projDamage: 18,
+            projSize: 8,
+            color: '#ffe08a',
+          },
+          {
+            kind: 'quake',
+            telegraph: 0.9,
+            duration: 2.0,
+            cooldown: 5.5,
+            speed: 640,
+            damage: 24,
+            range: 900,
+            color: '#ffe08a',
+            label: 'RUÉE',
+          },
+        ],
+      },
+    ],
     extraPhases: [
       {
         hpBelow: 0.3,
@@ -537,9 +622,9 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b3_2',
+    id: 'room_b3_4',
     biome: 'biome_3',
-    index: 2,
+    index: 4,
     type: 'COMBAT_CHALLENGE',
     refTime: 80,
     obstacles: [
@@ -588,6 +673,7 @@ CONTENT.rooms.push(
     biome: 'biome_3',
     index: 3,
     type: 'COMBAT_TRAP',
+    chest: true, // coffre offert en fin de salle (chantier 9)
     refTime: 105,
     terrain: [
       '........#########.......',
@@ -659,27 +745,6 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b3_4',
-    biome: 'biome_3',
-    index: 4,
-    type: 'CHEST',
-    refTime: 20,
-    obstacles: [
-      { x: 8, y: 4, w: 1, h: 1, kind: 'barrel' },
-      { x: 8, y: 8, w: 1, h: 1, kind: 'barrel' },
-      { x: 15, y: 4, w: 1, h: 1, kind: 'barrel' },
-      { x: 15, y: 8, w: 1, h: 1, kind: 'barrel' },
-    ],
-    deco: [
-      { x: 3, y: 2, kind: 'wanted' },
-      { x: 20, y: 10, kind: 'skull' },
-    ],
-    waves: [],
-    traps: [],
-    fragments: [],
-    modular: [],
-  },
-  {
     id: 'room_b3_5',
     biome: 'biome_3',
     index: 5,
@@ -705,10 +770,11 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b3_6',
+    id: 'room_b3_7',
     biome: 'biome_3',
-    index: 6,
+    index: 7,
     type: 'COMBAT_MODULAR',
+    chest: true, // coffre offert en fin de salle (chantier 9)
     refTime: 95,
     obstacles: [{ x: 11, y: 5, w: 2, h: 3, kind: 'rock' }],
     deco: [
@@ -752,35 +818,33 @@ CONTENT.rooms.push(
     ],
     fragments: [],
     modular: [
-      { kind: 'slide_wall', x: 3, y: 1, w: 1, h: 5, dx: 0, dy: 6, period: 7, phase: 0 },
-      { kind: 'slide_wall', x: 20, y: 7, w: 1, h: 5, dx: 0, dy: -6, period: 7, phase: 3.5 },
-      { kind: 'rotor', cx: 12, cy: 6.5, arms: 3, length: 4, angularSpeed: 0.75 },
+      /* la Concession : trois barrières de corral qui coulissent, décalées, et un sol de planches qui se déplace */
+      { kind: 'slide_wall', x: 6, y: 1, w: 1, h: 4, dx: 0, dy: 7, period: 7, phase: 0 },
+      { kind: 'slide_wall', x: 12, y: 8, w: 1, h: 4, dx: 0, dy: -7, period: 7, phase: 2.3 },
+      { kind: 'slide_wall', x: 18, y: 1, w: 1, h: 4, dx: 0, dy: 7, period: 7, phase: 4.6 },
       {
         kind: 'floor_cycle',
-        period: 8,
+        period: 10,
         telegraph: 1.5,
         configs: [
           [
-            { x: 7, y: 3, w: 1, h: 1 },
-            { x: 16, y: 3, w: 1, h: 1 },
-            { x: 7, y: 9, w: 1, h: 1 },
-            { x: 16, y: 9, w: 1, h: 1 },
-            { x: 11, y: 1, w: 2, h: 1 },
+            { x: 3, y: 6, w: 2, h: 1 },
+            { x: 20, y: 6, w: 2, h: 1 },
           ],
           [
-            { x: 5, y: 6, w: 2, h: 1 },
-            { x: 17, y: 6, w: 2, h: 1 },
-            { x: 9, y: 2, w: 1, h: 2 },
-            { x: 14, y: 9, w: 1, h: 2 },
+            { x: 9, y: 3, w: 1, h: 1 },
+            { x: 15, y: 9, w: 1, h: 1 },
+            { x: 9, y: 9, w: 1, h: 1 },
+            { x: 15, y: 3, w: 1, h: 1 },
           ],
         ],
       },
     ],
   },
   {
-    id: 'room_b3_7',
+    id: 'room_b3_8',
     biome: 'biome_3',
-    index: 7,
+    index: 8,
     type: 'COMBAT_TEMPO',
     refTime: 110,
     obstacles: [
@@ -834,27 +898,6 @@ CONTENT.rooms.push(
     modular: [],
   },
   {
-    id: 'room_b3_8',
-    biome: 'biome_3',
-    index: 8,
-    type: 'CHEST_FINAL',
-    refTime: 20,
-    obstacles: [
-      { x: 8, y: 4, w: 1, h: 1, kind: 'crate' },
-      { x: 8, y: 8, w: 1, h: 1, kind: 'crate' },
-      { x: 15, y: 4, w: 1, h: 1, kind: 'crate' },
-      { x: 15, y: 8, w: 1, h: 1, kind: 'crate' },
-    ],
-    deco: [
-      { x: 3, y: 10, kind: 'wanted' },
-      { x: 20, y: 2, kind: 'tumbleweed' },
-    ],
-    waves: [],
-    traps: [],
-    fragments: [],
-    modular: [],
-  },
-  {
     id: 'room_b3_9',
     biome: 'biome_3',
     index: 9,
@@ -880,5 +923,122 @@ CONTENT.rooms.push(
     ],
     fragments: [],
     modular: [],
+  },
+  // ---------- SALLE 2 : LE TRAIN (unique à la Concession) — trois wagons traversent la salle sans s'arrêter ----------
+  {
+    id: 'room_b3_2',
+    biome: 'biome_3',
+    index: 2,
+    type: 'TRAIN',
+    refTime: 75,
+    obstacles: [
+      { x: 6, y: 4, w: 1, h: 1 },
+      { x: 17, y: 8, w: 1, h: 1 },
+      { x: 11, y: 1, w: 2, h: 1 },
+      { x: 11, y: 11, w: 2, h: 1 },
+    ],
+    waves: [
+      {
+        at: 'start',
+        spawns: [
+          { enemy: 'enemy_coyote', count: 3, x: 20, y: 6 },
+          { enemy: 'enemy_bandit', count: 1, x: 21, y: 3 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_baril', count: 2, x: -1, y: -1 },
+          { enemy: 'enemy_coyote', count: 3, x: 21, y: 9 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_bandit', count: 2, x: 21, y: 3 },
+          { enemy: 'enemy_scorpions', count: 1, x: -1, y: -1 },
+          { enemy: 'enemy_crotale', count: 1, x: 21, y: 6 },
+        ],
+      },
+    ],
+    traps: [],
+    fragments: [],
+    modular: [
+      { kind: 'slide_wall', x: 2, y: 3, w: 3, h: 1, dx: 18, dy: 0, period: 6, phase: 0, loop: true },
+      { kind: 'slide_wall', x: 20, y: 9, w: 3, h: 1, dx: -18, dy: 0, period: 6, phase: 3, loop: true },
+      { kind: 'slide_wall', x: 2, y: 6, w: 2, h: 1, dx: 18, dy: 0, period: 9, phase: 4.5, loop: true },
+    ],
+  },
+  // ---------- SALLE 6 : COMBAT + PIÈGES + MODULAIRE ----------
+  {
+    id: 'room_b3_6',
+    biome: 'biome_3',
+    index: 6,
+    type: 'COMBAT_TRAP_MODULAR',
+    refTime: 90,
+    obstacles: [
+      { x: 2, y: 2, w: 1, h: 1 },
+      { x: 21, y: 2, w: 1, h: 1 },
+      { x: 2, y: 10, w: 1, h: 1 },
+      { x: 21, y: 10, w: 1, h: 1 },
+    ],
+    waves: [
+      {
+        at: 'start',
+        spawns: [
+          { enemy: 'enemy_bison', count: 1, x: 21, y: 6 },
+          { enemy: 'enemy_bandit', count: 2, x: 20, y: 3 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_scorpions', count: 2, x: -1, y: -1 },
+          { enemy: 'enemy_coyote', count: 3, x: 20, y: 9 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_croquemort', count: 1, x: 21, y: 6 },
+          { enemy: 'enemy_crotale', count: 2, x: -1, y: -1 },
+        ],
+      },
+      {
+        at: 'clear',
+        spawns: [
+          { enemy: 'enemy_bandit', count: 2, x: 3, y: 2 },
+          { enemy: 'enemy_coyote', count: 4, x: -1, y: -1 },
+          { enemy: 'enemy_baril', count: 2, x: 20, y: 9 },
+        ],
+      },
+    ],
+    traps: [
+      { trap: 'trap_embuscade', x: 8, y: 0, phase: 0 },
+      { trap: 'trap_embuscade', x: 15, y: 12, phase: 1.2 },
+      { trap: 'trap_ours', x: 1, y: 9, w: 3, h: 3, phase: 0 },
+      { trap: 'trap_ours', x: 20, y: 1, w: 3, h: 3, phase: 1 },
+      { trap: 'trap_poudre', x: 12, y: 4, phase: 2 },
+    ],
+    fragments: [],
+    modular: [
+      {
+        kind: 'floor_cycle',
+        period: 9,
+        telegraph: 1.5,
+        configs: [
+          [
+            { x: 6, y: 3, w: 2, h: 1 },
+            { x: 16, y: 9, w: 2, h: 1 },
+            { x: 11, y: 6, w: 2, h: 1 },
+          ],
+          [
+            { x: 6, y: 9, w: 2, h: 1 },
+            { x: 16, y: 3, w: 2, h: 1 },
+            { x: 11, y: 1, w: 2, h: 1 },
+          ],
+        ],
+      },
+    ],
   }
 );

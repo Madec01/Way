@@ -786,8 +786,9 @@ class Boss extends Enemy {
     this.cur = null;
     this.weak = Object.assign({}, def.weakness || { rule: 'after_charge', damageMul: 2, window: 1.5 });
     this.revenge = rv;
-    /* phases : celles du mini-boss, plus les phases supplémentaires de la revanche (triées par seuil décroissant) */
-    this.phases = def.phases.map(p => Object.assign({}, p, { patterns: p.patterns.slice() }));
+    /* phases : celles du mini-boss — ou, en revanche, les siennes propres (`revenge.phases`, chantier 9 : le boss de la
+       salle 9 ne rejoue pas la salle 5) — plus les phases supplémentaires de la revanche (triées par seuil décroissant) */
+    this.phases = ((rv && rv.phases) || def.phases).map(p => Object.assign({}, p, { patterns: p.patterns.slice() }));
     if (rv) {
       for (const p of rv.extraPhases || []) this.phases.push(Object.assign({}, p, { patterns: p.patterns.slice() }));
       this.phases.sort((a, b) => (b.hpBelow != null ? b.hpBelow : 1) - (a.hpBelow != null ? a.hpBelow : 1));
