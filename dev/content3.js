@@ -983,9 +983,9 @@ CONTENT.rooms.push(
     traps: [],
     fragments: [],
     modular: [
-      { kind: 'slide_wall', x: 2, y: 3, w: 3, h: 1, dx: 18, dy: 0, period: 6, phase: 0, loop: true },
-      { kind: 'slide_wall', x: 20, y: 9, w: 3, h: 1, dx: -18, dy: 0, period: 6, phase: 3, loop: true },
-      { kind: 'slide_wall', x: 2, y: 6, w: 2, h: 1, dx: 18, dy: 0, period: 9, phase: 4.5, loop: true },
+      { kind: 'slide_wall', x: 2, y: 3, w: 3, h: 1, dx: 18, dy: 0, period: 6, phase: 0, loop: true, look: 'wagon' },
+      { kind: 'slide_wall', x: 20, y: 9, w: 3, h: 1, dx: -18, dy: 0, period: 6, phase: 3, loop: true, look: 'wagon' },
+      { kind: 'slide_wall', x: 2, y: 6, w: 2, h: 1, dx: 18, dy: 0, period: 9, phase: 4.5, loop: true, look: 'wagon' },
     ],
   },
   // ---------- SALLE 6 : COMBAT + PIÈGES + MODULAIRE ----------

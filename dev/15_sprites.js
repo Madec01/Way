@@ -116,6 +116,28 @@ const Sprites = (() => {
     failed = false;
   const floorCache = new Map();
   let _fx = null;
+  /* Le flash blanc précalculé (chantier 9, [41]) : une image blanchie par (sprite, image, taille, intensité), gardée en
+     cache — avant, chaque ennemi touché redessinait son sprite dans un canvas intermédiaire à chaque image. Les teintes
+     de statut (brûlure, poison) gardent le chemin direct : elles changent avec le temps. */
+  const flashCache = new Map();
+  const FLASH_MAX = 160;
+  function flashFrame(id, src, sx, sy, sw, sh, dw, dh, alpha) {
+    const key = id + '|' + Math.round(dw) + '|' + Math.round(dh) + '|' + alpha.toFixed(2);
+    let c = flashCache.get(key);
+    if (c) return c;
+    c = document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(dw));
+    c.height = Math.max(1, Math.ceil(dh));
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(src, sx, sy, sw, sh, 0, 0, dw, dh);
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = `rgba(255,255,255,${alpha})`;
+    g.fillRect(0, 0, dw, dh);
+    if (flashCache.size >= FLASH_MAX) flashCache.delete(flashCache.keys().next().value);
+    flashCache.set(key, c);
+    return c;
+  }
   function flashCanvas(w, h) {
     if (!_fx) _fx = document.createElement('canvas');
     if (_fx.width < w || _fx.height < h) {
@@ -664,7 +686,20 @@ const Sprites = (() => {
       ctx.translate(0, -bas);
     }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
-    if (opts.flash || opts.tint) {
+    if (opts.flash && !opts.tint) {
+      const fc = flashFrame(
+        key + '|' + frame,
+        sheet,
+        sx + frame * sw,
+        sy,
+        sw,
+        sh,
+        dw,
+        dh,
+        opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9
+      );
+      ctx.drawImage(fc, -dw / 2, -dh / 2 - (d.foot ? 8 : 0));
+    } else if (opts.flash || opts.tint) {
       /* flash blanc ou teinte de statut limités aux pixels du sprite : canvas hors écran (sinon le rectangle entier s'éclaire) */
       const fx = flashCanvas(dw, dh);
       const g = fx.getContext('2d');
@@ -1120,18 +1155,9 @@ const Sprites = (() => {
     }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     if (opts.flash) {
-      /* le blanc ne couvre que les pixels du dessin : canvas hors écran (un source-atop sur le canvas du jeu, dont le sol
-         est opaque, blanchissait toute la case — le joueur touché devenait un rectangle) */
-      const fx = flashCanvas(dw, dh);
-      const g = fx.getContext('2d');
-      g.imageSmoothingEnabled = false;
-      g.globalCompositeOperation = 'source-over';
-      g.clearRect(0, 0, dw, dh);
-      g.drawImage(s.c, cx, cy, s.fw, s.fh, 0, 0, dw, dh);
-      g.globalCompositeOperation = 'source-atop';
-      g.fillStyle = `rgba(255,255,255,${opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9})`;
-      g.fillRect(0, 0, dw, dh);
-      ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2, dw, dh);
+      /* le blanc ne couvre que les pixels du dessin — image précalculée par (planche, image, taille, intensité) */
+      const fc = flashFrame(name + '|' + i, s.c, cx, cy, s.fw, s.fh, dw, dh, opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9);
+      ctx.drawImage(fc, -dw / 2, -dh / 2);
     } else ctx.drawImage(s.c, cx, cy, s.fw, s.fh, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
     return true;
@@ -1396,6 +1422,7 @@ const Sprites = (() => {
     addSheet,
     drawSheet,
     sheetInfo,
+    flashCacheSize: () => flashCache.size,
     sheetCanvas,
     CLIPS,
     draw,

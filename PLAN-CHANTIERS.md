@@ -150,7 +150,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Fini quand** : ouvrir l'atelier, exporter sans rien toucher, recoller, rebâtir → `content5.js` identique octet pour octet (test d'aller-retour) ; `index.html` perd ≥ 120 Ko.
 **Taille** : 1 à 2 séances. **Bilan** : fait en une séance (CONTENT.md §58, test `allerretour.js`, 11 mesures). L'export sans rien toucher redonne `content5.js` octet pour octet et `index.html` perd **149 Ko** (1 241 → 1 092). Le fichier prend la forme `FRIEND_CONTENT = { characters, pets, pairs }`, relu à l'ouverture et fondu à l'export ; les fiches portent `def`, donc `pairs`, `anim`, `duo`, `hidden`, `fly` et les caractères importés traversent ; les animaux ont leurs planches. PNG palette écrit par `78_amis.js` (261 → 86 Ko pour les 31 planches, mêmes pixels), photos en JPEG à 64 px, `way.props.custom` supprimé, planches lues une fois, IndexedDB avec refus explicite avant dépassement. Décor animé : livré, ses quatre salles au chantier 9. À regarder par l'auteur : ouvrir l'établi Amis (F2 → Amis) et vérifier ses trois copains et quatre animaux à l'œil.
 
-## Chantier 9 — Quatre biomes différents
+## Chantier 9 — Quatre biomes différents ✔ *(fait le 11 septembre 2026, trois séances)*
 
 **Objectif** : le plus gros, et le seul qui ajoute du jeu. Après lui, le contenu déclaré est vrai.
 
@@ -162,7 +162,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 - [12] Quatre salles cadencées si la décision est « livrer ».
 
 **Fini quand** : bot sur les 4 biomes : ordres de salles distincts, 0 élément modulaire identique entre deux biomes en salle 6, 28 comportements d'ennemi distincts au grep ; rendu < 2 ms par image sur « lumières coupées ».
-**Taille** : 3 à 4 séances. **Séance 1 (11 septembre 2026, CONTENT.md §59)** : [2] structure faite — quatre ordres de salles distincts, une salle unique par biome (sous-sol, pont, train, bazar) ; [14] fait — 4 et 8 en combat, coffres offerts en fin de 3 et 7 (au bazar pour le Sérail), boss de salle 9 à ses propres phases (`revenge.phases`) ; salles modulaires à éléments distincts par biome. **Séance 2 (CONTENT.md §60)** : [2] comportements faits — 21 variantes, 28 comportements distincts, chacun mesuré par `comportements.js`. Restent [12] quatre salles cadencées, [29] et [41] performance, [24] terrain, et l'habillage des wagons.
+**Taille** : 3 à 4 séances. **Séance 1 (11 septembre 2026, CONTENT.md §59)** : [2] structure faite — quatre ordres de salles distincts, une salle unique par biome (sous-sol, pont, train, bazar) ; [14] fait — 4 et 8 en combat, coffres offerts en fin de 3 et 7 (au bazar pour le Sérail), boss de salle 9 à ses propres phases (`revenge.phases`) ; salles modulaires à éléments distincts par biome. **Séance 2 (CONTENT.md §60)** : [2] comportements faits — 21 variantes, 28 comportements distincts, chacun mesuré par `comportements.js`. **Séance 3 (CONTENT.md §61)** : [12] quatre salles cadencées de l'Admission jouées, [29] masque des lumières une image sur deux avec disque pré-dessiné (1,28 → 0,97 ms au banc A/B, 1,45 ms avec les faisceaux : sous les 2 ms visés), [41] flash précalculé, wagons habillés. **Non fait** : [24] le terrain de salle, à trancher (étendre aux salles de combat ou retirer) — il ne bloque rien.
 
 ## Chantier 10 — Le téléphone
 

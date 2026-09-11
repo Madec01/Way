@@ -712,38 +712,60 @@ const Challenge = (() => {
   let darkC = null;
   /* Masque d'obscurité : un calque noir dans lequel on « perce » chaque source de lumière (destination-out), puis une passe
      colorée en fondu additif pour la teinte des projecteurs. Un seul calque hors écran, redimensionné avec la vue. */
+  /* Le disque de lumière pré-dessiné (chantier 9, [29]) : un seul dégradé radial de 256 px, collé à l'échelle voulue —
+     avant, chaque faisceau recréait son dégradé à chaque image. Et le masque n'est refait qu'une image sur deux
+     (`MASK_EVERY`) : il vit en coordonnées du monde, l'image intermédiaire reste juste. */
+  let discC = null;
+  const MASK_EVERY = 2;
+  function lightDisc() {
+    if (discC) return discC;
+    discC = document.createElement('canvas');
+    discC.width = discC.height = 256;
+    const g = discC.getContext('2d');
+    const rg = g.createRadialGradient(128, 128, 32, 128, 128, 128);
+    rg.addColorStop(0, 'rgba(0,0,0,1)');
+    rg.addColorStop(0.65, 'rgba(0,0,0,.85)');
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg;
+    g.fillRect(0, 0, 256, 256);
+    return discC;
+  }
   function lightMask(ctx, c, pl) {
     const V = Engine.view;
     const w = Math.ceil(V.w),
       h = Math.ceil(V.h);
     if (!darkC) darkC = document.createElement('canvas');
-    if (darkC.width !== w || darkC.height !== h) {
+    const neuf = darkC.width !== w || darkC.height !== h;
+    if (neuf) {
       darkC.width = w;
       darkC.height = h;
     }
-    const g = darkC.getContext('2d');
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, w, h);
-    g.fillStyle = 'rgba(2,3,8,.985)';
-    g.fillRect(0, 0, w, h); // noir presque total : dans l'ombre on ne devine plus les silhouettes
-    g.save();
-    g.translate(V.ox, V.oy);
-    g.globalCompositeOperation = 'destination-out';
+    c.maskTick = (c.maskTick || 0) + 1;
     /* respiration sur le temps, plus le fondu d'entrée du motif courant */
     const ph = Beat.phase();
     const pulse = (1 + 0.12 * Math.max(0, 1 - ph * 2.5)) * (c.phase === 'lure' ? 1 : 0.4 + 0.6 * c.fade);
+    const rebuild = neuf || c.maskTick % MASK_EVERY === 1 || MASK_EVERY === 1;
+    if (rebuild) c.maskBuilds = (c.maskBuilds || 0) + 1;
+    const g = darkC.getContext('2d');
+    if (rebuild) {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = 'rgba(2,3,8,.985)';
+      g.fillRect(0, 0, w, h); // noir presque total : dans l'ombre on ne devine plus les silhouettes
+      g.save();
+      g.translate(V.ox, V.oy);
+      g.globalCompositeOperation = 'destination-out';
+    }
+    const dc = lightDisc();
     const disc = (x, y, r) => {
-      const rg = g.createRadialGradient(x, y, r * 0.25, x, y, r);
-      rg.addColorStop(0, 'rgba(0,0,0,1)');
-      rg.addColorStop(0.65, 'rgba(0,0,0,.85)');
-      rg.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = rg;
-      g.beginPath();
-      g.arc(x, y, r, 0, TAU);
-      g.fill();
+      if (rebuild) g.drawImage(dc, x - r, y - r, r * 2, r * 2);
     };
-    if (c.phase === 'lure') disc(pl.x, pl.y, c.radius); // pas de lampe personnelle pendant le spectacle : hors des faisceaux, le joueur disparaît lui aussi
-    if (c.phase === 'lure') {
+    if (!rebuild) {
+      /* rien à redessiner cette image : le masque de l'image précédente sert tel quel */
+    } else if (c.phase === 'lure') disc(pl.x, pl.y, c.radius); // pas de lampe personnelle pendant le spectacle : hors des faisceaux, le joueur disparaît lui aussi
+    if (!rebuild) {
+      /* idem */
+    } else if (c.phase === 'lure') {
       disc(c.lure.x, c.lure.y, c.lure.r * (1 + 0.08 * Math.sin(Time.now * 3)));
     } else
       for (const b of c.beams) {
@@ -773,7 +795,7 @@ const Challenge = (() => {
           }
         }
       }
-    g.restore();
+    if (rebuild) g.restore();
     ctx.drawImage(darkC, -V.ox, -V.oy);
     /* teinte des faisceaux, par-dessus, en lumière additive */
     if (c.phase !== 'lure') {

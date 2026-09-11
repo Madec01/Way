@@ -420,6 +420,17 @@ const Debug = (() => {
               ? 110
               : 260
         : 0;
+    /* anti-blocage (chantier 9 : piliers du sous-sol, étals du bazar) — sans progrès vers un objectif pendant 1,2 s, le bot
+       fait un pas de côté franc pendant 0,7 s, d'un côté tiré au sort, plutôt que d'osciller contre le bloc */
+    if (goal && dist(pl.x, pl.y, goal.x, goal.y) > 60) {
+      const st = pl.botStuck || (pl.botStuck = { x: pl.x, y: pl.y, t: Time.now });
+      if (dist(pl.x, pl.y, st.x, st.y) > 14) Object.assign(st, { x: pl.x, y: pl.y, t: Time.now });
+      else if (Time.now - st.t > 1.2 && !(pl.botDetour && Time.now < pl.botDetour.until)) {
+        pl.botDetour = { a: angleTo(pl.x, pl.y, goal.x, goal.y) + (rng() < 0.5 ? 1 : -1) * Math.PI * 0.55, until: Time.now + 0.7 };
+        Object.assign(st, { x: pl.x, y: pl.y, t: Time.now });
+      }
+    }
+    const detour = pl.botDetour && Time.now < pl.botDetour.until ? pl.botDetour : null;
     /* évaluation des directions */
     let best = DIRS[0],
       bs = -Infinity;
@@ -448,6 +459,7 @@ const Debug = (() => {
         const gd = dist(nx, ny, goal.x, goal.y);
         s += wantDist ? -Math.abs(gd - wantDist) * 0.08 : -gd * 0.05;
       }
+      if (detour) s += 30 * (d.x * Math.cos(detour.a) + d.y * Math.sin(detour.a));
       s += rng() * 1.5;
       if (s > bs) {
         bs = s;

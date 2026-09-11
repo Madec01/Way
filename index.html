@@ -527,7 +527,7 @@ body.touch .shoppanel{max-width:none;width:100%;min-height:100%;border-radius:0;
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-11 11:53';</script>
+<script>window.WAY_BUILD = '2026-09-11 13:48';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -5199,6 +5199,54 @@ const CONTENT = {
       ],
       traps: [],
       fragments: [],
+      /* salle cadencée (chantier 9) : le carrelage de l'accueil s'allume en damier sur chaque temps, les néons battent sur le temps fort */
+      anims: [
+        {
+          kind: 'tile_color',
+          x: 9,
+          y: 4,
+          w: 6,
+          h: 5,
+          params: { mode: 'checker', color: '#6ee7ff', color2: '#ff9a3c' },
+          beats: { bars: 1, hits: [0, 1, 2, 3], active: 0.6 },
+        },
+        {
+          kind: 'light',
+          x: 1,
+          y: 1,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.4, gain: 0.25, color: '#6ee7ff' },
+          beats: { bars: 1, hits: [0], active: 2 },
+        },
+        {
+          kind: 'light',
+          x: 20,
+          y: 1,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.4, gain: 0.25, color: '#ff9a3c' },
+          beats: { bars: 1, hits: [2], active: 2 },
+        },
+        {
+          kind: 'light',
+          x: 1,
+          y: 9,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.4, gain: 0.25, color: '#ff9a3c' },
+          beats: { bars: 1, hits: [2], active: 2 },
+        },
+        {
+          kind: 'light',
+          x: 20,
+          y: 9,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.4, gain: 0.25, color: '#6ee7ff' },
+          beats: { bars: 1, hits: [0], active: 2 },
+        },
+      ],
       modular: [],
     },
 
@@ -5242,6 +5290,51 @@ const CONTENT = {
       ],
       traps: [],
       fragments: [],
+      /* salle cadencée : une onde part du centre sur le temps fort, une couronne de dalles se soulève un temps sur deux */
+      anims: [
+        { kind: 'ring', x: 11, y: 6, w: 2, h: 1, params: { radius: 6, color: '#6ee7ff' }, beats: { bars: 1, hits: [0], active: 1.5 } },
+        {
+          kind: 'tile_lift',
+          x: 0,
+          y: 0,
+          params: {
+            mode: 'checker',
+            amp: 6,
+            color: '#8a94b0',
+            cells: [
+              [8, 3],
+              [9, 3],
+              [14, 3],
+              [15, 3],
+              [8, 9],
+              [9, 9],
+              [14, 9],
+              [15, 9],
+              [6, 6],
+              [17, 6],
+            ],
+          },
+          beats: { bars: 1, hits: [0, 2], active: 1 },
+        },
+        {
+          kind: 'light',
+          x: 11,
+          y: 0,
+          w: 2,
+          h: 2,
+          params: { radius: 3, base: 0.35, gain: 0.25, color: '#6ee7ff' },
+          beats: { bars: 1, hits: [0], active: 2 },
+        },
+        {
+          kind: 'light',
+          x: 11,
+          y: 11,
+          w: 2,
+          h: 2,
+          params: { radius: 3, base: 0.35, gain: 0.25, color: '#ff9a3c' },
+          beats: { bars: 1, hits: [2], active: 2 },
+        },
+      ],
       modular: [],
     },
 
@@ -5298,6 +5391,36 @@ const CONTENT = {
         { trap: 'trap_tourelle', x: 11, y: 0, phase: 0 },
       ],
       fragments: [],
+      /* salle cadencée : un balayage de dalles traverse la salle à chaque mesure, dans le sens du tourniquet ; les néons s'alternent */
+      anims: [
+        {
+          kind: 'tile_color',
+          x: 3,
+          y: 5,
+          w: 18,
+          h: 3,
+          params: { mode: 'sweep', color: '#ffd166', color2: '#6ee7ff' },
+          beats: { bars: 2, hits: [0, 4], active: 3 },
+        },
+        {
+          kind: 'light',
+          x: 1,
+          y: 5,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.4, gain: 0.25, color: '#ffd166' },
+          beats: { bars: 1, hits: [0], active: 2 },
+        },
+        {
+          kind: 'light',
+          x: 20,
+          y: 5,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.4, gain: 0.25, color: '#6ee7ff' },
+          beats: { bars: 1, hits: [2], active: 2 },
+        },
+      ],
       modular: [],
     },
 
@@ -5360,6 +5483,56 @@ const CONTENT = {
       ],
       traps: [],
       fragments: [],
+      /* salle cadencée : quatre ventilateurs tournent d'un quart de tour à chaque temps, une valve saute sur les temps forts */
+      anims: [
+        {
+          kind: 'spinner',
+          x: 1,
+          y: 0,
+          params: { sprite: 'computer-fan', scale: 1.2 },
+          beats: { bars: 1, hits: [0, 1, 2, 3], active: 0.5 },
+        },
+        {
+          kind: 'spinner',
+          x: 22,
+          y: 0,
+          params: { sprite: 'computer-fan', scale: 1.2, step: -1.5707963 },
+          beats: { bars: 1, hits: [0, 1, 2, 3], active: 0.5 },
+        },
+        {
+          kind: 'spinner',
+          x: 1,
+          y: 12,
+          params: { sprite: 'computer-fan', scale: 1.2, step: -1.5707963 },
+          beats: { bars: 1, hits: [0, 1, 2, 3], active: 0.5 },
+        },
+        {
+          kind: 'spinner',
+          x: 22,
+          y: 12,
+          params: { sprite: 'computer-fan', scale: 1.2 },
+          beats: { bars: 1, hits: [0, 1, 2, 3], active: 0.5 },
+        },
+        { kind: 'bouncer', x: 11, y: 11, params: { sprite: 'valve', amp: 14 }, beats: { bars: 1, hits: [0, 2], active: 0.8 } },
+        {
+          kind: 'light',
+          x: 11,
+          y: 0,
+          w: 2,
+          h: 2,
+          params: { radius: 3, base: 0.35, gain: 0.25, color: '#6ee7ff' },
+          beats: { bars: 1, hits: [0], active: 2 },
+        },
+        {
+          kind: 'light',
+          x: 11,
+          y: 11,
+          w: 2,
+          h: 2,
+          params: { radius: 3, base: 0.35, gain: 0.25, color: '#ff9a3c' },
+          beats: { bars: 1, hits: [2], active: 2 },
+        },
+      ],
       modular: [
         { kind: 'slide_wall', x: 3, y: 1, w: 1, h: 4, dx: 0, dy: 7, period: 8, phase: 0 },
         { kind: 'slide_wall', x: 20, y: 8, w: 1, h: 4, dx: 0, dy: -7, period: 8, phase: 4 },
@@ -7417,9 +7590,9 @@ CONTENT.rooms.push(
     traps: [],
     fragments: [],
     modular: [
-      { kind: 'slide_wall', x: 2, y: 3, w: 3, h: 1, dx: 18, dy: 0, period: 6, phase: 0, loop: true },
-      { kind: 'slide_wall', x: 20, y: 9, w: 3, h: 1, dx: -18, dy: 0, period: 6, phase: 3, loop: true },
-      { kind: 'slide_wall', x: 2, y: 6, w: 2, h: 1, dx: 18, dy: 0, period: 9, phase: 4.5, loop: true },
+      { kind: 'slide_wall', x: 2, y: 3, w: 3, h: 1, dx: 18, dy: 0, period: 6, phase: 0, loop: true, look: 'wagon' },
+      { kind: 'slide_wall', x: 20, y: 9, w: 3, h: 1, dx: -18, dy: 0, period: 6, phase: 3, loop: true, look: 'wagon' },
+      { kind: 'slide_wall', x: 2, y: 6, w: 2, h: 1, dx: 18, dy: 0, period: 9, phase: 4.5, loop: true, look: 'wagon' },
     ],
   },
   // ---------- SALLE 6 : COMBAT + PIÈGES + MODULAIRE ----------
@@ -9189,6 +9362,28 @@ const Sprites = (() => {
     failed = false;
   const floorCache = new Map();
   let _fx = null;
+  /* Le flash blanc précalculé (chantier 9, [41]) : une image blanchie par (sprite, image, taille, intensité), gardée en
+     cache — avant, chaque ennemi touché redessinait son sprite dans un canvas intermédiaire à chaque image. Les teintes
+     de statut (brûlure, poison) gardent le chemin direct : elles changent avec le temps. */
+  const flashCache = new Map();
+  const FLASH_MAX = 160;
+  function flashFrame(id, src, sx, sy, sw, sh, dw, dh, alpha) {
+    const key = id + '|' + Math.round(dw) + '|' + Math.round(dh) + '|' + alpha.toFixed(2);
+    let c = flashCache.get(key);
+    if (c) return c;
+    c = document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(dw));
+    c.height = Math.max(1, Math.ceil(dh));
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(src, sx, sy, sw, sh, 0, 0, dw, dh);
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = `rgba(255,255,255,${alpha})`;
+    g.fillRect(0, 0, dw, dh);
+    if (flashCache.size >= FLASH_MAX) flashCache.delete(flashCache.keys().next().value);
+    flashCache.set(key, c);
+    return c;
+  }
   function flashCanvas(w, h) {
     if (!_fx) _fx = document.createElement('canvas');
     if (_fx.width < w || _fx.height < h) {
@@ -9737,7 +9932,20 @@ const Sprites = (() => {
       ctx.translate(0, -bas);
     }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
-    if (opts.flash || opts.tint) {
+    if (opts.flash && !opts.tint) {
+      const fc = flashFrame(
+        key + '|' + frame,
+        sheet,
+        sx + frame * sw,
+        sy,
+        sw,
+        sh,
+        dw,
+        dh,
+        opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9
+      );
+      ctx.drawImage(fc, -dw / 2, -dh / 2 - (d.foot ? 8 : 0));
+    } else if (opts.flash || opts.tint) {
       /* flash blanc ou teinte de statut limités aux pixels du sprite : canvas hors écran (sinon le rectangle entier s'éclaire) */
       const fx = flashCanvas(dw, dh);
       const g = fx.getContext('2d');
@@ -10193,18 +10401,9 @@ const Sprites = (() => {
     }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     if (opts.flash) {
-      /* le blanc ne couvre que les pixels du dessin : canvas hors écran (un source-atop sur le canvas du jeu, dont le sol
-         est opaque, blanchissait toute la case — le joueur touché devenait un rectangle) */
-      const fx = flashCanvas(dw, dh);
-      const g = fx.getContext('2d');
-      g.imageSmoothingEnabled = false;
-      g.globalCompositeOperation = 'source-over';
-      g.clearRect(0, 0, dw, dh);
-      g.drawImage(s.c, cx, cy, s.fw, s.fh, 0, 0, dw, dh);
-      g.globalCompositeOperation = 'source-atop';
-      g.fillStyle = `rgba(255,255,255,${opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9})`;
-      g.fillRect(0, 0, dw, dh);
-      ctx.drawImage(fx, 0, 0, dw, dh, -dw / 2, -dh / 2, dw, dh);
+      /* le blanc ne couvre que les pixels du dessin — image précalculée par (planche, image, taille, intensité) */
+      const fc = flashFrame(name + '|' + i, s.c, cx, cy, s.fw, s.fh, dw, dh, opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9);
+      ctx.drawImage(fc, -dw / 2, -dh / 2);
     } else ctx.drawImage(s.c, cx, cy, s.fw, s.fh, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
     return true;
@@ -10469,6 +10668,7 @@ const Sprites = (() => {
     addSheet,
     drawSheet,
     sheetInfo,
+    flashCacheSize: () => flashCache.size,
     sheetCanvas,
     CLIPS,
     draw,
@@ -18323,7 +18523,28 @@ const Modular = (() => {
     for (const m of room.modular) {
       if (m.disabled) continue;
       ctx.save();
-      if (m.kind === 'slide_wall') {
+      if (m.kind === 'slide_wall' && m.look === 'wagon') {
+        /* le train (chantier 9) : un wagonnet par tuile sur son rail, et un liseré orange quand il va entrer */
+        const o = m.obs[0];
+        ctx.setLineDash([6, 6]);
+        ctx.strokeStyle = 'rgba(60,40,20,.55)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(ROOM_X, o.py + o.ph / 2 + 10);
+        ctx.lineTo(ROOM_X + ROOM_W, o.py + o.ph / 2 + 10);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const n = Math.max(1, Math.round(o.pw / TILE));
+        for (let i = 0; i < n; i++)
+          Sprites.drawProp(ctx, 'mine-wagon', o.px + (i + 0.5) * (o.pw / n), o.py + o.ph / 2, TILE * 1.15, TILE * 1.15, {
+            flip: (m.dx || 0) < 0,
+          });
+        if (m.warn) {
+          ctx.strokeStyle = '#ffb347';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(o.px - 2, o.py - 2, o.pw + 4, o.ph + 4);
+        }
+      } else if (m.kind === 'slide_wall') {
         const o = m.obs[0];
         ctx.fillStyle = '#3a4260';
         ctx.fillRect(o.px, o.py, o.pw, o.ph);
@@ -19190,38 +19411,60 @@ const Challenge = (() => {
   let darkC = null;
   /* Masque d'obscurité : un calque noir dans lequel on « perce » chaque source de lumière (destination-out), puis une passe
      colorée en fondu additif pour la teinte des projecteurs. Un seul calque hors écran, redimensionné avec la vue. */
+  /* Le disque de lumière pré-dessiné (chantier 9, [29]) : un seul dégradé radial de 256 px, collé à l'échelle voulue —
+     avant, chaque faisceau recréait son dégradé à chaque image. Et le masque n'est refait qu'une image sur deux
+     (`MASK_EVERY`) : il vit en coordonnées du monde, l'image intermédiaire reste juste. */
+  let discC = null;
+  const MASK_EVERY = 2;
+  function lightDisc() {
+    if (discC) return discC;
+    discC = document.createElement('canvas');
+    discC.width = discC.height = 256;
+    const g = discC.getContext('2d');
+    const rg = g.createRadialGradient(128, 128, 32, 128, 128, 128);
+    rg.addColorStop(0, 'rgba(0,0,0,1)');
+    rg.addColorStop(0.65, 'rgba(0,0,0,.85)');
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg;
+    g.fillRect(0, 0, 256, 256);
+    return discC;
+  }
   function lightMask(ctx, c, pl) {
     const V = Engine.view;
     const w = Math.ceil(V.w),
       h = Math.ceil(V.h);
     if (!darkC) darkC = document.createElement('canvas');
-    if (darkC.width !== w || darkC.height !== h) {
+    const neuf = darkC.width !== w || darkC.height !== h;
+    if (neuf) {
       darkC.width = w;
       darkC.height = h;
     }
-    const g = darkC.getContext('2d');
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, w, h);
-    g.fillStyle = 'rgba(2,3,8,.985)';
-    g.fillRect(0, 0, w, h); // noir presque total : dans l'ombre on ne devine plus les silhouettes
-    g.save();
-    g.translate(V.ox, V.oy);
-    g.globalCompositeOperation = 'destination-out';
+    c.maskTick = (c.maskTick || 0) + 1;
     /* respiration sur le temps, plus le fondu d'entrée du motif courant */
     const ph = Beat.phase();
     const pulse = (1 + 0.12 * Math.max(0, 1 - ph * 2.5)) * (c.phase === 'lure' ? 1 : 0.4 + 0.6 * c.fade);
+    const rebuild = neuf || c.maskTick % MASK_EVERY === 1 || MASK_EVERY === 1;
+    if (rebuild) c.maskBuilds = (c.maskBuilds || 0) + 1;
+    const g = darkC.getContext('2d');
+    if (rebuild) {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = 'rgba(2,3,8,.985)';
+      g.fillRect(0, 0, w, h); // noir presque total : dans l'ombre on ne devine plus les silhouettes
+      g.save();
+      g.translate(V.ox, V.oy);
+      g.globalCompositeOperation = 'destination-out';
+    }
+    const dc = lightDisc();
     const disc = (x, y, r) => {
-      const rg = g.createRadialGradient(x, y, r * 0.25, x, y, r);
-      rg.addColorStop(0, 'rgba(0,0,0,1)');
-      rg.addColorStop(0.65, 'rgba(0,0,0,.85)');
-      rg.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = rg;
-      g.beginPath();
-      g.arc(x, y, r, 0, TAU);
-      g.fill();
+      if (rebuild) g.drawImage(dc, x - r, y - r, r * 2, r * 2);
     };
-    if (c.phase === 'lure') disc(pl.x, pl.y, c.radius); // pas de lampe personnelle pendant le spectacle : hors des faisceaux, le joueur disparaît lui aussi
-    if (c.phase === 'lure') {
+    if (!rebuild) {
+      /* rien à redessiner cette image : le masque de l'image précédente sert tel quel */
+    } else if (c.phase === 'lure') disc(pl.x, pl.y, c.radius); // pas de lampe personnelle pendant le spectacle : hors des faisceaux, le joueur disparaît lui aussi
+    if (!rebuild) {
+      /* idem */
+    } else if (c.phase === 'lure') {
       disc(c.lure.x, c.lure.y, c.lure.r * (1 + 0.08 * Math.sin(Time.now * 3)));
     } else
       for (const b of c.beams) {
@@ -19251,7 +19494,7 @@ const Challenge = (() => {
           }
         }
       }
-    g.restore();
+    if (rebuild) g.restore();
     ctx.drawImage(darkC, -V.ox, -V.oy);
     /* teinte des faisceaux, par-dessus, en lumière additive */
     if (c.phase !== 'lure') {
@@ -24696,6 +24939,17 @@ const Debug = (() => {
               ? 110
               : 260
         : 0;
+    /* anti-blocage (chantier 9 : piliers du sous-sol, étals du bazar) — sans progrès vers un objectif pendant 1,2 s, le bot
+       fait un pas de côté franc pendant 0,7 s, d'un côté tiré au sort, plutôt que d'osciller contre le bloc */
+    if (goal && dist(pl.x, pl.y, goal.x, goal.y) > 60) {
+      const st = pl.botStuck || (pl.botStuck = { x: pl.x, y: pl.y, t: Time.now });
+      if (dist(pl.x, pl.y, st.x, st.y) > 14) Object.assign(st, { x: pl.x, y: pl.y, t: Time.now });
+      else if (Time.now - st.t > 1.2 && !(pl.botDetour && Time.now < pl.botDetour.until)) {
+        pl.botDetour = { a: angleTo(pl.x, pl.y, goal.x, goal.y) + (rng() < 0.5 ? 1 : -1) * Math.PI * 0.55, until: Time.now + 0.7 };
+        Object.assign(st, { x: pl.x, y: pl.y, t: Time.now });
+      }
+    }
+    const detour = pl.botDetour && Time.now < pl.botDetour.until ? pl.botDetour : null;
     /* évaluation des directions */
     let best = DIRS[0],
       bs = -Infinity;
@@ -24724,6 +24978,7 @@ const Debug = (() => {
         const gd = dist(nx, ny, goal.x, goal.y);
         s += wantDist ? -Math.abs(gd - wantDist) * 0.08 : -gd * 0.05;
       }
+      if (detour) s += 30 * (d.x * Math.cos(detour.a) + d.y * Math.sin(detour.a));
       s += rng() * 1.5;
       if (s > bs) {
         bs = s;

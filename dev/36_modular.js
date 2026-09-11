@@ -216,7 +216,28 @@ const Modular = (() => {
     for (const m of room.modular) {
       if (m.disabled) continue;
       ctx.save();
-      if (m.kind === 'slide_wall') {
+      if (m.kind === 'slide_wall' && m.look === 'wagon') {
+        /* le train (chantier 9) : un wagonnet par tuile sur son rail, et un liseré orange quand il va entrer */
+        const o = m.obs[0];
+        ctx.setLineDash([6, 6]);
+        ctx.strokeStyle = 'rgba(60,40,20,.55)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(ROOM_X, o.py + o.ph / 2 + 10);
+        ctx.lineTo(ROOM_X + ROOM_W, o.py + o.ph / 2 + 10);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const n = Math.max(1, Math.round(o.pw / TILE));
+        for (let i = 0; i < n; i++)
+          Sprites.drawProp(ctx, 'mine-wagon', o.px + (i + 0.5) * (o.pw / n), o.py + o.ph / 2, TILE * 1.15, TILE * 1.15, {
+            flip: (m.dx || 0) < 0,
+          });
+        if (m.warn) {
+          ctx.strokeStyle = '#ffb347';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(o.px - 2, o.py - 2, o.pw + 4, o.ph + 4);
+        }
+      } else if (m.kind === 'slide_wall') {
         const o = m.obs[0];
         ctx.fillStyle = '#3a4260';
         ctx.fillRect(o.px, o.py, o.pw, o.ph);
