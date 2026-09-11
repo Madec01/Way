@@ -18,11 +18,9 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
   });
   fs.writeFileSync(out('px32.png'), Buffer.from(px32.split(',')[1], 'base64'));
 
-  await p.evaluate(() => {
-    try {
-      localStorage.removeItem('way_amis_v1');
-    } catch (e) {}
+  await p.evaluate(async () => {
     Atelier.open();
+    await Atelier.amisReset();
   });
   await p.waitForTimeout(1600);
   await p.evaluate(() => {
@@ -31,15 +29,15 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
   });
   await p.click('#am-addpet');
   await p.waitForTimeout(250);
-  await p.setInputFiles('#atelier [data-file="0"]', out('px32.png'));
+  await p.setInputFiles('#atelier [data-file="4"][data-v=""]', out('px32.png'));
   await p.waitForTimeout(800);
 
   const gard = await p.evaluate(
     () =>
       new Promise(r => {
-        const e = JSON.parse(localStorage.getItem('way_amis_v1')).pets[0];
+        const e = Atelier.amis.pets[4];
         const i = new Image();
-        i.onload = () => r({ w: i.width, h: i.height, taille: Content.pets()[0].size, src: e.img.length });
+        i.onload = () => r({ w: i.width, h: i.height, taille: Content.pets()[4].size, src: e.img.length });
         i.src = e.img;
       })
   );
@@ -51,7 +49,7 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
     const c = document.createElement('canvas');
     c.width = c.height = 80;
     const g = c.getContext('2d');
-    Sprites.drawProp(g, Content.pets()[0].sprite, 40, 40, 64, 64, {});
+    Sprites.drawProp(g, Content.pets()[4].sprite, 40, 40, 64, 64, {});
     const d = g.getImageData(8, 8, 64, 64).data;
     const vus = new Set();
     for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) vus.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]);
@@ -118,21 +116,21 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
   fs.writeFileSync(out('photo.png'), Buffer.from(photo.split(',')[1], 'base64'));
   await p.click('#am-addpet');
   await p.waitForTimeout(250);
-  await p.setInputFiles('#atelier [data-file="1"]', out('photo.png'));
+  await p.setInputFiles('#atelier [data-file="5"][data-v=""]', out('photo.png'));
   await p.waitForTimeout(900);
   const ph = await p.evaluate(
     () =>
       new Promise(r => {
-        const e = JSON.parse(localStorage.getItem('way_amis_v1')).pets[1];
+        const e = Atelier.amis.pets[5];
         const i = new Image();
         i.onload = () => r({ w: i.width, h: i.height });
         i.src = e.img;
       })
   );
-  ok("une photo d'appareil est réduite à 128 px", ph.w === 128 && ph.h === 128, `900×1200 → ${ph.w}×${ph.h}`);
+  ok("une photo d'appareil est réduite à 64 px", ph.w === 64 && ph.h === 64, `900×1200 → ${ph.w}×${ph.h}`);
 
   await p.evaluate(async () => {
-    Pets.give(Content.pets()[0].id, true);
+    Pets.give(Content.pets()[4].id, true);
     Atelier.st.tab = 'anim';
     Atelier.refresh();
     document.getElementById('a-mode').click();

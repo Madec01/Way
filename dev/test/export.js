@@ -3,11 +3,9 @@ const { test, out } = require('./lib');
 const fs = require('fs');
 test(async ({ page: p, ok, entrer }) => {
   await entrer('test');
-  await p.evaluate(() => {
-    try {
-      localStorage.removeItem('way_amis_v1');
-    } catch (e) {}
+  await p.evaluate(async () => {
     Atelier.open();
+    await Atelier.amisReset();
   });
   await p.waitForTimeout(1600);
   await p.evaluate(() => {
@@ -29,10 +27,10 @@ test(async ({ page: p, ok, entrer }) => {
     return c.toDataURL('image/png');
   });
   fs.writeFileSync(out('visage_test.png'), Buffer.from(img.split(',')[1], 'base64'));
-  await p.setInputFiles('#atelier [data-filec="0"]', out('visage_test.png'));
+  await p.setInputFiles('#atelier [data-filec="3"]', out('visage_test.png'));
   await p.waitForTimeout(700);
   await p.evaluate(() => {
-    const c = document.querySelector('.amicard[data-c="0"]');
+    const c = document.querySelector('.amicard[data-c="3"]');
     const set = (f, v) => {
       const e = c.querySelector(`[data-f="${f}"]`);
       e.value = v;
@@ -50,8 +48,11 @@ test(async ({ page: p, ok, entrer }) => {
   await p.click('#a-export');
   await p.waitForTimeout(300);
   const sans = await p.evaluate(() => document.querySelector('#a-txt').value);
-  ok('sans accord, aucune photo ne part', !/data:image/.test(sans) && /photos non exportées/.test(sans));
-  ok('le pseudo remplace le prénom dans le fichier', /"name":"Le Renard"/.test(sans) && !/Prénom Réel/.test(sans));
+  ok(
+    'sans accord, aucune photo ne part (les planches dessinées, elles, partent)',
+    /const FRIEND_IMAGES = \{\};/.test(sans) && /photos non exportées/.test(sans)
+  );
+  ok('le pseudo remplace le prénom dans le fichier', /name: 'Le Renard'/.test(sans) && !/Prénom Réel/.test(sans));
 
   /* export en acceptant : la photo part */
   await p.evaluate(() => {
@@ -61,4 +62,5 @@ test(async ({ page: p, ok, entrer }) => {
   await p.waitForTimeout(300);
   const avec = await p.evaluate(() => document.querySelector('#a-txt').value);
   ok('avec accord, la photo est embarquée', /data:image\/png/.test(avec));
+  await p.evaluate(() => Atelier.amisReset());
 });

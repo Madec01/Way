@@ -186,4 +186,8 @@ Clé **`way_save`** (anciennement `sujet_neuf_save_v1`, encore relue). Version c
 
 Migrations : v1 → v2 sans changement de champ ; v2 → v3 (chantier 6) ramène `metaTiers` de `meta_memoire_selective`, `meta_apercu_coffre` et `meta_quatrieme_choix` à 1 au plus et rembourse dans `coins` les paliers 2 et 3 payés (80 + 150, 70 + 130, 100 + 170).
 
-Autres clés du navigateur : `way_amis_v1` (l'établi Amis), `way.props.custom` (images importées), `way_journal` (les 20 dernières erreurs, voir `Rapport`).
+Autres clés du navigateur : `way_journal` (les 20 dernières erreurs, voir `Rapport`).
+
+## 9. L'établi Amis dans IndexedDB (chantier 8)
+
+Base `way_atelier`, magasin `kv`, clé `amis` : `{ pets: [fiche], chars: [fiche], deleted: [id], pairs: [] | null }` — **seulement ce qui diffère de `content5.js`** (une fiche modifiée ou nouvelle, un ami du fichier supprimé, les duos s'ils ont changé). Une fiche porte `def` (la définition du jeu), ses champs de formulaire, ses images en data URI (`img`, `imgE`, `imgN`, `imgBody*`) et ses planches (`sheets: { clip: dataURL }`, `fw`). Quand plus rien ne diffère, la clé est supprimée. L'ancienne clé `localStorage.way_amis_v1` est reprise une fois au premier chargement puis effacée ; `way.props.custom` n'existe plus.

@@ -4,10 +4,7 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
   await entrer('test');
   /* le contenu livré porte déjà les compagnons de l'auteur : on ne vise que celui posé par ce test */
   await p.addInitScript(() => {
-    window.monPet = () =>
-      Content.pets()
-        .filter(x => x.atelier)
-        .slice(-1)[0] || Content.pets()[0];
+    window.monPet = () => Content.pets()[4] || Content.pets()[0]; // la fiche posée par ce test vient après les 4 du fichier
   });
 
   /* trois vues 32×32, chacune d'une couleur franche pour être identifiable au pixel près */
@@ -45,11 +42,9 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
   ok('vers la gauche → vue est retournée', dirs.gauche.dir === 'e' && dirs.gauche.flip, 'trois images suffisent aux quatre directions');
   ok('une diagonale garde le profil', dirs.diag.dir === 'e', 'marge de 1,2 en faveur du profil');
 
-  await p.evaluate(() => {
-    try {
-      localStorage.removeItem('way_amis_v1');
-    } catch (e) {}
+  await p.evaluate(async () => {
     Atelier.open();
+    await Atelier.amisReset();
   });
   await p.waitForTimeout(1600);
   await p.evaluate(() => {
@@ -58,13 +53,17 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
   });
   await p.click('#am-addpet');
   await p.waitForTimeout(250);
-  const slots = await p.evaluate(() => [...document.querySelectorAll('.amicard[data-p="0"] .amivue')].map(e => e.textContent.trim()));
-  ok("trois emplacements d'image par animal", slots.length === 3, slots.join(' · '));
+  const slots = await p.evaluate(() =>
+    [...document.querySelectorAll('.amicard[data-p="4"] .amivue:not([data-clip])')]
+      .map(e => e.textContent.trim())
+      .filter(t => !/repos|marche|attaque|sonné/.test(t))
+  );
+  ok("trois emplacements d'image par animal (plus ses planches)", slots.length === 3, slots.join(' · '));
 
-  await p.setInputFiles('#atelier [data-file="0"][data-v=""]', out('v_sud.png'));
+  await p.setInputFiles('#atelier [data-file="4"][data-v=""]', out('v_sud.png'));
   await p.waitForTimeout(600);
   const uneSeule = await p.evaluate(() => {
-    const sp = Content.pets().find(x => x.atelier).sprite;
+    const sp = Content.pets()[4].sprite;
     return { type: typeof sp, sud: Sprites.pickDir(sp, 's'), nord: Sprites.pickDir(sp, 'n') };
   });
   ok(
@@ -73,12 +72,12 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
     'un seul sprite pour les trois directions'
   );
 
-  await p.setInputFiles('#atelier [data-file="0"][data-v="E"]', out('v_est.png'));
+  await p.setInputFiles('#atelier [data-file="4"][data-v="E"]', out('v_est.png'));
   await p.waitForTimeout(600);
-  await p.setInputFiles('#atelier [data-file="0"][data-v="N"]', out('v_nord.png'));
+  await p.setInputFiles('#atelier [data-file="4"][data-v="N"]', out('v_nord.png'));
   await p.waitForTimeout(600);
   const trois = await p.evaluate(() => {
-    const sp = Content.pets().find(x => x.atelier).sprite;
+    const sp = Content.pets()[4].sprite;
     return { type: typeof sp, s: Sprites.pickDir(sp, 's'), e: Sprites.pickDir(sp, 'e'), n: Sprites.pickDir(sp, 'n') };
   });
   ok(
@@ -86,12 +85,12 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
     trois.type === 'object' && trois.s !== trois.e && trois.e !== trois.n,
     `${trois.s} / ${trois.e} / ${trois.n}`
   );
-  const marques = await p.evaluate(() => document.querySelectorAll('.amicard[data-p="0"] .amivue.ok').length);
+  const marques = await p.evaluate(() => document.querySelectorAll('.amicard[data-p="4"] .amivue.ok').length);
   ok('les emplacements remplis sont signalés', marques === 3, marques + '/3 marqués');
 
   /* en jeu : la couleur dessinée doit changer avec la direction */
   const enjeu = await p.evaluate(async () => {
-    document.querySelector('[data-try="0"]').click();
+    document.querySelector('[data-try="4"]').click();
     await new Promise(r => setTimeout(r, 500));
     const lire = (dx, dy) => {
       G.pet.dx = dx;
@@ -195,9 +194,14 @@ test(async ({ page: p, context, ok, entrer, salle, run, sansPause, erreurs: errs
     window.confirm = () => true; // ces tests vérifient l'export AVEC les images : l'accord est donné
     document.getElementById('a-export').click();
     const t = document.getElementById('a-txt').value;
-    return { n: (t.match(/data:image\/png/g) || []).length, dir: /"e":/.test(t) && /"n":/.test(t) };
+    const bloc = t.slice(t.indexOf('const FRIEND_IMAGES'), t.indexOf('const FRIEND_SHEETS')); // les planches du fichier ne comptent pas
+    return {
+      n: (bloc.match(/data:image\/png/g) || []).length,
+      dir: /\be: '/.test(t) && /\bn: '/.test(t),
+      sprites: (t.match(/sprite: [^\n]*/g) || []).slice(-2).join(' / '),
+    };
   });
-  ok("l'export emporte les six images et les vues", exp.n === 6 && exp.dir, exp.n + ' images');
+  ok("l'export emporte les six images et les vues", exp.n === 6 && exp.dir, exp.n + ' images · ' + exp.sprites);
 
   await p.evaluate(() => {
     Atelier.st.tab = 'anim';

@@ -433,9 +433,10 @@ const Sprites = (() => {
   function clearFloor() {
     floorCache.clear();
   }
-  /* Atelier : une image déposée par l'auteur devient un accessoire utilisable tout de suite (et gardée dans le
-     navigateur). Pour l'avoir dans le jeu, le fichier doit ensuite rejoindre assets/sprites/pixel/. */
-  const CUSTOM_KEY = 'way.props.custom';
+  /* Atelier : une image déposée par l'auteur devient un accessoire utilisable tout de suite. Une seule copie de
+     chaque image (chantier 8) : les amis vivent dans l'établi Amis (IndexedDB) puis dans content5.js ; ici on ne
+     garde que le canvas, plus de `way.props.custom` réécrit en entier à chaque image. Un accessoire de décor déposé
+     dans l'établi rythme vaut jusqu'au rechargement : pour le garder, ranger le fichier dans assets/sprites/pixel/. */
   let customs = {};
   function addCustom(name, url) {
     return new Promise(res => {
@@ -450,30 +451,22 @@ const Sprites = (() => {
         props[name] = c;
         customs[name] = url;
         floorCache.clear();
-        try {
-          localStorage.setItem(CUSTOM_KEY, JSON.stringify(customs));
-        } catch (e) {
-          /* trop gros pour le navigateur : l'accessoire reste utilisable jusqu'au rechargement */
-        }
         res(true);
       };
       img.onerror = () => res(false);
       img.src = url;
     });
   }
-  /* images des amis embarquées dans content5.js : enregistrées comme accessoires au démarrage */
+  function removeCustom(name) {
+    delete props[name];
+    delete customs[name];
+  }
+  /* images des amis embarquées dans content5.js : enregistrées une fois, au démarrage (l'établi Amis ne
+     réenregistre que ce qui a changé localement) */
   function loadFriends() {
     if (typeof FRIEND_IMAGES === 'object' && FRIEND_IMAGES) for (const k in FRIEND_IMAGES) addCustom(k, FRIEND_IMAGES[k]);
     if (typeof FRIEND_SHEETS === 'object' && FRIEND_SHEETS)
       for (const k in FRIEND_SHEETS) addSheet(k, FRIEND_SHEETS[k].url, FRIEND_SHEETS[k].fw);
-  }
-  function loadCustoms() {
-    try {
-      customs = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '{}');
-    } catch (e) {
-      customs = {};
-    }
-    for (const k in customs) addCustom(k, customs[k]);
   }
   function propNames() {
     return Object.keys(PROP_DEFS)
@@ -1391,7 +1384,7 @@ const Sprites = (() => {
     drawDeco,
     clearFloor,
     addCustom,
-    loadCustoms,
+    removeCustom,
     loadFriends,
     propNames,
     propCanvas,

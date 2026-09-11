@@ -31,6 +31,7 @@ const ORDER = [
   '57_attract.js',
   '60_meta.js',
   '70_debug.js',
+  '78_amis.js',
   '80_atelier.js',
   '90_main.js',
 ];

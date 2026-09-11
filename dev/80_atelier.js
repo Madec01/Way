@@ -200,7 +200,7 @@ const Atelier = (() => {
     headX0 = 0,
     headW = 0;
   const AKEY = 'way_amis_v1';
-  let amis = { pets: [], chars: [] }; // animaux et copains créés ici, gardés dans le navigateur puis exportés
+  let amis = { pets: [], chars: [], pairs: [] }; // les amis du fichier, plus ce qui a changé ici (IndexedDB)
 
   /* Deux longueurs distinctes, et c'est tout le sujet des partitions longues :
      `bars` est la longueur de la PARTITION (jusqu'à un morceau entier, plusieurs minutes) ;
@@ -381,78 +381,47 @@ const Atelier = (() => {
     else if (o.terrain === null) st.terrain = null;
   }
 
-  /* ---------- les amis : animaux de compagnie et visages ----------
-     Tout est gardé dans le navigateur pendant qu'on travaille, et versé dans le jeu tout de suite (CONTENT).
-     « Exporter » écrit dev/content5.js, images comprises : c'est ce fichier qui fait vivre les amis chez tout
-     le monde une fois le jeu partagé. */
-  function amisLoad() {
-    try {
-      const o = JSON.parse(localStorage.getItem(AKEY) || 'null');
-      if (o) amis = { pets: o.pets || [], chars: o.chars || [] };
-    } catch (e) {
-      /* */
-    }
-    amisRegister();
-  }
-  function amisSave() {
-    try {
-      localStorage.setItem(AKEY, JSON.stringify(amis));
-    } catch (e) {
-      UI.toast("Trop d'images pour le navigateur : exportez dans content5.js");
-    }
-    amisRegister();
-  }
-  /* verse les amis dans le contenu du jeu (en remplaçant la fournée précédente) */
-  function amisRegister() {
-    for (const a of amis.pets.concat(amis.chars)) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) Sprites.addCustom(a[k], a[f]);
-    for (const c of amis.chars) if (c.sheets) for (const k in c.sheets) Sprites.addSheet(c.id + '_' + k, c.sheets[k], c.fw || 0);
-    CONTENT.pets = CONTENT.pets.filter(p => !p.atelier).concat(amis.pets.map(petDef));
-    CONTENT.characters = CONTENT.characters.filter(c => !c.atelier).concat(amis.chars.map(charDef));
-    Content.invalidate();
-    Meta.ensure();
-  }
+  /* ---------- les amis : animaux de compagnie et visages (chantier 8 : l'atelier honnête) ----------
+     Ce que le jeu contient (content5.js : FRIEND_CONTENT, FRIEND_SHEETS, FRIEND_IMAGES) est relu à l'ouverture :
+     les amis livrés apparaissent dans l'établi tels quels. Seuls les changements locaux (fiche modifiée, ami ajouté
+     ou supprimé) sont gardés dans le navigateur, dans IndexedDB ; « Exporter » fond les deux et écrit le fichier
+     complet. Une fiche porte `def`, la définition telle que le jeu la lit : le formulaire n'en touche que quelques
+     champs, tout le reste (rôle caché, duo, vol, caractère importé) traverse intact. */
+  const IDB = {
+    db: null,
+    open() {
+      if (this.db) return Promise.resolve(this.db);
+      return new Promise((res, rej) => {
+        if (typeof indexedDB === 'undefined') return rej(new Error('pas d’IndexedDB'));
+        const r = indexedDB.open('way_atelier', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('kv');
+        r.onsuccess = () => res((this.db = r.result));
+        r.onerror = () => rej(r.error);
+      });
+    },
+    req(mode, fn) {
+      return this.open().then(
+        db =>
+          new Promise((res, rej) => {
+            const t = db.transaction('kv', mode);
+            const q = fn(t.objectStore('kv'));
+            q.onsuccess = () => res(q.result);
+            q.onerror = () => rej(q.error);
+          })
+      );
+    },
+    get(k) {
+      return this.req('readonly', s => s.get(k));
+    },
+    set(k, v) {
+      return this.req('readwrite', s => s.put(v, k));
+    },
+    del(k) {
+      return this.req('readwrite', s => s.delete(k));
+    },
+  };
+  const clone = o => JSON.parse(JSON.stringify(o));
   const roleOf = b => ROLES.find(r => r[0] === b) || ROLES[0];
-  function petDef(p) {
-    const base = Object.assign({}, roleOf(p.behavior)[2]);
-    const vues = p.imgE || p.imgN ? { s: p.sprite, e: p.imgE ? p.spriteE : null, n: p.imgN ? p.spriteN : null } : p.sprite;
-    return Object.assign(base, {
-      id: p.id,
-      name: p.name || 'Animal',
-      sprite: vues,
-      color: p.color || '#9fd8ff',
-      tag: roleOf(p.behavior)[1],
-      desc: p.desc || '',
-      behavior: p.behavior,
-      damage: +p.damage || 0,
-      every: +p.every || 4,
-      size: +p.size || 64,
-      price: +p.price || 0,
-      unlocked: true,
-      atelier: true,
-    });
-  }
-  function charDef(c) {
-    const tr = TRAITS.find(t => t[0] === c.trait) || TRAITS[0];
-    const corps = c.imgBody ? { s: c.spriteBody, e: c.imgBodyE ? c.spriteBodyE : null, n: c.imgBodyN ? c.spriteBodyN : null } : null;
-    const anim = {};
-    for (const [k] of CLIPS_UI) if (c.sheets && c.sheets[k]) anim[k] = c.id + '_' + k;
-    return {
-      id: c.id,
-      name: c.pseudo || c.name || 'Copain', // le pseudo, s'il existe, est le seul nom qui sort du navigateur
-      sprite: 'player',
-      face: c.imgBody || anim.idle ? null : c.sprite,
-      body: corps,
-      anim: Object.keys(anim).length ? anim : null,
-      size: +c.size || 64,
-      atelier: true,
-      desc: c.desc || '',
-      stats: { maxHp: +c.maxHp || 100, speed: +c.speed || 260, damage: +c.damage || 1, luck: +c.luck || 2 },
-      trait: { id: 'trait_' + c.id, name: c.traitName || tr[1], desc: c.traitDesc || tr[1], mods: tr[2], hooks: tr[3] || {} },
-      startWeapon: c.weapon || 'weapon_blade',
-      unlocked: true,
-      price: 0,
-    };
-  }
   const uid = p => p + '_' + Math.random().toString(36).slice(2, 8);
   /* toutes les images qu'un ami peut porter : champ de données ↔ nom d'accessoire */
   const IMG_SLOTS = [
@@ -469,7 +438,7 @@ const Atelier = (() => {
     ['N', 'nord (dos)'],
   ];
   /* Planches d'animation : une grille de cases carrées, lues dans l'ordre de lecture. Elles priment sur l'image
-     fixe — c'est le dessin le plus fini dont on dispose. */
+     fixe — c'est le dessin le plus fini dont on dispose. Les animaux ont les leurs (attaque, sonné). */
   const CLIPS_UI = [
     ['idle', 'repos'],
     ['walk', 'marche'],
@@ -477,8 +446,287 @@ const Atelier = (() => {
     ['pick', 'ramasse'],
     ['death', 'mort'],
   ];
-  /* 64 px par défaut : le double d'une image de 32, donc des pixels carrés, et une bête un peu plus grande
-     qu'une tuile (48) — c'est la taille qui « fait animal » à côté d'un joueur de 48 × 75. */
+  const PET_CLIPS_UI = [
+    ['idle', 'repos'],
+    ['walk', 'marche'],
+    ['attack', 'attaque'],
+    ['hurt', 'sonné'],
+  ];
+  const clipsOf = kind => (kind === 'pet' ? PET_CLIPS_UI : CLIPS_UI);
+  const friends = () => (typeof FRIEND_CONTENT === 'object' && FRIEND_CONTENT) || { characters: [], pets: [], pairs: [] };
+  const friendSheets = () => (typeof FRIEND_SHEETS === 'object' && FRIEND_SHEETS) || {};
+  const friendImages = () => (typeof FRIEND_IMAGES === 'object' && FRIEND_IMAGES) || {};
+  /* une définition du jeu → une fiche de l'établi (l'inverse exact de petDef / charDef) */
+  function defToEntry(def, kind) {
+    const e = { id: def.id, def: clone(def) };
+    const sh = friendSheets(),
+      im = friendImages();
+    if (def.anim)
+      for (const k in def.anim)
+        if (sh[def.anim[k]]) {
+          e.sheets = e.sheets || {};
+          e.sheets[k] = sh[def.anim[k]].url;
+          e.fw = sh[def.anim[k]].fw;
+        }
+    const vues = (spec, base) => {
+      if (!spec) return;
+      const s = typeof spec === 'string' ? { s: spec } : spec;
+      if (s.s && im[s.s]) ((e[base[0]] = im[s.s]), (e[base[1]] = s.s));
+      if (s.e && im[s.e]) ((e[base[0] + 'E'] = im[s.e]), (e[base[1] + 'E'] = s.e));
+      if (s.n && im[s.n]) ((e[base[0] + 'N'] = im[s.n]), (e[base[1] + 'N'] = s.n));
+    };
+    if (kind === 'pet') {
+      Object.assign(e, {
+        name: def.name || '',
+        desc: def.desc || '',
+        tag: def.tag,
+        behavior: def.behavior,
+        damage: def.damage || 0,
+        every: def.every || 4,
+        size: def.size || 64,
+        price: def.price || 0,
+        color: def.color || '#9fd8ff',
+        sprite: typeof def.sprite === 'string' ? def.sprite : (def.sprite && def.sprite.s) || def.id + '_img',
+      });
+      vues(def.sprite, ['img', 'sprite']);
+      if (!e.spriteE) ((e.spriteE = e.sprite + '_e'), (e.spriteN = e.sprite + '_n'));
+    } else {
+      const st2 = def.stats || {};
+      Object.assign(e, {
+        name: def.name || '',
+        pseudo: '',
+        desc: def.desc || '',
+        trait: 'importe',
+        traitName: (def.trait && def.trait.name) || '',
+        traitDesc: (def.trait && def.trait.desc) || '',
+        maxHp: st2.maxHp || 100,
+        speed: st2.speed || 260,
+        damage: st2.damage || 1,
+        luck: st2.luck || 2,
+        size: def.size || 64,
+        sizeSet: true,
+        weapon: def.startWeapon || 'weapon_blade',
+        sprite: def.face || def.id + '_face',
+        spriteBody: (def.body && def.body.s) || def.id + '_body',
+      });
+      if (def.face && im[def.face]) e.img = im[def.face];
+      vues(def.body, ['imgBody', 'spriteBody']);
+      if (!e.spriteBodyE) ((e.spriteBodyE = e.spriteBody + '_e'), (e.spriteBodyN = e.spriteBody + '_n'));
+    }
+    e._sig = signature(e, kind);
+    return e;
+  }
+  const sheetName = (e, k) => e.id + '_' + k;
+  function animOf(e, kind) {
+    const anim = {};
+    for (const [k] of clipsOf(kind)) if (e.sheets && e.sheets[k]) anim[k] = sheetName(e, k);
+    return Object.keys(anim).length ? anim : null;
+  }
+  /* la définition d'un animal : la fiche par-dessus sa définition d'origine (ou les valeurs de départ de son rôle) */
+  function petDef(p) {
+    const role = roleOf(p.behavior);
+    const base = p.def ? clone(p.def) : Object.assign({ id: p.id, name: '', color: '', tag: '', desc: '', sprite: null }, role[2]);
+    if (!p.def || p.def.behavior !== p.behavior) Object.assign(base, role[2]); // changer de rôle repose ses réglages
+    const vues = p.imgE || p.imgN ? { s: p.sprite, e: p.imgE ? p.spriteE : null, n: p.imgN ? p.spriteN : null } : p.sprite;
+    const anim = animOf(p, 'pet');
+    Object.assign(base, {
+      id: p.id,
+      name: p.name || base.name || 'Animal',
+      color: p.color || base.color || '#9fd8ff',
+      tag: p.tag != null ? p.tag : role[1],
+      desc: p.desc || '',
+      behavior: p.behavior,
+      damage: +p.damage || 0,
+      every: +p.every || 4,
+      size: +p.size || 64,
+      price: +p.price || 0,
+    });
+    if (p.img || p.imgE || p.imgN) base.sprite = vues;
+    else if (!p.def) {
+      if (anim)
+        delete base.sprite; // la planche de repos sert d'image fixe (Sprites.pickDir retombe dessus)
+      else base.sprite = p.sprite;
+    }
+    if (anim) base.anim = anim;
+    else if (!p.def) delete base.anim;
+    if (base.unlocked == null) base.unlocked = true;
+    return base;
+  }
+  function charDef(c) {
+    const base = c.def
+      ? clone(c.def)
+      : {
+          id: c.id,
+          name: '',
+          sprite: 'player',
+          desc: '',
+          size: 64,
+          stats: {},
+          trait: {},
+          startWeapon: 'weapon_blade',
+          unlocked: true,
+          price: 0,
+        };
+    const anim = animOf(c, 'char');
+    base.id = c.id;
+    base.name = c.pseudo || c.name || base.name || 'Copain'; // le pseudo, s'il existe, est le seul nom qui sort du navigateur
+    if (c.img && !c.imgBody && !(anim && anim.idle)) base.face = c.sprite;
+    else delete base.face;
+    if (c.imgBody) base.body = { s: c.spriteBody, e: c.imgBodyE ? c.spriteBodyE : null, n: c.imgBodyN ? c.spriteBodyN : null };
+    else delete base.body;
+    if (anim) base.anim = anim;
+    else delete base.anim;
+    base.size = +c.size || 64;
+    base.desc = c.desc || '';
+    base.stats = { maxHp: +c.maxHp || 100, speed: +c.speed || 260, damage: +c.damage || 1, luck: +c.luck || 2 };
+    const tr = TRAITS.find(t => t[0] === c.trait);
+    if (c.trait === 'importe' && c.def && c.def.trait) base.trait = clone(c.def.trait);
+    else {
+      const t = tr || TRAITS[0];
+      base.trait = { id: 'trait_' + c.id, name: c.traitName || t[1], desc: c.traitDesc || t[1], mods: t[2], hooks: t[3] || {} };
+    }
+    base.startWeapon = c.weapon || 'weapon_blade';
+    return base;
+  }
+  /* ce qui compte pour savoir si une fiche a changé depuis le fichier : sa définition et ses images */
+  function signature(e, kind) {
+    const d = kind === 'pet' ? petDef(e) : charDef(e);
+    const imgs = {};
+    for (const [f, k] of IMG_SLOTS) if (e[f]) imgs[e[k]] = e[f];
+    return JSON.stringify([d, imgs, e.sheets || null, e.fw || 0]);
+  }
+  const dirty = (e, kind) => !e._sig || signature(e, kind) !== e._sig;
+  /* fiches livrées (content5.js), puis les changements locaux par-dessus */
+  function amisBase() {
+    const f = friends();
+    return {
+      pets: (f.pets || []).map(d => defToEntry(d, 'pet')),
+      chars: (f.characters || []).map(d => defToEntry(d, 'char')),
+      pairs: clone(f.pairs || []),
+    };
+  }
+  let amisReady = Promise.resolve();
+  function amisLoad() {
+    amis = amisBase();
+    amisReady = (async () => {
+      let local = null;
+      try {
+        local = await IDB.get('amis');
+      } catch (e) {
+        /* pas d'IndexedDB : on travaille en mémoire, l'export reste possible */
+      }
+      if (!local) {
+        /* l'ancienne sauvegarde (localStorage, chantier 2) est reprise une fois puis retirée */
+        try {
+          const old = JSON.parse(localStorage.getItem(AKEY) || 'null');
+          if (old && (old.pets || old.chars)) {
+            local = { pets: old.pets || [], chars: old.chars || [], deleted: [] };
+            for (const p of local.pets) if (p.trait === undefined && p.behavior == null) p.behavior = 'bite';
+            localStorage.removeItem(AKEY);
+          }
+        } catch (e) {
+          /* */
+        }
+      }
+      if (local) {
+        const merge = (list, loc) => {
+          for (const e of loc || []) {
+            const i = list.findIndex(x => x.id === e.id);
+            if (i >= 0) list[i] = e;
+            else list.push(e);
+          }
+        };
+        merge(amis.pets, local.pets);
+        merge(amis.chars, local.chars);
+        for (const id of local.deleted || []) {
+          amis.pets = amis.pets.filter(p => p.id !== id);
+          amis.chars = amis.chars.filter(c => c.id !== id);
+        }
+        if (local.pairs) amis.pairs = local.pairs;
+      }
+      amisRegister();
+      if (live && st.tab === 'amis') refresh();
+    })();
+    return amisReady;
+  }
+  /* ne garde dans le navigateur que ce qui diffère du fichier : fiches changées ou nouvelles, suppressions */
+  function amisLocal() {
+    const f = friends();
+    const ids = new Set((f.pets || []).map(d => d.id).concat((f.characters || []).map(d => d.id)));
+    const deleted = [...ids].filter(id => !amis.pets.some(p => p.id === id) && !amis.chars.some(c => c.id === id));
+    return {
+      pets: amis.pets.filter(p => dirty(p, 'pet')),
+      chars: amis.chars.filter(c => dirty(c, 'char')),
+      deleted,
+      pairs: JSON.stringify(amis.pairs) === JSON.stringify(f.pairs || []) ? null : amis.pairs,
+    };
+  }
+  function amisSave() {
+    amisRegister();
+    const local = amisLocal();
+    const vide = !local.pets.length && !local.chars.length && !local.deleted.length && !local.pairs;
+    return (vide ? IDB.del('amis') : IDB.set('amis', local)).catch(e => {
+      UI.toast('Le navigateur ne garde pas ces changements (' + (e && e.name ? e.name : 'stockage') + ') : exporte dans content5.js', 6);
+    });
+  }
+  /* refus explicite avant de dépasser la place du navigateur : mieux qu'un plantage silencieux à la sauvegarde */
+  async function placePour(octets) {
+    try {
+      if (!navigator.storage || !navigator.storage.estimate) return true;
+      const est = await navigator.storage.estimate();
+      if (!est.quota) return true;
+      const besoin = est.usage + octets * 1.3;
+      if (besoin <= est.quota) return true;
+      const mo = n => (n / 1048576).toFixed(1);
+      UI.toast(
+        `Plus de place dans le navigateur (${mo(est.usage)} Mo sur ${mo(est.quota)}) : exporte dans content5.js avant d'ajouter des images`,
+        7
+      );
+      return false;
+    } catch (e) {
+      return true;
+    }
+  }
+  /* verse dans le contenu du jeu ce qui a changé ; les fiches livrées intactes y sont déjà depuis le démarrage */
+  function amisRegister() {
+    const f = friends();
+    const put = (list, d) => {
+      const i = list.findIndex(x => x.id === d.id);
+      if (i >= 0) list[i] = d;
+      else list.push(d);
+    };
+    const images = e => {
+      for (const [fld, k] of IMG_SLOTS) if (e[fld] && e[k]) Sprites.addCustom(e[k], e[fld]);
+      if (e.sheets) for (const k in e.sheets) Sprites.addSheet(sheetName(e, k), e.sheets[k], e.fw || 0);
+    };
+    for (const p of amis.pets)
+      if (dirty(p, 'pet')) {
+        images(p);
+        put(CONTENT.pets, petDef(p));
+      }
+    for (const c of amis.chars)
+      if (dirty(c, 'char')) {
+        images(c);
+        put(CONTENT.characters, charDef(c));
+      }
+    const ids = new Set(amis.pets.map(p => p.id).concat(amis.chars.map(c => c.id)));
+    const livres = new Set((f.pets || []).map(d => d.id).concat((f.characters || []).map(d => d.id)));
+    CONTENT.pets = CONTENT.pets.filter(d => !livres.has(d.id) || ids.has(d.id));
+    CONTENT.characters = CONTENT.characters.filter(d => !livres.has(d.id) || ids.has(d.id));
+    const pairKey = q => q.char + '|' + q.pet;
+    const basePairs = new Set((f.pairs || []).map(pairKey));
+    CONTENT.pairs = CONTENT.pairs.filter(q => !basePairs.has(pairKey(q))).concat(amisPairs());
+    Content.invalidate();
+    Meta.ensure();
+  }
+  /* les duos du fichier dont les deux membres existent encore */
+  const amisPairs = () => amis.pairs.filter(q => amis.chars.some(c => c.id === q.char) && amis.pets.some(p => p.id === q.pet));
+  /* tout oublier localement (tests, ou repartir du fichier) */
+  function amisReset() {
+    return IDB.del('amis')
+      .catch(() => {})
+      .then(() => amisLoad());
+  }
   function addPet() {
     const n = uid('img');
     amis.pets.push({
@@ -520,9 +768,9 @@ const Atelier = (() => {
     refresh();
   }
 
-  /* ---------- ouverture / fermeture ---------- */
   function toggle() {
-    live ? close() : open();
+    if (live) close();
+    else open();
   }
   function open() {
     if (live) return;
@@ -885,7 +1133,11 @@ const Atelier = (() => {
           <label>taille <input type="number" min="16" max="128" step="8" data-f="size" value="${p.size}"> px <i class="amuted">(image 32 px → 64 = ×2 net · tuile 48 · joueur 48×75)</i></label>
           <label>prix <input type="number" min="0" max="999" step="10" data-f="price" value="${p.price}"></label>
           <label>teinte <input type="color" data-f="color" value="${p.color || '#9fd8ff'}"></label></div>
-        <div class="amirow"><input type="text" class="amidesc" data-f="desc" value="${(p.desc || '').replace(/"/g, '&quot;')}" placeholder="Ce qu'il fait, en une phrase"></div></div>`;
+        <div class="amirow"><span class="amuted">planches d'animation :</span>
+          ${PET_CLIPS_UI.map(cl => `<label class="amivue${p.sheets && p.sheets[cl[0]] ? ' ok' : ''}">${cl[1]} <input type="file" accept="image/*" data-psheet="${i}" data-clip="${cl[0]}"></label>`).join('')}
+          <label>case <input type="number" min="8" max="256" step="1" data-f="fw" value="${p.fw || 0}"> px <i class="amuted">(0 = deviné)</i></label></div>
+        <div class="amirow"><input type="text" class="amidesc" data-f="tag" value="${(p.tag != null ? p.tag : roleOf(p.behavior)[1]).replace(/"/g, '&quot;')}" placeholder="Ce qu'il fait, en trois mots (la ligne sous son nom)">
+          <input type="text" class="amidesc" data-f="desc" value="${(p.desc || '').replace(/"/g, '&quot;')}" placeholder="Ce qu'il fait, en une phrase"></div></div>`;
     });
     h += '<button class="btn small" id="am-addpet">+ Ajouter un animal</button></div>';
     h += '<div class="amiscol"><h4>Copains</h4>';
@@ -902,7 +1154,9 @@ const Atelier = (() => {
           ${c.imgBody ? `<button class="btn tiny ghost" data-nobody="${i}">retirer le sprite entier</button>` : ''}
           <label>taille <input type="number" min="32" max="128" step="8" data-f="size" value="${c.size || 64}"> px</label>
           <label>caractère <select data-f="trait">${opt(
-            TRAITS.map(t => [t[0], t[1]]),
+            (c.def && c.def.trait ? [['importe', '(du fichier) ' + (c.def.trait.name || 'caractère importé')]] : []).concat(
+              TRAITS.map(t => [t[0], t[1]])
+            ),
             c.trait
           )}</select></label></div>
         <div class="amirow"><label>PV <input type="number" min="40" max="300" step="5" data-f="maxHp" value="${c.maxHp}"></label>
@@ -925,7 +1179,12 @@ const Atelier = (() => {
     lanes.querySelectorAll('[data-img]').forEach(sp => {
       const k = sp.dataset.img;
       const a = k[0] === 'p' ? amis.pets[+k.slice(1)] : amis.chars[+k.slice(1)];
-      const c = a ? Sprites.propCanvas(a.imgBody ? a.spriteBody : a.sprite, 34) : null;
+      /* la vignette : la planche de repos si elle existe (les amis du fichier n'ont que des planches), sinon l'image fixe */
+      const c = !a
+        ? null
+        : a.sheets && a.sheets.idle
+          ? Sprites.sheetCanvas(sheetName(a, 'idle'), 34)
+          : Sprites.propCanvas(a.imgBody ? a.spriteBody : a.sprite, 34);
       if (c) sp.appendChild(c);
       else sp.textContent = '—';
     });
@@ -961,6 +1220,9 @@ const Atelier = (() => {
     });
     lanes.querySelectorAll('[data-sheet]').forEach(f => {
       f.onchange = () => readSheet(f, amis.chars[+f.dataset.sheet], f.dataset.clip);
+    });
+    lanes.querySelectorAll('[data-psheet]').forEach(f => {
+      f.onchange = () => readSheet(f, amis.pets[+f.dataset.psheet], f.dataset.clip);
     });
     lanes.querySelectorAll('[data-del]').forEach(bt => {
       bt.onclick = () => {
@@ -1028,12 +1290,23 @@ const Atelier = (() => {
     const f = input.files && input.files[0];
     if (!f || !entry) return;
     const rd = new FileReader();
-    rd.onload = () => {
-      entry.sheets = entry.sheets || {};
-      entry.sheets[clip] = rd.result;
+    rd.onload = () => readSheetData(entry, clip, rd.result);
+    rd.readAsDataURL(f);
+  }
+  /* la planche est réencodée en PNG palette (trois fois plus léger, mêmes pixels) avant d'être gardée */
+  async function readSheetData(entry, clip, dataUrl) {
+    const url = await paletteUrl(dataUrl);
+    if (!url) {
+      UI.toast('Planche illisible');
+      return;
+    }
+    if (!(await placePour(url.length))) return;
+    entry.sheets = entry.sheets || {};
+    entry.sheets[clip] = url;
+    {
       /* la case est devinée pour CHAQUE planche ; une planche d'une autre case que les précédentes est refusée
          plutôt que découpée de travers en silence */
-      Sprites.addSheet(entry.id + '_' + clip, rd.result, 0).then(inf => {
+      Sprites.addSheet(sheetName(entry, clip), url, 0).then(inf => {
         if (inf && entry.fw && inf.fw !== entry.fw) {
           UI.toast(`${clip} : cases de ${inf.fw} px, les autres planches sont en ${entry.fw} px — planche refusée`, 6);
           delete entry.sheets[clip];
@@ -1067,43 +1340,71 @@ const Atelier = (() => {
         amisSave();
         refresh();
       });
-    };
-    rd.readAsDataURL(f);
+    }
+  }
+  /* charge une image et la rend en PNG palette (ou en PNG RGBA au-delà de 256 couleurs) ; null si illisible */
+  function paletteUrl(dataUrl) {
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = img.width;
+        c.height = img.height;
+        const g = c.getContext('2d');
+        g.imageSmoothingEnabled = false;
+        g.drawImage(img, 0, 0);
+        Amis.encodeCanvas(c).then(res, () => res(c.toDataURL('image/png')));
+      };
+      img.onerror = () => res(null);
+      img.src = dataUrl;
+    });
   }
   /* Une image déposée entre dans le jeu telle quelle si elle est déjà à une taille de sprite. On ne l'AGRANDIT
      jamais : un pixel art de 32×32 agrandi, a fortiori en lissant, perd exactement ce qui en fait du pixel art.
      Seules les photos d'appareil sont réduites — et là le lissage sert, puisqu'il s'agit de photos. */
-  const IMG_MAX = 128;
+  const IMG_MAX = 128; // au-delà, c'est une photo : réduite à PHOTO_MAX, lissée, en JPEG
+  const PHOTO_MAX = 64;
   function readImg(input, entry, field, key) {
     const f = input.files && input.files[0];
     if (!f || !entry) return;
     const rd = new FileReader();
-    rd.onload = () => {
+    rd.onload = () => readImgData(entry, field, key, rd.result);
+    rd.readAsDataURL(f);
+  }
+  function readImgData(entry, field, key, dataUrl) {
+    return new Promise(res => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const side = Math.min(img.width, img.height);
         const carre = img.width === img.height;
-        const S = Math.min(IMG_MAX, side);
+        const photo = side > IMG_MAX;
+        const S = photo ? PHOTO_MAX : side;
         const c = document.createElement('canvas');
         c.width = S;
         c.height = S;
         const g = c.getContext('2d');
-        const reduit = side > S;
-        g.imageSmoothingEnabled = reduit;
-        if (reduit) g.imageSmoothingQuality = 'high';
+        g.imageSmoothingEnabled = photo;
+        if (photo) g.imageSmoothingQuality = 'high';
         g.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
-        entry[field] = c.toDataURL('image/png');
-        if (!carre) UI.toast('Image recadrée au carré (' + img.width + '×' + img.height + ' → ' + S + '×' + S + ')');
-        else if (!reduit) UI.toast('Image reprise telle quelle : ' + S + '×' + S + ' px');
+        /* une photo n'a ni transparence ni palette : le JPEG pèse six fois moins ; un pixel art garde ses pixels en PNG palette */
+        const url = photo ? c.toDataURL('image/jpeg', 0.85) : await Amis.encodeCanvas(c);
+        if (!(await placePour(url.length))) return res(false);
+        entry[field] = url;
+        if (photo) UI.toast('Photo réduite à ' + S + '×' + S + ' px (JPEG)');
+        else if (!carre) UI.toast('Image recadrée au carré (' + img.width + '×' + img.height + ' → ' + S + '×' + S + ')');
+        else UI.toast('Image reprise telle quelle : ' + S + '×' + S + ' px');
         Sprites.addCustom(entry[key], entry[field]).then(() => {
           amisSave();
           refresh();
+          res(true);
         });
       };
-      img.onerror = () => UI.toast('Image illisible');
-      img.src = rd.result;
-    };
-    rd.readAsDataURL(f);
+      img.onerror = () => {
+        UI.toast('Image illisible');
+        res(false);
+      };
+      img.src = dataUrl;
+    });
   }
   /* réglages de l'élément choisi : ce qui a du sens pour sa mécanique, rien de plus */
   function tune(lanes) {
@@ -1632,19 +1933,18 @@ const Atelier = (() => {
      une fois dans content5.js et poussées, elles sont indexables et impossibles à rappeler. Les planches dessinées
      partent toujours. Sans les photos, un copain retombe sur le corps du jeu et un animal sur sa pastille. */
   function amisSnippet(avecPhotos) {
-    const src = amis.pets.concat(amis.chars);
-    const imgs = [];
-    const shs = [];
-    if (avecPhotos) for (const a of src) for (const [f, k] of IMG_SLOTS) if (a[f] && a[k]) imgs.push([a[k], a[f]]);
-    for (const c of amis.chars) if (c.sheets) for (const k in c.sheets) shs.push([c.id + '_' + k, c.sheets[k], c.fw || 0]);
-    let out = '/* AMIS_DEBUT */\n';
-    if (!avecPhotos) out += "/* photos non exportées : accord non donné (voir l'établi Amis) */\n";
-    out += 'const FRIEND_IMAGES = {\n' + imgs.map(([k, v]) => `  '${k}': '${v}',`).join('\n') + '\n};\n\n';
-    out += 'const FRIEND_SHEETS = {\n' + shs.map(([k, v, w]) => `  '${k}': { fw: ${w}, url: '${v}' },`).join('\n') + '\n};\n\n';
-    out += 'CONTENT.pets.push(\n' + amis.pets.map(p => '  ' + JSON.stringify(petDef(p)) + ',').join('\n') + '\n);\n\n';
-    out += 'CONTENT.characters.push(\n' + amis.chars.map(c => '  ' + JSON.stringify(charDef(c)) + ',').join('\n') + '\n);\n';
-    out += '/* AMIS_FIN */\n';
-    return out.replace(/"atelier":true,?/g, '');
+    const images = {},
+      sheets = {};
+    const prendre = (e, kind) => {
+      if (avecPhotos) for (const [f, k] of IMG_SLOTS) if (e[f] && e[k]) images[e[k]] = e[f];
+      for (const [k] of clipsOf(kind)) if (e.sheets && e.sheets[k]) sheets[sheetName(e, k)] = { fw: e.fw || 0, url: e.sheets[k] };
+    };
+    for (const c of amis.chars) prendre(c, 'char');
+    for (const p of amis.pets) prendre(p, 'pet');
+    return Amis.snippet(
+      { images, sheets, characters: amis.chars.map(charDef), pets: amis.pets.map(petDef), pairs: amisPairs() },
+      { photos: !!avecPhotos }
+    );
   }
   function photosPresentes() {
     let n = 0;
@@ -1848,5 +2148,19 @@ const Atelier = (() => {
       return st;
     },
     posing: () => live && st.pose,
+    /* l'établi Amis, pour les tests et l'aller-retour avec content5.js */
+    get amis() {
+      return amis;
+    },
+    get amisReady() {
+      return amisReady;
+    },
+    amisSnippet,
+    amisReset,
+    amisSave,
+    readImgData,
+    readSheetData,
+    petDef,
+    charDef,
   };
 })();

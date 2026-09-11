@@ -135,7 +135,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Fini quand** : deux profils sur la même graine du jour voient la même salle 1 ; la ligne copiée se recolle dans un autre navigateur et rejoue la graine.
 **Taille** : 1 séance.
 
-## Chantier 8 — L'atelier honnête
+## Chantier 8 — L'atelier honnête ✔ *(fait le 11 septembre 2026)*
 
 **Objectif** : l'outil produit exactement ce que le jeu contient, et le contenu ne pèse pas trois fois son poids.
 
@@ -148,7 +148,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 - [12] Décor animé : appliquer la décision.
 
 **Fini quand** : ouvrir l'atelier, exporter sans rien toucher, recoller, rebâtir → `content5.js` identique octet pour octet (test d'aller-retour) ; `index.html` perd ≥ 120 Ko.
-**Taille** : 1 à 2 séances.
+**Taille** : 1 à 2 séances. **Bilan** : fait en une séance (CONTENT.md §58, test `allerretour.js`, 11 mesures). L'export sans rien toucher redonne `content5.js` octet pour octet et `index.html` perd **149 Ko** (1 241 → 1 092). Le fichier prend la forme `FRIEND_CONTENT = { characters, pets, pairs }`, relu à l'ouverture et fondu à l'export ; les fiches portent `def`, donc `pairs`, `anim`, `duo`, `hidden`, `fly` et les caractères importés traversent ; les animaux ont leurs planches. PNG palette écrit par `78_amis.js` (261 → 86 Ko pour les 31 planches, mêmes pixels), photos en JPEG à 64 px, `way.props.custom` supprimé, planches lues une fois, IndexedDB avec refus explicite avant dépassement. Décor animé : livré, ses quatre salles au chantier 9. À regarder par l'auteur : ouvrir l'établi Amis (F2 → Amis) et vérifier ses trois copains et quatre animaux à l'œil.
 
 ## Chantier 9 — Quatre biomes différents
 

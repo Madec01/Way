@@ -91,7 +91,6 @@ async function boot() {
   await Sprites.load();
   Sprites.loadProps();
   Sprites.loadFriends();
-  Sprites.loadCustoms();
   Beat.load();
   if (Meta.profile.lag) Beat.lag = Meta.profile.lag; // décalage son/image calibré par l'auteur
   UI.showTitle();

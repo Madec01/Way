@@ -34,7 +34,8 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | Fichier | Ce qu'il vérifie |
 |---|---|
 | `acces` | un profil neuf a bien les personnages et les animaux de l'auteur, et entre en salle 1 avec son équipe |
-| `amis` | l'établi Amis : créer un animal et un copain, export de `content5.js`, rechargement |
+| `allerretour` | chantier 8 : l'export de l'établi Amis sans rien toucher est `dev/content5.js` octet pour octet et un point fixe de Prettier ; planches en PNG palette découpées comme avant ; encodeur pixel-exact ; fiche modifiée dans le jeu, IndexedDB, l'export ; survie au rechargement ; photo → JPEG 64 px ; refus quand le navigateur est plein ; suppression avec son duo |
+| `amis` | l'établi Amis : les amis du fichier d'abord, créer un animal et un copain, export de `content5.js`, rechargement |
 | `arme` | l'arme part de la main, à 45 % du corps, pour chaque type de corps |
 | `animaux` | chantier F-7 : Uno accroupi puis sa morsure sur le temps, le repos assis, l'appel depuis le bord, la ruée et ses fantômes (dorés en rythme), Choupi allongée et la collecte en deux temps, Tanuki qui tourne, le trait d'ORI |
 | `bat` | chantier F-5 : Beat.pulse, la passe de lumière mesurée au pixel, la respiration du joueur et des ennemis, l'anneau de mesure, les télégraphies et annonces sur le tempo, la partition sans or, la porte sur le temps fort, les drops déphasés, les lumières de salle |
@@ -63,7 +64,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `ressenti` | chantier F-1 : Ease et Feel, arrêt sur image (30 / 70 / 60 ms, plafonné, jamais sur un ralenti), étincelles au corps dans le sens du coup, étincelle de contact, écrasement, secousse directionnelle indépendante du zoom, plus de `G.shake`, recul de l'arme, polices pixel dans le monde, squash & stretch des planches |
 | `scenes` | chantier F-6 : l'entrée de salle en marchant, la montée de niveau mise en scène et son écran sur le temps fort, l'arrivée du boss (rideau, caméra, descente, trois secousses au temps), sa mort en 1,6 s, la mort du joueur (ralenti, ennemis figés, voile, compagnon couché), l'écran de fin après 1,4 s |
 | `spawncheck` | chaque salle des quatre biomes : spawns et pièges sur des tuiles libres, porte atteignable |
-| `sprites32` | une image 32×32 importée reste nette, un visage photo est réduit |
+| `sprites32` | une image 32×32 importée reste nette, une photo est réduite à 64 px |
 | `touch` | la couche tactile sur un téléphone simulé : joystick, tir maintenu, compétence, pause — et le pouce (I-8) : esquive, cibles ≥ 44 px, HUD ×1,35, joystick au repos et indication, tir automatique et bouton en pointillé, pause hors de la prise, camp en rangées défilables |
 | `vocabulaire` | chantier I-2 : le contenu, les écrans rendus et les messages du code passés à la liste des mots bannis ; un mot par notion ; descriptions ≤ 90 caractères |
 | `uno` | Uno : planches, équipe avec Martin, morsure, mode « à l'appel », mode « personne » |
