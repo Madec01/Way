@@ -483,3 +483,26 @@ body.touch .hub3{padding:calc(8px*var(--ui-scale))}
 .sliders select{background:rgba(8,10,18,.8);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:.2em .5em;font:inherit}
 #ui #screen-pause{background:rgba(3,4,8,.7)}
 @media (max-width:900px){.pauseinfo{grid-template-columns:repeat(2,auto)}.end .bignum .n{font-size:2em}}
+
+/* ---------- Chantier I-8 : le pouce ---------- */
+#touch .tstick.rest{left:calc(22%);top:calc(100% - 150px*var(--ui-scale));opacity:.55}
+#touch .thint{position:absolute;left:50%;top:calc(100% + .5em);transform:translateX(-50%);white-space:nowrap;font:calc(13px*var(--ui-scale)) "VT323",monospace;color:#dfe6ff;letter-spacing:.05em;text-shadow:0 0 6px #000}
+#touch .thint[hidden]{display:none}
+#touch .tbtn{font-family:"Silkscreen","Segoe UI",system-ui,sans-serif;font-size:calc(12px*var(--ui-scale))}
+#touch .tbtn.fire{opacity:.55}
+#touch .tbtn.fire.on,#touch .tbtn.fire.auto{opacity:1}
+#touch .tbtn.fire.auto{border-style:dashed}
+#touch .tbtn.dodge{right:calc(160px*var(--ui-scale));bottom:calc(170px*var(--ui-scale));width:max(48px,calc(72px*var(--ui-scale)));height:max(48px,calc(72px*var(--ui-scale)));border-color:rgba(110,231,255,.6)}
+#touch .tbtn.act{right:calc(60px*var(--ui-scale));bottom:calc(178px*var(--ui-scale));width:max(48px,calc(62px*var(--ui-scale)));height:max(48px,calc(62px*var(--ui-scale)))}
+#touch .tbtn.pause{right:auto;left:calc(50% + 150px*var(--ui-scale));top:calc(10px*var(--ui-scale));width:max(44px,calc(44px*var(--ui-scale)));height:max(44px,calc(44px*var(--ui-scale)))}
+#touch .tbtn.fs{right:auto;left:calc(50% + 158px*var(--ui-scale) + max(44px,calc(44px*var(--ui-scale))));top:calc(10px*var(--ui-scale));width:max(44px,calc(44px*var(--ui-scale)));height:max(44px,calc(44px*var(--ui-scale)))}
+body.touch .btn,body.touch .tab,body.touch .card.pick,body.touch .card.big,body.touch .teammode .btn,body.touch .pairchip,body.touch summary{min-height:48px}
+body.touch .btn.small{min-height:44px}
+#touch .tbtn.skill{width:max(56px,calc(86px*var(--ui-scale)));height:max(56px,calc(86px*var(--ui-scale)))}
+#touch .tbtn.fire{width:max(64px,calc(120px*var(--ui-scale)));height:max(64px,calc(120px*var(--ui-scale)))}
+body.touch .hub3 .row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:.3em;scrollbar-width:thin}
+body.touch .hub3 .card.big,body.touch .hub3 .card.level{flex:none}
+body.touch .prep2 .grid.weapons{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+body.touch .prep2 .grid.skills{grid-template-columns:1fr}
+body.touch #ui #screen-shop{padding:0}
+body.touch .shoppanel{max-width:none;width:100%;min-height:100%;border-radius:0;margin:0}

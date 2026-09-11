@@ -63,7 +63,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `scenes` | chantier F-6 : l'entrée de salle en marchant, la montée de niveau mise en scène et son écran sur le temps fort, l'arrivée du boss (rideau, caméra, descente, trois secousses au temps), sa mort en 1,6 s, la mort du joueur (ralenti, ennemis figés, voile, compagnon couché), l'écran de fin après 1,4 s |
 | `spawncheck` | chaque salle des quatre biomes : spawns et pièges sur des tuiles libres, porte atteignable |
 | `sprites32` | une image 32×32 importée reste nette, un visage photo est réduit |
-| `touch` | la couche tactile : joystick, tir, compétence sur un écran de téléphone simulé |
+| `touch` | la couche tactile sur un téléphone simulé : joystick, tir maintenu, compétence, pause — et le pouce (I-8) : esquive, cibles ≥ 44 px, HUD ×1,35, joystick au repos et indication, tir automatique et bouton en pointillé, pause hors de la prise, camp en rangées défilables |
 | `vocabulaire` | chantier I-2 : le contenu, les écrans rendus et les messages du code passés à la liste des mots bannis ; un mot par notion ; descriptions ≤ 90 caractères |
 | `uno` | Uno : planches, équipe avec Martin, morsure, mode « à l'appel », mode « personne » |
 | `vues` | trois images (sud, est, nord) pour quatre directions, retournement ouest |

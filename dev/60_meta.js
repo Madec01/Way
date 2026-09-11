@@ -29,6 +29,8 @@ const Meta = (() => {
     deaths: 0,
     bestLevel: 0,
     bestRoom: 0,
+    touchAutoFire: true, // au pouce, on tire tout seul par défaut (I-8) — la pause permet de l'éteindre
+    touchHinted: false, // « pose ton pouce ici » ne se montre qu'au premier lancement
     character: null,
     volume: { master: 0.8, sfx: 0.9, music: 0.6 },
     zoom: 0, // 0 = automatique (1 au clavier, 1,5 au tactile)

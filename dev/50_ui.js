@@ -1204,7 +1204,7 @@ const UI = (() => {
     const pl = G.player;
     let haut = true;
     if (pl && G.state === 'run') {
-      const sy = (pl.y - Camera.y) * Camera.zoom + H / 2; // position du joueur à l'écran
+      const sy = ((pl.y - Camera.y) * Camera.zoom + H / 2) / hudK; // position du joueur à l'écran, dans la vue du HUD
       if (sy < T + V.h * 0.42) haut = false;
     }
     return { haut, y: haut ? T + V.h * 0.1 : B - V.h * 0.22 };
@@ -1254,6 +1254,39 @@ const UI = (() => {
      milieu du terrain. Sonde de mise en page : quand G.debug.hudProbe est vrai, chaque panneau et chaque texte
      sont notés — interface.js vérifie qu'un texte tient dans un panneau et que tout tient dans la vue. */
   const hudProbe = { rects: [], texts: [], flags: {}, gauges: [], fonts: new Set() };
+  /* Le pouce (chantier I-8) : au tactile, tout le HUD est dessiné à ×1,35. hudBegin/hudEnd posent l'échelle et donnent
+     aux renderHud une vue réduite d'autant (ils continuent d'écrire en px de HUD) ; la sonde, elle, note tout en px
+     d'écran (×k), pour que les tests comparent au vrai bord de la vue. Réentrant : UI.renderHud se protège lui-même. */
+  let hudK = 1,
+    hudDepth = 0,
+    hudSaved = null;
+  function hudScale() {
+    return Input.touch.active ? 1.35 : 1;
+  }
+  function hudBegin(ctx) {
+    hudDepth++;
+    if (hudDepth > 1) return;
+    hudK = hudScale();
+    const V = Engine.view;
+    hudSaved = { ox: V.ox, oy: V.oy, w: V.w, h: V.h, scale: V.scale };
+    if (hudK !== 1) {
+      V.ox /= hudK;
+      V.oy /= hudK;
+      V.w /= hudK;
+      V.h /= hudK;
+      V.scale *= hudK;
+    }
+    ctx.save();
+    if (hudK !== 1) ctx.scale(hudK, hudK);
+  }
+  function hudEnd(ctx) {
+    hudDepth--;
+    if (hudDepth > 0) return;
+    ctx.restore();
+    if (hudSaved) Object.assign(Engine.view, hudSaved);
+    hudSaved = null;
+    hudK = 1;
+  }
   /* flash blanc plein écran d'une image (gros coup reçu, phase de boss) : { a, until, life } */
   let flashScreenState = null;
   function flashScreen(a, ms) {
@@ -1279,7 +1312,7 @@ const UI = (() => {
     ctx.fillStyle = fill;
     roundRect(ctx, x, y, w, h, r);
     ctx.fill();
-    if (G.debug.hudProbe) hudProbe.rects.push({ x, y, w, h });
+    if (G.debug.hudProbe) hudProbe.rects.push({ x: x * hudK, y: y * hudK, w: w * hudK, h: h * hudK });
   }
   /* une jauge : fond, remplissage, et des séparations tous les `segments` — une barre segmentée se lit en paliers */
   function gauge(ctx, x, y, w, h, k, col, o = {}) {
@@ -1291,7 +1324,8 @@ const UI = (() => {
       ctx.fillStyle = o.seg || 'rgba(5,6,10,.6)';
       for (let i = 1; i < o.segments; i++) ctx.fillRect(Math.round(x + (w * i) / o.segments) - 1, y, 2, h);
     }
-    if (G.debug.hudProbe) hudProbe.gauges.push({ x, y, w, h, k, segments: o.segments || 1 });
+    if (G.debug.hudProbe)
+      hudProbe.gauges.push({ x: x * hudK, y: y * hudK, w: Math.round(w * hudK * 1000) / 1000, h: h * hudK, k, segments: o.segments || 1 });
   }
   function label(ctx, t, x, y, o = {}) {
     ctx.font = hudFont(o);
@@ -1301,7 +1335,7 @@ const UI = (() => {
     if (G.debug.hudProbe) {
       const w = ctx.measureText(t).width;
       const x0 = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
-      hudProbe.texts.push({ t, x: x0, y, w, h: o.size || 12, free: !!o.free });
+      hudProbe.texts.push({ t, x: x0 * hudK, y: y * hudK, w: w * hudK, h: (o.size || 12) * hudK, free: !!o.free });
     }
   }
   /* Le HUD s'estompe : après 4 s sans dégât ni ennemi vivant, les blocs secondaires passent à 45 % et remontent en
@@ -1331,6 +1365,14 @@ const UI = (() => {
       r = G.run,
       rm = G.room;
     if (!pl || !r || !rm || !pl.weapon || !pl.skill) return;
+    hudBegin(ctx);
+    try {
+      renderHudBody(ctx, pl, r, rm);
+    } finally {
+      hudEnd(ctx);
+    }
+  }
+  function renderHudBody(ctx, pl, r, rm) {
     const V = Engine.view;
     const L = -V.ox,
       T = -V.oy,
@@ -1455,7 +1497,7 @@ const UI = (() => {
     });
     /* l'XP : une bande de 4 px tout en haut, sur toute la largeur — on la sent monter sans la regarder */
     gauge(ctx, L, T, V.w, 4, r.xp / r.xpNext, PAL.self, { bg: 'rgba(18,32,58,.7)' });
-    hudProbe.flags.xpBar = { y: T, h: 4, w: V.w };
+    hudProbe.flags.xpBar = { y: T * hudK, h: 4 * hudK, w: Math.round(V.w * hudK * 1000) / 1000 };
     /* haut-centre : une seule ligne, « Salle 5/9 · 1:24 » — ou la barre du boss au même endroit, là où le joueur regarde */
     const boss = rm.boss;
     if (boss && !boss.dead) {
@@ -1496,7 +1538,7 @@ const UI = (() => {
           color: '#ffd166',
           free: true,
         });
-      hudProbe.flags.bossY = y2;
+      hudProbe.flags.bossY = y2 * hudK;
     } else {
       const t = `${STR.room} ${rm.index}/9 · ${mmss(rm.time)}`;
       const w = textW(ctx, t, { kind: 'num', weight: 'bold', size: 12 }) + 28; // la boîte suit le texte, jamais l'inverse
@@ -1572,7 +1614,7 @@ const UI = (() => {
       const gx = R - 18 - gw,
         gy = B - 18 - gh;
       panel(ctx, gx, gy, gw, gh, 8, 'rgba(8,10,18,.6)');
-      const m = Input.mouse;
+      const m = Input.mouse && { x: Input.mouse.x / hudK, y: Input.mouse.y / hudK };
       let hover = null;
       ups.forEach((u, i) => {
         const x = gx + 6 + (i % perRow) * cell,
@@ -1635,6 +1677,14 @@ const UI = (() => {
   }
   /* toasts : en bas à droite, empilés vers le haut — au-dessus des boutons tactiles sur un téléphone */
   function renderToasts(ctx) {
+    hudBegin(ctx);
+    try {
+      renderToastsBody(ctx);
+    } finally {
+      hudEnd(ctx);
+    }
+  }
+  function renderToastsBody(ctx) {
     const V = Engine.view;
     const R = -V.ox + V.w - 24,
       B = -V.oy + V.h;
@@ -1806,6 +1856,10 @@ const UI = (() => {
     transition,
     update,
     renderHud,
+    hudBegin,
+    renderHudBody,
+    hudEnd,
+    hudScale,
     notify,
     clearInfo,
     clearAll,

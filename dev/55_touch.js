@@ -22,9 +22,10 @@ const Touch = (() => {
     layer = document.getElementById('touch');
     layer.innerHTML = `
       <div class="tzone" id="t-zone"></div>
-      <div class="tstick" id="t-stick" hidden><div class="tknob" id="t-knob"></div></div>
+      <div class="tstick rest" id="t-stick"><div class="tknob" id="t-knob"></div><div class="thint" id="t-hint">pose ton pouce ici</div></div>
       <button class="tbtn fire" id="t-fire">TIR</button>
       <button class="tbtn skill" id="t-skill">COMP.</button>
+      <button class="tbtn dodge" id="t-dodge">ESQ.</button>
       <button class="tbtn act" id="t-act">E</button>
       <button class="tbtn pause" id="t-pause">II</button>
       <button class="tbtn fs" id="t-fs">⛶</button>`;
@@ -45,6 +46,8 @@ const Touch = (() => {
       origin = toLogical(e);
       const sc = Engine.view.scale;
       stick.hidden = false;
+      stick.classList.remove('rest');
+      hinted(); // le premier toucher efface « pose ton pouce ici »
       stick.style.left = origin.x * sc + 'px';
       stick.style.top = origin.y * sc + 'px';
       knob.style.transform = 'translate(-50%,-50%)';
@@ -73,7 +76,7 @@ const Touch = (() => {
     const release = e => {
       if (e.pointerId !== stickId) return;
       stickId = null;
-      stick.hidden = true;
+      restStick(); // le joystick reste visible, à sa place de repos : on sait toujours où poser le pouce
       T.move.x = 0;
       T.move.y = 0;
     };
@@ -109,6 +112,9 @@ const Touch = (() => {
     hold('t-skill', () => {
       Input.press('Space');
     });
+    hold('t-dodge', () => {
+      if (G.player) G.player.dodge();
+    });
     hold('t-act', () => {
       T.interact = true;
     });
@@ -118,12 +124,32 @@ const Touch = (() => {
     hold('t-fs', () => Fullscreen.toggle());
     layer.addEventListener('contextmenu', e => e.preventDefault());
   }
+  /* le joystick au repos : en bas à gauche, là où le pouce tombe, avec l'indication tant qu'on n'a jamais touché */
+  function restStick() {
+    if (!stick) return;
+    stick.hidden = false;
+    stick.classList.add('rest');
+    stick.style.left = '';
+    stick.style.top = '';
+    knob.style.transform = 'translate(-50%,-50%)';
+    const h = document.getElementById('t-hint');
+    if (h) h.hidden = !!(Meta.profile && Meta.profile.touchHinted);
+  }
+  function hinted() {
+    if (Meta.profile && !Meta.profile.touchHinted) {
+      Meta.profile.touchHinted = true;
+      Meta.save();
+    }
+    const h = document.getElementById('t-hint');
+    if (h) h.hidden = true;
+  }
   function activate() {
     if (Input.touch.active) return;
     Input.touch.active = true;
     build();
+    restStick();
     try {
-      Input.touch.autoFire = !!Meta.profile.touchAutoFire;
+      Input.touch.autoFire = Meta.profile.touchAutoFire !== false; // par défaut, on tire tout seul
     } catch (e) {
       /* */
     }
@@ -148,16 +174,19 @@ const Touch = (() => {
     layer.hidden = !show;
     if (!show && stickId != null) {
       stickId = null;
-      stick.hidden = true;
+      restStick();
       Input.touch.move.x = 0;
       Input.touch.move.y = 0;
       Input.touch.fire = false;
     }
+    const f = document.getElementById('t-fire');
+    if (f) f.classList.toggle('auto', !!Input.touch.autoFire);
   }
   return {
     init,
     sync,
     activate,
+    restStick,
     get active() {
       return Input.touch.active;
     },

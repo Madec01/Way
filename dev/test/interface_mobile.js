@@ -47,21 +47,22 @@ test(
       const pr = UI.hudProbe;
       const horsVue = pr.rects.filter(r => r.x < L - 1 || r.x + r.w > R + 1 || r.y < T - 1 || r.y + r.h > B + 1).length;
       const pv = pr.rects[0];
-      const arme = pr.rects.find(r => r.w === 420);
+      const k = UI.hudScale();
+      const arme = pr.rects.find(r => Math.abs(r.w - 420 * k) < 1);
       const toast = pr.texts.find(t => t.t === 'Un message');
       const tir = document.querySelector('#touch .tbtn.fire');
       const tirTop = tir ? tir.getBoundingClientRect().top / V.scale - V.oy : B;
-      return { vue: { L, T, R, B, ox: V.ox, oy: V.oy }, horsVue, pv, arme, toast: toast && toast.y, tirTop, touch: Input.touch.active };
+      return { vue: { L, T, R, B, ox: V.ox, oy: V.oy }, horsVue, pv, arme, toast: toast && toast.y, tirTop, touch: Input.touch.active, k };
     });
     ok('la vue est plus large que 1280 × 720 (bandes autour)', hud.vue.ox !== 0 || hud.vue.oy !== 0, JSON.stringify(hud.vue));
     ok(
       'le HUD est ancré aux bords de la vue, pas de la boîte 1280 × 720',
-      hud.horsVue === 0 && hud.pv && Math.round(hud.pv.x) === Math.round(hud.vue.L + 18),
-      `PV à x=${hud.pv && Math.round(hud.pv.x)} pour un bord à ${Math.round(hud.vue.L)}`
+      hud.horsVue === 0 && hud.pv && Math.round(hud.pv.x) === Math.round(hud.vue.L + 18 * hud.k), // le HUD est à ×1,35 au pouce (I-8)
+      `PV à x=${hud.pv && Math.round(hud.pv.x)} pour un bord à ${Math.round(hud.vue.L)} (×${hud.k})`
     );
     ok(
       'le cartouche d’arme est collé au bas de la vue',
-      hud.arme && Math.round(hud.arme.y + hud.arme.h) === Math.round(hud.vue.B - 18),
+      hud.arme && Math.round(hud.arme.y + hud.arme.h) === Math.round(hud.vue.B - 18 * hud.k),
       hud.arme && `bas à ${Math.round(hud.arme.y + hud.arme.h)} pour ${Math.round(hud.vue.B)}`
     );
     ok(

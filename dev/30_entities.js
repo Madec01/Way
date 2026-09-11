@@ -1914,6 +1914,30 @@ class Player {
     AudioEngine.playerDie({});
     Run.onPlayerDeath();
   }
+  /* l'esquive : la compétence si c'est la ruée, sinon le pas de côté libre */
+  dodge() {
+    if (this.dead) return false;
+    if (this.skill && this.skill.effect && this.skill.effect.kind === 'dash' && this.skillCharges > 0) return Skills.use(this, this.aim);
+    if (this.hopCd > 0 || this.hop || this.dashing) return false;
+    const mv =
+      this.moveDir && (this.moveDir.x || this.moveDir.y) ? Math.atan2(this.moveDir.y, this.moveDir.x) : this.facing < 0 ? Math.PI : 0;
+    const dur = 0.14,
+      d = 110;
+    this.hop = { t: 0, dur, vx: (Math.cos(mv) * d) / dur, vy: (Math.sin(mv) * d) / dur };
+    this.hopCd = 1.2;
+    Particles.spawn(this.x, this.y + Sprites.SOL - 4, {
+      count: 5,
+      color: '#b8b0a0',
+      size: 2,
+      speedMin: 30,
+      speedMax: 90,
+      angle: mv + Math.PI,
+      spread: 0.5,
+      life: 0.3,
+    });
+    AudioEngine.dash({ pitch: 0.8, intensity: 0.4 });
+    return true;
+  }
   /* Choisit le clip à jouer et avance son horloge. L'ordre est une priorité : mourir passe avant tout, puis
      ramasser, puis tirer, puis marcher. Un clip « une fois » garde la main jusqu'au bout de sa durée. */
   /* Un geste de tir par tir réel, à la cadence de l'arme : le clip tient dans l'intervalle entre deux tirs
@@ -1984,6 +2008,16 @@ class Player {
     this.aim = aim;
     if (Math.abs(Math.cos(aim)) > 0.2) this.facing = Math.cos(aim) > 0 ? 1 : -1;
     /* --- déplacement --- */
+    /* l'esquive du pouce (I-8) : un pas de côté de 110 px en 0,14 s, sans invulnérabilité, 1,2 s de recharge —
+       le joueur au clavier fait ce pas avec ses touches ; au pouce, il lui faut un bouton */
+    if (this.hopCd > 0) this.hopCd -= dt;
+    if (this.hop) {
+      this.hop.t += dt;
+      this.x += this.hop.vx * dt;
+      this.y += this.hop.vy * dt;
+      this.animStep(dt, true, false);
+      if (this.hop.t >= this.hop.dur) this.hop = null;
+    }
     if (this.dashing) {
       this.dashT += dt;
       this.x += this.dashVx * dt;

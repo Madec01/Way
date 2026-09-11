@@ -219,7 +219,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 **Taille** : 1 séance.
 **Bilan** : fait en une séance (CONTENT.md §55, test `fin.js`, 11 mesures). La montée de niveau avec le ruban de rareté, l'icône de catégorie dans son rond (deux icônes ajoutées à la planche pour Utilitaire et Synergie), « choix 1 sur n », la bande des greffes déjà prises et « tu es à … » ; le coffre en une phrase ; l'écran de fin avec ses deux gros chiffres, la ligne de progression (`bestRoom`, nouveau champ du profil), la phrase du compagnon, le détail replié, la suggestion d'achat qui ouvre la boutique, et « Repartir tout de suite » sans hub ; la pause avec les informations de partie, les stats de l'arme, les commandes, les curseurs stylés et le jeu assombri ; le HUD de combat éteint derrière la fin. `mort.js` et `human.js` n'ont pas eu à changer (ils l'avaient été en F-6). Pas fait : rien. À vérifier à la main : « tu es à 140 % » pour les dégâts, ça se comprend, ou il faut « ×1,4 » ?
 
-## Chantier I-8 — Le pouce
+## Chantier I-8 — Le pouce ✔ *(fait le 11 septembre 2026, vérification sur téléphone réel à faire)*
 
 **Objectif** : une run complète jouable au pouce, lisible sur un écran de 900 px. Ce chantier **remplace** le point [25] du chantier 10 du plan principal ; la mesure de performance [63] [66] y reste.
 
@@ -229,6 +229,9 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 **Fini quand** : `touch.js` étendu vérifie les tailles de cibles (≥ 44 px) et l'échelle du HUD ; une run complète au pouce sans toucher au clavier, sur un téléphone réel.
 **Taille** : 1 à 2 séances.
+**Bilan** : fait en une séance pour tout ce qui se mesure dans le navigateur (CONTENT.md §56, `touch.js` étendu à 13 mesures, `interface_mobile.js` adapté) : le HUD à ×1,35, le joystick visible au repos avec « pose ton pouce ici », le tir automatique par défaut et le bouton TIR en pointillé ou translucide, le bouton d'esquive (la ruée si c'est la compétence, sinon un pas de côté libre), E dans l'arc du pouce droit, pause et plein écran hors de la prise, toutes les cibles à 44 px au moins, le camp et la prépa en rangées défilables, la boutique plein écran. **Reste à faire avec un vrai téléphone** : la partie au pouce à bout de bras (lisibilité, touches accidentelles, images par seconde) — c'est la partie 10 du plan principal. Décision prise sans toi, à renverser d'un mot : le pas de côté libre existe seulement au pouce.
+
+**Le plan des interfaces est terminé.** Les chantiers 8 à 11 du plan principal reprennent : 8 (l'atelier honnête), 9 (quatre biomes différents), 10 (le téléphone, partie performance), 11 au fil de l'eau.
 
 ---
 

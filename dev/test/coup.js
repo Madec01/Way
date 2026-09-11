@@ -165,7 +165,12 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
     const gros = { flash: !!UI.hudProbe.flags.flash, a: +pl.hurtA.toFixed(2) };
     G.debug.invuln = true;
     pl.hp = pl.stats.maxHp;
-    return { petit, gros, blink6: pl.render.toString().includes('Time.now * 12'), bat: UI.renderHud.toString().includes('Beat.phase()') };
+    return {
+      petit,
+      gros,
+      blink6: pl.render.toString().includes('Time.now * 12'),
+      bat: (UI.renderHudBody || UI.renderHud).toString().includes('Beat.phase()'),
+    };
   });
   ok(
     'un petit coup : vignette corail, recul de 7 px à l’opposé de la source, ralenti à 35 % pendant 120 ms, pas de flash',

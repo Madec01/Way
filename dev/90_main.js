@@ -50,11 +50,13 @@ function render(ctx) {
     if (G.attract) {
       UI.renderAttractVeil(ctx);
     } else if (G.overlay !== 'end') {
-      /* derrière l'écran de fin, le HUD de combat n'a plus rien à dire (I-7) */
+      /* derrière l'écran de fin, le HUD de combat n'a plus rien à dire (I-7) ; au tactile, tout est à ×1,35 (I-8) */
+      UI.hudBegin(ctx);
       UI.renderHud(ctx);
       Pets.renderHud(ctx);
       if (G.room.challenge) Challenge.renderHud(ctx, G.room);
       if (G.room.tempo) Tempo.renderHud(ctx, G.room);
+      UI.hudEnd(ctx);
     }
   } else UI.renderBackdrop(ctx);
   UI.renderMenuFx(ctx);

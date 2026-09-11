@@ -1505,3 +1505,19 @@ Test : `animaux.js` — 8 mesures (l'accroupissement et la morsure à moins de 3
 
 Test : `fin.js` — 11 mesures (le titre et les cartes de la montée de niveau, l'état actuel et la bande des prises, la phrase du coffre, les informations de la pause, ses curseurs et son fond, les deux gros chiffres, la progression et le détail replié, la suggestion d'achat, « Repartir » sans hub, le HUD éteint derrière la fin, la boutique ouverte par la suggestion).
 
+## 56. Chantier I-8 — le pouce
+
+**Une partie complète jouable au pouce, lisible sur un écran de 900 px.** Ce chantier remplace la partie tactile du chantier 10 du plan principal ; la mesure de performance sur téléphone réel y reste.
+
+- **Le HUD grossit d'un facteur 1,35** sous `Input.touch.active` : `UI.hudBegin(ctx)` / `UI.hudEnd(ctx)` (50_ui.js) posent l'échelle et donnent aux cinq `renderHud` une vue réduite d'autant (ils continuent d'écrire en px de HUD) ; réentrant (`UI.renderHud` et `renderToasts` se protègent eux-mêmes, 90_main.js enveloppe le groupe). La sonde `hudProbe` note tout en px d'écran (×k), `UI.hudScale()` dit k. Les positions qui viennent du monde (zone libre des bandeaux, souris sur la grille des greffes) sont ramenées dans la vue du HUD.
+- **Le joystick reste visible au repos** (`.tstick.rest`, en bas à gauche à 55 %), avec **« pose ton pouce ici »** tant qu'on n'a jamais touché (`Meta.profile.touchHinted`) ; au toucher il saute sous le doigt, comme avant.
+- **Le tir automatique est le défaut** d'un profil neuf (`touchAutoFire: true`, la pause permet de l'éteindre) ; le bouton TIR est **en pointillé** quand il est automatique, **translucide à 55 %** tant qu'il n'est pas pressé sinon.
+- **Un bouton d'esquive dédié** (ESQ., 72 px) : `Player.dodge()` — la compétence si c'est la ruée, sinon **un pas de côté libre** de 110 px en 0,14 s dans la direction du joystick (ou face au joueur), sans invulnérabilité, 1,2 s de recharge (`pl.hop`, `pl.hopCd`), un peu de poussière et le son de la ruée plus grave. Le joueur au clavier fait ce pas avec ses touches ; au pouce il lui fallait un bouton.
+- **E** dans l'arc du pouce droit (au-dessus de TIR), **pause et plein écran en haut, à droite de la ligne « Salle n/9 »**, hors de la zone de préhension.
+- **Toutes les cibles font au moins 44 px** quelle que soit l'échelle (`max(44px, calc(N × var(--ui-scale)))` sur les boutons tactiles ; `body.touch` impose 48 px de haut aux boutons, onglets, cartes, chips et `summary`, 44 aux petits boutons).
+- **Hub et prépa au pouce** : les rangées de cartes défilent au doigt (`body.touch .hub3 .row`), la prépa passe ses armes en `minmax(140px, 1fr)` et ses compétences en une colonne, **la boutique prend tout l'écran**.
+
+Test : `touch.js` — 13 mesures (les six d'avant, plus l'esquive, les cibles ≥ 44 px, l'échelle ×1,35, le joystick au repos et l'indication disparue, le tir automatique et le bouton en pointillé, pause et plein écran hors de la prise, le TIR translucide sans tir automatique, le camp en rangées défilables sans cible sous 44 px). `interface_mobile.js` lit désormais l'échelle.
+
+Pas fait, faute de téléphone sous la main : la vérification à bout de bras (lisibilité, touches accidentelles, images par seconde) — c'est la partie 10 du plan principal, qui reste à faire avec un vrai appareil.
+

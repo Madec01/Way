@@ -2,7 +2,7 @@
 
 Une seule liste, dans l'ordre où je te conseille de faire les choses. Elle rassemble tout ce qui reste des trois plans — le plan de chantiers (`PLAN-CHANTIERS.md`, chantiers 8 à 11), le plan des interfaces (`PLAN-INTERFACES.md`, I-3 à I-8) et le plan du ressenti (`PLAN-RESSENTI.md`, F-1 à F-7). Chaque étape renvoie à son plan pour le détail ; ici, une ligne dit ce qu'elle change pour un joueur, ce qu'elle te demande, et pourquoi elle est à cette place.
 
-**Fait à ce jour (10 septembre 2026)** : chantiers 0 à 6 du plan principal, I-1 à I-7 du plan des interfaces, F-1 à F-7 du plan du ressenti (le plan du ressenti est terminé). **Reste** : 5 étapes, **5 à 9 séances**. Une séance = une session de travail avec moi, vérifiée par la batterie de tests et livrée sur `main`.
+**Fait à ce jour (10 septembre 2026)** : chantiers 0 à 6 du plan principal, les plans des interfaces (I-1 à I-8) et du ressenti (F-1 à F-7) sont terminés. **Reste** : les chantiers 8, 9 et 10 du plan principal, **4 à 7 séances**, plus la vérification d'I-8 sur un vrai téléphone. Une séance = une session de travail avec moi, vérifiée par la batterie de tests et livrée sur `main`.
 
 ## Le principe de l'ordre
 
