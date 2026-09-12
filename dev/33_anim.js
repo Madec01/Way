@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 33_anim.js — décor animé en rythme
+   WAY — 33_anim.js — décor animé en rythme
    Des éléments sans collision ni dégât, pilotés par la même partition que les pièges (`beats.hits`) : dalles qui
    changent de couleur ou qui se soulèvent, accessoires qui tournent ou qui sautent, lumières colorées, ondes.
    Ils ne blessent jamais — c'est la lecture de la salle qu'ils portent, pas la difficulté.

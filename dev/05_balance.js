@@ -37,6 +37,10 @@ const BALANCE = {
   relicOnBoss: true,
   /* montée de difficulté à l'intérieur d'un palier : multiplicateur (1 + rampPerRoom·(salle-1)) sur PV et dégâts des ennemis/pièges */
   rampPerRoom: 0.09,
+  /* la difficulté d (1 = Normal) : vitesse des ennemis 0,7 + 0,3 d, cadence de tir 0,75 + 0,25 d (chantier 4) */
+  difficulty: { speedBase: 0.7, speedPerD: 0.3, fireBase: 0.75, firePerD: 0.25 },
+  timerBonus: 30, // crédits en attente pour un défi chrono tenu
+  enrageMul: 1.3, // vitesse et dégâts d'un ennemi enragé (chrono dépassé)
   /* foudre ambiante : intervalle réel = every × [jitterMin, jitterMax] */
   lightningJitter: { min: 0.8, max: 2.0 },
   /* prime de fin de palier (crédits) */

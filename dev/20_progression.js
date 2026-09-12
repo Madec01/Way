@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 20_progression.js
+   WAY — 20_progression.js
    Stats (agrégation des modificateurs), raretés, XP, scores de salle, argent.
    ========================================================================= */
 

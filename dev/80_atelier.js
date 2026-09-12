@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
-   SALLE ZÉRO — 80_atelier.js — Atelier rythme
+   WAY — 80_atelier.js — Atelier rythme
    Une salle vierge, la piste du biome découpée en temps cliquables, et une partition par élément posé.
    Trois établis : Animations (décor qui joue en rythme), Pièges (ce qui blesse), Niveau (terrain et murs).
    F2 ouvre et ferme.

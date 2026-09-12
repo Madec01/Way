@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 34_traps.js
+   WAY — 34_traps.js
    Pièges : patterns déterministes pilotés par le temps de salle, télégraphe avant activation.
    Chaque piège expose update(dt, rt), render(ctx), dangerAt(x, y) (pour le bot) et hitPlayer.
    ========================================================================= */

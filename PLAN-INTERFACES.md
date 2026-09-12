@@ -235,6 +235,36 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 ---
 
+## Chantier I-9 — Les menus en paysage court *(à faire ; idées d'un agent d'analyse, 12 septembre 2026)*
+
+**Le constat de l'auteur** sur son téléphone (832×384 en paysage, ×3,8) : « l'affichage des menus n'est pas ouf ». Trois captures : le camp où la carte de palier prend 63 % de la hauteur visible, la question 1 qui laisse 75 % de la largeur vide et se défile sur quatre écrans, la prépa où une seule paire bonus/malus fait 200 px de haut dans une colonne de 180 px.
+
+**Le diagnostic** (vérifié dans le code) :
+- `--ui-scale` = min(832/1280, 384/720) = 0,533 : toutes les **dimensions** des cartes sont réduites de moitié, mais les **polices** ont un plancher (`max(13px, …)`) et restent à taille pleine — du texte de bureau dans des cartes de poche. Ce n'est pas un problème de hauteur minimale, c'est le texte qui s'empile.
+- Rien ne distingue le **paysage court** du portrait : les seuls aiguillages sont `body.touch` et `max-width: 900px`. La mise en une colonne (I-8) est pensée pour le portrait ; en paysage elle gaspille la largeur.
+- Le **cadre fixe** (en-tête 56 px + bouton PARTIR 62 px + marges) mange ≈ 145 px sur 384 : il reste 240 px de contenu.
+- En prépa, `body.touch .cards .card { max-width: 15em }` l'emporte sur `.prep2 .pairpick { max-width: none }` ; les compétences sont forcées en une colonne ; l'en-tête n'est pas collant.
+- Les puces bonus ⇄ malus ont 48 px de haut sans être cliquables ; les titres restent aux multiplicateurs du bureau.
+
+**Les idées, classées gain/effort** (le bureau ne change pas d'un pixel : tout passe par `body.touch`, une media query ou un plancher qui vaut 1 au bureau) :
+1. **Un plancher d'échelle pour les menus** : `--menu-scale: max(0.72, var(--ui-scale))` dans les blocs `.hub3` et `.prep2` — cartes de personnage 80 px au lieu de 58, phrase du palier sur 3 lignes au lieu de 7. *Petit effort, très grand gain.*
+2. **Lever le plafond des cartes de paire** en prépa (`body.touch .prep2 .pairpick { max-width: none }`, puces côte à côte) — l'étape 0 passe de 420 à 110 px. *Petit, grand.*
+3. **Une media query « paysage court »** `@media (max-height: 500px) and (orientation: landscape)` — le socle des idées 4 à 9. *Petit.*
+4. **Bouton PARTIR fin** en paysage court : une ligne de 40 px (« ▶ PARTIR — Admission · Martin + Uno »). *Petit, ≈ 25 px récupérés.*
+5. **En-tête compact et collant** : une ligne de 44 px (WAY · crédits · boutons), idem en prépa. *Petit, ≈ 15 px.*
+6. **Le camp sur deux colonnes** en paysage : « Qui part ? » à gauche, « Avec qui ? » à droite, l'équipe et « Où ? » en pleine largeur ; les rangées en `flex-wrap`. De 4 écrans de défilement à 1,5. *Moyen, très grand.*
+7. **La phrase du palier hors de la carte** : cartes de même hauteur, la phrase du palier choisi en une ligne sous la rangée. *Petit-moyen, moyen.*
+8. **La prépa en rangées** : paires côte à côte, compétences sur 3 colonnes, armes en `auto-fill`. *Petit, moyen.*
+9. **Titres et noms aux bonnes proportions** (h2 1,1 em, noms 1,05 em, équipe 1,15 em). *Petit, moyen.*
+10. **Puces bonus ⇄ malus** : 24 px de haut, un toucher montre la phrase (le `title` est muet au doigt). *Petit.*
+11. **Titres de section collants** dans le défilement. *Petit.*
+12. **La prépa en étapes horizontales** (onglets 0 | 1 | 2) : du JavaScript, et les tests `prepa.js` / `choix.js` à revoir — à réserver, les idées 2 et 8 règlent 80 % du problème.
+
+**La séance proposée** : 3 → 1 → 4 + 5 → 6 → 2 + 8 → 9, puis la batterie et une capture 900×420 de chaque écran pour comparer avec les photos. Attendu : camp de 4 à 1,5 écrans, prépa de 5 à 2, largeur utilisée de 25 % à 90 %. Une mesure à ajouter dans `touch.js` : en 900×420, `#hub-body` fait moins de 2,5 fois sa hauteur visible, et aucune carte du camp n'est deux fois plus haute que large. Bornes des tests à respecter : cibles ≥ 44 px, polices ≥ 12 px, `overflow-x: auto` sur `.hub3 .row`, une seule zone de défilement, armes ≥ 140 px en 800×600.
+
+**Fini quand** : sur le téléphone de l'auteur, le camp tient en deux écrans et la prépa en deux, sans texte coupé.
+**Taille** : 1 séance (finitions 7, 10, 11 en seconde séance si le résultat plaît).
+
 ## L'ordre, et pourquoi
 
 ```

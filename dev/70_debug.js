@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 70_debug.js
+   WAY — 70_debug.js
    Panneau debug (mode Test), écran de test audio, harness window.__autoplay(config).
    ========================================================================= */
 

@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 30_entities.js
+   WAY — 30_entities.js
    Joueur, armes, projectiles, pickups, particules, effets à hooks.
    Tout lit/écrit l'état global G (défini dans 40_room.js).
    ========================================================================= */

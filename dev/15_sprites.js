@@ -1,6 +1,6 @@
 /* =========================================================================
-   SALLE ZÉRO — 15_sprites.js
-   Sprites (0x72 Dungeon Tileset II, CC0) avec fallback Canvas marqué TODO_SPRITE ; sol/murs ; musique.
+   WAY — 15_sprites.js
+   Sprites (0x72 Dungeon Tileset II, CC0) avec repli Canvas quand une planche manque ; sol/murs ; musique.
    ========================================================================= */
 
 'use strict';
@@ -155,7 +155,7 @@ const Sprites = (() => {
       };
       sheet.onerror = () => {
         failed = true;
-        console.warn('[Sprites] spritesheet indisponible, placeholders TODO_SPRITE');
+        console.warn('[Sprites] planche indisponible : repli Canvas (formes simples)');
         res(false);
       };
       sheet.src = SHEET_URL;
@@ -664,7 +664,7 @@ const Sprites = (() => {
     if (!ready || !d) {
       if (opts.fallback) opts.fallback();
       return false;
-    } // TODO_SPRITE : fallback Canvas
+    } // planche absente : le repli Canvas de l'appelant
     if (!opts.tint && d.tint) opts = Object.assign({}, opts, { tint: d.tint }); // teinte propre au sprite (variantes de biome)
     if (d.scale) opts = Object.assign({}, opts, { scale: (opts.scale || 1) * d.scale }); // agrandissement propre au sprite (le Vizir, plus haut que les autres boss)
     const moving = opts.walk != null && opts.walk > 0;
@@ -1008,7 +1008,7 @@ const Sprites = (() => {
       ctx.fillRect(ch.x - 22, ch.y - 16, 44, 32);
       ctx.fillStyle = '#ffd166';
       ctx.fillRect(ch.x - 4, ch.y - 4, 8, 8);
-    } // TODO_SPRITE
+    } // repli Canvas
     ctx.shadowBlur = 0;
     if (near) {
       ctx.fillStyle = '#fff';

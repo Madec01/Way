@@ -1,5 +1,5 @@
 /* =====================================================================
-   SALLE ZÉRO — AudioEngine
+   WAY — AudioEngine
    ---------------------------------------------------------------------
    Moteur audio procédural (Web Audio API, JS vanilla, aucune dépendance).
 

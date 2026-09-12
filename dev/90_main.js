@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 90_main.js — point d'entrée, boucle update/render.
+   WAY — 90_main.js — point d'entrée, boucle update/render.
    ========================================================================= */
 
 'use strict';

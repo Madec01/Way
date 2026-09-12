@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 40_room.js
+   WAY — 40_room.js
    État global G, Room (chargement, vagues, portes, transitions), Run (déroulé d'un niveau).
    ========================================================================= */
 
@@ -36,8 +36,8 @@ function applyDifficulty() {
   G.difficulty = {
     hpMul: d * (b.hpMul || 1) * ramp,
     damageMul: d * (b.damageMul || 1) * ramp,
-    speedMul: (0.7 + 0.3 * d) * (b.speedMul || 1),
-    fireRateMul: 0.75 + 0.25 * d,
+    speedMul: (BALANCE.difficulty.speedBase + BALANCE.difficulty.speedPerD * d) * (b.speedMul || 1),
+    fireRateMul: BALANCE.difficulty.fireBase + BALANCE.difficulty.firePerD * d,
     ramp,
   };
 }
@@ -897,8 +897,8 @@ const Run = {
       else seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     }
     RNG.reseed(seed);
-    const charDef = Content.character(character);
-    const biomeDef = Content.biome(biome);
+    const charDef = Content.character(character) || Content.character(null);
+    const biomeDef = Content.biome(biome) || Content.biome(null);
     const rooms = Content.roomsOf(biomeDef.id);
     /* deux paires bonus/malus tirées : le joueur choisit la sienne en prépa (Run.setPair), la première par défaut */
     const pairChoices = RNG.shuffle(

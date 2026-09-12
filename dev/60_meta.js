@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 60_meta.js
+   WAY — 60_meta.js
    Méta-progression : profils Normal (localStorage) / Test (tout débloqué, jamais sauvegardé), argent, passifs, déblocages.
    ========================================================================= */
 

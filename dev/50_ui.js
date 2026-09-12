@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 50_ui.js
+   WAY — 50_ui.js
    Écrans DOM (menu, hub, préparation, choix, pause, fin, crédits) et HUD canvas.
    ========================================================================= */
 
@@ -430,7 +430,7 @@ const UI = (() => {
     const p = Meta.profile;
     const s = screens.hub;
     const chars = Content.characters();
-    const cur = Content.character(p.character);
+    const cur = Content.character(p.character) || Content.character(null); // un personnage retiré : on repart du premier
     const biomes = Content.biomes();
     if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id;
     const biome = biomes.find(b => b.id === p.biome);
@@ -627,10 +627,11 @@ const UI = (() => {
         return;
       }
       p.seedNext = r.seed;
-      if (r.biome && Meta.biomeUnlocked(Content.biome(r.biome))) p.biome = r.biome;
+      if (r.biome && Content.biome(r.biome) && Meta.biomeUnlocked(Content.biome(r.biome))) p.biome = r.biome;
       Meta.save();
       showHub();
-      toast(`Prochaine partie : graine ${r.seed}${r.biome ? ', ' + Content.biome(r.biome).name : ''}`, 4);
+      const bio = r.biome && Content.biome(r.biome);
+      toast(`Prochaine partie : graine ${r.seed}${bio ? ', ' + bio.name : ''}`, 4);
     };
     s.querySelector('#hub-seed-go').onclick = seedGo;
     s.querySelector('#hub-seed-text').onkeydown = e => {

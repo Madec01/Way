@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 10_content_api.js
+   WAY — 10_content_api.js
    Accès au contenu déclaratif (CONTENT défini juste avant) + textes de lore.
    ========================================================================= */
 
@@ -121,10 +121,15 @@ const Content = (() => {
       if (!PET_BEHAVIORS.includes(p.behavior)) warn('comportement de compagnon inconnu', p.id, p.behavior);
     for (const u of CONTENT.upgrades) if (!RARITY[u.rarity]) warn('rareté inconnue', u.id, u.rarity);
   }
+  function inconnu(quoi, id) {
+    console.warn(`[Content] ${quoi} inconnu : ${id}`);
+    return null;
+  }
   return {
     validate,
     characters: () => CONTENT.characters,
-    character: id => get('characters', id) || CONTENT.characters[0],
+    /* sans id (profil neuf) : le premier personnage ; un id inconnu (contenu retiré, sauvegarde d'un ami) : null, et un mot dans la console */
+    character: id => (id == null ? CONTENT.characters[0] : get('characters', id) || inconnu('personnage', id)),
     weapons: () => CONTENT.weapons,
     weapon: id => get('weapons', id),
     skills: () => CONTENT.skills,
@@ -136,7 +141,7 @@ const Content = (() => {
     metaPassives: () => CONTENT.metaPassives,
     metaPassive: id => get('metaPassives', id),
     biomes: () => CONTENT.biomes.slice().sort((a, b) => a.order - b.order),
-    biome: id => get('biomes', id) || CONTENT.biomes[0],
+    biome: id => (id == null ? CONTENT.biomes[0] : get('biomes', id) || inconnu('palier', id)),
     enemies: () => CONTENT.enemies,
     enemy: id => get('enemies', id),
     bosses: () => CONTENT.bosses,

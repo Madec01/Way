@@ -79,7 +79,7 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
     Time.slowUntil = 0;
     Combat.hitEnemy(e, 14, { noCrit: true, silent: true, color: PAL.pets.pet_uno });
     const f = Floaters.list[0];
-    const srcBite = Pet.prototype.update.toString().includes('color: this.color');
+    const srcBite = (PET_ACTIONS.bite.toString() + Pet.prototype.update.toString()).includes('color: this.color'); // chantier 11 : la morsure vit dans la table
     return { color: f && f.color, kind: f && f.kind, srcBite };
   });
   ok(

@@ -207,12 +207,9 @@ const Challenge = (() => {
   };
 
   /* ---------- update ---------- */
-  function update(room, dt) {
-    const c = room.challenge;
-    if (!c || c.done) return;
-    c.t += dt;
-    const pl = G.player;
-    if (c.id === 'capture') {
+  /* La règle de chaque défi, un pas à la fois (chantier 11) : (salle, défi, pas, joueur) ; un id inconnu ne fait rien. */
+  const UPDATERS = {
+    capture(room, c, dt, pl) {
       const z = c.zones[c.zi];
       const inside = dist(pl.x, pl.y, z.x, z.y) < c.r;
       c.gauge = clamp(c.gauge + (inside ? dt / 6 : -dt / 12), 0, 1);
@@ -239,7 +236,8 @@ const Challenge = (() => {
         } else UI.banner(`Zone ${c.zi + 1} / 3`, '#7fff9a');
       }
       c.hud = `Zone ${Math.min(c.zi + 1, 3)}/3 · ${Math.round(c.gauge * 100)} %`;
-    } else if (c.id === 'collapse') {
+    },
+    collapse(room, c, dt, pl) {
       /* avertissements → chutes */
       for (const [k, until] of c.warn) {
         if (room.time >= until) {
@@ -286,7 +284,8 @@ const Challenge = (() => {
         buildPlanks(room, c);
         UI.banner('Une passerelle se déploie vers la sortie', '#ffb347');
       }
-    } else if (c.id === 'switches') {
+    },
+    switches(room, c, dt, pl) {
       c.showT -= dt;
       for (const s of c.sw) {
         if (s.on || dist(pl.x, pl.y, s.x, s.y) > 26 + pl.r) continue;
@@ -312,7 +311,8 @@ const Challenge = (() => {
         }
       }
       c.hud = `Ordre : ${c.order.map(i => c.sw[i].label).join(' → ')} · ${c.step}/3`;
-    } else if (c.id === 'lights') {
+    },
+    lights(room, c, dt, pl) {
       c.t2 += dt;
       if (c.phase === 'lure') {
         c.hud = 'Rejoins le halo';
@@ -361,9 +361,9 @@ const Challenge = (() => {
             continue;
           }
           /* Nouvelle destination seulement quand la précédente est atteinte, et toujours sur un temps. La distance est
-             bornée par ce que le joueur peut parcourir dans le même temps : avant, la lumière visait n'importe quel point
-             de la salle et allait 1,2× à 20× plus vite que lui — impossible à suivre. Les pointes restent (elles couvrent
-             la même distance en deux fois moins de temps), mais on peut toujours recoller. */
+           bornée par ce que le joueur peut parcourir dans le même temps : avant, la lumière visait n'importe quel point
+           de la salle et allait 1,2× à 20× plus vite que lui — impossible à suivre. Les pointes restent (elles couvrent
+           la même distance en deux fois moins de temps), mais on peut toujours recoller. */
           if (b.moveK == null) b.moveK = 1;
           if (b.moveK >= 1 && (bar || (beat && b.jump) || (beat && RNG.chance(0.2)))) {
             b.fx = b.x;
@@ -394,13 +394,14 @@ const Challenge = (() => {
         }
       }
       if (room.state === 'clear') c.done = true;
-    } else if (c.id === 'timer') {
+    },
+    timer(room, c, dt, pl) {
       const left = Math.max(0, c.limit - room.time);
       if (room.state === 'clear' && !c.done) {
         c.done = true;
         if (left > 0) {
           room.challengeOk = true;
-          const bonus = 30;
+          const bonus = BALANCE.timerBonus;
           G.run.coinsPending += bonus;
           UI.toast(`Chrono tenu : +${bonus} crédits`);
         }
@@ -412,13 +413,21 @@ const Challenge = (() => {
         for (const e of G.enemies) enrage(e);
       }
       c.hud = left > 0 ? `${left.toFixed(1)} s` : 'ENRAGÉS';
-    }
+    },
+  };
+  function update(room, dt) {
+    const c = room.challenge;
+    if (!c || c.done) return;
+    c.t += dt;
+    const pl = G.player;
+    const fn = UPDATERS[c.id];
+    if (fn) fn(room, c, dt, pl);
   }
   function enrage(e) {
     if (e.dead || e.enraged) return;
     e.enraged = true;
-    e.speed *= 1.3;
-    e.damage = Math.round(e.damage * 1.3);
+    e.speed *= BALANCE.enrageMul;
+    e.damage = Math.round(e.damage * BALANCE.enrageMul);
     e.color = PAL.alert;
   }
   function reward(room) {

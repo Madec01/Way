@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 00_core.js
+   WAY — 00_core.js
    Constantes, utilitaires, PRNG seedable, Input, Time, Engine (boucle à pas fixe).
    ========================================================================= */
 'use strict';
@@ -55,7 +55,6 @@ const wrapAngle = a => {
 };
 const tileX = tx => ROOM_X + (tx + 0.5) * TILE; // centre de la tuile en px
 const tileY = ty => ROOM_Y + (ty + 0.5) * TILE;
-const deepClone = o => JSON.parse(JSON.stringify(o));
 const fmt = n => Math.round(n).toLocaleString('fr-FR');
 const pct = n => `${n >= 0 ? '+' : ''}${Math.round(n * 100)} %`;
 
@@ -793,7 +792,6 @@ const Input = (() => {
     }
     return { x, y };
   }
-  /* Gamepad : abstraction prévue, non branchée en phase 1. */
   function endFrame() {
     pressed.clear();
   }

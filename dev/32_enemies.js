@@ -1,5 +1,5 @@
 /* =========================================================================
-   SALLE ZÉRO — 32_enemies.js
+   WAY — 32_enemies.js
    Ennemis (7 archétypes, machine à états avec télégraphie) et mini-boss (phases, patterns, faiblesse).
    ========================================================================= */
 
@@ -94,9 +94,6 @@ class Enemy {
     if (b.blinkWindup != null) this.telegraph = Object.assign({}, this.telegraph, { time: b.blinkWindup });
     if (b.summonWindup != null) this.telegraph = Object.assign({}, this.telegraph, { time: b.summonWindup });
     if (b.aimTime != null) this.telegraph = Object.assign({}, this.telegraph, { time: b.aimTime });
-  }
-  get slowFactor() {
-    return updateStatus(this, 0);
   }
   moveToward(tx, ty, dt, speedMul = 1, sep = true) {
     let a = angleTo(this.x, this.y, tx, ty);
@@ -1019,6 +1016,387 @@ class Enemy {
 }
 
 /* ---------- Mini-boss ---------- */
+/* Les motifs de boss, un par `kind` de `patterns[]` (chantier 11) : chaque fonction est appelée sur le boss (`this`) à
+   chaque pas de la phase d'action, avec le motif courant `c`, le pas `dt`, sa durée `dur`, le joueur et le multiplicateur
+   de cadence. Un motif finit par `this.endPattern()`. Un `kind` inconnu finit tout de suite. */
+const BOSS_PATTERNS = {
+  ring(c, dt, dur, pl, rate) {
+    const every = 1 / ((c.rate || 2) * rate);
+    if (c.t >= c.fired * every) {
+      c.fired++;
+      const n = c.count || 12;
+      const off = c.fired * (c.rotate || 0.25);
+      for (let i = 0; i < n; i++)
+        enemyProjectile(this, off + (i * TAU) / n, {
+          speed: c.projSpeed || c.speed || 220,
+          damage: c.projDamage || c.damage || this.damage * 0.6,
+          r: c.projSize || c.size || 7,
+          color: c.color,
+        });
+      AudioEngine.shootHammer({ intensity: 0.4 });
+    }
+    if (c.t >= dur) this.endPattern();
+  },
+  fan(c, dt, dur, pl, rate) {
+    const every = 1 / ((c.rate || 3) * rate);
+    if (c.t >= c.fired * every) {
+      c.fired++;
+      const n = c.count || 5,
+        sp = c.spread || 0.9;
+      const a0 = angleTo(this.x, this.y, pl.x, pl.y);
+      for (let i = 0; i < n; i++)
+        enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), {
+          speed: c.projSpeed || c.speed || 300,
+          damage: c.projDamage || c.damage || this.damage * 0.6,
+          r: c.projSize || c.size || 7,
+          color: c.color,
+        });
+      AudioEngine.shootPistol({ intensity: 0.5 });
+    }
+    if (c.t >= dur) this.endPattern();
+  },
+  spiral(c, dt, dur, pl, rate) {
+    const every = 1 / ((c.rate || 12) * rate);
+    if (c.t >= c.fired * every) {
+      c.fired++;
+      const arms = c.arms || 2;
+      for (let i = 0; i < arms; i++)
+        enemyProjectile(this, c.fired * (c.step || (c.angularSpeed || 2) / (c.rate || 12)) + (i * TAU) / arms, {
+          speed: c.projSpeed || c.speed || 200,
+          damage: c.projDamage || c.damage || this.damage * 0.5,
+          r: c.projSize || c.size || 6,
+          color: c.color,
+        });
+    }
+    if (c.t >= dur) this.endPattern();
+  },
+  charge(c, dt, dur, pl, rate) {
+    const sp = (c.speed || 640) * G.difficulty.speedMul * this.slow;
+    this.x += Math.cos(this.chargeA) * sp * dt;
+    this.y += Math.sin(this.chargeA) * sp * dt;
+    if (this.hitWall || c.t >= dur) {
+      const wall = this.hitWall;
+      this.endPattern();
+      if (this.weak.rule === 'after_charge' || (this.weak.rule === 'while_stunned' && wall) || (this.weak.rule === 'back' && wall)) {
+        const win = wall ? c.stunTime || this.weak.window || 1.5 : this.weak.window || 1.5;
+        this.stunUntil = Time.now + win;
+        if (this.weak.rule !== 'back') {
+          this.weakActive = true;
+          this.weakUntil = this.stunUntil;
+        }
+        Floaters.add(this.x, this.y - this.r - 20, wall ? 'SONNÉ' : 'PRISE EXPOSÉE', '#ffd166', 18);
+        Feel.shake(4, undefined, 160);
+      }
+    }
+  },
+  slam(c, dt, dur, pl, rate) {
+    const jt = c.jump || 0.6;
+    if (c.t < jt) {
+      const k = c.t / jt;
+      this.x = lerp(c.sx != null ? c.sx : (c.sx = this.x), c.tx, k);
+      this.y = lerp(c.sy != null ? c.sy : (c.sy = this.y), c.ty, k);
+      this.air = Math.sin(k * Math.PI) * 60;
+    } else {
+      this.air = 0;
+      Combat.explosion(
+        this.x,
+        this.y,
+        c.radius || 120,
+        Math.round((c.damage || this.damage) * G.difficulty.damageMul),
+        c.color || '#ffb347',
+        false
+      );
+      Feel.shake(9, undefined, 220);
+      this.endPattern();
+      if (this.weak.rule === 'while_stunned') {
+        this.weakActive = true;
+        this.weakUntil = Time.now + (this.weak.window || 1.2);
+        this.stunUntil = this.weakUntil;
+      }
+    }
+  },
+  /* --- duel (le Marshal) : il se campe, vise longuement, puis tire une balle unique très rapide. Rechargement = faiblesse. --- */
+  duel(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      const a = angleTo(this.x, this.y, pl.x, pl.y);
+      enemyProjectile(this, a, {
+        speed: c.projSpeed || 1000,
+        damage: c.projDamage || this.damage * 1.4,
+        r: c.projSize || 5,
+        color: c.color || '#ffe08a',
+      });
+      G.room.beams.push({
+        ax: this.x,
+        ay: this.y,
+        bx: this.x + Math.cos(a) * 900,
+        by: this.y + Math.sin(a) * 900,
+        t: 0,
+        life: 0.12,
+        color: '#fff3c4',
+        width: 3,
+      });
+      AudioEngine.shootPistol({ intensity: 1 });
+      Feel.shake(4, undefined, 160);
+      this.stunUntil = Time.now + (c.reload || 1.2);
+      this.weakActive = true;
+      this.weakUntil = this.stunUntil; // il recharge : ouvert
+      Floaters.add(this.x, this.y - this.r - 20, 'RECHARGE', '#ffd166', 18);
+    }
+    if (c.t >= (c.reload || 1.2)) this.endPattern();
+  },
+  /* --- onde de choc annulaire (le Portier) : un anneau part de lui et traverse la salle ; on saute par-dessus au dash --- */
+  quake(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      c.r = 0;
+      Feel.shake(9, undefined, 220);
+      AudioEngine.skillShockwave({ intensity: 1 });
+    }
+    const sp = (c.speed || 620) * G.difficulty.speedMul;
+    const prev = c.r;
+    c.r += sp * dt;
+    G.room.blasts.push({ x: this.x, y: this.y, r: c.r, t: 0, life: 0.09, color: c.color || '#9fd8ff' });
+    const d2 = dist(pl.x, pl.y, this.x, this.y);
+    if (!c.hit && !pl.dashing && d2 >= prev - 18 && d2 <= c.r + 18) {
+      c.hit = 1;
+      Combat.hitPlayer(Math.round((c.damage || 26) * G.difficulty.damageMul), {
+        type: 'trap',
+        x: this.x,
+        y: this.y,
+        trapName: 'Onde de choc',
+      });
+    }
+    if (c.r > (c.range || 900)) this.endPattern();
+  },
+  /* --- mines (le Marshal) : bâtons de dynamite semés autour du joueur, ils sautent après la mèche --- */
+  mines(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      const n = c.count || 4,
+        fuse = c.fuse || 1.6;
+      for (let i = 0; i < n; i++) {
+        const a = RNG.range(0, TAU),
+          rr = RNG.range(30, c.spread || 150);
+        G.room.hazards.push({
+          x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20),
+          y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
+          r: c.radius || 70,
+          until: Time.now + fuse + 0.1,
+          boomAt: Time.now + fuse,
+          damage: c.damage || 24,
+          owner: 'enemy',
+          color: c.color || '#ff6b3c',
+          cd: new Map(),
+        });
+      }
+      AudioEngine.trapWarn({ intensity: 0.8 });
+    }
+    if (c.t >= 0.4) this.endPattern();
+  },
+  /* --- racines (la Serriste) : le sol se couvre de ronces qui blessent et ralentissent --- */
+  roots(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      const n = c.count || 3;
+      for (let i = 0; i < n; i++) {
+        const a = angleTo(this.x, this.y, pl.x, pl.y) + RNG.range(-0.8, 0.8),
+          rr = RNG.range(40, 130);
+        G.room.hazards.push({
+          x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20),
+          y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
+          r: c.radius || 62,
+          until: Time.now + (c.duration || 4.5),
+          dps: c.dps || 10,
+          slow: true,
+          owner: 'enemy',
+          color: c.color || '#7ed957',
+          cd: new Map(),
+        });
+      }
+      AudioEngine.trapGas({ intensity: 0.8 });
+    }
+    if (c.t >= 0.5) this.endPattern();
+  },
+  /* --- tempête de sable (le Vizir) : un mur de sable traverse la salle, une seule brèche pour passer --- */
+  sandstorm(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      Feel.shake(4, undefined, 160);
+      AudioEngine.trapGas({ intensity: 1 });
+    }
+    const sp = (c.speed || 420) * G.difficulty.speedMul;
+    c.x += c.dir * sp * dt;
+    const half = c.thickness || 46,
+      gh = c.gapH / 2;
+    const inWall = Math.abs(pl.x - c.x) < half && Math.abs(pl.y - c.gapY) > gh;
+    if (inWall && !c.hit) {
+      c.hit = 1;
+      Combat.hitPlayer(Math.round((c.damage || 24) * G.difficulty.damageMul), {
+        type: 'trap',
+        x: c.x,
+        y: pl.y,
+        trapName: 'Tempête de sable',
+      });
+    }
+    if (inWall) {
+      pl.x += c.dir * 210 * dt;
+      resolveRoomCollision(pl);
+    }
+    if (c.x < ROOM_X - 70 || c.x > ROOM_X + ROOM_W + 70) this.endPattern();
+  },
+  /* --- mirage (le Vizir) : il se replace et laisse des doubles ; tous tirent la même salve, impossible de deviner d'où elle vient --- */
+  mirage(c, dt, dur, pl, rate) {
+    const hold = c.hold || 0.85;
+    if (!c.fired) {
+      c.fired = 1;
+      c.ghosts = [];
+      const n = c.count || 3,
+        rr = c.spread || 230;
+      const base = RNG.range(0, TAU);
+      for (let i = 1; i <= n; i++) {
+        const a = base + (i * TAU) / (n + 1);
+        c.ghosts.push({
+          x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 40, ROOM_X + ROOM_W - 40),
+          y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 40, ROOM_Y + ROOM_H - 40),
+          k: 0,
+        });
+      }
+      this.x = clamp(pl.x + Math.cos(base) * rr, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
+      this.y = clamp(pl.y + Math.sin(base) * rr, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
+      resolveRoomCollision(this);
+      Particles.spawn(this.x, this.y, { count: 18, color: c.color || '#ffd166', glow: true });
+      AudioEngine.skillBlink({ intensity: 0.9 });
+    }
+    for (const g of c.ghosts) g.k = c.t < hold ? clamp(c.t / hold, 0, 1) : Math.max(0, 1 - (c.t - hold) / 0.3); // les doubles s'effacent juste après la salve : le vrai reste seul
+    if (c.t >= hold && c.fired < 2) {
+      c.fired = 2;
+      const nb = c.bullets || 3,
+        sp2 = c.arc || 0.5;
+      const salve = (sx, sy) => {
+        const a0 = angleTo(sx, sy, pl.x, pl.y);
+        const src = { x: sx, y: sy, r: this.r, behavior: this.behavior, damage: this.damage, projColor: this.projColor };
+        for (let i = 0; i < nb; i++)
+          enemyProjectile(src, a0 + lerp(-sp2 / 2, sp2 / 2, nb > 1 ? i / (nb - 1) : 0.5), {
+            speed: c.projSpeed || 340,
+            damage: c.projDamage || this.damage * 0.6,
+            r: c.projSize || 7,
+            color: c.color || '#ffd166',
+          });
+      };
+      salve(this.x, this.y);
+      for (const g of c.ghosts) salve(g.x, g.y);
+      AudioEngine.shootOrb({ intensity: 0.7 });
+      /* le mirage retombe : le vrai est démasqué et ouvert (faiblesse propre au Vizir) */
+      if (this.weak.rule === 'after_mirage') {
+        this.weakActive = true;
+        this.weakUntil = Time.now + (this.weak.window || 2.2);
+        Floaters.add(this.x, this.y - this.r - 22, 'DÉMASQUÉ', '#ffd166', 18);
+        AudioEngine.bossPhase({ intensity: 0.4 });
+      }
+    }
+    if (c.t >= hold + 0.35) this.endPattern();
+  },
+  summon(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      const def = Content.enemy(c.enemy);
+      for (let i = 0; i < (c.count || 3); i++) {
+        const a = RNG.range(0, TAU);
+        const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 70, this.y + Math.sin(a) * 70, { hpMul: 0.8 });
+        if (e) {
+          e.xp = Math.round(e.xp * 0.5);
+        }
+      }
+      AudioEngine.trapGas({});
+    }
+    if (c.t >= (c.duration || 0.5)) this.endPattern();
+  },
+  laser_sweep(c, dt, dur, pl, rate) {
+    const sweep = c.sweep || Math.PI;
+    const a0 = c.a0 != null ? c.a0 : (c.a0 = angleTo(this.x, this.y, pl.x, pl.y) - (sweep / 2) * (c.dir = RNG.chance(0.5) ? 1 : -1));
+    const a = a0 + c.dir * sweep * (c.t / dur);
+    const len = c.length || 700;
+    G.room.beams.push({
+      ax: this.x,
+      ay: this.y,
+      bx: this.x + Math.cos(a) * len,
+      by: this.y + Math.sin(a) * len,
+      t: 0,
+      life: 0.05,
+      color: c.color || PAL.alert,
+      width: 8,
+    });
+    if (segCircle(this.x, this.y, this.x + Math.cos(a) * len, this.y + Math.sin(a) * len, pl.x, pl.y, pl.r))
+      Combat.hitPlayer(Math.round((c.damage || this.damage * 0.8) * G.difficulty.damageMul), { type: 'trap', x: this.x, y: this.y });
+    if (c.t >= dur) this.endPattern();
+  },
+  teleport(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true });
+      const a = angleTo(pl.x, pl.y, this.x, this.y);
+      const dd = this.r + pl.r + 40;
+      let tx = pl.x - Math.cos(angleTo(this.x, this.y, pl.x, pl.y)) * -dd,
+        ty = pl.y - Math.sin(angleTo(this.x, this.y, pl.x, pl.y)) * -dd;
+      /* derrière le joueur : opposé à la direction boss→joueur */ tx =
+        pl.x + ((pl.x - this.x) / Math.max(1, dist(pl.x, pl.y, this.x, this.y))) * dd;
+      ty = pl.y + ((pl.y - this.y) / Math.max(1, dist(pl.x, pl.y, this.x, this.y))) * dd;
+      tx = clamp(tx, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
+      ty = clamp(ty, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
+      this.x = tx;
+      this.y = ty;
+      resolveRoomCollision(this);
+      Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true });
+      AudioEngine.skillBlink({});
+      const n = c.count || 5,
+        sp = c.spread || 1;
+      const a0 = angleTo(this.x, this.y, pl.x, pl.y);
+      for (let i = 0; i < n; i++)
+        enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), {
+          speed: c.projSpeed || 320,
+          damage: c.projDamage || 14,
+          r: c.projSize || 7,
+          color: c.color,
+        });
+    }
+    if (c.t >= dur) this.endPattern();
+  },
+  shield(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      this.shieldUntil = Time.now + dur;
+      AudioEngine.skillShield({});
+    }
+    if (c.t >= 0.3) this.endPattern();
+  },
+  slow(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      pl.jamUntil = Time.now + dur;
+      pl.jamScale = c.scale || 0.55;
+      AudioEngine.skillSlowtime({});
+      Floaters.add(pl.x, pl.y - 34, 'BROUILLÉ', '#c9a3ff', 16);
+    }
+    if (c.t >= 0.3) this.endPattern();
+  },
+  pull(c, dt, dur, pl, rate) {
+    const a = angleTo(pl.x, pl.y, this.x, this.y);
+    const f = (c.force || 500) * dt;
+    if (!pl.dead && !pl.dashing) {
+      pl.x += Math.cos(a) * f;
+      pl.y += Math.sin(a) * f;
+      resolveRoomCollision(pl);
+    }
+    G.room.beams.push({ ax: this.x, ay: this.y, bx: pl.x, by: pl.y, t: 0, life: 0.05, color: '#c9a3ff', width: 3 });
+    if (c.t >= dur) {
+      this.endPattern();
+      if (dist(pl.x, pl.y, this.x, this.y) < this.r + pl.r + 30)
+        Combat.explosion(this.x, this.y, this.r + 60, Math.round((c.damage || 18) * G.difficulty.damageMul), '#c9a3ff', false);
+    }
+  },
+};
+
 class Boss extends Enemy {
   constructor(def, x, y, opts = {}) {
     const rv = opts.revenge ? def.revenge || { hpMul: 1.5 } : null;
@@ -1570,402 +1948,9 @@ class Boss extends Enemy {
       return;
     }
     const dur = c.duration || 1;
-    switch (c.kind) {
-      case 'ring': {
-        const every = 1 / ((c.rate || 2) * rate);
-        if (c.t >= c.fired * every) {
-          c.fired++;
-          const n = c.count || 12;
-          const off = c.fired * (c.rotate || 0.25);
-          for (let i = 0; i < n; i++)
-            enemyProjectile(this, off + (i * TAU) / n, {
-              speed: c.projSpeed || c.speed || 220,
-              damage: c.projDamage || c.damage || this.damage * 0.6,
-              r: c.projSize || c.size || 7,
-              color: c.color,
-            });
-          AudioEngine.shootHammer({ intensity: 0.4 });
-        }
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'fan': {
-        const every = 1 / ((c.rate || 3) * rate);
-        if (c.t >= c.fired * every) {
-          c.fired++;
-          const n = c.count || 5,
-            sp = c.spread || 0.9;
-          const a0 = angleTo(this.x, this.y, pl.x, pl.y);
-          for (let i = 0; i < n; i++)
-            enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), {
-              speed: c.projSpeed || c.speed || 300,
-              damage: c.projDamage || c.damage || this.damage * 0.6,
-              r: c.projSize || c.size || 7,
-              color: c.color,
-            });
-          AudioEngine.shootPistol({ intensity: 0.5 });
-        }
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'spiral': {
-        const every = 1 / ((c.rate || 12) * rate);
-        if (c.t >= c.fired * every) {
-          c.fired++;
-          const arms = c.arms || 2;
-          for (let i = 0; i < arms; i++)
-            enemyProjectile(this, c.fired * (c.step || (c.angularSpeed || 2) / (c.rate || 12)) + (i * TAU) / arms, {
-              speed: c.projSpeed || c.speed || 200,
-              damage: c.projDamage || c.damage || this.damage * 0.5,
-              r: c.projSize || c.size || 6,
-              color: c.color,
-            });
-        }
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'charge': {
-        const sp = (c.speed || 640) * G.difficulty.speedMul * this.slow;
-        this.x += Math.cos(this.chargeA) * sp * dt;
-        this.y += Math.sin(this.chargeA) * sp * dt;
-        if (this.hitWall || c.t >= dur) {
-          const wall = this.hitWall;
-          this.endPattern();
-          if (this.weak.rule === 'after_charge' || (this.weak.rule === 'while_stunned' && wall) || (this.weak.rule === 'back' && wall)) {
-            const win = wall ? c.stunTime || this.weak.window || 1.5 : this.weak.window || 1.5;
-            this.stunUntil = Time.now + win;
-            if (this.weak.rule !== 'back') {
-              this.weakActive = true;
-              this.weakUntil = this.stunUntil;
-            }
-            Floaters.add(this.x, this.y - this.r - 20, wall ? 'SONNÉ' : 'PRISE EXPOSÉE', '#ffd166', 18);
-            Feel.shake(4, undefined, 160);
-          }
-        }
-        break;
-      }
-      case 'slam': {
-        const jt = c.jump || 0.6;
-        if (c.t < jt) {
-          const k = c.t / jt;
-          this.x = lerp(c.sx != null ? c.sx : (c.sx = this.x), c.tx, k);
-          this.y = lerp(c.sy != null ? c.sy : (c.sy = this.y), c.ty, k);
-          this.air = Math.sin(k * Math.PI) * 60;
-        } else {
-          this.air = 0;
-          Combat.explosion(
-            this.x,
-            this.y,
-            c.radius || 120,
-            Math.round((c.damage || this.damage) * G.difficulty.damageMul),
-            c.color || '#ffb347',
-            false
-          );
-          Feel.shake(9, undefined, 220);
-          this.endPattern();
-          if (this.weak.rule === 'while_stunned') {
-            this.weakActive = true;
-            this.weakUntil = Time.now + (this.weak.window || 1.2);
-            this.stunUntil = this.weakUntil;
-          }
-        }
-        break;
-      }
-      /* --- duel (le Marshal) : il se campe, vise longuement, puis tire une balle unique très rapide. Rechargement = faiblesse. --- */
-      case 'duel': {
-        if (!c.fired) {
-          c.fired = 1;
-          const a = angleTo(this.x, this.y, pl.x, pl.y);
-          enemyProjectile(this, a, {
-            speed: c.projSpeed || 1000,
-            damage: c.projDamage || this.damage * 1.4,
-            r: c.projSize || 5,
-            color: c.color || '#ffe08a',
-          });
-          G.room.beams.push({
-            ax: this.x,
-            ay: this.y,
-            bx: this.x + Math.cos(a) * 900,
-            by: this.y + Math.sin(a) * 900,
-            t: 0,
-            life: 0.12,
-            color: '#fff3c4',
-            width: 3,
-          });
-          AudioEngine.shootPistol({ intensity: 1 });
-          Feel.shake(4, undefined, 160);
-          this.stunUntil = Time.now + (c.reload || 1.2);
-          this.weakActive = true;
-          this.weakUntil = this.stunUntil; // il recharge : ouvert
-          Floaters.add(this.x, this.y - this.r - 20, 'RECHARGE', '#ffd166', 18);
-        }
-        if (c.t >= (c.reload || 1.2)) this.endPattern();
-        break;
-      }
-      /* --- onde de choc annulaire (le Portier) : un anneau part de lui et traverse la salle ; on saute par-dessus au dash --- */
-      case 'quake': {
-        if (!c.fired) {
-          c.fired = 1;
-          c.r = 0;
-          Feel.shake(9, undefined, 220);
-          AudioEngine.skillShockwave({ intensity: 1 });
-        }
-        const sp = (c.speed || 620) * G.difficulty.speedMul;
-        const prev = c.r;
-        c.r += sp * dt;
-        G.room.blasts.push({ x: this.x, y: this.y, r: c.r, t: 0, life: 0.09, color: c.color || '#9fd8ff' });
-        const d2 = dist(pl.x, pl.y, this.x, this.y);
-        if (!c.hit && !pl.dashing && d2 >= prev - 18 && d2 <= c.r + 18) {
-          c.hit = 1;
-          Combat.hitPlayer(Math.round((c.damage || 26) * G.difficulty.damageMul), {
-            type: 'trap',
-            x: this.x,
-            y: this.y,
-            trapName: 'Onde de choc',
-          });
-        }
-        if (c.r > (c.range || 900)) this.endPattern();
-        break;
-      }
-      /* --- mines (le Marshal) : bâtons de dynamite semés autour du joueur, ils sautent après la mèche --- */
-      case 'mines': {
-        if (!c.fired) {
-          c.fired = 1;
-          const n = c.count || 4,
-            fuse = c.fuse || 1.6;
-          for (let i = 0; i < n; i++) {
-            const a = RNG.range(0, TAU),
-              rr = RNG.range(30, c.spread || 150);
-            G.room.hazards.push({
-              x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20),
-              y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
-              r: c.radius || 70,
-              until: Time.now + fuse + 0.1,
-              boomAt: Time.now + fuse,
-              damage: c.damage || 24,
-              owner: 'enemy',
-              color: c.color || '#ff6b3c',
-              cd: new Map(),
-            });
-          }
-          AudioEngine.trapWarn({ intensity: 0.8 });
-        }
-        if (c.t >= 0.4) this.endPattern();
-        break;
-      }
-      /* --- racines (la Serriste) : le sol se couvre de ronces qui blessent et ralentissent --- */
-      case 'roots': {
-        if (!c.fired) {
-          c.fired = 1;
-          const n = c.count || 3;
-          for (let i = 0; i < n; i++) {
-            const a = angleTo(this.x, this.y, pl.x, pl.y) + RNG.range(-0.8, 0.8),
-              rr = RNG.range(40, 130);
-            G.room.hazards.push({
-              x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20),
-              y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
-              r: c.radius || 62,
-              until: Time.now + (c.duration || 4.5),
-              dps: c.dps || 10,
-              slow: true,
-              owner: 'enemy',
-              color: c.color || '#7ed957',
-              cd: new Map(),
-            });
-          }
-          AudioEngine.trapGas({ intensity: 0.8 });
-        }
-        if (c.t >= 0.5) this.endPattern();
-        break;
-      }
-      /* --- tempête de sable (le Vizir) : un mur de sable traverse la salle, une seule brèche pour passer --- */
-      case 'sandstorm': {
-        if (!c.fired) {
-          c.fired = 1;
-          Feel.shake(4, undefined, 160);
-          AudioEngine.trapGas({ intensity: 1 });
-        }
-        const sp = (c.speed || 420) * G.difficulty.speedMul;
-        c.x += c.dir * sp * dt;
-        const half = c.thickness || 46,
-          gh = c.gapH / 2;
-        const inWall = Math.abs(pl.x - c.x) < half && Math.abs(pl.y - c.gapY) > gh;
-        if (inWall && !c.hit) {
-          c.hit = 1;
-          Combat.hitPlayer(Math.round((c.damage || 24) * G.difficulty.damageMul), {
-            type: 'trap',
-            x: c.x,
-            y: pl.y,
-            trapName: 'Tempête de sable',
-          });
-        }
-        if (inWall) {
-          pl.x += c.dir * 210 * dt;
-          resolveRoomCollision(pl);
-        }
-        if (c.x < ROOM_X - 70 || c.x > ROOM_X + ROOM_W + 70) this.endPattern();
-        break;
-      }
-      /* --- mirage (le Vizir) : il se replace et laisse des doubles ; tous tirent la même salve, impossible de deviner d'où elle vient --- */
-      case 'mirage': {
-        const hold = c.hold || 0.85;
-        if (!c.fired) {
-          c.fired = 1;
-          c.ghosts = [];
-          const n = c.count || 3,
-            rr = c.spread || 230;
-          const base = RNG.range(0, TAU);
-          for (let i = 1; i <= n; i++) {
-            const a = base + (i * TAU) / (n + 1);
-            c.ghosts.push({
-              x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 40, ROOM_X + ROOM_W - 40),
-              y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 40, ROOM_Y + ROOM_H - 40),
-              k: 0,
-            });
-          }
-          this.x = clamp(pl.x + Math.cos(base) * rr, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
-          this.y = clamp(pl.y + Math.sin(base) * rr, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
-          resolveRoomCollision(this);
-          Particles.spawn(this.x, this.y, { count: 18, color: c.color || '#ffd166', glow: true });
-          AudioEngine.skillBlink({ intensity: 0.9 });
-        }
-        for (const g of c.ghosts) g.k = c.t < hold ? clamp(c.t / hold, 0, 1) : Math.max(0, 1 - (c.t - hold) / 0.3); // les doubles s'effacent juste après la salve : le vrai reste seul
-        if (c.t >= hold && c.fired < 2) {
-          c.fired = 2;
-          const nb = c.bullets || 3,
-            sp2 = c.arc || 0.5;
-          const salve = (sx, sy) => {
-            const a0 = angleTo(sx, sy, pl.x, pl.y);
-            const src = { x: sx, y: sy, r: this.r, behavior: this.behavior, damage: this.damage, projColor: this.projColor };
-            for (let i = 0; i < nb; i++)
-              enemyProjectile(src, a0 + lerp(-sp2 / 2, sp2 / 2, nb > 1 ? i / (nb - 1) : 0.5), {
-                speed: c.projSpeed || 340,
-                damage: c.projDamage || this.damage * 0.6,
-                r: c.projSize || 7,
-                color: c.color || '#ffd166',
-              });
-          };
-          salve(this.x, this.y);
-          for (const g of c.ghosts) salve(g.x, g.y);
-          AudioEngine.shootOrb({ intensity: 0.7 });
-          /* le mirage retombe : le vrai est démasqué et ouvert (faiblesse propre au Vizir) */
-          if (this.weak.rule === 'after_mirage') {
-            this.weakActive = true;
-            this.weakUntil = Time.now + (this.weak.window || 2.2);
-            Floaters.add(this.x, this.y - this.r - 22, 'DÉMASQUÉ', '#ffd166', 18);
-            AudioEngine.bossPhase({ intensity: 0.4 });
-          }
-        }
-        if (c.t >= hold + 0.35) this.endPattern();
-        break;
-      }
-      case 'summon': {
-        if (!c.fired) {
-          c.fired = 1;
-          const def = Content.enemy(c.enemy);
-          for (let i = 0; i < (c.count || 3); i++) {
-            const a = RNG.range(0, TAU);
-            const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 70, this.y + Math.sin(a) * 70, { hpMul: 0.8 });
-            if (e) {
-              e.xp = Math.round(e.xp * 0.5);
-            }
-          }
-          AudioEngine.trapGas({});
-        }
-        if (c.t >= (c.duration || 0.5)) this.endPattern();
-        break;
-      }
-      case 'laser_sweep': {
-        const sweep = c.sweep || Math.PI;
-        const a0 = c.a0 != null ? c.a0 : (c.a0 = angleTo(this.x, this.y, pl.x, pl.y) - (sweep / 2) * (c.dir = RNG.chance(0.5) ? 1 : -1));
-        const a = a0 + c.dir * sweep * (c.t / dur);
-        const len = c.length || 700;
-        G.room.beams.push({
-          ax: this.x,
-          ay: this.y,
-          bx: this.x + Math.cos(a) * len,
-          by: this.y + Math.sin(a) * len,
-          t: 0,
-          life: 0.05,
-          color: c.color || PAL.alert,
-          width: 8,
-        });
-        if (segCircle(this.x, this.y, this.x + Math.cos(a) * len, this.y + Math.sin(a) * len, pl.x, pl.y, pl.r))
-          Combat.hitPlayer(Math.round((c.damage || this.damage * 0.8) * G.difficulty.damageMul), { type: 'trap', x: this.x, y: this.y });
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'teleport': {
-        if (!c.fired) {
-          c.fired = 1;
-          Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true });
-          const a = angleTo(pl.x, pl.y, this.x, this.y);
-          const dd = this.r + pl.r + 40;
-          let tx = pl.x - Math.cos(angleTo(this.x, this.y, pl.x, pl.y)) * -dd,
-            ty = pl.y - Math.sin(angleTo(this.x, this.y, pl.x, pl.y)) * -dd;
-          /* derrière le joueur : opposé à la direction boss→joueur */ tx =
-            pl.x + ((pl.x - this.x) / Math.max(1, dist(pl.x, pl.y, this.x, this.y))) * dd;
-          ty = pl.y + ((pl.y - this.y) / Math.max(1, dist(pl.x, pl.y, this.x, this.y))) * dd;
-          tx = clamp(tx, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
-          ty = clamp(ty, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
-          this.x = tx;
-          this.y = ty;
-          resolveRoomCollision(this);
-          Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true });
-          AudioEngine.skillBlink({});
-          const n = c.count || 5,
-            sp = c.spread || 1;
-          const a0 = angleTo(this.x, this.y, pl.x, pl.y);
-          for (let i = 0; i < n; i++)
-            enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), {
-              speed: c.projSpeed || 320,
-              damage: c.projDamage || 14,
-              r: c.projSize || 7,
-              color: c.color,
-            });
-        }
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'shield': {
-        if (!c.fired) {
-          c.fired = 1;
-          this.shieldUntil = Time.now + dur;
-          AudioEngine.skillShield({});
-        }
-        if (c.t >= 0.3) this.endPattern();
-        break;
-      }
-      case 'slow': {
-        if (!c.fired) {
-          c.fired = 1;
-          pl.jamUntil = Time.now + dur;
-          pl.jamScale = c.scale || 0.55;
-          AudioEngine.skillSlowtime({});
-          Floaters.add(pl.x, pl.y - 34, 'BROUILLÉ', '#c9a3ff', 16);
-        }
-        if (c.t >= 0.3) this.endPattern();
-        break;
-      }
-      case 'pull': {
-        const a = angleTo(pl.x, pl.y, this.x, this.y);
-        const f = (c.force || 500) * dt;
-        if (!pl.dead && !pl.dashing) {
-          pl.x += Math.cos(a) * f;
-          pl.y += Math.sin(a) * f;
-          resolveRoomCollision(pl);
-        }
-        G.room.beams.push({ ax: this.x, ay: this.y, bx: pl.x, by: pl.y, t: 0, life: 0.05, color: '#c9a3ff', width: 3 });
-        if (c.t >= dur) {
-          this.endPattern();
-          if (dist(pl.x, pl.y, this.x, this.y) < this.r + pl.r + 30)
-            Combat.explosion(this.x, this.y, this.r + 60, Math.round((c.damage || 18) * G.difficulty.damageMul), '#c9a3ff', false);
-        }
-        break;
-      }
-      default:
-        this.endPattern();
-    }
+    const fn = BOSS_PATTERNS[c.kind];
+    if (fn) fn.call(this, c, dt, dur, pl, rate);
+    else this.endPattern();
   }
   endPattern() {
     const c = this.cur;

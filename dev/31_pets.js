@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
-   SALLE ZÉRO — 31_pets.js — compagnons
+   WAY — 31_pets.js — compagnons
    Un animal ramassé en cours de run suit le joueur jusqu'à la fin du niveau. Il n'a qu'un comportement, mais il le
    joue EN MESURE : le faucon pique sur le temps, le chien mord sur le temps, le crapaud soigne sur le temps fort.
    C'est ce qui les distingue d'une tourelle : on les entend arriver.
@@ -40,6 +40,279 @@ const PET_MODES = {
       { stat: 'maxHp', mul: 1.35 },
       { stat: 'damage', mul: 1.2 },
     ],
+  },
+};
+
+/* Ce que fait un compagnon à chaque pas, un par `behavior` (chantier 11) : appelé sur le compagnon (`this`) avec le pas
+   `dt`, `tick` (vrai sur un temps de la musique) et le joueur. Un comportement inconnu suit le joueur. */
+const PET_ACTIONS = {
+  /* --- faucon : pique sur l'ennemi le plus proche, revient ensuite --- */
+  strike(dt, tick, pl) {
+    if (this.state === 'dive') {
+      const t = this.target;
+      if (!t || t.dead) {
+        this.state = 'follow';
+        this.target = null;
+        return;
+      }
+      const a = angleTo(this.x, this.y, t.x, t.y);
+      const sp = this.def.diveSpeed || 640;
+      this.x += Math.cos(a) * sp * dt;
+      this.y += Math.sin(a) * sp * dt;
+      this.facing = Math.cos(a) > 0 ? 1 : -1;
+      this.moving = true;
+      if (dist(this.x, this.y, t.x, t.y) < t.r + this.r) {
+        Combat.hitEnemy(t, this.dmg(), { x: t.x, y: t.y, knockback: this.def.knockback || 1.4, silent: true, color: this.color });
+        Particles.spawn(t.x, t.y, { count: 7, color: this.color, glow: true, speedMax: 160, life: 0.35, size: 2 });
+        AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.35 });
+        this.act = 1;
+        this.state = 'follow';
+        this.target = null;
+      }
+    } else {
+      this.follow(dt);
+      if (tick) {
+        const e = nearestEnemy(this.x, this.y, this.def.range || 340);
+        if (e) {
+          this.target = e;
+          this.state = 'dive';
+        }
+      }
+    }
+  },
+  /* --- chien : court au contact, mord en mesure, et attire les coups --- */
+  bite(dt, tick, pl) {
+    const e = nearestEnemy(this.x, this.y, this.def.range || 260);
+    if (e) {
+      const a = angleTo(this.x, this.y, e.x, e.y);
+      const d = dist(this.x, this.y, e.x, e.y);
+      if (d > e.r + this.r + 4) {
+        const sp = this.def.speed || 300;
+        this.x += Math.cos(a) * sp * dt;
+        this.y += Math.sin(a) * sp * dt;
+        this.facing = Math.cos(a) > 0 ? 1 : -1;
+        this.moving = true;
+      } else {
+        this.moving = false;
+        /* il anticipe (F-7) : accroupi dans les 200 ms qui précèdent le temps de sa morsure */
+        const ev = this.every();
+        const nextIsBite = (((Beat.index() + 1) % ev) + ev) % ev === 0;
+        this.crouch = nextIsBite && Beat.distToBeat(1) < 0.2 && Beat.phase() > 0.5;
+        if (tick) {
+          this.crouch = false;
+          Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true, color: this.color });
+          Particles.spawn(e.x, e.y, {
+            count: 3,
+            color: this.color,
+            speedMin: 90,
+            speedMax: 180,
+            angle: a,
+            spread: 0.5,
+            life: 0.3,
+            size: 3,
+          });
+          G.room.blasts.push({ x: e.x, y: e.y - e.r * 0.4, r: 16, t: 0, life: 0.12, color: '#ffffff' });
+          Feel.stop(40);
+          Feel.pop(this, 0.35, 160);
+          this.act = 1;
+          this.lastBite = { t: Beat.t, phase: Beat.phase(), bib: Beat.beatInBar(), dist: Beat.distToBeat(1) };
+        }
+      }
+      resolveRoomCollision(this);
+    } else this.follow(dt);
+  },
+  /* --- serpent : crache sur le temps, à distance --- */
+  spit(dt, tick, pl) {
+    this.follow(dt);
+    if (tick) {
+      const e = nearestEnemy(this.x, this.y, this.def.range || 320);
+      if (e) {
+        const a = angleTo(this.x, this.y, e.x, e.y);
+        const sp = this.def.projSpeed || 460;
+        Projectiles.spawn({
+          x: this.x,
+          y: this.y - 6,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          r: this.def.projSize || 5,
+          damage: this.dmg(),
+          owner: 'player',
+          life: 1.4,
+          color: this.color,
+          kind: 'bullet',
+          noCrit: true,
+          knockback: 0.4,
+        });
+        this.facing = Math.cos(a) > 0 ? 1 : -1;
+        this.act = 1;
+        AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.3 });
+      }
+    }
+  },
+  /* --- rapporteur : il va chercher ce qui traîne. Il court vers le ramassable le plus proche (dans `radius`
+     de lui, sans s'éloigner du joueur de plus de `leash`) et tout ce qui passe à `reach` de lui file vers le joueur.
+     Un anneau au sol montre cette portée tant qu'il a une cible. --- */
+  collect(dt, tick, pl) {
+    const R = this.def.radius || 260,
+      reach = this.def.reach || 140,
+      leash = this.def.leash || 320;
+    let best = null,
+      bd = R;
+    for (const p of Pickups.list) {
+      if (p.magnet || p.carrier || p.ghost || NO_MAGNET.has(p.kind)) continue; // un éclat de décor ne se rapporte pas
+      const d = dist(p.x, p.y, this.x, this.y);
+      if (d < reach) {
+        /* en deux temps (F-7) : l'objet vole vers elle en arc, puis d'elle vers le joueur */
+        p.carrier = this;
+        p.vz = -160;
+        p.stages = ['pet'];
+        this.act = Math.max(this.act, 0.6);
+      } else if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    this.fetching = best && dist(best.x, best.y, pl.x, pl.y) < leash ? best : null;
+    if (this.fetching) {
+      const a = angleTo(this.x, this.y, best.x, best.y);
+      const sp = this.def.speed || 260;
+      this.x += Math.cos(a) * sp * dt;
+      this.y += Math.sin(a) * sp * dt;
+      this.facing = Math.cos(a) > 0 ? 1 : -1;
+      this.moving = true;
+      this.stretch = true; // allongée en course (F-7)
+      this.pushTrail(4);
+      if (!this.airborne) resolveRoomCollision(this);
+    } else {
+      this.stretch = false;
+      this.follow(dt);
+    }
+    if (tick) this.act = Math.max(this.act, 0.5);
+  },
+  /* --- tortue : tourne autour du joueur et brise les tirs ennemis --- */
+  guard(dt, tick, pl) {
+    const a = this.t * (this.def.spin || 1.7);
+    const R = this.def.dist || 54;
+    this.x = pl.x + Math.cos(a) * R;
+    this.y = pl.y + Math.sin(a) * R;
+    this.facing = Math.cos(a) > 0 ? 1 : -1;
+    this.moving = true;
+    if (tick) this.blocks = this.def.block || 2;
+    for (let i = Projectiles.list.length - 1; i >= 0 && this.blocks > 0; i--) {
+      const p = Projectiles.list[i];
+      if (p.owner === 'player') continue;
+      if (dist(p.x, p.y, this.x, this.y) < p.r + this.r + 4) {
+        Projectiles.list.splice(i, 1);
+        this.blocks--;
+        this.act = 1;
+        Particles.spawn(p.x, p.y, { count: 5, color: this.color, glow: true, speedMax: 140, life: 0.3, size: 2 });
+        AudioEngine.uiBack && AudioEngine.uiBack({ intensity: 0.25 });
+      }
+    }
+  },
+  /* --- tatou : se roule en boule et traverse la salle en ligne droite, blessant tout sur son passage --- */
+  charge(dt, tick, pl) {
+    if (this.state === 'roll') {
+      const sp = this.def.rollSpeed || 560;
+      this.x += Math.cos(this.rollA) * sp * dt;
+      this.y += Math.sin(this.rollA) * sp * dt;
+      this.moving = true;
+      this.act = 1;
+      this.rollSpin = (this.rollSpin || 0) + dt * 14 * (Math.cos(this.rollA) < 0 ? -1 : 1); // il tourne vraiment (F-7)
+      this.pushTrail(6);
+      for (const e of G.enemies) {
+        if (e.dead || this.rolled.has(e) || dist(this.x, this.y, e.x, e.y) > e.r + this.r) continue;
+        this.rolled.add(e);
+        Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true, color: this.color });
+        Particles.spawn(e.x, e.y, { count: 6, color: this.color, speedMax: 150, life: 0.3, size: 2 });
+      }
+      this.rollT -= dt;
+      if (this.rollT <= 0 || this.x < ROOM_X || this.y < ROOM_Y || this.x > ROOM_X + ROOM_W || this.y > ROOM_Y + ROOM_H) {
+        this.state = 'follow';
+        this.act = 0;
+      }
+    } else {
+      this.follow(dt);
+      /* un demi-temps avant de partir, il flashe : on sait qu'il va rouler */
+      const ev = this.every();
+      const nextIsRoll = (((Beat.index() + 1) % ev) + ev) % ev === 0;
+      this.preRoll = nextIsRoll && Beat.phase() > 0.5 && !!nearestEnemy(this.x, this.y, this.def.range || 420);
+      if (tick) {
+        const e = nearestEnemy(this.x, this.y, this.def.range || 420);
+        if (e) {
+          this.rollA = angleTo(this.x, this.y, e.x, e.y);
+          this.facing = Math.cos(this.rollA) > 0 ? 1 : -1;
+          this.rolled = new Set();
+          this.rollT = this.def.rollTime || 0.8;
+          this.rollSpin = 0;
+          this.preRoll = false;
+          this.trail = [];
+          G.room.blasts.push({ x: this.x, y: this.y + Sprites.SOL - 3, r: 30, t: 0, life: 0.25, color: this.color, flat: true }); // l'onde du départ
+          this.state = 'roll';
+          AudioEngine.trapSaw && AudioEngine.trapSaw({ intensity: 0.3 });
+        }
+      }
+    }
+  },
+  /* --- guetteur : désigne une cible, qui encaisse davantage tant qu'elle est marquée. Avec `markCrit`, chaque
+     coup du joueur sur la cible marquée est un coup critique. La marque se voit : un anneau à ses pieds et un
+     losange au-dessus de sa tête (renderMark). --- */
+  mark(dt, tick, pl) {
+    this.follow(dt);
+    if (this.target && (this.target.dead || this.target.markUntil <= Time.now)) this.target = null;
+    if (tick) {
+      const e = nearestEnemy(this.x, this.y, this.def.range || 420, x => x !== this.target);
+      const t = e || nearestEnemy(this.x, this.y, this.def.range || 420);
+      if (t) {
+        t.markUntil = Time.now + (this.def.markTime || 4);
+        t.markMul = this.def.markMul || 1.3;
+        t.markCrit = !!this.def.markCrit;
+        t.markColor = this.color;
+        this.target = t;
+        this.markT = 0; // le trait pointillé part maintenant (F-7)
+        this.act = 1;
+        Particles.spawn(t.x, t.y - 24, { count: 6, color: this.color, glow: true, speedMax: 60, life: 0.6, size: 2 });
+      }
+    }
+  },
+  /* --- abeille : tourne autour de l'ennemi le plus proche et pique sans relâche --- */
+  sting(dt, tick, pl) {
+    const e = nearestEnemy(this.x, this.y, this.def.range || 300);
+    if (!e) {
+      this.follow(dt, 1.2);
+      return;
+    }
+    const R = this.def.orbit || 26;
+    const a = this.t * (this.def.spin || 5);
+    const tx = e.x + Math.cos(a) * (e.r + R),
+      ty = e.y + Math.sin(a) * (e.r + R);
+    const sp = this.def.speed || 420;
+    const d = dist(this.x, this.y, tx, ty);
+    if (d > 2) {
+      const ang = angleTo(this.x, this.y, tx, ty);
+      const step = Math.min(sp * dt, d);
+      this.x += Math.cos(ang) * step;
+      this.y += Math.sin(ang) * step;
+    }
+    this.facing = Math.cos(a) > 0 ? 1 : -1;
+    this.moving = true;
+    /* la piqûre porte jusqu'au rayon d'orbite : sinon l'abeille tourne juste au-delà de sa propre portée */
+    if (tick && dist(this.x, this.y, e.x, e.y) < e.r + R + 10) {
+      Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true, color: this.color });
+      Particles.spawn(this.x, this.y, { count: 3, color: this.color, speedMax: 80, life: 0.25, size: 2 });
+      this.act = 1;
+    }
+  },
+  /* --- crapaud : soigne sur le temps fort --- */
+  mend(dt, tick, pl) {
+    this.follow(dt);
+    if (tick && pl.hp < pl.stats.maxHp && !pl.dead) {
+      const h = this.def.heal || 4;
+      pl.heal(h);
+      this.act = 1;
+      Floaters.add(pl.x, pl.y - 34, '+' + h, null, null, 'heal');
+      Particles.spawn(this.x, this.y - 8, { count: 4, color: '#7fff9a', glow: true, speedMax: 70, life: 0.5, size: 2 });
+    }
   },
 };
 
@@ -314,287 +587,9 @@ class Pet {
         return;
       }
     }
-    switch (this.def.behavior) {
-      /* --- faucon : pique sur l'ennemi le plus proche, revient ensuite --- */
-      case 'strike': {
-        if (this.state === 'dive') {
-          const t = this.target;
-          if (!t || t.dead) {
-            this.state = 'follow';
-            this.target = null;
-            break;
-          }
-          const a = angleTo(this.x, this.y, t.x, t.y);
-          const sp = this.def.diveSpeed || 640;
-          this.x += Math.cos(a) * sp * dt;
-          this.y += Math.sin(a) * sp * dt;
-          this.facing = Math.cos(a) > 0 ? 1 : -1;
-          this.moving = true;
-          if (dist(this.x, this.y, t.x, t.y) < t.r + this.r) {
-            Combat.hitEnemy(t, this.dmg(), { x: t.x, y: t.y, knockback: this.def.knockback || 1.4, silent: true, color: this.color });
-            Particles.spawn(t.x, t.y, { count: 7, color: this.color, glow: true, speedMax: 160, life: 0.35, size: 2 });
-            AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.35 });
-            this.act = 1;
-            this.state = 'follow';
-            this.target = null;
-          }
-        } else {
-          this.follow(dt);
-          if (tick) {
-            const e = nearestEnemy(this.x, this.y, this.def.range || 340);
-            if (e) {
-              this.target = e;
-              this.state = 'dive';
-            }
-          }
-        }
-        break;
-      }
-      /* --- chien : court au contact, mord en mesure, et attire les coups --- */
-      case 'bite': {
-        const e = nearestEnemy(this.x, this.y, this.def.range || 260);
-        if (e) {
-          const a = angleTo(this.x, this.y, e.x, e.y);
-          const d = dist(this.x, this.y, e.x, e.y);
-          if (d > e.r + this.r + 4) {
-            const sp = this.def.speed || 300;
-            this.x += Math.cos(a) * sp * dt;
-            this.y += Math.sin(a) * sp * dt;
-            this.facing = Math.cos(a) > 0 ? 1 : -1;
-            this.moving = true;
-          } else {
-            this.moving = false;
-            /* il anticipe (F-7) : accroupi dans les 200 ms qui précèdent le temps de sa morsure */
-            const ev = this.every();
-            const nextIsBite = (((Beat.index() + 1) % ev) + ev) % ev === 0;
-            this.crouch = nextIsBite && Beat.distToBeat(1) < 0.2 && Beat.phase() > 0.5;
-            if (tick) {
-              this.crouch = false;
-              Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true, color: this.color });
-              Particles.spawn(e.x, e.y, {
-                count: 3,
-                color: this.color,
-                speedMin: 90,
-                speedMax: 180,
-                angle: a,
-                spread: 0.5,
-                life: 0.3,
-                size: 3,
-              });
-              G.room.blasts.push({ x: e.x, y: e.y - e.r * 0.4, r: 16, t: 0, life: 0.12, color: '#ffffff' });
-              Feel.stop(40);
-              Feel.pop(this, 0.35, 160);
-              this.act = 1;
-              this.lastBite = { t: Beat.t, phase: Beat.phase(), bib: Beat.beatInBar(), dist: Beat.distToBeat(1) };
-            }
-          }
-          resolveRoomCollision(this);
-        } else this.follow(dt);
-        break;
-      }
-      /* --- serpent : crache sur le temps, à distance --- */
-      case 'spit': {
-        this.follow(dt);
-        if (tick) {
-          const e = nearestEnemy(this.x, this.y, this.def.range || 320);
-          if (e) {
-            const a = angleTo(this.x, this.y, e.x, e.y);
-            const sp = this.def.projSpeed || 460;
-            Projectiles.spawn({
-              x: this.x,
-              y: this.y - 6,
-              vx: Math.cos(a) * sp,
-              vy: Math.sin(a) * sp,
-              r: this.def.projSize || 5,
-              damage: this.dmg(),
-              owner: 'player',
-              life: 1.4,
-              color: this.color,
-              kind: 'bullet',
-              noCrit: true,
-              knockback: 0.4,
-            });
-            this.facing = Math.cos(a) > 0 ? 1 : -1;
-            this.act = 1;
-            AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.3 });
-          }
-        }
-        break;
-      }
-      /* --- rapporteur : il va chercher ce qui traîne. Il court vers le ramassable le plus proche (dans `radius`
-         de lui, sans s'éloigner du joueur de plus de `leash`) et tout ce qui passe à `reach` de lui file vers le joueur.
-         Un anneau au sol montre cette portée tant qu'il a une cible. --- */
-      case 'collect': {
-        const R = this.def.radius || 260,
-          reach = this.def.reach || 140,
-          leash = this.def.leash || 320;
-        let best = null,
-          bd = R;
-        for (const p of Pickups.list) {
-          if (p.magnet || p.carrier || p.ghost || NO_MAGNET.has(p.kind)) continue; // un éclat de décor ne se rapporte pas
-          const d = dist(p.x, p.y, this.x, this.y);
-          if (d < reach) {
-            /* en deux temps (F-7) : l'objet vole vers elle en arc, puis d'elle vers le joueur */
-            p.carrier = this;
-            p.vz = -160;
-            p.stages = ['pet'];
-            this.act = Math.max(this.act, 0.6);
-          } else if (d < bd) {
-            bd = d;
-            best = p;
-          }
-        }
-        this.fetching = best && dist(best.x, best.y, pl.x, pl.y) < leash ? best : null;
-        if (this.fetching) {
-          const a = angleTo(this.x, this.y, best.x, best.y);
-          const sp = this.def.speed || 260;
-          this.x += Math.cos(a) * sp * dt;
-          this.y += Math.sin(a) * sp * dt;
-          this.facing = Math.cos(a) > 0 ? 1 : -1;
-          this.moving = true;
-          this.stretch = true; // allongée en course (F-7)
-          this.pushTrail(4);
-          if (!this.airborne) resolveRoomCollision(this);
-        } else {
-          this.stretch = false;
-          this.follow(dt);
-        }
-        if (tick) this.act = Math.max(this.act, 0.5);
-        break;
-      }
-      /* --- tortue : tourne autour du joueur et brise les tirs ennemis --- */
-      case 'guard': {
-        const a = this.t * (this.def.spin || 1.7);
-        const R = this.def.dist || 54;
-        this.x = pl.x + Math.cos(a) * R;
-        this.y = pl.y + Math.sin(a) * R;
-        this.facing = Math.cos(a) > 0 ? 1 : -1;
-        this.moving = true;
-        if (tick) this.blocks = this.def.block || 2;
-        for (let i = Projectiles.list.length - 1; i >= 0 && this.blocks > 0; i--) {
-          const p = Projectiles.list[i];
-          if (p.owner === 'player') continue;
-          if (dist(p.x, p.y, this.x, this.y) < p.r + this.r + 4) {
-            Projectiles.list.splice(i, 1);
-            this.blocks--;
-            this.act = 1;
-            Particles.spawn(p.x, p.y, { count: 5, color: this.color, glow: true, speedMax: 140, life: 0.3, size: 2 });
-            AudioEngine.uiBack && AudioEngine.uiBack({ intensity: 0.25 });
-          }
-        }
-        break;
-      }
-      /* --- tatou : se roule en boule et traverse la salle en ligne droite, blessant tout sur son passage --- */
-      case 'charge': {
-        if (this.state === 'roll') {
-          const sp = this.def.rollSpeed || 560;
-          this.x += Math.cos(this.rollA) * sp * dt;
-          this.y += Math.sin(this.rollA) * sp * dt;
-          this.moving = true;
-          this.act = 1;
-          this.rollSpin = (this.rollSpin || 0) + dt * 14 * (Math.cos(this.rollA) < 0 ? -1 : 1); // il tourne vraiment (F-7)
-          this.pushTrail(6);
-          for (const e of G.enemies) {
-            if (e.dead || this.rolled.has(e) || dist(this.x, this.y, e.x, e.y) > e.r + this.r) continue;
-            this.rolled.add(e);
-            Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true, color: this.color });
-            Particles.spawn(e.x, e.y, { count: 6, color: this.color, speedMax: 150, life: 0.3, size: 2 });
-          }
-          this.rollT -= dt;
-          if (this.rollT <= 0 || this.x < ROOM_X || this.y < ROOM_Y || this.x > ROOM_X + ROOM_W || this.y > ROOM_Y + ROOM_H) {
-            this.state = 'follow';
-            this.act = 0;
-          }
-        } else {
-          this.follow(dt);
-          /* un demi-temps avant de partir, il flashe : on sait qu'il va rouler */
-          const ev = this.every();
-          const nextIsRoll = (((Beat.index() + 1) % ev) + ev) % ev === 0;
-          this.preRoll = nextIsRoll && Beat.phase() > 0.5 && !!nearestEnemy(this.x, this.y, this.def.range || 420);
-          if (tick) {
-            const e = nearestEnemy(this.x, this.y, this.def.range || 420);
-            if (e) {
-              this.rollA = angleTo(this.x, this.y, e.x, e.y);
-              this.facing = Math.cos(this.rollA) > 0 ? 1 : -1;
-              this.rolled = new Set();
-              this.rollT = this.def.rollTime || 0.8;
-              this.rollSpin = 0;
-              this.preRoll = false;
-              this.trail = [];
-              G.room.blasts.push({ x: this.x, y: this.y + Sprites.SOL - 3, r: 30, t: 0, life: 0.25, color: this.color, flat: true }); // l'onde du départ
-              this.state = 'roll';
-              AudioEngine.trapSaw && AudioEngine.trapSaw({ intensity: 0.3 });
-            }
-          }
-        }
-        break;
-      }
-      /* --- guetteur : désigne une cible, qui encaisse davantage tant qu'elle est marquée. Avec `markCrit`, chaque
-         coup du joueur sur la cible marquée est un coup critique. La marque se voit : un anneau à ses pieds et un
-         losange au-dessus de sa tête (renderMark). --- */
-      case 'mark': {
-        this.follow(dt);
-        if (this.target && (this.target.dead || this.target.markUntil <= Time.now)) this.target = null;
-        if (tick) {
-          const e = nearestEnemy(this.x, this.y, this.def.range || 420, x => x !== this.target);
-          const t = e || nearestEnemy(this.x, this.y, this.def.range || 420);
-          if (t) {
-            t.markUntil = Time.now + (this.def.markTime || 4);
-            t.markMul = this.def.markMul || 1.3;
-            t.markCrit = !!this.def.markCrit;
-            t.markColor = this.color;
-            this.target = t;
-            this.markT = 0; // le trait pointillé part maintenant (F-7)
-            this.act = 1;
-            Particles.spawn(t.x, t.y - 24, { count: 6, color: this.color, glow: true, speedMax: 60, life: 0.6, size: 2 });
-          }
-        }
-        break;
-      }
-      /* --- abeille : tourne autour de l'ennemi le plus proche et pique sans relâche --- */
-      case 'sting': {
-        const e = nearestEnemy(this.x, this.y, this.def.range || 300);
-        if (!e) {
-          this.follow(dt, 1.2);
-          break;
-        }
-        const R = this.def.orbit || 26;
-        const a = this.t * (this.def.spin || 5);
-        const tx = e.x + Math.cos(a) * (e.r + R),
-          ty = e.y + Math.sin(a) * (e.r + R);
-        const sp = this.def.speed || 420;
-        const d = dist(this.x, this.y, tx, ty);
-        if (d > 2) {
-          const ang = angleTo(this.x, this.y, tx, ty);
-          const step = Math.min(sp * dt, d);
-          this.x += Math.cos(ang) * step;
-          this.y += Math.sin(ang) * step;
-        }
-        this.facing = Math.cos(a) > 0 ? 1 : -1;
-        this.moving = true;
-        /* la piqûre porte jusqu'au rayon d'orbite : sinon l'abeille tourne juste au-delà de sa propre portée */
-        if (tick && dist(this.x, this.y, e.x, e.y) < e.r + R + 10) {
-          Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true, color: this.color });
-          Particles.spawn(this.x, this.y, { count: 3, color: this.color, speedMax: 80, life: 0.25, size: 2 });
-          this.act = 1;
-        }
-        break;
-      }
-      /* --- crapaud : soigne sur le temps fort --- */
-      case 'mend': {
-        this.follow(dt);
-        if (tick && pl.hp < pl.stats.maxHp && !pl.dead) {
-          const h = this.def.heal || 4;
-          pl.heal(h);
-          this.act = 1;
-          Floaters.add(pl.x, pl.y - 34, '+' + h, null, null, 'heal');
-          Particles.spawn(this.x, this.y - 8, { count: 4, color: '#7fff9a', glow: true, speedMax: 70, life: 0.5, size: 2 });
-        }
-        break;
-      }
-      default:
-        this.follow(dt);
-    }
+    const act = PET_ACTIONS[this.def.behavior];
+    if (act) act.call(this, dt, tick, pl);
+    else this.follow(dt);
     const mx = this.x - this.px,
       my = this.y - this.py;
     if (Math.abs(mx) + Math.abs(my) > 0.15) {

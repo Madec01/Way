@@ -164,7 +164,7 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Fini quand** : bot sur les 4 biomes : ordres de salles distincts, 0 élément modulaire identique entre deux biomes en salle 6, 28 comportements d'ennemi distincts au grep ; rendu < 2 ms par image sur « lumières coupées ».
 **Taille** : 3 à 4 séances. **Séance 1 (11 septembre 2026, CONTENT.md §59)** : [2] structure faite — quatre ordres de salles distincts, une salle unique par biome (sous-sol, pont, train, bazar) ; [14] fait — 4 et 8 en combat, coffres offerts en fin de 3 et 7 (au bazar pour le Sérail), boss de salle 9 à ses propres phases (`revenge.phases`) ; salles modulaires à éléments distincts par biome. **Séance 2 (CONTENT.md §60)** : [2] comportements faits — 21 variantes, 28 comportements distincts, chacun mesuré par `comportements.js`. **Séance 3 (CONTENT.md §61)** : [12] quatre salles cadencées de l'Admission jouées, [29] masque des lumières une image sur deux avec disque pré-dessiné (1,28 → 0,97 ms au banc A/B, 1,45 ms avec les faisceaux : sous les 2 ms visés), [41] flash précalculé, wagons habillés. **Non fait** : [24] le terrain de salle, à trancher (étendre aux salles de combat ou retirer) — il ne bloque rien.
 
-## Chantier 10 — Le téléphone ✔ (côté code ; la mesure sur un vrai téléphone reste à faire)
+## Chantier 10 — Le téléphone ✔ *(fait, mesuré sur le téléphone de l'auteur le 12 septembre 2026)*
 
 **Objectif** : la moitié des amis ouvrira le lien sur un téléphone.
 
@@ -172,19 +172,19 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 - [25] ✔ Refonte de l'interface tactile (PLAN.md §8) — faite en I-8.
 - [66] ✔ `shadowBlur` et `backdrop-filter` remplacés par des ombres pré-rendues là où la mesure le demande. *Pièges, modules, tempo, défis, porte, flaques, lames : `Halo.line` / `Halo.rect` / `Halo.draw`. Par image : salle 6 → 5 flous (11 avant), salle 8 → 3 (11). Les boutons tactiles n'ont plus de flou d'arrière-plan. Un **rendu économe** (flous coupés, un pixel par pixel, écrans sans flou) s'allume tout seul au tactile sous 45 i/s pendant 3 s, ou depuis la pause.*
 
-**Fini quand** : ≥ 50 fps en salle 2 sur un téléphone de milieu de gamme ; une run complète jouable au pouce sans toucher au clavier. *Le second point est fait (I-8) ; le premier attend ta mesure — si elle tombe sous 50, le rendu économe est le premier levier, et la ligne copiée dira lequel actionner ensuite.*
+**Fini quand** : ≥ 50 fps en salle 2 sur un téléphone de milieu de gamme ; une run complète jouable au pouce sans toucher au clavier. *Les deux points sont faits : mesure de l'auteur sur son téléphone (Android 10, Chrome 153, écran 832×384 ×3,8, tactile) : « 60 i/s · min 60 sur 10 s · rendu 1,8 ms · 3 flous · complet · salle 1 » en Serre — au-dessus des 50 visés, sans que le rendu économe ait eu besoin de s'allumer. Reste l'affichage des menus en paysage court, traité à part (PLAN-INTERFACES.md, I-9).*
 **Taille** : 2 à 3 séances — **1 séance faite le 11 septembre 2026**, plus la mesure.
 
-## Chantier 11 — La dette, au fil de l'eau
+## Chantier 11 — La dette, au fil de l'eau ✔ *(séance de ménage le 12 septembre 2026)*
 
-**Objectif** : pas une séance dédiée — un item par séance, glissé dans le chantier en cours quand on touche le fichier.
+**Objectif** : pas une séance dédiée — un item par séance, glissé dans le chantier en cours quand on touche le fichier. *Finalement fait en une séance, à la demande de l'auteur (CONTENT.md §65).*
 
-- [54] Table `kind → fn` pour `Boss.runPattern`, `Pet.update`, `Atelier.tune`, `Challenge.update` — chacun au moment où un chantier l'ouvre (5 pour `Pet.update`, 9 pour `Boss.runPattern`).
-- [58] Nombres magiques vers `05_balance.js` — ceux du chantier 4 en priorité.
-- [59] `|| CONTENT.x[0]` → `console.warn` + `null`.
-- [66] En-têtes « SALLE ZÉRO », Gamepad « prévu », `deepClone`, `Fullscreen.supported`, `Enemy.slowFactor`, `TODO_SPRITE`.
+- [54] ✔ Table `kind → fn` pour `Boss.runPattern` (`BOSS_PATTERNS`, 17 motifs), `Pet.update` (`PET_ACTIONS`, 9 comportements), `Challenge.update` (`UPDATERS`, 5 défis). *`Atelier.tune` n'est pas une machine à états (un formulaire par famille d'élément) : laissé tel quel, il s'ouvrira avec l'atelier.*
+- [58] ✔ Nombres magiques vers `05_balance.js` — ceux du chantier 4 : la formule de la difficulté (`BALANCE.difficulty`), le chrono tenu (`timerBonus`), l'enragé (`enrageMul`).
+- [59] ✔ `Content.character` / `Content.biome` : sans id le premier (profil neuf), un id inconnu → `console.warn` + `null` ; les quatre appelants qui supposaient un résultat se rabattent ou se taisent.
+- [66] ✔ En-têtes « SALLE ZÉRO » (16 fichiers), Gamepad « prévu », `deepClone`, `Enemy.slowFactor`, `TODO_SPRITE` retirés ; `Fullscreen.supported` n'existait déjà plus.
 
-**Fini quand** : plus aucune fonction de plus de 60 lignes dans `dev/` ; `grep -c "SALLE ZÉRO" dev/*.js` = 0.
+**Fini quand** : plus aucune fonction de plus de 60 lignes dans `dev/` ; `grep -c "SALLE ZÉRO" dev/*.js` = 0. *Le second est vrai. Le premier ne l'est pas et ne le sera pas sans refaire le jeu : `renderHudBody` (300 lignes), `showHub` (280), les `render` des entités et `Atelier.tune` restent longs — ce sont des gabarits et des dessins, pas des machines à états ; les découper n'apporterait rien au joueur. Critère abandonné, remplacé par : aucune machine à états en `switch` de plus de 60 lignes (`dette.js` le mesure).*
 
 ---
 

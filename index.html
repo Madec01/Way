@@ -2953,11 +2953,11 @@ body.eco .hubcol {
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-11 23:02';</script>
+<script>window.WAY_BUILD = '2026-09-12 06:26';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 00_core.js
+   WAY — 00_core.js
    Constantes, utilitaires, PRNG seedable, Input, Time, Engine (boucle à pas fixe).
    ========================================================================= */
 'use strict';
@@ -3013,7 +3013,6 @@ const wrapAngle = a => {
 };
 const tileX = tx => ROOM_X + (tx + 0.5) * TILE; // centre de la tuile en px
 const tileY = ty => ROOM_Y + (ty + 0.5) * TILE;
-const deepClone = o => JSON.parse(JSON.stringify(o));
 const fmt = n => Math.round(n).toLocaleString('fr-FR');
 const pct = n => `${n >= 0 ? '+' : ''}${Math.round(n * 100)} %`;
 
@@ -3751,7 +3750,6 @@ const Input = (() => {
     }
     return { x, y };
   }
-  /* Gamepad : abstraction prévue, non branchée en phase 1. */
   function endFrame() {
     pressed.clear();
   }
@@ -3924,6 +3922,10 @@ const BALANCE = {
   relicOnBoss: true,
   /* montée de difficulté à l'intérieur d'un palier : multiplicateur (1 + rampPerRoom·(salle-1)) sur PV et dégâts des ennemis/pièges */
   rampPerRoom: 0.09,
+  /* la difficulté d (1 = Normal) : vitesse des ennemis 0,7 + 0,3 d, cadence de tir 0,75 + 0,25 d (chantier 4) */
+  difficulty: { speedBase: 0.7, speedPerD: 0.3, fireBase: 0.75, firePerD: 0.25 },
+  timerBonus: 30, // crédits en attente pour un défi chrono tenu
+  enrageMul: 1.3, // vitesse et dégâts d'un ennemi enragé (chrono dépassé)
   /* foudre ambiante : intervalle réel = every × [jitterMin, jitterMax] */
   lightningJitter: { min: 0.8, max: 2.0 },
   /* prime de fin de palier (crédits) */
@@ -3934,7 +3936,7 @@ const BALANCE = {
 <script>
 /* ==== AudioEngine.js ==== */
 /* =====================================================================
-   SALLE ZÉRO — AudioEngine
+   WAY — AudioEngine
    ---------------------------------------------------------------------
    Moteur audio procédural (Web Audio API, JS vanilla, aucune dépendance).
 
@@ -11734,7 +11736,7 @@ CONTENT.pairs.push(...FRIEND_CONTENT.pairs);
 <script>
 /* ==== 10_content_api.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 10_content_api.js
+   WAY — 10_content_api.js
    Accès au contenu déclaratif (CONTENT défini juste avant) + textes de lore.
    ========================================================================= */
 
@@ -11856,10 +11858,15 @@ const Content = (() => {
       if (!PET_BEHAVIORS.includes(p.behavior)) warn('comportement de compagnon inconnu', p.id, p.behavior);
     for (const u of CONTENT.upgrades) if (!RARITY[u.rarity]) warn('rareté inconnue', u.id, u.rarity);
   }
+  function inconnu(quoi, id) {
+    console.warn(`[Content] ${quoi} inconnu : ${id}`);
+    return null;
+  }
   return {
     validate,
     characters: () => CONTENT.characters,
-    character: id => get('characters', id) || CONTENT.characters[0],
+    /* sans id (profil neuf) : le premier personnage ; un id inconnu (contenu retiré, sauvegarde d'un ami) : null, et un mot dans la console */
+    character: id => (id == null ? CONTENT.characters[0] : get('characters', id) || inconnu('personnage', id)),
     weapons: () => CONTENT.weapons,
     weapon: id => get('weapons', id),
     skills: () => CONTENT.skills,
@@ -11871,7 +11878,7 @@ const Content = (() => {
     metaPassives: () => CONTENT.metaPassives,
     metaPassive: id => get('metaPassives', id),
     biomes: () => CONTENT.biomes.slice().sort((a, b) => a.order - b.order),
-    biome: id => get('biomes', id) || CONTENT.biomes[0],
+    biome: id => (id == null ? CONTENT.biomes[0] : get('biomes', id) || inconnu('palier', id)),
     enemies: () => CONTENT.enemies,
     enemy: id => get('enemies', id),
     bosses: () => CONTENT.bosses,
@@ -11896,8 +11903,8 @@ const Content = (() => {
 <script>
 /* ==== 15_sprites.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 15_sprites.js
-   Sprites (0x72 Dungeon Tileset II, CC0) avec fallback Canvas marqué TODO_SPRITE ; sol/murs ; musique.
+   WAY — 15_sprites.js
+   Sprites (0x72 Dungeon Tileset II, CC0) avec repli Canvas quand une planche manque ; sol/murs ; musique.
    ========================================================================= */
 
 'use strict';
@@ -12052,7 +12059,7 @@ const Sprites = (() => {
       };
       sheet.onerror = () => {
         failed = true;
-        console.warn('[Sprites] spritesheet indisponible, placeholders TODO_SPRITE');
+        console.warn('[Sprites] planche indisponible : repli Canvas (formes simples)');
         res(false);
       };
       sheet.src = SHEET_URL;
@@ -12561,7 +12568,7 @@ const Sprites = (() => {
     if (!ready || !d) {
       if (opts.fallback) opts.fallback();
       return false;
-    } // TODO_SPRITE : fallback Canvas
+    } // planche absente : le repli Canvas de l'appelant
     if (!opts.tint && d.tint) opts = Object.assign({}, opts, { tint: d.tint }); // teinte propre au sprite (variantes de biome)
     if (d.scale) opts = Object.assign({}, opts, { scale: (opts.scale || 1) * d.scale }); // agrandissement propre au sprite (le Vizir, plus haut que les autres boss)
     const moving = opts.walk != null && opts.walk > 0;
@@ -12905,7 +12912,7 @@ const Sprites = (() => {
       ctx.fillRect(ch.x - 22, ch.y - 16, 44, 32);
       ctx.fillStyle = '#ffd166';
       ctx.fillRect(ch.x - 4, ch.y - 4, 8, 8);
-    } // TODO_SPRITE
+    } // repli Canvas
     ctx.shadowBlur = 0;
     if (near) {
       ctx.fillStyle = '#fff';
@@ -13683,7 +13690,7 @@ const Music = (() => {
 <script>
 /* ==== 20_progression.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 20_progression.js
+   WAY — 20_progression.js
    Stats (agrégation des modificateurs), raretés, XP, scores de salle, argent.
    ========================================================================= */
 
@@ -13976,7 +13983,7 @@ const Progression = (() => {
 <script>
 /* ==== 30_entities.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 30_entities.js
+   WAY — 30_entities.js
    Joueur, armes, projectiles, pickups, particules, effets à hooks.
    Tout lit/écrit l'état global G (défini dans 40_room.js).
    ========================================================================= */
@@ -16482,7 +16489,7 @@ class Player {
 /* ==== 31_pets.js ==== */
 'use strict';
 /* =========================================================================
-   SALLE ZÉRO — 31_pets.js — compagnons
+   WAY — 31_pets.js — compagnons
    Un animal ramassé en cours de run suit le joueur jusqu'à la fin du niveau. Il n'a qu'un comportement, mais il le
    joue EN MESURE : le faucon pique sur le temps, le chien mord sur le temps, le crapaud soigne sur le temps fort.
    C'est ce qui les distingue d'une tourelle : on les entend arriver.
@@ -16522,6 +16529,279 @@ const PET_MODES = {
       { stat: 'maxHp', mul: 1.35 },
       { stat: 'damage', mul: 1.2 },
     ],
+  },
+};
+
+/* Ce que fait un compagnon à chaque pas, un par `behavior` (chantier 11) : appelé sur le compagnon (`this`) avec le pas
+   `dt`, `tick` (vrai sur un temps de la musique) et le joueur. Un comportement inconnu suit le joueur. */
+const PET_ACTIONS = {
+  /* --- faucon : pique sur l'ennemi le plus proche, revient ensuite --- */
+  strike(dt, tick, pl) {
+    if (this.state === 'dive') {
+      const t = this.target;
+      if (!t || t.dead) {
+        this.state = 'follow';
+        this.target = null;
+        return;
+      }
+      const a = angleTo(this.x, this.y, t.x, t.y);
+      const sp = this.def.diveSpeed || 640;
+      this.x += Math.cos(a) * sp * dt;
+      this.y += Math.sin(a) * sp * dt;
+      this.facing = Math.cos(a) > 0 ? 1 : -1;
+      this.moving = true;
+      if (dist(this.x, this.y, t.x, t.y) < t.r + this.r) {
+        Combat.hitEnemy(t, this.dmg(), { x: t.x, y: t.y, knockback: this.def.knockback || 1.4, silent: true, color: this.color });
+        Particles.spawn(t.x, t.y, { count: 7, color: this.color, glow: true, speedMax: 160, life: 0.35, size: 2 });
+        AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.35 });
+        this.act = 1;
+        this.state = 'follow';
+        this.target = null;
+      }
+    } else {
+      this.follow(dt);
+      if (tick) {
+        const e = nearestEnemy(this.x, this.y, this.def.range || 340);
+        if (e) {
+          this.target = e;
+          this.state = 'dive';
+        }
+      }
+    }
+  },
+  /* --- chien : court au contact, mord en mesure, et attire les coups --- */
+  bite(dt, tick, pl) {
+    const e = nearestEnemy(this.x, this.y, this.def.range || 260);
+    if (e) {
+      const a = angleTo(this.x, this.y, e.x, e.y);
+      const d = dist(this.x, this.y, e.x, e.y);
+      if (d > e.r + this.r + 4) {
+        const sp = this.def.speed || 300;
+        this.x += Math.cos(a) * sp * dt;
+        this.y += Math.sin(a) * sp * dt;
+        this.facing = Math.cos(a) > 0 ? 1 : -1;
+        this.moving = true;
+      } else {
+        this.moving = false;
+        /* il anticipe (F-7) : accroupi dans les 200 ms qui précèdent le temps de sa morsure */
+        const ev = this.every();
+        const nextIsBite = (((Beat.index() + 1) % ev) + ev) % ev === 0;
+        this.crouch = nextIsBite && Beat.distToBeat(1) < 0.2 && Beat.phase() > 0.5;
+        if (tick) {
+          this.crouch = false;
+          Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true, color: this.color });
+          Particles.spawn(e.x, e.y, {
+            count: 3,
+            color: this.color,
+            speedMin: 90,
+            speedMax: 180,
+            angle: a,
+            spread: 0.5,
+            life: 0.3,
+            size: 3,
+          });
+          G.room.blasts.push({ x: e.x, y: e.y - e.r * 0.4, r: 16, t: 0, life: 0.12, color: '#ffffff' });
+          Feel.stop(40);
+          Feel.pop(this, 0.35, 160);
+          this.act = 1;
+          this.lastBite = { t: Beat.t, phase: Beat.phase(), bib: Beat.beatInBar(), dist: Beat.distToBeat(1) };
+        }
+      }
+      resolveRoomCollision(this);
+    } else this.follow(dt);
+  },
+  /* --- serpent : crache sur le temps, à distance --- */
+  spit(dt, tick, pl) {
+    this.follow(dt);
+    if (tick) {
+      const e = nearestEnemy(this.x, this.y, this.def.range || 320);
+      if (e) {
+        const a = angleTo(this.x, this.y, e.x, e.y);
+        const sp = this.def.projSpeed || 460;
+        Projectiles.spawn({
+          x: this.x,
+          y: this.y - 6,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          r: this.def.projSize || 5,
+          damage: this.dmg(),
+          owner: 'player',
+          life: 1.4,
+          color: this.color,
+          kind: 'bullet',
+          noCrit: true,
+          knockback: 0.4,
+        });
+        this.facing = Math.cos(a) > 0 ? 1 : -1;
+        this.act = 1;
+        AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.3 });
+      }
+    }
+  },
+  /* --- rapporteur : il va chercher ce qui traîne. Il court vers le ramassable le plus proche (dans `radius`
+     de lui, sans s'éloigner du joueur de plus de `leash`) et tout ce qui passe à `reach` de lui file vers le joueur.
+     Un anneau au sol montre cette portée tant qu'il a une cible. --- */
+  collect(dt, tick, pl) {
+    const R = this.def.radius || 260,
+      reach = this.def.reach || 140,
+      leash = this.def.leash || 320;
+    let best = null,
+      bd = R;
+    for (const p of Pickups.list) {
+      if (p.magnet || p.carrier || p.ghost || NO_MAGNET.has(p.kind)) continue; // un éclat de décor ne se rapporte pas
+      const d = dist(p.x, p.y, this.x, this.y);
+      if (d < reach) {
+        /* en deux temps (F-7) : l'objet vole vers elle en arc, puis d'elle vers le joueur */
+        p.carrier = this;
+        p.vz = -160;
+        p.stages = ['pet'];
+        this.act = Math.max(this.act, 0.6);
+      } else if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    this.fetching = best && dist(best.x, best.y, pl.x, pl.y) < leash ? best : null;
+    if (this.fetching) {
+      const a = angleTo(this.x, this.y, best.x, best.y);
+      const sp = this.def.speed || 260;
+      this.x += Math.cos(a) * sp * dt;
+      this.y += Math.sin(a) * sp * dt;
+      this.facing = Math.cos(a) > 0 ? 1 : -1;
+      this.moving = true;
+      this.stretch = true; // allongée en course (F-7)
+      this.pushTrail(4);
+      if (!this.airborne) resolveRoomCollision(this);
+    } else {
+      this.stretch = false;
+      this.follow(dt);
+    }
+    if (tick) this.act = Math.max(this.act, 0.5);
+  },
+  /* --- tortue : tourne autour du joueur et brise les tirs ennemis --- */
+  guard(dt, tick, pl) {
+    const a = this.t * (this.def.spin || 1.7);
+    const R = this.def.dist || 54;
+    this.x = pl.x + Math.cos(a) * R;
+    this.y = pl.y + Math.sin(a) * R;
+    this.facing = Math.cos(a) > 0 ? 1 : -1;
+    this.moving = true;
+    if (tick) this.blocks = this.def.block || 2;
+    for (let i = Projectiles.list.length - 1; i >= 0 && this.blocks > 0; i--) {
+      const p = Projectiles.list[i];
+      if (p.owner === 'player') continue;
+      if (dist(p.x, p.y, this.x, this.y) < p.r + this.r + 4) {
+        Projectiles.list.splice(i, 1);
+        this.blocks--;
+        this.act = 1;
+        Particles.spawn(p.x, p.y, { count: 5, color: this.color, glow: true, speedMax: 140, life: 0.3, size: 2 });
+        AudioEngine.uiBack && AudioEngine.uiBack({ intensity: 0.25 });
+      }
+    }
+  },
+  /* --- tatou : se roule en boule et traverse la salle en ligne droite, blessant tout sur son passage --- */
+  charge(dt, tick, pl) {
+    if (this.state === 'roll') {
+      const sp = this.def.rollSpeed || 560;
+      this.x += Math.cos(this.rollA) * sp * dt;
+      this.y += Math.sin(this.rollA) * sp * dt;
+      this.moving = true;
+      this.act = 1;
+      this.rollSpin = (this.rollSpin || 0) + dt * 14 * (Math.cos(this.rollA) < 0 ? -1 : 1); // il tourne vraiment (F-7)
+      this.pushTrail(6);
+      for (const e of G.enemies) {
+        if (e.dead || this.rolled.has(e) || dist(this.x, this.y, e.x, e.y) > e.r + this.r) continue;
+        this.rolled.add(e);
+        Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true, color: this.color });
+        Particles.spawn(e.x, e.y, { count: 6, color: this.color, speedMax: 150, life: 0.3, size: 2 });
+      }
+      this.rollT -= dt;
+      if (this.rollT <= 0 || this.x < ROOM_X || this.y < ROOM_Y || this.x > ROOM_X + ROOM_W || this.y > ROOM_Y + ROOM_H) {
+        this.state = 'follow';
+        this.act = 0;
+      }
+    } else {
+      this.follow(dt);
+      /* un demi-temps avant de partir, il flashe : on sait qu'il va rouler */
+      const ev = this.every();
+      const nextIsRoll = (((Beat.index() + 1) % ev) + ev) % ev === 0;
+      this.preRoll = nextIsRoll && Beat.phase() > 0.5 && !!nearestEnemy(this.x, this.y, this.def.range || 420);
+      if (tick) {
+        const e = nearestEnemy(this.x, this.y, this.def.range || 420);
+        if (e) {
+          this.rollA = angleTo(this.x, this.y, e.x, e.y);
+          this.facing = Math.cos(this.rollA) > 0 ? 1 : -1;
+          this.rolled = new Set();
+          this.rollT = this.def.rollTime || 0.8;
+          this.rollSpin = 0;
+          this.preRoll = false;
+          this.trail = [];
+          G.room.blasts.push({ x: this.x, y: this.y + Sprites.SOL - 3, r: 30, t: 0, life: 0.25, color: this.color, flat: true }); // l'onde du départ
+          this.state = 'roll';
+          AudioEngine.trapSaw && AudioEngine.trapSaw({ intensity: 0.3 });
+        }
+      }
+    }
+  },
+  /* --- guetteur : désigne une cible, qui encaisse davantage tant qu'elle est marquée. Avec `markCrit`, chaque
+     coup du joueur sur la cible marquée est un coup critique. La marque se voit : un anneau à ses pieds et un
+     losange au-dessus de sa tête (renderMark). --- */
+  mark(dt, tick, pl) {
+    this.follow(dt);
+    if (this.target && (this.target.dead || this.target.markUntil <= Time.now)) this.target = null;
+    if (tick) {
+      const e = nearestEnemy(this.x, this.y, this.def.range || 420, x => x !== this.target);
+      const t = e || nearestEnemy(this.x, this.y, this.def.range || 420);
+      if (t) {
+        t.markUntil = Time.now + (this.def.markTime || 4);
+        t.markMul = this.def.markMul || 1.3;
+        t.markCrit = !!this.def.markCrit;
+        t.markColor = this.color;
+        this.target = t;
+        this.markT = 0; // le trait pointillé part maintenant (F-7)
+        this.act = 1;
+        Particles.spawn(t.x, t.y - 24, { count: 6, color: this.color, glow: true, speedMax: 60, life: 0.6, size: 2 });
+      }
+    }
+  },
+  /* --- abeille : tourne autour de l'ennemi le plus proche et pique sans relâche --- */
+  sting(dt, tick, pl) {
+    const e = nearestEnemy(this.x, this.y, this.def.range || 300);
+    if (!e) {
+      this.follow(dt, 1.2);
+      return;
+    }
+    const R = this.def.orbit || 26;
+    const a = this.t * (this.def.spin || 5);
+    const tx = e.x + Math.cos(a) * (e.r + R),
+      ty = e.y + Math.sin(a) * (e.r + R);
+    const sp = this.def.speed || 420;
+    const d = dist(this.x, this.y, tx, ty);
+    if (d > 2) {
+      const ang = angleTo(this.x, this.y, tx, ty);
+      const step = Math.min(sp * dt, d);
+      this.x += Math.cos(ang) * step;
+      this.y += Math.sin(ang) * step;
+    }
+    this.facing = Math.cos(a) > 0 ? 1 : -1;
+    this.moving = true;
+    /* la piqûre porte jusqu'au rayon d'orbite : sinon l'abeille tourne juste au-delà de sa propre portée */
+    if (tick && dist(this.x, this.y, e.x, e.y) < e.r + R + 10) {
+      Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true, color: this.color });
+      Particles.spawn(this.x, this.y, { count: 3, color: this.color, speedMax: 80, life: 0.25, size: 2 });
+      this.act = 1;
+    }
+  },
+  /* --- crapaud : soigne sur le temps fort --- */
+  mend(dt, tick, pl) {
+    this.follow(dt);
+    if (tick && pl.hp < pl.stats.maxHp && !pl.dead) {
+      const h = this.def.heal || 4;
+      pl.heal(h);
+      this.act = 1;
+      Floaters.add(pl.x, pl.y - 34, '+' + h, null, null, 'heal');
+      Particles.spawn(this.x, this.y - 8, { count: 4, color: '#7fff9a', glow: true, speedMax: 70, life: 0.5, size: 2 });
+    }
   },
 };
 
@@ -16796,287 +17076,9 @@ class Pet {
         return;
       }
     }
-    switch (this.def.behavior) {
-      /* --- faucon : pique sur l'ennemi le plus proche, revient ensuite --- */
-      case 'strike': {
-        if (this.state === 'dive') {
-          const t = this.target;
-          if (!t || t.dead) {
-            this.state = 'follow';
-            this.target = null;
-            break;
-          }
-          const a = angleTo(this.x, this.y, t.x, t.y);
-          const sp = this.def.diveSpeed || 640;
-          this.x += Math.cos(a) * sp * dt;
-          this.y += Math.sin(a) * sp * dt;
-          this.facing = Math.cos(a) > 0 ? 1 : -1;
-          this.moving = true;
-          if (dist(this.x, this.y, t.x, t.y) < t.r + this.r) {
-            Combat.hitEnemy(t, this.dmg(), { x: t.x, y: t.y, knockback: this.def.knockback || 1.4, silent: true, color: this.color });
-            Particles.spawn(t.x, t.y, { count: 7, color: this.color, glow: true, speedMax: 160, life: 0.35, size: 2 });
-            AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.35 });
-            this.act = 1;
-            this.state = 'follow';
-            this.target = null;
-          }
-        } else {
-          this.follow(dt);
-          if (tick) {
-            const e = nearestEnemy(this.x, this.y, this.def.range || 340);
-            if (e) {
-              this.target = e;
-              this.state = 'dive';
-            }
-          }
-        }
-        break;
-      }
-      /* --- chien : court au contact, mord en mesure, et attire les coups --- */
-      case 'bite': {
-        const e = nearestEnemy(this.x, this.y, this.def.range || 260);
-        if (e) {
-          const a = angleTo(this.x, this.y, e.x, e.y);
-          const d = dist(this.x, this.y, e.x, e.y);
-          if (d > e.r + this.r + 4) {
-            const sp = this.def.speed || 300;
-            this.x += Math.cos(a) * sp * dt;
-            this.y += Math.sin(a) * sp * dt;
-            this.facing = Math.cos(a) > 0 ? 1 : -1;
-            this.moving = true;
-          } else {
-            this.moving = false;
-            /* il anticipe (F-7) : accroupi dans les 200 ms qui précèdent le temps de sa morsure */
-            const ev = this.every();
-            const nextIsBite = (((Beat.index() + 1) % ev) + ev) % ev === 0;
-            this.crouch = nextIsBite && Beat.distToBeat(1) < 0.2 && Beat.phase() > 0.5;
-            if (tick) {
-              this.crouch = false;
-              Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 2, silent: true, color: this.color });
-              Particles.spawn(e.x, e.y, {
-                count: 3,
-                color: this.color,
-                speedMin: 90,
-                speedMax: 180,
-                angle: a,
-                spread: 0.5,
-                life: 0.3,
-                size: 3,
-              });
-              G.room.blasts.push({ x: e.x, y: e.y - e.r * 0.4, r: 16, t: 0, life: 0.12, color: '#ffffff' });
-              Feel.stop(40);
-              Feel.pop(this, 0.35, 160);
-              this.act = 1;
-              this.lastBite = { t: Beat.t, phase: Beat.phase(), bib: Beat.beatInBar(), dist: Beat.distToBeat(1) };
-            }
-          }
-          resolveRoomCollision(this);
-        } else this.follow(dt);
-        break;
-      }
-      /* --- serpent : crache sur le temps, à distance --- */
-      case 'spit': {
-        this.follow(dt);
-        if (tick) {
-          const e = nearestEnemy(this.x, this.y, this.def.range || 320);
-          if (e) {
-            const a = angleTo(this.x, this.y, e.x, e.y);
-            const sp = this.def.projSpeed || 460;
-            Projectiles.spawn({
-              x: this.x,
-              y: this.y - 6,
-              vx: Math.cos(a) * sp,
-              vy: Math.sin(a) * sp,
-              r: this.def.projSize || 5,
-              damage: this.dmg(),
-              owner: 'player',
-              life: 1.4,
-              color: this.color,
-              kind: 'bullet',
-              noCrit: true,
-              knockback: 0.4,
-            });
-            this.facing = Math.cos(a) > 0 ? 1 : -1;
-            this.act = 1;
-            AudioEngine.trapShot({ x: (this.x - W / 2) / (W / 2), intensity: 0.3 });
-          }
-        }
-        break;
-      }
-      /* --- rapporteur : il va chercher ce qui traîne. Il court vers le ramassable le plus proche (dans `radius`
-         de lui, sans s'éloigner du joueur de plus de `leash`) et tout ce qui passe à `reach` de lui file vers le joueur.
-         Un anneau au sol montre cette portée tant qu'il a une cible. --- */
-      case 'collect': {
-        const R = this.def.radius || 260,
-          reach = this.def.reach || 140,
-          leash = this.def.leash || 320;
-        let best = null,
-          bd = R;
-        for (const p of Pickups.list) {
-          if (p.magnet || p.carrier || p.ghost || NO_MAGNET.has(p.kind)) continue; // un éclat de décor ne se rapporte pas
-          const d = dist(p.x, p.y, this.x, this.y);
-          if (d < reach) {
-            /* en deux temps (F-7) : l'objet vole vers elle en arc, puis d'elle vers le joueur */
-            p.carrier = this;
-            p.vz = -160;
-            p.stages = ['pet'];
-            this.act = Math.max(this.act, 0.6);
-          } else if (d < bd) {
-            bd = d;
-            best = p;
-          }
-        }
-        this.fetching = best && dist(best.x, best.y, pl.x, pl.y) < leash ? best : null;
-        if (this.fetching) {
-          const a = angleTo(this.x, this.y, best.x, best.y);
-          const sp = this.def.speed || 260;
-          this.x += Math.cos(a) * sp * dt;
-          this.y += Math.sin(a) * sp * dt;
-          this.facing = Math.cos(a) > 0 ? 1 : -1;
-          this.moving = true;
-          this.stretch = true; // allongée en course (F-7)
-          this.pushTrail(4);
-          if (!this.airborne) resolveRoomCollision(this);
-        } else {
-          this.stretch = false;
-          this.follow(dt);
-        }
-        if (tick) this.act = Math.max(this.act, 0.5);
-        break;
-      }
-      /* --- tortue : tourne autour du joueur et brise les tirs ennemis --- */
-      case 'guard': {
-        const a = this.t * (this.def.spin || 1.7);
-        const R = this.def.dist || 54;
-        this.x = pl.x + Math.cos(a) * R;
-        this.y = pl.y + Math.sin(a) * R;
-        this.facing = Math.cos(a) > 0 ? 1 : -1;
-        this.moving = true;
-        if (tick) this.blocks = this.def.block || 2;
-        for (let i = Projectiles.list.length - 1; i >= 0 && this.blocks > 0; i--) {
-          const p = Projectiles.list[i];
-          if (p.owner === 'player') continue;
-          if (dist(p.x, p.y, this.x, this.y) < p.r + this.r + 4) {
-            Projectiles.list.splice(i, 1);
-            this.blocks--;
-            this.act = 1;
-            Particles.spawn(p.x, p.y, { count: 5, color: this.color, glow: true, speedMax: 140, life: 0.3, size: 2 });
-            AudioEngine.uiBack && AudioEngine.uiBack({ intensity: 0.25 });
-          }
-        }
-        break;
-      }
-      /* --- tatou : se roule en boule et traverse la salle en ligne droite, blessant tout sur son passage --- */
-      case 'charge': {
-        if (this.state === 'roll') {
-          const sp = this.def.rollSpeed || 560;
-          this.x += Math.cos(this.rollA) * sp * dt;
-          this.y += Math.sin(this.rollA) * sp * dt;
-          this.moving = true;
-          this.act = 1;
-          this.rollSpin = (this.rollSpin || 0) + dt * 14 * (Math.cos(this.rollA) < 0 ? -1 : 1); // il tourne vraiment (F-7)
-          this.pushTrail(6);
-          for (const e of G.enemies) {
-            if (e.dead || this.rolled.has(e) || dist(this.x, this.y, e.x, e.y) > e.r + this.r) continue;
-            this.rolled.add(e);
-            Combat.hitEnemy(e, this.dmg(), { x: e.x, y: e.y, knockback: this.def.knockback || 3, silent: true, color: this.color });
-            Particles.spawn(e.x, e.y, { count: 6, color: this.color, speedMax: 150, life: 0.3, size: 2 });
-          }
-          this.rollT -= dt;
-          if (this.rollT <= 0 || this.x < ROOM_X || this.y < ROOM_Y || this.x > ROOM_X + ROOM_W || this.y > ROOM_Y + ROOM_H) {
-            this.state = 'follow';
-            this.act = 0;
-          }
-        } else {
-          this.follow(dt);
-          /* un demi-temps avant de partir, il flashe : on sait qu'il va rouler */
-          const ev = this.every();
-          const nextIsRoll = (((Beat.index() + 1) % ev) + ev) % ev === 0;
-          this.preRoll = nextIsRoll && Beat.phase() > 0.5 && !!nearestEnemy(this.x, this.y, this.def.range || 420);
-          if (tick) {
-            const e = nearestEnemy(this.x, this.y, this.def.range || 420);
-            if (e) {
-              this.rollA = angleTo(this.x, this.y, e.x, e.y);
-              this.facing = Math.cos(this.rollA) > 0 ? 1 : -1;
-              this.rolled = new Set();
-              this.rollT = this.def.rollTime || 0.8;
-              this.rollSpin = 0;
-              this.preRoll = false;
-              this.trail = [];
-              G.room.blasts.push({ x: this.x, y: this.y + Sprites.SOL - 3, r: 30, t: 0, life: 0.25, color: this.color, flat: true }); // l'onde du départ
-              this.state = 'roll';
-              AudioEngine.trapSaw && AudioEngine.trapSaw({ intensity: 0.3 });
-            }
-          }
-        }
-        break;
-      }
-      /* --- guetteur : désigne une cible, qui encaisse davantage tant qu'elle est marquée. Avec `markCrit`, chaque
-         coup du joueur sur la cible marquée est un coup critique. La marque se voit : un anneau à ses pieds et un
-         losange au-dessus de sa tête (renderMark). --- */
-      case 'mark': {
-        this.follow(dt);
-        if (this.target && (this.target.dead || this.target.markUntil <= Time.now)) this.target = null;
-        if (tick) {
-          const e = nearestEnemy(this.x, this.y, this.def.range || 420, x => x !== this.target);
-          const t = e || nearestEnemy(this.x, this.y, this.def.range || 420);
-          if (t) {
-            t.markUntil = Time.now + (this.def.markTime || 4);
-            t.markMul = this.def.markMul || 1.3;
-            t.markCrit = !!this.def.markCrit;
-            t.markColor = this.color;
-            this.target = t;
-            this.markT = 0; // le trait pointillé part maintenant (F-7)
-            this.act = 1;
-            Particles.spawn(t.x, t.y - 24, { count: 6, color: this.color, glow: true, speedMax: 60, life: 0.6, size: 2 });
-          }
-        }
-        break;
-      }
-      /* --- abeille : tourne autour de l'ennemi le plus proche et pique sans relâche --- */
-      case 'sting': {
-        const e = nearestEnemy(this.x, this.y, this.def.range || 300);
-        if (!e) {
-          this.follow(dt, 1.2);
-          break;
-        }
-        const R = this.def.orbit || 26;
-        const a = this.t * (this.def.spin || 5);
-        const tx = e.x + Math.cos(a) * (e.r + R),
-          ty = e.y + Math.sin(a) * (e.r + R);
-        const sp = this.def.speed || 420;
-        const d = dist(this.x, this.y, tx, ty);
-        if (d > 2) {
-          const ang = angleTo(this.x, this.y, tx, ty);
-          const step = Math.min(sp * dt, d);
-          this.x += Math.cos(ang) * step;
-          this.y += Math.sin(ang) * step;
-        }
-        this.facing = Math.cos(a) > 0 ? 1 : -1;
-        this.moving = true;
-        /* la piqûre porte jusqu'au rayon d'orbite : sinon l'abeille tourne juste au-delà de sa propre portée */
-        if (tick && dist(this.x, this.y, e.x, e.y) < e.r + R + 10) {
-          Combat.hitEnemy(e, this.dmg(), { x: this.x, y: this.y, knockback: 0.2, silent: true, noCrit: true, color: this.color });
-          Particles.spawn(this.x, this.y, { count: 3, color: this.color, speedMax: 80, life: 0.25, size: 2 });
-          this.act = 1;
-        }
-        break;
-      }
-      /* --- crapaud : soigne sur le temps fort --- */
-      case 'mend': {
-        this.follow(dt);
-        if (tick && pl.hp < pl.stats.maxHp && !pl.dead) {
-          const h = this.def.heal || 4;
-          pl.heal(h);
-          this.act = 1;
-          Floaters.add(pl.x, pl.y - 34, '+' + h, null, null, 'heal');
-          Particles.spawn(this.x, this.y - 8, { count: 4, color: '#7fff9a', glow: true, speedMax: 70, life: 0.5, size: 2 });
-        }
-        break;
-      }
-      default:
-        this.follow(dt);
-    }
+    const act = PET_ACTIONS[this.def.behavior];
+    if (act) act.call(this, dt, tick, pl);
+    else this.follow(dt);
     const mx = this.x - this.px,
       my = this.y - this.py;
     if (Math.abs(mx) + Math.abs(my) > 0.15) {
@@ -17425,7 +17427,7 @@ const Pets = {
 <script>
 /* ==== 32_enemies.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 32_enemies.js
+   WAY — 32_enemies.js
    Ennemis (7 archétypes, machine à états avec télégraphie) et mini-boss (phases, patterns, faiblesse).
    ========================================================================= */
 
@@ -17520,9 +17522,6 @@ class Enemy {
     if (b.blinkWindup != null) this.telegraph = Object.assign({}, this.telegraph, { time: b.blinkWindup });
     if (b.summonWindup != null) this.telegraph = Object.assign({}, this.telegraph, { time: b.summonWindup });
     if (b.aimTime != null) this.telegraph = Object.assign({}, this.telegraph, { time: b.aimTime });
-  }
-  get slowFactor() {
-    return updateStatus(this, 0);
   }
   moveToward(tx, ty, dt, speedMul = 1, sep = true) {
     let a = angleTo(this.x, this.y, tx, ty);
@@ -18445,6 +18444,387 @@ class Enemy {
 }
 
 /* ---------- Mini-boss ---------- */
+/* Les motifs de boss, un par `kind` de `patterns[]` (chantier 11) : chaque fonction est appelée sur le boss (`this`) à
+   chaque pas de la phase d'action, avec le motif courant `c`, le pas `dt`, sa durée `dur`, le joueur et le multiplicateur
+   de cadence. Un motif finit par `this.endPattern()`. Un `kind` inconnu finit tout de suite. */
+const BOSS_PATTERNS = {
+  ring(c, dt, dur, pl, rate) {
+    const every = 1 / ((c.rate || 2) * rate);
+    if (c.t >= c.fired * every) {
+      c.fired++;
+      const n = c.count || 12;
+      const off = c.fired * (c.rotate || 0.25);
+      for (let i = 0; i < n; i++)
+        enemyProjectile(this, off + (i * TAU) / n, {
+          speed: c.projSpeed || c.speed || 220,
+          damage: c.projDamage || c.damage || this.damage * 0.6,
+          r: c.projSize || c.size || 7,
+          color: c.color,
+        });
+      AudioEngine.shootHammer({ intensity: 0.4 });
+    }
+    if (c.t >= dur) this.endPattern();
+  },
+  fan(c, dt, dur, pl, rate) {
+    const every = 1 / ((c.rate || 3) * rate);
+    if (c.t >= c.fired * every) {
+      c.fired++;
+      const n = c.count || 5,
+        sp = c.spread || 0.9;
+      const a0 = angleTo(this.x, this.y, pl.x, pl.y);
+      for (let i = 0; i < n; i++)
+        enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), {
+          speed: c.projSpeed || c.speed || 300,
+          damage: c.projDamage || c.damage || this.damage * 0.6,
+          r: c.projSize || c.size || 7,
+          color: c.color,
+        });
+      AudioEngine.shootPistol({ intensity: 0.5 });
+    }
+    if (c.t >= dur) this.endPattern();
+  },
+  spiral(c, dt, dur, pl, rate) {
+    const every = 1 / ((c.rate || 12) * rate);
+    if (c.t >= c.fired * every) {
+      c.fired++;
+      const arms = c.arms || 2;
+      for (let i = 0; i < arms; i++)
+        enemyProjectile(this, c.fired * (c.step || (c.angularSpeed || 2) / (c.rate || 12)) + (i * TAU) / arms, {
+          speed: c.projSpeed || c.speed || 200,
+          damage: c.projDamage || c.damage || this.damage * 0.5,
+          r: c.projSize || c.size || 6,
+          color: c.color,
+        });
+    }
+    if (c.t >= dur) this.endPattern();
+  },
+  charge(c, dt, dur, pl, rate) {
+    const sp = (c.speed || 640) * G.difficulty.speedMul * this.slow;
+    this.x += Math.cos(this.chargeA) * sp * dt;
+    this.y += Math.sin(this.chargeA) * sp * dt;
+    if (this.hitWall || c.t >= dur) {
+      const wall = this.hitWall;
+      this.endPattern();
+      if (this.weak.rule === 'after_charge' || (this.weak.rule === 'while_stunned' && wall) || (this.weak.rule === 'back' && wall)) {
+        const win = wall ? c.stunTime || this.weak.window || 1.5 : this.weak.window || 1.5;
+        this.stunUntil = Time.now + win;
+        if (this.weak.rule !== 'back') {
+          this.weakActive = true;
+          this.weakUntil = this.stunUntil;
+        }
+        Floaters.add(this.x, this.y - this.r - 20, wall ? 'SONNÉ' : 'PRISE EXPOSÉE', '#ffd166', 18);
+        Feel.shake(4, undefined, 160);
+      }
+    }
+  },
+  slam(c, dt, dur, pl, rate) {
+    const jt = c.jump || 0.6;
+    if (c.t < jt) {
+      const k = c.t / jt;
+      this.x = lerp(c.sx != null ? c.sx : (c.sx = this.x), c.tx, k);
+      this.y = lerp(c.sy != null ? c.sy : (c.sy = this.y), c.ty, k);
+      this.air = Math.sin(k * Math.PI) * 60;
+    } else {
+      this.air = 0;
+      Combat.explosion(
+        this.x,
+        this.y,
+        c.radius || 120,
+        Math.round((c.damage || this.damage) * G.difficulty.damageMul),
+        c.color || '#ffb347',
+        false
+      );
+      Feel.shake(9, undefined, 220);
+      this.endPattern();
+      if (this.weak.rule === 'while_stunned') {
+        this.weakActive = true;
+        this.weakUntil = Time.now + (this.weak.window || 1.2);
+        this.stunUntil = this.weakUntil;
+      }
+    }
+  },
+  /* --- duel (le Marshal) : il se campe, vise longuement, puis tire une balle unique très rapide. Rechargement = faiblesse. --- */
+  duel(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      const a = angleTo(this.x, this.y, pl.x, pl.y);
+      enemyProjectile(this, a, {
+        speed: c.projSpeed || 1000,
+        damage: c.projDamage || this.damage * 1.4,
+        r: c.projSize || 5,
+        color: c.color || '#ffe08a',
+      });
+      G.room.beams.push({
+        ax: this.x,
+        ay: this.y,
+        bx: this.x + Math.cos(a) * 900,
+        by: this.y + Math.sin(a) * 900,
+        t: 0,
+        life: 0.12,
+        color: '#fff3c4',
+        width: 3,
+      });
+      AudioEngine.shootPistol({ intensity: 1 });
+      Feel.shake(4, undefined, 160);
+      this.stunUntil = Time.now + (c.reload || 1.2);
+      this.weakActive = true;
+      this.weakUntil = this.stunUntil; // il recharge : ouvert
+      Floaters.add(this.x, this.y - this.r - 20, 'RECHARGE', '#ffd166', 18);
+    }
+    if (c.t >= (c.reload || 1.2)) this.endPattern();
+  },
+  /* --- onde de choc annulaire (le Portier) : un anneau part de lui et traverse la salle ; on saute par-dessus au dash --- */
+  quake(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      c.r = 0;
+      Feel.shake(9, undefined, 220);
+      AudioEngine.skillShockwave({ intensity: 1 });
+    }
+    const sp = (c.speed || 620) * G.difficulty.speedMul;
+    const prev = c.r;
+    c.r += sp * dt;
+    G.room.blasts.push({ x: this.x, y: this.y, r: c.r, t: 0, life: 0.09, color: c.color || '#9fd8ff' });
+    const d2 = dist(pl.x, pl.y, this.x, this.y);
+    if (!c.hit && !pl.dashing && d2 >= prev - 18 && d2 <= c.r + 18) {
+      c.hit = 1;
+      Combat.hitPlayer(Math.round((c.damage || 26) * G.difficulty.damageMul), {
+        type: 'trap',
+        x: this.x,
+        y: this.y,
+        trapName: 'Onde de choc',
+      });
+    }
+    if (c.r > (c.range || 900)) this.endPattern();
+  },
+  /* --- mines (le Marshal) : bâtons de dynamite semés autour du joueur, ils sautent après la mèche --- */
+  mines(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      const n = c.count || 4,
+        fuse = c.fuse || 1.6;
+      for (let i = 0; i < n; i++) {
+        const a = RNG.range(0, TAU),
+          rr = RNG.range(30, c.spread || 150);
+        G.room.hazards.push({
+          x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20),
+          y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
+          r: c.radius || 70,
+          until: Time.now + fuse + 0.1,
+          boomAt: Time.now + fuse,
+          damage: c.damage || 24,
+          owner: 'enemy',
+          color: c.color || '#ff6b3c',
+          cd: new Map(),
+        });
+      }
+      AudioEngine.trapWarn({ intensity: 0.8 });
+    }
+    if (c.t >= 0.4) this.endPattern();
+  },
+  /* --- racines (la Serriste) : le sol se couvre de ronces qui blessent et ralentissent --- */
+  roots(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      const n = c.count || 3;
+      for (let i = 0; i < n; i++) {
+        const a = angleTo(this.x, this.y, pl.x, pl.y) + RNG.range(-0.8, 0.8),
+          rr = RNG.range(40, 130);
+        G.room.hazards.push({
+          x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20),
+          y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
+          r: c.radius || 62,
+          until: Time.now + (c.duration || 4.5),
+          dps: c.dps || 10,
+          slow: true,
+          owner: 'enemy',
+          color: c.color || '#7ed957',
+          cd: new Map(),
+        });
+      }
+      AudioEngine.trapGas({ intensity: 0.8 });
+    }
+    if (c.t >= 0.5) this.endPattern();
+  },
+  /* --- tempête de sable (le Vizir) : un mur de sable traverse la salle, une seule brèche pour passer --- */
+  sandstorm(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      Feel.shake(4, undefined, 160);
+      AudioEngine.trapGas({ intensity: 1 });
+    }
+    const sp = (c.speed || 420) * G.difficulty.speedMul;
+    c.x += c.dir * sp * dt;
+    const half = c.thickness || 46,
+      gh = c.gapH / 2;
+    const inWall = Math.abs(pl.x - c.x) < half && Math.abs(pl.y - c.gapY) > gh;
+    if (inWall && !c.hit) {
+      c.hit = 1;
+      Combat.hitPlayer(Math.round((c.damage || 24) * G.difficulty.damageMul), {
+        type: 'trap',
+        x: c.x,
+        y: pl.y,
+        trapName: 'Tempête de sable',
+      });
+    }
+    if (inWall) {
+      pl.x += c.dir * 210 * dt;
+      resolveRoomCollision(pl);
+    }
+    if (c.x < ROOM_X - 70 || c.x > ROOM_X + ROOM_W + 70) this.endPattern();
+  },
+  /* --- mirage (le Vizir) : il se replace et laisse des doubles ; tous tirent la même salve, impossible de deviner d'où elle vient --- */
+  mirage(c, dt, dur, pl, rate) {
+    const hold = c.hold || 0.85;
+    if (!c.fired) {
+      c.fired = 1;
+      c.ghosts = [];
+      const n = c.count || 3,
+        rr = c.spread || 230;
+      const base = RNG.range(0, TAU);
+      for (let i = 1; i <= n; i++) {
+        const a = base + (i * TAU) / (n + 1);
+        c.ghosts.push({
+          x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 40, ROOM_X + ROOM_W - 40),
+          y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 40, ROOM_Y + ROOM_H - 40),
+          k: 0,
+        });
+      }
+      this.x = clamp(pl.x + Math.cos(base) * rr, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
+      this.y = clamp(pl.y + Math.sin(base) * rr, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
+      resolveRoomCollision(this);
+      Particles.spawn(this.x, this.y, { count: 18, color: c.color || '#ffd166', glow: true });
+      AudioEngine.skillBlink({ intensity: 0.9 });
+    }
+    for (const g of c.ghosts) g.k = c.t < hold ? clamp(c.t / hold, 0, 1) : Math.max(0, 1 - (c.t - hold) / 0.3); // les doubles s'effacent juste après la salve : le vrai reste seul
+    if (c.t >= hold && c.fired < 2) {
+      c.fired = 2;
+      const nb = c.bullets || 3,
+        sp2 = c.arc || 0.5;
+      const salve = (sx, sy) => {
+        const a0 = angleTo(sx, sy, pl.x, pl.y);
+        const src = { x: sx, y: sy, r: this.r, behavior: this.behavior, damage: this.damage, projColor: this.projColor };
+        for (let i = 0; i < nb; i++)
+          enemyProjectile(src, a0 + lerp(-sp2 / 2, sp2 / 2, nb > 1 ? i / (nb - 1) : 0.5), {
+            speed: c.projSpeed || 340,
+            damage: c.projDamage || this.damage * 0.6,
+            r: c.projSize || 7,
+            color: c.color || '#ffd166',
+          });
+      };
+      salve(this.x, this.y);
+      for (const g of c.ghosts) salve(g.x, g.y);
+      AudioEngine.shootOrb({ intensity: 0.7 });
+      /* le mirage retombe : le vrai est démasqué et ouvert (faiblesse propre au Vizir) */
+      if (this.weak.rule === 'after_mirage') {
+        this.weakActive = true;
+        this.weakUntil = Time.now + (this.weak.window || 2.2);
+        Floaters.add(this.x, this.y - this.r - 22, 'DÉMASQUÉ', '#ffd166', 18);
+        AudioEngine.bossPhase({ intensity: 0.4 });
+      }
+    }
+    if (c.t >= hold + 0.35) this.endPattern();
+  },
+  summon(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      const def = Content.enemy(c.enemy);
+      for (let i = 0; i < (c.count || 3); i++) {
+        const a = RNG.range(0, TAU);
+        const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 70, this.y + Math.sin(a) * 70, { hpMul: 0.8 });
+        if (e) {
+          e.xp = Math.round(e.xp * 0.5);
+        }
+      }
+      AudioEngine.trapGas({});
+    }
+    if (c.t >= (c.duration || 0.5)) this.endPattern();
+  },
+  laser_sweep(c, dt, dur, pl, rate) {
+    const sweep = c.sweep || Math.PI;
+    const a0 = c.a0 != null ? c.a0 : (c.a0 = angleTo(this.x, this.y, pl.x, pl.y) - (sweep / 2) * (c.dir = RNG.chance(0.5) ? 1 : -1));
+    const a = a0 + c.dir * sweep * (c.t / dur);
+    const len = c.length || 700;
+    G.room.beams.push({
+      ax: this.x,
+      ay: this.y,
+      bx: this.x + Math.cos(a) * len,
+      by: this.y + Math.sin(a) * len,
+      t: 0,
+      life: 0.05,
+      color: c.color || PAL.alert,
+      width: 8,
+    });
+    if (segCircle(this.x, this.y, this.x + Math.cos(a) * len, this.y + Math.sin(a) * len, pl.x, pl.y, pl.r))
+      Combat.hitPlayer(Math.round((c.damage || this.damage * 0.8) * G.difficulty.damageMul), { type: 'trap', x: this.x, y: this.y });
+    if (c.t >= dur) this.endPattern();
+  },
+  teleport(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true });
+      const a = angleTo(pl.x, pl.y, this.x, this.y);
+      const dd = this.r + pl.r + 40;
+      let tx = pl.x - Math.cos(angleTo(this.x, this.y, pl.x, pl.y)) * -dd,
+        ty = pl.y - Math.sin(angleTo(this.x, this.y, pl.x, pl.y)) * -dd;
+      /* derrière le joueur : opposé à la direction boss→joueur */ tx =
+        pl.x + ((pl.x - this.x) / Math.max(1, dist(pl.x, pl.y, this.x, this.y))) * dd;
+      ty = pl.y + ((pl.y - this.y) / Math.max(1, dist(pl.x, pl.y, this.x, this.y))) * dd;
+      tx = clamp(tx, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
+      ty = clamp(ty, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
+      this.x = tx;
+      this.y = ty;
+      resolveRoomCollision(this);
+      Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true });
+      AudioEngine.skillBlink({});
+      const n = c.count || 5,
+        sp = c.spread || 1;
+      const a0 = angleTo(this.x, this.y, pl.x, pl.y);
+      for (let i = 0; i < n; i++)
+        enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), {
+          speed: c.projSpeed || 320,
+          damage: c.projDamage || 14,
+          r: c.projSize || 7,
+          color: c.color,
+        });
+    }
+    if (c.t >= dur) this.endPattern();
+  },
+  shield(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      this.shieldUntil = Time.now + dur;
+      AudioEngine.skillShield({});
+    }
+    if (c.t >= 0.3) this.endPattern();
+  },
+  slow(c, dt, dur, pl, rate) {
+    if (!c.fired) {
+      c.fired = 1;
+      pl.jamUntil = Time.now + dur;
+      pl.jamScale = c.scale || 0.55;
+      AudioEngine.skillSlowtime({});
+      Floaters.add(pl.x, pl.y - 34, 'BROUILLÉ', '#c9a3ff', 16);
+    }
+    if (c.t >= 0.3) this.endPattern();
+  },
+  pull(c, dt, dur, pl, rate) {
+    const a = angleTo(pl.x, pl.y, this.x, this.y);
+    const f = (c.force || 500) * dt;
+    if (!pl.dead && !pl.dashing) {
+      pl.x += Math.cos(a) * f;
+      pl.y += Math.sin(a) * f;
+      resolveRoomCollision(pl);
+    }
+    G.room.beams.push({ ax: this.x, ay: this.y, bx: pl.x, by: pl.y, t: 0, life: 0.05, color: '#c9a3ff', width: 3 });
+    if (c.t >= dur) {
+      this.endPattern();
+      if (dist(pl.x, pl.y, this.x, this.y) < this.r + pl.r + 30)
+        Combat.explosion(this.x, this.y, this.r + 60, Math.round((c.damage || 18) * G.difficulty.damageMul), '#c9a3ff', false);
+    }
+  },
+};
+
 class Boss extends Enemy {
   constructor(def, x, y, opts = {}) {
     const rv = opts.revenge ? def.revenge || { hpMul: 1.5 } : null;
@@ -18996,402 +19376,9 @@ class Boss extends Enemy {
       return;
     }
     const dur = c.duration || 1;
-    switch (c.kind) {
-      case 'ring': {
-        const every = 1 / ((c.rate || 2) * rate);
-        if (c.t >= c.fired * every) {
-          c.fired++;
-          const n = c.count || 12;
-          const off = c.fired * (c.rotate || 0.25);
-          for (let i = 0; i < n; i++)
-            enemyProjectile(this, off + (i * TAU) / n, {
-              speed: c.projSpeed || c.speed || 220,
-              damage: c.projDamage || c.damage || this.damage * 0.6,
-              r: c.projSize || c.size || 7,
-              color: c.color,
-            });
-          AudioEngine.shootHammer({ intensity: 0.4 });
-        }
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'fan': {
-        const every = 1 / ((c.rate || 3) * rate);
-        if (c.t >= c.fired * every) {
-          c.fired++;
-          const n = c.count || 5,
-            sp = c.spread || 0.9;
-          const a0 = angleTo(this.x, this.y, pl.x, pl.y);
-          for (let i = 0; i < n; i++)
-            enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), {
-              speed: c.projSpeed || c.speed || 300,
-              damage: c.projDamage || c.damage || this.damage * 0.6,
-              r: c.projSize || c.size || 7,
-              color: c.color,
-            });
-          AudioEngine.shootPistol({ intensity: 0.5 });
-        }
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'spiral': {
-        const every = 1 / ((c.rate || 12) * rate);
-        if (c.t >= c.fired * every) {
-          c.fired++;
-          const arms = c.arms || 2;
-          for (let i = 0; i < arms; i++)
-            enemyProjectile(this, c.fired * (c.step || (c.angularSpeed || 2) / (c.rate || 12)) + (i * TAU) / arms, {
-              speed: c.projSpeed || c.speed || 200,
-              damage: c.projDamage || c.damage || this.damage * 0.5,
-              r: c.projSize || c.size || 6,
-              color: c.color,
-            });
-        }
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'charge': {
-        const sp = (c.speed || 640) * G.difficulty.speedMul * this.slow;
-        this.x += Math.cos(this.chargeA) * sp * dt;
-        this.y += Math.sin(this.chargeA) * sp * dt;
-        if (this.hitWall || c.t >= dur) {
-          const wall = this.hitWall;
-          this.endPattern();
-          if (this.weak.rule === 'after_charge' || (this.weak.rule === 'while_stunned' && wall) || (this.weak.rule === 'back' && wall)) {
-            const win = wall ? c.stunTime || this.weak.window || 1.5 : this.weak.window || 1.5;
-            this.stunUntil = Time.now + win;
-            if (this.weak.rule !== 'back') {
-              this.weakActive = true;
-              this.weakUntil = this.stunUntil;
-            }
-            Floaters.add(this.x, this.y - this.r - 20, wall ? 'SONNÉ' : 'PRISE EXPOSÉE', '#ffd166', 18);
-            Feel.shake(4, undefined, 160);
-          }
-        }
-        break;
-      }
-      case 'slam': {
-        const jt = c.jump || 0.6;
-        if (c.t < jt) {
-          const k = c.t / jt;
-          this.x = lerp(c.sx != null ? c.sx : (c.sx = this.x), c.tx, k);
-          this.y = lerp(c.sy != null ? c.sy : (c.sy = this.y), c.ty, k);
-          this.air = Math.sin(k * Math.PI) * 60;
-        } else {
-          this.air = 0;
-          Combat.explosion(
-            this.x,
-            this.y,
-            c.radius || 120,
-            Math.round((c.damage || this.damage) * G.difficulty.damageMul),
-            c.color || '#ffb347',
-            false
-          );
-          Feel.shake(9, undefined, 220);
-          this.endPattern();
-          if (this.weak.rule === 'while_stunned') {
-            this.weakActive = true;
-            this.weakUntil = Time.now + (this.weak.window || 1.2);
-            this.stunUntil = this.weakUntil;
-          }
-        }
-        break;
-      }
-      /* --- duel (le Marshal) : il se campe, vise longuement, puis tire une balle unique très rapide. Rechargement = faiblesse. --- */
-      case 'duel': {
-        if (!c.fired) {
-          c.fired = 1;
-          const a = angleTo(this.x, this.y, pl.x, pl.y);
-          enemyProjectile(this, a, {
-            speed: c.projSpeed || 1000,
-            damage: c.projDamage || this.damage * 1.4,
-            r: c.projSize || 5,
-            color: c.color || '#ffe08a',
-          });
-          G.room.beams.push({
-            ax: this.x,
-            ay: this.y,
-            bx: this.x + Math.cos(a) * 900,
-            by: this.y + Math.sin(a) * 900,
-            t: 0,
-            life: 0.12,
-            color: '#fff3c4',
-            width: 3,
-          });
-          AudioEngine.shootPistol({ intensity: 1 });
-          Feel.shake(4, undefined, 160);
-          this.stunUntil = Time.now + (c.reload || 1.2);
-          this.weakActive = true;
-          this.weakUntil = this.stunUntil; // il recharge : ouvert
-          Floaters.add(this.x, this.y - this.r - 20, 'RECHARGE', '#ffd166', 18);
-        }
-        if (c.t >= (c.reload || 1.2)) this.endPattern();
-        break;
-      }
-      /* --- onde de choc annulaire (le Portier) : un anneau part de lui et traverse la salle ; on saute par-dessus au dash --- */
-      case 'quake': {
-        if (!c.fired) {
-          c.fired = 1;
-          c.r = 0;
-          Feel.shake(9, undefined, 220);
-          AudioEngine.skillShockwave({ intensity: 1 });
-        }
-        const sp = (c.speed || 620) * G.difficulty.speedMul;
-        const prev = c.r;
-        c.r += sp * dt;
-        G.room.blasts.push({ x: this.x, y: this.y, r: c.r, t: 0, life: 0.09, color: c.color || '#9fd8ff' });
-        const d2 = dist(pl.x, pl.y, this.x, this.y);
-        if (!c.hit && !pl.dashing && d2 >= prev - 18 && d2 <= c.r + 18) {
-          c.hit = 1;
-          Combat.hitPlayer(Math.round((c.damage || 26) * G.difficulty.damageMul), {
-            type: 'trap',
-            x: this.x,
-            y: this.y,
-            trapName: 'Onde de choc',
-          });
-        }
-        if (c.r > (c.range || 900)) this.endPattern();
-        break;
-      }
-      /* --- mines (le Marshal) : bâtons de dynamite semés autour du joueur, ils sautent après la mèche --- */
-      case 'mines': {
-        if (!c.fired) {
-          c.fired = 1;
-          const n = c.count || 4,
-            fuse = c.fuse || 1.6;
-          for (let i = 0; i < n; i++) {
-            const a = RNG.range(0, TAU),
-              rr = RNG.range(30, c.spread || 150);
-            G.room.hazards.push({
-              x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20),
-              y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
-              r: c.radius || 70,
-              until: Time.now + fuse + 0.1,
-              boomAt: Time.now + fuse,
-              damage: c.damage || 24,
-              owner: 'enemy',
-              color: c.color || '#ff6b3c',
-              cd: new Map(),
-            });
-          }
-          AudioEngine.trapWarn({ intensity: 0.8 });
-        }
-        if (c.t >= 0.4) this.endPattern();
-        break;
-      }
-      /* --- racines (la Serriste) : le sol se couvre de ronces qui blessent et ralentissent --- */
-      case 'roots': {
-        if (!c.fired) {
-          c.fired = 1;
-          const n = c.count || 3;
-          for (let i = 0; i < n; i++) {
-            const a = angleTo(this.x, this.y, pl.x, pl.y) + RNG.range(-0.8, 0.8),
-              rr = RNG.range(40, 130);
-            G.room.hazards.push({
-              x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 20, ROOM_X + ROOM_W - 20),
-              y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 20, ROOM_Y + ROOM_H - 20),
-              r: c.radius || 62,
-              until: Time.now + (c.duration || 4.5),
-              dps: c.dps || 10,
-              slow: true,
-              owner: 'enemy',
-              color: c.color || '#7ed957',
-              cd: new Map(),
-            });
-          }
-          AudioEngine.trapGas({ intensity: 0.8 });
-        }
-        if (c.t >= 0.5) this.endPattern();
-        break;
-      }
-      /* --- tempête de sable (le Vizir) : un mur de sable traverse la salle, une seule brèche pour passer --- */
-      case 'sandstorm': {
-        if (!c.fired) {
-          c.fired = 1;
-          Feel.shake(4, undefined, 160);
-          AudioEngine.trapGas({ intensity: 1 });
-        }
-        const sp = (c.speed || 420) * G.difficulty.speedMul;
-        c.x += c.dir * sp * dt;
-        const half = c.thickness || 46,
-          gh = c.gapH / 2;
-        const inWall = Math.abs(pl.x - c.x) < half && Math.abs(pl.y - c.gapY) > gh;
-        if (inWall && !c.hit) {
-          c.hit = 1;
-          Combat.hitPlayer(Math.round((c.damage || 24) * G.difficulty.damageMul), {
-            type: 'trap',
-            x: c.x,
-            y: pl.y,
-            trapName: 'Tempête de sable',
-          });
-        }
-        if (inWall) {
-          pl.x += c.dir * 210 * dt;
-          resolveRoomCollision(pl);
-        }
-        if (c.x < ROOM_X - 70 || c.x > ROOM_X + ROOM_W + 70) this.endPattern();
-        break;
-      }
-      /* --- mirage (le Vizir) : il se replace et laisse des doubles ; tous tirent la même salve, impossible de deviner d'où elle vient --- */
-      case 'mirage': {
-        const hold = c.hold || 0.85;
-        if (!c.fired) {
-          c.fired = 1;
-          c.ghosts = [];
-          const n = c.count || 3,
-            rr = c.spread || 230;
-          const base = RNG.range(0, TAU);
-          for (let i = 1; i <= n; i++) {
-            const a = base + (i * TAU) / (n + 1);
-            c.ghosts.push({
-              x: clamp(pl.x + Math.cos(a) * rr, ROOM_X + 40, ROOM_X + ROOM_W - 40),
-              y: clamp(pl.y + Math.sin(a) * rr, ROOM_Y + 40, ROOM_Y + ROOM_H - 40),
-              k: 0,
-            });
-          }
-          this.x = clamp(pl.x + Math.cos(base) * rr, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
-          this.y = clamp(pl.y + Math.sin(base) * rr, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
-          resolveRoomCollision(this);
-          Particles.spawn(this.x, this.y, { count: 18, color: c.color || '#ffd166', glow: true });
-          AudioEngine.skillBlink({ intensity: 0.9 });
-        }
-        for (const g of c.ghosts) g.k = c.t < hold ? clamp(c.t / hold, 0, 1) : Math.max(0, 1 - (c.t - hold) / 0.3); // les doubles s'effacent juste après la salve : le vrai reste seul
-        if (c.t >= hold && c.fired < 2) {
-          c.fired = 2;
-          const nb = c.bullets || 3,
-            sp2 = c.arc || 0.5;
-          const salve = (sx, sy) => {
-            const a0 = angleTo(sx, sy, pl.x, pl.y);
-            const src = { x: sx, y: sy, r: this.r, behavior: this.behavior, damage: this.damage, projColor: this.projColor };
-            for (let i = 0; i < nb; i++)
-              enemyProjectile(src, a0 + lerp(-sp2 / 2, sp2 / 2, nb > 1 ? i / (nb - 1) : 0.5), {
-                speed: c.projSpeed || 340,
-                damage: c.projDamage || this.damage * 0.6,
-                r: c.projSize || 7,
-                color: c.color || '#ffd166',
-              });
-          };
-          salve(this.x, this.y);
-          for (const g of c.ghosts) salve(g.x, g.y);
-          AudioEngine.shootOrb({ intensity: 0.7 });
-          /* le mirage retombe : le vrai est démasqué et ouvert (faiblesse propre au Vizir) */
-          if (this.weak.rule === 'after_mirage') {
-            this.weakActive = true;
-            this.weakUntil = Time.now + (this.weak.window || 2.2);
-            Floaters.add(this.x, this.y - this.r - 22, 'DÉMASQUÉ', '#ffd166', 18);
-            AudioEngine.bossPhase({ intensity: 0.4 });
-          }
-        }
-        if (c.t >= hold + 0.35) this.endPattern();
-        break;
-      }
-      case 'summon': {
-        if (!c.fired) {
-          c.fired = 1;
-          const def = Content.enemy(c.enemy);
-          for (let i = 0; i < (c.count || 3); i++) {
-            const a = RNG.range(0, TAU);
-            const e = Room.spawnEnemy(def, this.x + Math.cos(a) * 70, this.y + Math.sin(a) * 70, { hpMul: 0.8 });
-            if (e) {
-              e.xp = Math.round(e.xp * 0.5);
-            }
-          }
-          AudioEngine.trapGas({});
-        }
-        if (c.t >= (c.duration || 0.5)) this.endPattern();
-        break;
-      }
-      case 'laser_sweep': {
-        const sweep = c.sweep || Math.PI;
-        const a0 = c.a0 != null ? c.a0 : (c.a0 = angleTo(this.x, this.y, pl.x, pl.y) - (sweep / 2) * (c.dir = RNG.chance(0.5) ? 1 : -1));
-        const a = a0 + c.dir * sweep * (c.t / dur);
-        const len = c.length || 700;
-        G.room.beams.push({
-          ax: this.x,
-          ay: this.y,
-          bx: this.x + Math.cos(a) * len,
-          by: this.y + Math.sin(a) * len,
-          t: 0,
-          life: 0.05,
-          color: c.color || PAL.alert,
-          width: 8,
-        });
-        if (segCircle(this.x, this.y, this.x + Math.cos(a) * len, this.y + Math.sin(a) * len, pl.x, pl.y, pl.r))
-          Combat.hitPlayer(Math.round((c.damage || this.damage * 0.8) * G.difficulty.damageMul), { type: 'trap', x: this.x, y: this.y });
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'teleport': {
-        if (!c.fired) {
-          c.fired = 1;
-          Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true });
-          const a = angleTo(pl.x, pl.y, this.x, this.y);
-          const dd = this.r + pl.r + 40;
-          let tx = pl.x - Math.cos(angleTo(this.x, this.y, pl.x, pl.y)) * -dd,
-            ty = pl.y - Math.sin(angleTo(this.x, this.y, pl.x, pl.y)) * -dd;
-          /* derrière le joueur : opposé à la direction boss→joueur */ tx =
-            pl.x + ((pl.x - this.x) / Math.max(1, dist(pl.x, pl.y, this.x, this.y))) * dd;
-          ty = pl.y + ((pl.y - this.y) / Math.max(1, dist(pl.x, pl.y, this.x, this.y))) * dd;
-          tx = clamp(tx, ROOM_X + this.r, ROOM_X + ROOM_W - this.r);
-          ty = clamp(ty, ROOM_Y + this.r, ROOM_Y + ROOM_H - this.r);
-          this.x = tx;
-          this.y = ty;
-          resolveRoomCollision(this);
-          Particles.spawn(this.x, this.y, { count: 16, color: '#c9a3ff', glow: true });
-          AudioEngine.skillBlink({});
-          const n = c.count || 5,
-            sp = c.spread || 1;
-          const a0 = angleTo(this.x, this.y, pl.x, pl.y);
-          for (let i = 0; i < n; i++)
-            enemyProjectile(this, a0 + lerp(-sp / 2, sp / 2, n > 1 ? i / (n - 1) : 0.5), {
-              speed: c.projSpeed || 320,
-              damage: c.projDamage || 14,
-              r: c.projSize || 7,
-              color: c.color,
-            });
-        }
-        if (c.t >= dur) this.endPattern();
-        break;
-      }
-      case 'shield': {
-        if (!c.fired) {
-          c.fired = 1;
-          this.shieldUntil = Time.now + dur;
-          AudioEngine.skillShield({});
-        }
-        if (c.t >= 0.3) this.endPattern();
-        break;
-      }
-      case 'slow': {
-        if (!c.fired) {
-          c.fired = 1;
-          pl.jamUntil = Time.now + dur;
-          pl.jamScale = c.scale || 0.55;
-          AudioEngine.skillSlowtime({});
-          Floaters.add(pl.x, pl.y - 34, 'BROUILLÉ', '#c9a3ff', 16);
-        }
-        if (c.t >= 0.3) this.endPattern();
-        break;
-      }
-      case 'pull': {
-        const a = angleTo(pl.x, pl.y, this.x, this.y);
-        const f = (c.force || 500) * dt;
-        if (!pl.dead && !pl.dashing) {
-          pl.x += Math.cos(a) * f;
-          pl.y += Math.sin(a) * f;
-          resolveRoomCollision(pl);
-        }
-        G.room.beams.push({ ax: this.x, ay: this.y, bx: pl.x, by: pl.y, t: 0, life: 0.05, color: '#c9a3ff', width: 3 });
-        if (c.t >= dur) {
-          this.endPattern();
-          if (dist(pl.x, pl.y, this.x, this.y) < this.r + pl.r + 30)
-            Combat.explosion(this.x, this.y, this.r + 60, Math.round((c.damage || 18) * G.difficulty.damageMul), '#c9a3ff', false);
-        }
-        break;
-      }
-      default:
-        this.endPattern();
-    }
+    const fn = BOSS_PATTERNS[c.kind];
+    if (fn) fn.call(this, c, dt, dur, pl, rate);
+    else this.endPattern();
   }
   endPattern() {
     const c = this.cur;
@@ -19502,7 +19489,7 @@ Boss.prototype.hitFromBehind = function (fromX, fromY) {
 <script>
 /* ==== 33_anim.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 33_anim.js — décor animé en rythme
+   WAY — 33_anim.js — décor animé en rythme
    Des éléments sans collision ni dégât, pilotés par la même partition que les pièges (`beats.hits`) : dalles qui
    changent de couleur ou qui se soulèvent, accessoires qui tournent ou qui sautent, lumières colorées, ondes.
    Ils ne blessent jamais — c'est la lecture de la salle qu'ils portent, pas la difficulté.
@@ -19808,7 +19795,7 @@ const Anim = {
 <script>
 /* ==== 34_traps.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 34_traps.js
+   WAY — 34_traps.js
    Pièges : patterns déterministes pilotés par le temps de salle, télégraphe avant activation.
    Chaque piège expose update(dt, rt), render(ctx), dangerAt(x, y) (pour le bot) et hitPlayer.
    ========================================================================= */
@@ -21551,12 +21538,9 @@ const Challenge = (() => {
   };
 
   /* ---------- update ---------- */
-  function update(room, dt) {
-    const c = room.challenge;
-    if (!c || c.done) return;
-    c.t += dt;
-    const pl = G.player;
-    if (c.id === 'capture') {
+  /* La règle de chaque défi, un pas à la fois (chantier 11) : (salle, défi, pas, joueur) ; un id inconnu ne fait rien. */
+  const UPDATERS = {
+    capture(room, c, dt, pl) {
       const z = c.zones[c.zi];
       const inside = dist(pl.x, pl.y, z.x, z.y) < c.r;
       c.gauge = clamp(c.gauge + (inside ? dt / 6 : -dt / 12), 0, 1);
@@ -21583,7 +21567,8 @@ const Challenge = (() => {
         } else UI.banner(`Zone ${c.zi + 1} / 3`, '#7fff9a');
       }
       c.hud = `Zone ${Math.min(c.zi + 1, 3)}/3 · ${Math.round(c.gauge * 100)} %`;
-    } else if (c.id === 'collapse') {
+    },
+    collapse(room, c, dt, pl) {
       /* avertissements → chutes */
       for (const [k, until] of c.warn) {
         if (room.time >= until) {
@@ -21630,7 +21615,8 @@ const Challenge = (() => {
         buildPlanks(room, c);
         UI.banner('Une passerelle se déploie vers la sortie', '#ffb347');
       }
-    } else if (c.id === 'switches') {
+    },
+    switches(room, c, dt, pl) {
       c.showT -= dt;
       for (const s of c.sw) {
         if (s.on || dist(pl.x, pl.y, s.x, s.y) > 26 + pl.r) continue;
@@ -21656,7 +21642,8 @@ const Challenge = (() => {
         }
       }
       c.hud = `Ordre : ${c.order.map(i => c.sw[i].label).join(' → ')} · ${c.step}/3`;
-    } else if (c.id === 'lights') {
+    },
+    lights(room, c, dt, pl) {
       c.t2 += dt;
       if (c.phase === 'lure') {
         c.hud = 'Rejoins le halo';
@@ -21705,9 +21692,9 @@ const Challenge = (() => {
             continue;
           }
           /* Nouvelle destination seulement quand la précédente est atteinte, et toujours sur un temps. La distance est
-             bornée par ce que le joueur peut parcourir dans le même temps : avant, la lumière visait n'importe quel point
-             de la salle et allait 1,2× à 20× plus vite que lui — impossible à suivre. Les pointes restent (elles couvrent
-             la même distance en deux fois moins de temps), mais on peut toujours recoller. */
+           bornée par ce que le joueur peut parcourir dans le même temps : avant, la lumière visait n'importe quel point
+           de la salle et allait 1,2× à 20× plus vite que lui — impossible à suivre. Les pointes restent (elles couvrent
+           la même distance en deux fois moins de temps), mais on peut toujours recoller. */
           if (b.moveK == null) b.moveK = 1;
           if (b.moveK >= 1 && (bar || (beat && b.jump) || (beat && RNG.chance(0.2)))) {
             b.fx = b.x;
@@ -21738,13 +21725,14 @@ const Challenge = (() => {
         }
       }
       if (room.state === 'clear') c.done = true;
-    } else if (c.id === 'timer') {
+    },
+    timer(room, c, dt, pl) {
       const left = Math.max(0, c.limit - room.time);
       if (room.state === 'clear' && !c.done) {
         c.done = true;
         if (left > 0) {
           room.challengeOk = true;
-          const bonus = 30;
+          const bonus = BALANCE.timerBonus;
           G.run.coinsPending += bonus;
           UI.toast(`Chrono tenu : +${bonus} crédits`);
         }
@@ -21756,13 +21744,21 @@ const Challenge = (() => {
         for (const e of G.enemies) enrage(e);
       }
       c.hud = left > 0 ? `${left.toFixed(1)} s` : 'ENRAGÉS';
-    }
+    },
+  };
+  function update(room, dt) {
+    const c = room.challenge;
+    if (!c || c.done) return;
+    c.t += dt;
+    const pl = G.player;
+    const fn = UPDATERS[c.id];
+    if (fn) fn(room, c, dt, pl);
   }
   function enrage(e) {
     if (e.dead || e.enraged) return;
     e.enraged = true;
-    e.speed *= 1.3;
-    e.damage = Math.round(e.damage * 1.3);
+    e.speed *= BALANCE.enrageMul;
+    e.damage = Math.round(e.damage * BALANCE.enrageMul);
     e.color = PAL.alert;
   }
   function reward(room) {
@@ -23168,7 +23164,7 @@ const Tempo = {
 <script>
 /* ==== 40_room.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 40_room.js
+   WAY — 40_room.js
    État global G, Room (chargement, vagues, portes, transitions), Run (déroulé d'un niveau).
    ========================================================================= */
 
@@ -23205,8 +23201,8 @@ function applyDifficulty() {
   G.difficulty = {
     hpMul: d * (b.hpMul || 1) * ramp,
     damageMul: d * (b.damageMul || 1) * ramp,
-    speedMul: (0.7 + 0.3 * d) * (b.speedMul || 1),
-    fireRateMul: 0.75 + 0.25 * d,
+    speedMul: (BALANCE.difficulty.speedBase + BALANCE.difficulty.speedPerD * d) * (b.speedMul || 1),
+    fireRateMul: BALANCE.difficulty.fireBase + BALANCE.difficulty.firePerD * d,
     ramp,
   };
 }
@@ -24066,8 +24062,8 @@ const Run = {
       else seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     }
     RNG.reseed(seed);
-    const charDef = Content.character(character);
-    const biomeDef = Content.biome(biome);
+    const charDef = Content.character(character) || Content.character(null);
+    const biomeDef = Content.biome(biome) || Content.biome(null);
     const rooms = Content.roomsOf(biomeDef.id);
     /* deux paires bonus/malus tirées : le joueur choisit la sienne en prépa (Run.setPair), la première par défaut */
     const pairChoices = RNG.shuffle(
@@ -24606,7 +24602,7 @@ const Run = {
 <script>
 /* ==== 50_ui.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 50_ui.js
+   WAY — 50_ui.js
    Écrans DOM (menu, hub, préparation, choix, pause, fin, crédits) et HUD canvas.
    ========================================================================= */
 
@@ -25037,7 +25033,7 @@ const UI = (() => {
     const p = Meta.profile;
     const s = screens.hub;
     const chars = Content.characters();
-    const cur = Content.character(p.character);
+    const cur = Content.character(p.character) || Content.character(null); // un personnage retiré : on repart du premier
     const biomes = Content.biomes();
     if (!p.biome || !biomes.find(b => b.id === p.biome && Meta.biomeUnlocked(b))) p.biome = biomes[0].id;
     const biome = biomes.find(b => b.id === p.biome);
@@ -25234,10 +25230,11 @@ const UI = (() => {
         return;
       }
       p.seedNext = r.seed;
-      if (r.biome && Meta.biomeUnlocked(Content.biome(r.biome))) p.biome = r.biome;
+      if (r.biome && Content.biome(r.biome) && Meta.biomeUnlocked(Content.biome(r.biome))) p.biome = r.biome;
       Meta.save();
       showHub();
-      toast(`Prochaine partie : graine ${r.seed}${r.biome ? ', ' + Content.biome(r.biome).name : ''}`, 4);
+      const bio = r.biome && Content.biome(r.biome);
+      toast(`Prochaine partie : graine ${r.seed}${bio ? ', ' + bio.name : ''}`, 4);
     };
     s.querySelector('#hub-seed-go').onclick = seedGo;
     s.querySelector('#hub-seed-text').onkeydown = e => {
@@ -27049,7 +27046,7 @@ const Attract = (() => {
 <script>
 /* ==== 60_meta.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 60_meta.js
+   WAY — 60_meta.js
    Méta-progression : profils Normal (localStorage) / Test (tout débloqué, jamais sauvegardé), argent, passifs, déblocages.
    ========================================================================= */
 
@@ -27403,7 +27400,7 @@ const Meta = (() => {
 <script>
 /* ==== 70_debug.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 70_debug.js
+   WAY — 70_debug.js
    Panneau debug (mode Test), écran de test audio, harness window.__autoplay(config).
    ========================================================================= */
 
@@ -28231,7 +28228,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = Amis;
 /* ==== 80_atelier.js ==== */
 'use strict';
 /* =========================================================================
-   SALLE ZÉRO — 80_atelier.js — Atelier rythme
+   WAY — 80_atelier.js — Atelier rythme
    Une salle vierge, la piste du biome découpée en temps cliquables, et une partition par élément posé.
    Trois établis : Animations (décor qui joue en rythme), Pièges (ce qui blesse), Niveau (terrain et murs).
    F2 ouvre et ferme.
@@ -30400,7 +30397,7 @@ const Atelier = (() => {
 <script>
 /* ==== 90_main.js ==== */
 /* =========================================================================
-   SALLE ZÉRO — 90_main.js — point d'entrée, boucle update/render.
+   WAY — 90_main.js — point d'entrée, boucle update/render.
    ========================================================================= */
 
 'use strict';
