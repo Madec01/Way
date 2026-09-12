@@ -1169,6 +1169,8 @@ const CONTENT = {
       name: 'ADMISSION',
       order: 1,
       tagline: 'Un hôpital désaffecté : couloirs étroits, néons, pièges mécaniques. Le niveau pour apprendre.',
+      /* chantier 12 : la palette de l'hôpital, dite plutôt que codée en dur (bleu froid, néons cyan et orange sodium) */
+      palette: { tint: 'rgba(40,70,110,.22)', neon: ['#6ee7ff', '#ff9a3c'], wall: 'rgba(40,70,110,.3)' },
       desc: "Un ancien service d'accueil réaménagé en parcours : guichets devenus couverts, bancs devenus obstacles, rails de brancards devenus rails de pièges. Néons qui clignotent, sols humides. Le premier palier : on y apprend tout.",
       levelPassives: [
         {

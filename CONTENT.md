@@ -1670,3 +1670,14 @@ Test : `paysage.js` — 12 mesures (le défilement gardé quand on choisit une a
 - `dev/check-terrain.js` acceptait mal le muret `n` (clé sans guillemets dans `TERRAIN`) : corrigé, 0 erreur sur les 4 plans.
 
 Règles gardées : le couloir de la porte et l'entrée libres, aucun piège en (23,6), les apparitions sur du sol, la télégraphie en `PAL.alert`. Tests : `spawncheck.js`, `vocabulaire.js` (les nouveaux noms), `biomes.js` (le bazar garde ses 23 étals), `cadence.js` (les partitions de l'Admission inchangées), batterie complète ; galerie des 36 salles capturée pour l'auteur.
+
+## 68. Chantier 12, séance B — un sol et des murs par palier
+
+**Les quatre paliers partageaient les mêmes dalles 0x72 sous une teinte. Chacun a maintenant son sol, ses murs, et un mur du haut qui raconte le lieu.**
+
+- **`TILESETS`** (dev/15_sprites.js) : par palier, six dalles de sol (la première à `plain` % — 72 à 84 —, les autres au tirage du `floorSeed`), un mur de face, un mur du bas, un mur de côté, deux à quatre motifs 0x72 pour le mur du haut, et une fontaine animée ou non. Une tuile est `[x, y, planche]` ; sans planche, c'est la planche 0x72 d'avant. `tile()` sait dessiner depuis n'importe quelle planche chargée. Les planches (`SHEETS`) se chargent avec `Sprites.load()`, avant le premier rendu ; si l'une manque (file://, réseau), le palier retombe sur les dalles 0x72 sans rien casser (`sols.js` le mesure).
+- **Les quatre lieux** : l'Admission en dalles grises fissurées (Kenney Roguelike Caves & Dungeons) et murs de pierre grise, bouches d'aération et une fontaine rouge (le fluide des cuves) ; la Serre en terre brune bordée d'herbe (Ninja Adventure) et briques brunes, une cuve qui coule et une fontaine bleue ; la Concession en sable beige et pierre brune, des trous dans le mur, pas d'eau ; le Sérail en pavés beiges arrondis (Ninja Adventure) et grès, des tentures et une fontaine bleue. L'Admission a enfin une `palette` dite dans le contenu au lieu du défaut codé.
+- **Le mur du haut** : `drawFloor` tire deux à quatre colonnes (jamais dans les coins, jamais sur un néon) et y pose un motif de la liste du palier, mis en cache avec le sol ; la fontaine (`room.fountainX`) est dessinée par-dessus le cache à chaque image par `Sprites.drawWallFx` — un `drawImage`, trois images 0x72 à 4 par seconde. La même salle est toujours habillée pareil.
+- **Les planches** (≈ 78 Ko dans `assets/`, `index.html` inchangé) : Kenney Roguelike Caves & Dungeons (CC0, pas de 17 px), Ninja Adventure de Pixel-boy & AAA (CC0, pas de 16 px) — sources, miroirs et coordonnées dans ASSETS.md §0, crédits dans CREDITS.md.
+
+Test : `sols.js` — 9 mesures (les planches chargées, un tileset par palier, deux paliers jamais le même sol ni le même mur, deux à quatre motifs au mur, la fontaine qui s'anime là où il y en a une, la même salle toujours pareille, le repli 0x72 sans planche, aucun flou de plus par image).

@@ -3117,7 +3117,7 @@ body.eco .hubcol {
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-12 09:09';</script>
+<script>window.WAY_BUILD = '2026-09-12 10:09';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -7336,6 +7336,8 @@ const CONTENT = {
       name: 'ADMISSION',
       order: 1,
       tagline: 'Un hôpital désaffecté : couloirs étroits, néons, pièges mécaniques. Le niveau pour apprendre.',
+      /* chantier 12 : la palette de l'hôpital, dite plutôt que codée en dur (bleu froid, néons cyan et orange sodium) */
+      palette: { tint: 'rgba(40,70,110,.22)', neon: ['#6ee7ff', '#ff9a3c'], wall: 'rgba(40,70,110,.3)' },
       desc: "Un ancien service d'accueil réaménagé en parcours : guichets devenus couverts, bancs devenus obstacles, rails de brancards devenus rails de pièges. Néons qui clignotent, sols humides. Le premier palier : on y apprend tout.",
       levelPassives: [
         {
@@ -12600,6 +12602,76 @@ const TILES = {
   hole: [48, 32],
   goo: [64, 80],
 };
+/* ---- Chantier 12, séance B : un sol et des murs par palier ----
+   Les quatre paliers partageaient les mêmes dalles 0x72 sous une teinte. Chaque palier tire maintenant son sol et ses
+   murs d'une planche libre (CC0) : Kenney « Roguelike Caves & Dungeons » (pas de 17 px) et Ninja Adventure de
+   Pixel-boy & AAA (pas de 16 px). Une tuile est [x, y, planche] ; sans troisième élément, c'est la planche 0x72.
+   Le mur du haut reçoit deux à quatre motifs 0x72 (bouches d'aération, cuve qui coule, tentures) tirés du floorSeed,
+   et une fontaine murale animée là où le palier en a une. */
+const SHEETS = {
+  kd: 'sprites/kenney_roguelike-dungeon/roguelikeDungeon_transparent.png',
+  na_floor: 'sprites/ninja_adventure/TilesetFloor.png',
+  na_interior: 'sprites/ninja_adventure/TilesetInteriorFloor.png',
+  na_desert: 'sprites/ninja_adventure/TilesetDesert.png',
+};
+const kd = (c, r) => [c * 17, r * 17, 'kd'];
+const na = (sheet, c, r) => [c * 16, r * 16, sheet];
+const TILESETS = {
+  /* l'hôpital : dalles grises fissurées, murs de pierre grise ; bouches d'aération et une fontaine rouge (le fluide des cuves) */
+  biome_1: {
+    floor: [kd(8, 2), kd(9, 2), kd(9, 3), kd(10, 3), kd(11, 3), kd(13, 3)],
+    plain: 0.82,
+    wallFace: kd(8, 1),
+    wallTop: kd(8, 0),
+    wallSide: kd(8, 1),
+    decor: [TILES.hole, [48, 48], TILES.hole],
+    fountain: { mid: [64, 16], frames: 3 },
+  },
+  /* la serre : terre brune tachée d'herbe, briques brunes ; une cuve qui coule et une fontaine bleue */
+  biome_2: {
+    floor: [
+      na('na_floor', 1, 8),
+      na('na_floor', 1, 11),
+      na('na_floor', 2, 9),
+      na('na_floor', 1, 9),
+      na('na_floor', 2, 8),
+      na('na_floor', 1, 11),
+    ],
+    plain: 0.8,
+    wallFace: kd(17, 6),
+    wallTop: kd(17, 5),
+    wallSide: kd(17, 6),
+    decor: [TILES.goo, TILES.goo, [16, 48]],
+    fountain: { mid: [64, 48], frames: 3 },
+  },
+  /* la Concession : sable beige, pierre brune ; des trous dans le mur */
+  biome_3: {
+    floor: [kd(17, 15), kd(16, 14), kd(19, 14), kd(18, 16), kd(20, 16), kd(16, 16)],
+    plain: 0.8,
+    wallFace: kd(17, 8),
+    wallTop: kd(17, 7),
+    wallSide: kd(17, 8),
+    decor: [TILES.hole, [48, 48], [32, 48]],
+    fountain: null,
+  },
+  /* le Sérail : mosaïque beige, grès clair ; des tentures et une fontaine bleue */
+  biome_4: {
+    floor: [
+      na('na_interior', 1, 13),
+      na('na_interior', 5, 13),
+      na('na_interior', 6, 14),
+      na('na_interior', 8, 13),
+      na('na_interior', 2, 15),
+      na('na_interior', 12, 1),
+    ],
+    plain: 0.84,
+    wallFace: na('na_desert', 17, 1),
+    wallTop: na('na_desert', 17, 0),
+    wallSide: na('na_desert', 17, 1),
+    decor: [[16, 32], TILES.banner, [32, 48], [16, 48]],
+    fountain: { mid: [64, 48], frames: 3 },
+  },
+};
 
 const Sprites = (() => {
   let sheet = null,
@@ -12637,12 +12709,28 @@ const Sprites = (() => {
     }
     return _fx;
   }
+  const palSheets = {}; // les planches des paliers (chantier 12), par clé de SHEETS
+  function loadSheet(key) {
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        palSheets[key] = img;
+        res(true);
+      };
+      img.onerror = () => {
+        console.warn('[Sprites] planche de palier indisponible : ' + key + ' (sol 0x72 en repli)');
+        res(false);
+      };
+      img.src = ASSET_BASE + SHEETS[key];
+    });
+  }
   function load() {
+    const paliers = Promise.all(Object.keys(SHEETS).map(loadSheet));
     return new Promise(res => {
       sheet = new Image();
       sheet.onload = () => {
         ready = true;
-        res(true);
+        paliers.then(() => res(true));
       };
       sheet.onerror = () => {
         failed = true;
@@ -12652,6 +12740,8 @@ const Sprites = (() => {
       sheet.src = SHEET_URL;
     });
   }
+  const tilesetOf = () => (G.run && G.run.biome && TILESETS[G.run.biome.id]) || null;
+  const sheetReady = key => !!palSheets[key];
   /* ---- accessoires western : icônes SVG (game-icons.net, CC BY 3.0) rastérisées en 20 px puis agrandies sans lissage = pixel art ---- */
   const PROP_DEFS = {
     /* biome 3 — western (assets/sprites/western/) */
@@ -13130,6 +13220,13 @@ const Sprites = (() => {
     drawProp(ctx, name, x, y, TILE * (d.big ? 1.3 : 0.9), TILE * (d.big ? 1.3 : 0.9), { variant: hash2(d.x + 7, d.y + 3) });
     ctx.restore();
   } // rien si l'accessoire n'est pas encore chargé (pas de carré de repli)
+  /* la fontaine murale animée du palier (3 images 0x72), dessinée par-dessus le sol mis en cache : un drawImage par image */
+  function drawWallFx(ctx, room) {
+    const ts = tilesetOf();
+    if (!ts || !ts.fountain || room.fountainX == null) return;
+    const f = Math.floor(Time.now * 4) % ts.fountain.frames;
+    tile(ctx, [ts.fountain.mid[0] + 16 * f, ts.fountain.mid[1]], room.fountainX, ROOM_Y - TILE);
+  }
   /* dessine un sprite nommé centré en (x, y) ; opts : flip, walk (temps de marche, anim run si > 0), flash, scale, fallback() */
   function draw(ctx, key, x, y, opts = {}) {
     const d = SPRITE_DEFS[key];
@@ -13207,8 +13304,9 @@ const Sprites = (() => {
     return true;
   }
   function tile(ctx, t, dx, dy, w = TILE, h = TILE) {
-    if (!ready) return false;
-    ctx.drawImage(sheet, t[0], t[1], 16, 16, dx, dy, w, h);
+    const img = t[2] ? palSheets[t[2]] : ready ? sheet : null;
+    if (!img) return false;
+    ctx.drawImage(img, t[0], t[1], 16, 16, dx, dy, w, h);
     return true;
   }
   /* sol + murs, mis en cache par salle dans un canvas hors écran */
@@ -13227,6 +13325,9 @@ const Sprites = (() => {
       const g = c.getContext('2d');
       g.imageSmoothingEnabled = false;
       const rng = makeRng(room.floorSeed);
+      /* le palier a sa planche ; si elle n'est pas chargée (file://, réseau), les dalles 0x72 reprennent */
+      const ts0 = tilesetOf();
+      const ts = ts0 && tile(g, ts0.floor[0], -TILE, -TILE) ? ts0 : null;
       g.fillStyle = '#07080d';
       g.fillRect(0, 0, W, H);
       /* décor des bandes hors salle (fenêtres larges) : dessiné à la volée dans drawFloor, voir plus bas */
@@ -13234,7 +13335,14 @@ const Sprites = (() => {
         for (let tx = 0; tx < ROOM_COLS; tx++) {
           const x = ROOM_X + tx * TILE,
             y = ROOM_Y + ty * TILE;
-          if (!tile(g, rng.chance(0.9) ? TILES.floor[0] : rng.pick(TILES.floor), x, y)) {
+          const t = ts
+            ? rng.chance(ts.plain)
+              ? ts.floor[0]
+              : rng.pick(ts.floor)
+            : rng.chance(0.9)
+              ? TILES.floor[0]
+              : rng.pick(TILES.floor);
+          if (!tile(g, t, x, y)) {
             g.fillStyle = (tx + ty) % 2 ? '#141826' : '#161b2b';
             g.fillRect(x, y, TILE, TILE);
           }
@@ -13265,27 +13373,53 @@ const Sprites = (() => {
         g.stroke();
       }
       /* murs */
+      const wFace = ts ? ts.wallFace : TILES.wallFace,
+        wTop = ts ? ts.wallTop : TILES.wallTop,
+        wLeft = ts ? ts.wallSide : TILES.wallLeft,
+        wRight = ts ? ts.wallSide : TILES.wallRight;
       for (let tx = -1; tx <= ROOM_COLS; tx++) {
         const x = ROOM_X + tx * TILE;
-        if (!tile(g, TILES.wallFace, x, ROOM_Y - TILE)) {
+        if (!tile(g, wFace, x, ROOM_Y - TILE)) {
           g.fillStyle = '#232a44';
           g.fillRect(x, ROOM_Y - TILE, TILE, TILE);
         }
-        if (!tile(g, TILES.wallTop, x, ROOM_Y + ROOM_H)) {
+        if (!tile(g, wTop, x, ROOM_Y + ROOM_H)) {
           g.fillStyle = '#1a2036';
           g.fillRect(x, ROOM_Y + ROOM_H, TILE, TILE);
         }
       }
       for (let ty = 0; ty < ROOM_ROWS; ty++) {
         const y = ROOM_Y + ty * TILE;
-        if (!tile(g, TILES.wallLeft, ROOM_X - TILE, y)) {
+        if (!tile(g, wLeft, ROOM_X - TILE, y)) {
           g.fillStyle = '#1a2036';
           g.fillRect(ROOM_X - TILE, y, TILE, TILE);
         }
-        if (!tile(g, TILES.wallRight, ROOM_X + ROOM_W, y)) {
+        if (!tile(g, wRight, ROOM_X + ROOM_W, y)) {
           g.fillStyle = '#1a2036';
           g.fillRect(ROOM_X + ROOM_W, y, TILE, TILE);
         }
+      }
+      /* le mur du haut raconte le palier : deux à quatre motifs 0x72 (bouches, cuve qui coule, tentures) et la place
+         de la fontaine animée, tirés du floorSeed, jamais dans les trois colonnes du coin ni sur un néon */
+      room.wallDeco = [];
+      room.fountainX = null;
+      if (ts) {
+        const n = 2 + Math.floor(rng() * 3);
+        const cols = [];
+        for (let k = 0; k < 40 && cols.length < n + (ts.fountain ? 1 : 0); k++) {
+          const c = 2 + Math.floor(rng() * (ROOM_COLS - 4));
+          if (cols.some(o => Math.abs(o - c) < 2) || (c + 0.5) % (ROOM_COLS / 5) < 1.2) continue;
+          cols.push(c);
+        }
+        cols.forEach((c, i) => {
+          const x = ROOM_X + c * TILE;
+          if (ts.fountain && i === cols.length - 1) room.fountainX = x;
+          else {
+            const t = rng.pick(ts.decor);
+            tile(g, t, x, ROOM_Y - TILE);
+            room.wallDeco.push({ x, t });
+          }
+        });
       }
       g.fillStyle = pal.wall;
       g.fillRect(ROOM_X - TILE, ROOM_Y - TILE, ROOM_W + 2 * TILE, TILE);
@@ -13925,6 +14059,11 @@ const Sprites = (() => {
     tile,
     drawFloor,
     drawBlock,
+    drawWallFx,
+    tilesetOf,
+    sheetReady,
+    TILESETS,
+    SHEETS,
     drawChest,
     setVariant,
     clearVariants,
@@ -24422,6 +24561,7 @@ const Room = {
     const r = G.room;
     if (!r) return;
     Sprites.drawFloor(ctx, r);
+    Sprites.drawWallFx(ctx, r);
     if (r.grid) Terrain.render(ctx, r);
     /* les traces des morts : une ellipse sombre teintée de l'ennemi, posée pour la salle */
     for (const d of r.decals) {

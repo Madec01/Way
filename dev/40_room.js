@@ -670,6 +670,7 @@ const Room = {
     const r = G.room;
     if (!r) return;
     Sprites.drawFloor(ctx, r);
+    Sprites.drawWallFx(ctx, r);
     if (r.grid) Terrain.render(ctx, r);
     /* les traces des morts : une ellipse sombre teintée de l'ennemi, posée pour la salle */
     for (const d of r.decals) {

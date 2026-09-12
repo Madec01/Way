@@ -13,6 +13,19 @@ La politique de sortie du proxy bloque **itch.io, kenney.nl, incompetech.com, op
 
 ---
 
+## 0. Chantier 12 (septembre 2026) — les planches de sol et de mur par palier
+
+Récupérées depuis des miroirs GitHub publics (voir la politique réseau ci-dessous ; `raw.githubusercontent.com` renvoie un pointeur Git LFS pour les dépôts Kenney, il faut passer par `media.githubusercontent.com`). Toutes CC0, créditées dans CREDITS.md. Elles restent des fichiers dans `assets/` : `index.html` ne grossit pas.
+
+| Fichier local | Source (vérifiée le 12 septembre 2026) | Pas | Usage |
+|---|---|---|---|
+| `kenney_roguelike-dungeon/roguelikeDungeon_transparent.png` (15,7 Ko, 492×305) | `media.githubusercontent.com/media/series-ai/jam-ready-assets/main/kenney-roguelike-dungeon-pack/2D/top-down-rpg/Spritesheet/roguelikeDungeon_transparent.png` | 17 px (16 + 1 de gouttière) | Admission : dalles grises (col. 8-13, lig. 2-3) et murs de pierre (8, 0-1) ; Concession : sable beige (16-20, 14-16) et pierre brune (8, 7-8) ; Serre : briques brunes (17, 5-6) |
+| `ninja_adventure/TilesetFloor.png` (30 Ko, 352×417) | `raw.githubusercontent.com/jackfruitgames/chickeeen/main/assets/Tilesets/TilesetFloor.png` | 16 px | Serre : terre brune (1, 8) et ses détails (1-4, 11) |
+| `ninja_adventure/TilesetInteriorFloor.png` (13 Ko, 352×272) | `…/Tilesets/Interior/TilesetInteriorFloor.png` | 16 px | Sérail : pavés beiges arrondis (0-9, 12-15) et une mosaïque (12, 1) |
+| `ninja_adventure/TilesetDesert.png` (19 Ko, 320×192) | `…/Tilesets/TilesetDesert.png` | 16 px | Sérail : mur de grès (15, 4-5) |
+
+Les coordonnées sont en (colonne, ligne) de tuile ; le code (`TILESETS`, dev/15_sprites.js) les multiplie par le pas. La licence CC0 de Ninja Adventure est confirmée par le README du pack (« released under the Creative Commons Zero (CC0) license »).
+
 ## 1. Sprites
 
 ### 1.1 0x72 Dungeon Tileset II — `assets/sprites/0x72_dungeon_tileset_ii/` (93 Ko) — **spritesheet principale**
