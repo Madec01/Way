@@ -2072,7 +2072,7 @@ class Player {
       let sp = this.stats.speed;
       if (Time.now < this.killSpeedUntil) sp *= this.killSpeedMul;
       if (this.charge > 0) sp *= 0.6;
-      if (this.gasSlowUntil > Time.now) sp *= 0.7;
+      if (this.gasSlowUntil > Time.now) sp *= this.gasSlowMul || 0.7; // la nappe dit de combien (`slow`), les ronces gardent 0,7
       if (this.jamUntil > Time.now) sp *= this.jamScale || 0.55;
       if (G.room && G.room.grid) sp *= Terrain.speedAt(this.x, this.y); // eau, boue : on ralentit sans rien perdre
       if (Time.now < this.venomUntil) sp *= 0.65; // le venin des scorpions (chantier 9)

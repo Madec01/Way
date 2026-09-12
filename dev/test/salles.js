@@ -109,4 +109,97 @@ test(async ({ page, ok, url }) => {
       `${b} : ${s.salles} salles, au plus ${s.obstaclesMax} obstacles, couloir large d'au moins ${s.couloirMin} positions`,
       s.couloirMin > 0
     );
+
+  /* Chantier 13 A — le chemin sûr prouvé (la garantie d'Isaac et de DCSS, automatisée), dans le temps et l'espace :
+     dans chaque salle à pièges, tous les pièges armés en même temps (plus sévère que la salle du tempo qui les arme un
+     par un), depuis chaque instant de départ (0 à 12 s par pas de 0,4 s) un joueur parti du sas atteint la porte en
+     marchant d'une tuile par cinquième de seconde ou en attendant, sans jamais être sur une tuile dangereuse — et
+     le sas lui-même est sûr pendant les deux premières secondes (le temps d'entrer). Barre le passage ce qui frappe
+     sur place (rayon, bras, dalle, scie, nappe : danger ≥ 0,8) ; la portée d'un tireur (0,5-0,6) est une gêne, pas
+     un mur — ses balles se lisent et s'esquivent. */
+  const sr = await page.evaluate(() => {
+    const pb = [];
+    let salles = 0,
+      departs = 0;
+    const sy = Math.floor(ROOM_ROWS / 2);
+    const N = ROOM_COLS * ROOM_ROWS,
+      STEP = 0.2,
+      STEPS = 120; // 24 s
+    const DIRS = [0, 1, -1, ROOM_COLS, -ROOM_COLS];
+    for (const b of Content.biomes())
+      for (const def of Content.roomsOf(b.id)) {
+        const room = Room.create(def);
+        if (!room.traps.length) continue;
+        salles++;
+        const walk = new Uint8Array(N);
+        for (let y = 0; y < ROOM_ROWS; y++)
+          for (let x = 0; x < ROOM_COLS; x++) walk[y * ROOM_COLS + x] = Terrain.walkable(x, y, room) ? 1 : 0;
+        /* la carte du danger, instant par instant */
+        const dang = [];
+        for (let st = 0; st <= STEPS; st++) {
+          const d = new Uint8Array(N);
+          const rt = st * STEP;
+          for (let y = 0; y < ROOM_ROWS; y++)
+            for (let x = 0; x < ROOM_COLS; x++) {
+              const i = y * ROOM_COLS + x;
+              if (!walk[i]) {
+                d[i] = 1;
+                continue;
+              }
+              const px = ROOM_X + (x + 0.5) * TILE,
+                py = ROOM_Y + (y + 0.5) * TILE;
+              for (const t of room.traps)
+                if (t.dangerAt(px, py, rt) >= 0.8) {
+                  d[i] = 1;
+                  break;
+                }
+            }
+          dang.push(d);
+        }
+        const start = 1 + sy * ROOM_COLS,
+          goal = ROOM_COLS - 1 + sy * ROOM_COLS;
+        for (let s0 = 0; s0 <= 60; s0 += 2) {
+          if (dang[s0][start]) {
+            if (s0 * STEP < 2) pb.push(`${def.id} : le sas est dangereux à ${(s0 * STEP).toFixed(1)} s, le temps d'entrer`);
+            continue;
+          }
+          departs++;
+          /* parcours en largeur dans (tuile, instant) : avancer d'une tuile ou attendre, jamais sur du danger */
+          const seen = new Uint8Array(N * (STEPS + 1));
+          let q = [start],
+            found = false;
+          seen[s0 * N + start] = 1;
+          for (let st = s0; st < STEPS && q.length && !found; st++) {
+            const next = [],
+              d = dang[st + 1];
+            for (const i of q) {
+              if (i === goal) {
+                found = true;
+                break;
+              }
+              const x = i % ROOM_COLS;
+              for (const dd of DIRS) {
+                const j = i + dd;
+                if (j < 0 || j >= N) continue;
+                if ((dd === 1 && x === ROOM_COLS - 1) || (dd === -1 && x === 0)) continue;
+                if (d[j] || seen[(st + 1) * N + j]) continue;
+                seen[(st + 1) * N + j] = 1;
+                next.push(j);
+              }
+            }
+            q = next;
+          }
+          if (!found && !q.includes(goal)) {
+            pb.push(`${def.id} : parti du sas à ${(s0 * STEP).toFixed(1)} s, aucun chemin sûr n'atteint la porte en 24 s`);
+            break;
+          }
+        }
+      }
+    return { pb, salles, departs };
+  });
+  ok(
+    `chemin sûr prouvé : ${sr.salles} salles à pièges, ${sr.departs} départs, toujours un parcours sans danger du sas à la porte`,
+    sr.pb.length === 0,
+    sr.pb.length ? '\n  ' + sr.pb.join('\n  ') : 'aucune coupure'
+  );
 });

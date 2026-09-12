@@ -130,8 +130,9 @@ CONTENT = {
              revenge: { hpMul, extraPhases: [...], desc }   // salle 9, PRÉVU, non implémenté
            }],
 
-  traps: [{ id, name, desc, kind: 'laser_sweep'|'laser_rotate'|'laser_grid'|'wall_fireball'|'spike_tiles'|'gas_zone'|'saw_rail'|'turret_fixed',
-            damage, telegraph /*s*/, period /*s*/, active /*s*/, params: { /* selon kind */ } }],
+  traps: [{ id, name, desc, kind: 'laser_sweep'|'laser_rotate'|'laser_grid'|'wall_fireball'|'spike_tiles'|'gas_zone'|'saw_rail'|'turret_fixed'|'emitter'|'laser_beam',
+            damage, telegraph /*s*/, period /*s*/, active /*s*/, params: { /* selon kind */ },
+            trigger?, body?, effect?, snd? /* chantier 13 : un kind = un triplet de TRAP_LEGACY (34_traps.js) ; une définition peut nommer le sien */ }],
 
   rooms: [{ id, biome, index /*1..9*/, type: 'PREP_COMBAT'|'TRAP'|'COMBAT_TRAP'|'CHEST'|'MINIBOSS'|'COMBAT_MODULAR'|'COMBAT_TRAP_MODULAR'|'CHEST_FINAL'|'BOSS_REVENGE',
             refTime /*s, temps de référence pour le score*/,

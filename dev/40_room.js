@@ -430,7 +430,10 @@ const Room = {
           continue;
         }
         if (h.dps && !pl.dead && dist(h.x, h.y, pl.x, pl.y) < h.r) {
-          if (h.slow) pl.gasSlowUntil = Time.now + 0.1;
+          if (h.slow) {
+            pl.gasSlowUntil = Time.now + 0.1;
+            pl.gasSlowMul = 0.7;
+          }
           const last = h.cd.get('pl') || -9;
           if (Time.now - last >= 0.5) {
             h.cd.set('pl', Time.now);

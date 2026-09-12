@@ -32,9 +32,7 @@ test(async ({ page: p, ok, entrer, salle, sansPause, url, erreurs }) => {
 
   const sources = await p.evaluate(() => {
     const flou = /shadowBlur = (?![0;])/;
-    const pieges = Object.getOwnPropertyNames(Trap.prototype)
-      .filter(k => k.startsWith('r_'))
-      .filter(k => flou.test(Trap.prototype[k].toString()));
+    const pieges = Object.keys(TRAP_BODIES).filter(k => flou.test(TRAP_BODIES[k].render.toString()));
     return {
       pieges,
       modules: flou.test(Modular.render.toString()),
