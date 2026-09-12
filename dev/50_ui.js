@@ -499,6 +499,7 @@ const UI = (() => {
             </div>`;
               })
               .join('')}</div>
+            <div class="muted small lvltag">${esc(biome.tagline || biome.desc)}</div>
             <div class="muted tiny pairsline">Au départ, une paire bonus ⇄ malus à choisir parmi : ${biome.levelPassives
               .map(
                 lp =>

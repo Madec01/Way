@@ -235,7 +235,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 
 ---
 
-## Chantier I-9 — Les menus en paysage court *(à faire ; idées d'un agent d'analyse, 12 septembre 2026)*
+## Chantier I-9 — Les menus en paysage court ✔ *(fait le 12 septembre 2026, photo de l'auteur à recevoir)*
 
 **Le constat de l'auteur** sur son téléphone (832×384 en paysage, ×3,8) : « l'affichage des menus n'est pas ouf ». Trois captures : le camp où la carte de palier prend 63 % de la hauteur visible, la question 1 qui laisse 75 % de la largeur vide et se défile sur quatre écrans, la prépa où une seule paire bonus/malus fait 200 px de haut dans une colonne de 180 px.
 
@@ -263,7 +263,7 @@ Un point de plus, déjà en attente : l'onglet **Fragments** du hub [M19] racont
 **La séance proposée** : 3 → 1 → 4 + 5 → 6 → 2 + 8 → 9, puis la batterie et une capture 900×420 de chaque écran pour comparer avec les photos. Attendu : camp de 4 à 1,5 écrans, prépa de 5 à 2, largeur utilisée de 25 % à 90 %. Une mesure à ajouter dans `touch.js` : en 900×420, `#hub-body` fait moins de 2,5 fois sa hauteur visible, et aucune carte du camp n'est deux fois plus haute que large. Bornes des tests à respecter : cibles ≥ 44 px, polices ≥ 12 px, `overflow-x: auto` sur `.hub3 .row`, une seule zone de défilement, armes ≥ 140 px en 800×600.
 
 **Fini quand** : sur le téléphone de l'auteur, le camp tient en deux écrans et la prépa en deux, sans texte coupé.
-**Taille** : 1 séance (finitions 7, 10, 11 en seconde séance si le résultat plaît).
+**Taille** : 1 séance (finitions 7, 10, 11 en seconde séance si le résultat plaît). **Bilan** : fait en une séance (CONTENT.md §66, test `paysage.js`, 11 mesures). Idées 1 à 9 et 11 faites : le plancher d'échelle `--menu-scale`, la media query « paysage court », l'en-tête et PARTIR en une ligne, le camp sur deux colonnes, la phrase du palier sous la rangée, la prépa en rangées avec en-tête collant, les titres resserrés et collants, les puces fines ; en plus, les cartes de compagnon perdent leur ligne de description en paysage court (la carte d'équipe la dit). Mesuré en 900×420 : le camp de 3,7 à 2,0 écrans, la prépa de 3,2 à 2,2, le bureau inchangé. Pas fait : l'idée 10 (toucher une puce pour lire la phrase) et l'idée 12 (la prépa en onglets). Reste : ta photo du camp et de la prépa sur ton téléphone.
 
 ## L'ordre, et pourquoi
 

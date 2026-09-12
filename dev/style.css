@@ -2059,7 +2059,7 @@ body.touch .menuscreen.main .bigtitle {
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: calc(10px * var(--ui-scale));
+  gap: calc(10px * var(--menu-scale));
   padding: 0.6em 1em;
   background: rgba(8, 10, 18, 0.93);
   border: 1px solid var(--line);
@@ -2115,22 +2115,22 @@ body.touch .menuscreen.main .bigtitle {
   user-select: none;
 }
 .hub3 .card.char.big {
-  width: calc(150px * var(--ui-scale));
-  min-height: calc(172px * var(--ui-scale));
+  width: calc(150px * var(--menu-scale));
+  min-height: calc(172px * var(--menu-scale));
 }
 .hub3 .card.pet.big {
-  width: calc(132px * var(--ui-scale));
-  min-height: calc(138px * var(--ui-scale));
+  width: calc(132px * var(--menu-scale));
+  min-height: calc(138px * var(--menu-scale));
 }
 .hub3 .card.big .portrait {
-  width: calc(120px * var(--ui-scale));
-  height: calc(116px * var(--ui-scale));
+  width: calc(120px * var(--menu-scale));
+  height: calc(116px * var(--menu-scale));
   background: none;
   box-shadow: none;
   align-items: flex-end;
 }
 .hub3 .card.big .portrait-canvas {
-  width: calc(110px * var(--ui-scale));
+  width: calc(110px * var(--menu-scale));
   margin-bottom: 0;
 }
 .hub3 .cardname {
@@ -2152,7 +2152,7 @@ body.touch .menuscreen.main .bigtitle {
   image-rendering: pixelated;
 }
 .peticonbox {
-  height: calc(72px * var(--ui-scale));
+  height: calc(72px * var(--menu-scale));
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -2257,14 +2257,14 @@ body.touch .menuscreen.main .bigtitle {
   flex-basis: 100%;
 }
 .hub3 .card.level {
-  width: calc(210px * var(--ui-scale));
+  width: calc(210px * var(--menu-scale));
   min-width: 0;
   max-width: none;
   padding: 0.55em 0.8em;
   cursor: pointer;
 }
 .hub3 .card.level.locked {
-  width: calc(120px * var(--ui-scale));
+  width: calc(120px * var(--menu-scale));
   opacity: 0.55;
   cursor: default;
 }
@@ -2329,7 +2329,7 @@ body.touch .menuscreen.main .bigtitle {
   min-height: 0;
 }
 body.touch .hub3 {
-  padding: calc(8px * var(--ui-scale));
+  padding: calc(8px * var(--menu-scale));
 }
 @media (max-width: 900px) {
   .hub3 .row {
@@ -2355,22 +2355,22 @@ body.touch .hub3 {
 }
 @media (max-width: 900px) {
   .hub3 .card.char.big {
-    width: calc(112px * var(--ui-scale));
-    min-height: calc(130px * var(--ui-scale));
+    width: calc(112px * var(--menu-scale));
+    min-height: calc(130px * var(--menu-scale));
   }
   .hub3 .card.big .portrait {
-    width: calc(90px * var(--ui-scale));
-    height: calc(86px * var(--ui-scale));
+    width: calc(90px * var(--menu-scale));
+    height: calc(86px * var(--menu-scale));
   }
   .hub3 .card.big .portrait-canvas {
-    width: calc(80px * var(--ui-scale));
+    width: calc(80px * var(--menu-scale));
   }
   .hub3 .card.pet.big {
-    width: calc(104px * var(--ui-scale));
-    min-height: calc(112px * var(--ui-scale));
+    width: calc(104px * var(--menu-scale));
+    min-height: calc(112px * var(--menu-scale));
   }
   .peticonbox {
-    height: calc(56px * var(--ui-scale));
+    height: calc(56px * var(--menu-scale));
   }
   .hub3 .row {
     padding-left: 0;
@@ -2395,16 +2395,16 @@ body.touch .hub3 {
   justify-content: flex-start;
 }
 .prep2 .grid.weapons {
-  grid-template-columns: repeat(auto-fill, calc(190px * var(--ui-scale)));
+  grid-template-columns: repeat(auto-fill, calc(190px * var(--menu-scale)));
 }
 .prep2 .grid.skills {
-  grid-template-columns: repeat(auto-fill, calc(300px * var(--ui-scale)));
+  grid-template-columns: repeat(auto-fill, calc(300px * var(--menu-scale)));
 }
 .prep2 .card.wcard {
   min-width: 0;
   max-width: none;
   width: auto;
-  min-height: calc(150px * var(--ui-scale));
+  min-height: calc(150px * var(--menu-scale));
   padding: 0.5em 0.6em 0.6em;
   display: flex;
   flex-direction: column;
@@ -2427,7 +2427,7 @@ body.touch .hub3 {
   min-width: 0;
   max-width: none;
   width: auto;
-  min-height: calc(110px * var(--ui-scale));
+  min-height: calc(110px * var(--menu-scale));
   display: flex;
   gap: 0.7em;
   align-items: center;
@@ -2446,8 +2446,8 @@ body.touch .hub3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(64px * var(--ui-scale));
-  height: calc(64px * var(--ui-scale));
+  width: calc(64px * var(--menu-scale));
+  height: calc(64px * var(--menu-scale));
   flex: none;
 }
 .iconbox canvas {
@@ -2456,8 +2456,8 @@ body.touch .hub3 {
   max-height: 100%;
 }
 .prep2 .scard .iconbox {
-  width: calc(56px * var(--ui-scale));
-  height: calc(56px * var(--ui-scale));
+  width: calc(56px * var(--menu-scale));
+  height: calc(56px * var(--menu-scale));
 }
 .jauges.mini {
   flex-direction: column;
@@ -2492,11 +2492,11 @@ body.touch .hub3 {
   border: 1px solid rgba(110, 231, 255, 0.35);
   border-radius: 10px;
   background: rgba(10, 13, 24, 0.6);
-  min-height: calc(64px * var(--ui-scale));
+  min-height: calc(64px * var(--menu-scale));
 }
 .prep2 .detail .iconbox {
-  width: calc(48px * var(--ui-scale));
-  height: calc(48px * var(--ui-scale));
+  width: calc(48px * var(--menu-scale));
+  height: calc(48px * var(--menu-scale));
 }
 .prep2 .detail .dtext {
   flex: 1;
@@ -2931,4 +2931,168 @@ body.eco .hubcol {
   opacity: 0.8;
   margin-top: 0.4em;
   word-break: break-word;
+}
+
+/* ================= Chantier I-9 : les menus en paysage court ================= */
+/* Sur un téléphone en paysage (832×384), --ui-scale ≈ 0,53 réduit les cartes de moitié alors que les polices ont un
+   plancher : du texte de bureau empilé dans des cartes de poche. --menu-scale a son propre plancher (0,72) et
+   s'applique aux dimensions des cartes du camp et de la prépa ; au bureau (échelle 1) rien ne change. */
+:root {
+  --menu-scale: max(0.72, var(--ui-scale));
+}
+.lvltag {
+  display: none;
+}
+/* le paysage court : moins de 500 px de haut, plus large que haut — un téléphone tenu à l'horizontale */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* l'en-tête sur une ligne : WAY · crédits · boutons */
+  .hub3 {
+    gap: 4px;
+    padding: 4px 8px;
+  }
+  .hub3 .hubhead {
+    padding: 0.15em 0.7em;
+    gap: 0.6em;
+    flex-wrap: nowrap;
+  }
+  .hubid .stamp .sep,
+  .hubid .stamp .sep + span {
+    display: none;
+  }
+  .hubcoins {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+  }
+  .hubcoins .credits {
+    font-size: max(14px, 1em);
+  }
+  /* le bouton PARTIR sur une ligne */
+  .hub3 .cta.big {
+    padding: 0.3em 1em;
+    min-height: 44px;
+  }
+  .hub3 .cta.big .l {
+    font-size: 1.1em;
+  }
+  .hub3 .cta.big .d {
+    display: inline;
+    margin-left: 0.6em;
+  }
+  /* le camp sur deux colonnes : « Qui part ? » à gauche, « Avec qui ? » à droite, le reste en pleine largeur */
+  .hubbody {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1em;
+    row-gap: 6px;
+    padding: 0.4em 0.8em;
+    align-content: start;
+  }
+  .hstep.qui {
+    grid-column: 1;
+  }
+  .hstep.avec {
+    grid-column: 2;
+  }
+  #hub-team,
+  .hstep.ou,
+  .hstep.bests,
+  .bests,
+  .sauvegarde {
+    grid-column: 1 / -1;
+  }
+  .hub3 .row,
+  body.touch .hub3 .row {
+    flex-wrap: wrap;
+    overflow-x: auto;
+    padding-left: 0;
+    padding-bottom: 0;
+  }
+  .hstep h2 {
+    font-size: 1.1em;
+    margin: 0.1em 0 0.3em;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(8, 10, 18, 0.93);
+  }
+  .hub3 .cardname {
+    font-size: 1.05em;
+  }
+  /* les compagnons : la carte d'équipe dit déjà ce que l'animal fait ; sa ligne sous le nom s'empilait sur cinq lignes */
+  .hub3 .card.pet.big {
+    width: calc(116px * var(--menu-scale));
+    min-height: 0;
+  }
+  .hub3 .card.pet.big .muted.tiny {
+    display: none;
+  }
+  .hub3 .card.level .lvlname {
+    font-size: 1.05em;
+  }
+  .teamnames {
+    font-size: 1.15em;
+  }
+  .teamcard {
+    padding: 0.45em 0.8em;
+    gap: 0.2em;
+  }
+  /* la phrase du palier sort de la carte : les cartes ont toutes la même hauteur, la phrase vit sous la rangée */
+  .hub3 .card.level .lvldesc {
+    display: none;
+  }
+  .hub3 .lvltag {
+    display: block;
+    margin: 0.2em 0 0;
+  }
+  /* les puces bonus ⇄ malus ne sont pas cliquables : pas de hauteur de cible ; seuls les contrôles en gardent une */
+  body.touch .pairchip {
+    min-height: 0;
+  }
+  body.touch label.pairchip,
+  body.touch .pairchip.graine-coller,
+  body.touch #hub-seednext {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+  }
+  /* la prépa : en-tête collant et compact, paires côte à côte, compétences en rangée, armes serrées */
+  .prep2 .prephead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: rgba(8, 10, 18, 0.96);
+    padding: 0.2em 0 0.3em;
+    align-items: center;
+  }
+  .prep2 .prephead h2 {
+    font-size: 1.1em;
+    margin: 0;
+  }
+  .prep2 .prephead .eyebrow {
+    display: none;
+  }
+  body.touch .prep2 .pairpick {
+    max-width: none;
+    min-width: 0;
+    flex: 1 1 18em;
+  }
+  .prep2 #prep-pairs {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .prep2 .pairpick .prepmods .chip {
+    flex: 1 1 10em;
+  }
+  body.touch .prep2 .grid.skills {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  body.touch .prep2 .grid.weapons {
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  }
+  .prep2 .prepstep h3 {
+    font-size: 1em;
+    margin: 0.3em 0;
+  }
 }
