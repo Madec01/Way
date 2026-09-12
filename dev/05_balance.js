@@ -41,6 +41,9 @@ const BALANCE = {
   difficulty: { speedBase: 0.7, speedPerD: 0.3, fireBase: 0.75, firePerD: 0.25 },
   timerBonus: 30, // crédits en attente pour un défi chrono tenu
   enrageMul: 1.3, // vitesse et dégâts d'un ennemi enragé (chrono dépassé)
+  /* pièges (chantier 13 B) : ce qu'un piège fait aux ennemis, aux boss et aux compagnons, en fraction de ses dégâts au
+     joueur (0 = épargné). Les ennemis prennent plus que le joueur (la règle d'Hades) : un piège est un outil, pas un impôt. */
+  trap: { enemyMul: 1.5, bossMul: 0.25, petMul: 0.5 },
   /* foudre ambiante : intervalle réel = every × [jitterMin, jitterMax] */
   lightningJitter: { min: 0.8, max: 2.0 },
   /* prime de fin de palier (crédits) */

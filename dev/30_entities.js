@@ -421,6 +421,22 @@ const Projectiles = {
           }
         }
       } else {
+        /* une balle de piège (chantier 13 B) abat aussi ce qui passe devant : ennemi ou boss, à la fraction de BALANCE.trap */
+        if (p.trap && (BALANCE.trap.enemyMul || BALANCE.trap.bossMul)) {
+          let hitE = null;
+          for (const e of G.enemies)
+            if (!e.dead && dist(p.x, p.y, e.x, e.y) < p.r + e.r) {
+              hitE = e;
+              break;
+            }
+          if (hitE) {
+            const mul = hitE.isBoss ? BALANCE.trap.bossMul : BALANCE.trap.enemyMul;
+            if (mul) Combat.hitEnemy(hitE, Math.max(1, Math.round(p.damage * mul)), { dot: true, x: p.x, y: p.y });
+            Particles.spawn(p.x, p.y, { count: 4, color: p.color, size: 2 });
+            this.list.splice(i, 1);
+            continue;
+          }
+        }
         if (!pl.dead && dist(p.x, p.y, pl.x, pl.y) < p.r + pl.r) {
           /* orbes de protection */
           Combat.hitPlayer(p.damage, { type: 'projectile', x: p.x, y: p.y });

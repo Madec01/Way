@@ -853,6 +853,9 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 B : les pièges dormants posés */
+      { trap: 'trap_moucharabieh', x: 8, y: 0, w: 8, h: 4, phase: 0 },
+      { trap: 'trap_moucharabieh', x: 8, y: 9, w: 8, h: 4, phase: 1.5 },
       { trap: 'trap_sabres', x: 11, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
       { trap: 'trap_pieux', x: 1, y: 1, w: 3, h: 3, phase: 0 },
       { trap: 'trap_pieux', x: 20, y: 9, w: 3, h: 3, phase: 1 },

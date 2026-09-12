@@ -906,6 +906,9 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 B : les pièges dormants posés */
+      { trap: 'trap_lampe_uv', x: 23, y: 2, phase: 0, params: { angle: 3.1416 } },
+      { trap: 'trap_lampe_uv', x: 0, y: 10, phase: 1.5 },
       { trap: 'trap_cracheuse', x: 0, y: 3, phase: 0 },
       { trap: 'trap_cracheuse', x: 23, y: 9, phase: 1 },
     ],
@@ -1068,6 +1071,8 @@ CONTENT.rooms.push(
     ],
     waves: [{ at: 'start', spawns: [{ enemy: 'boss_serriste', count: 1, x: 18, y: 6 }] }],
     traps: [
+      /* chantier 13 B : les pièges dormants posés */
+      { trap: 'trap_tondeuse', x: 8, y: 10, w: 8, phase: 0 },
       { trap: 'trap_cracheuse', x: 11, y: 0, phase: 0 },
       { trap: 'trap_cracheuse', x: 12, y: 12, phase: 1.2 },
       { trap: 'trap_spores', x: 3, y: 6, phase: 4 },
@@ -1223,6 +1228,8 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 B : les pièges dormants posés */
+      { trap: 'trap_treillis', x: 3, y: 2, w: 18, h: 9, phase: 0 },
       { trap: 'trap_cracheuse', x: 11, y: 0, phase: 0 },
       { trap: 'trap_cracheuse', x: 12, y: 12, phase: 1.2 },
     ],

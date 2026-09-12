@@ -11,6 +11,8 @@
        le statut, le feu qui reste.
    Les dix `kind` historiques sont traduits en triplets par `TRAP_LEGACY` : les définitions et les poses du contenu
    n'ont pas changé d'un caractère, et une définition peut aussi nommer `trigger`, `body`, `effect` elle-même.
+   Chantier 13 B : un piège touche les deux camps — le joueur, puis les ennemis, les boss et les compagnons à la
+   fraction que dit `BALANCE.trap` (voir `Trap.others` et `Trap.hitOther`) ; ses balles aussi (`p.trap`, 30_entities.js).
    La classe `Trap` reste l'horloge (cycle, partition, coups) et l'assembleur : update / render / dangerAt.
    ========================================================================= */
 
@@ -75,6 +77,10 @@ const TRAP_EFFECTS = {
   gas: {
     weight: 0.8,
     apply(t, pl, dt) {
+      if (pl !== G.player) {
+        t.hitOther(pl, Math.max(1, Math.round(t.damage * 0.5))); // la recharge par cible fait le tic d'une demi-seconde
+        return;
+      }
       if (t.p.slow) {
         pl.gasSlowUntil = Time.now + 0.1;
         pl.gasSlowMul = typeof t.p.slow === 'number' ? 1 - t.p.slow : 0.7;
@@ -745,6 +751,8 @@ class Trap {
     this.active = def.active != null ? def.active : 1;
     this.speedMul = d.speedMul;
     this.hitCd = 0;
+    this.clock = 0; // temps vécu par le piège (recharges par cible), indépendant de l'horloge de salle
+    this.cds = new Map(); // dernière frappe par ennemi ou compagnon
     this.warned = -1;
     this.fireCount = 0;
     this.lastShot = null;
@@ -845,12 +853,42 @@ class Trap {
       AudioEngine[snd]({ x: trapPan(this), intensity });
     }
   }
-  hit(pl) {
-    if (this.hitCd > 0) return;
-    if (Combat.hitPlayer(this.damage, { type: 'trap', x: this.cx, y: this.cy, trapName: this.name })) this.hitCd = 0.5;
+  hit(target, dmg = this.damage) {
+    if (target === G.player) {
+      if (this.hitCd > 0) return false;
+      if (Combat.hitPlayer(dmg, { type: 'trap', x: this.cx, y: this.cy, trapName: this.name })) this.hitCd = 0.5;
+      return true;
+    }
+    return this.hitOther(target, dmg);
+  }
+  /* les deux camps (chantier 13 B) : un ennemi, un boss ou un compagnon dans le piège encaisse, à la fraction que dit
+     `BALANCE.trap`, avec une recharge d'une demi-seconde par cible ; un compagnon passe par `Pets.hurt` (il n'en meurt pas) */
+  static mulFor(target) {
+    const b = BALANCE.trap;
+    return target instanceof Pet ? b.petMul : target.isBoss ? b.bossMul : b.enemyMul;
+  }
+  hitOther(target, dmg) {
+    const mul = Trap.mulFor(target);
+    if (!mul) return false;
+    const last = this.cds.get(target);
+    if (last != null && this.clock - last < 0.5) return false;
+    this.cds.set(target, this.clock);
+    const d = Math.max(1, Math.round(dmg * mul));
+    if (target instanceof Pet) target.hurt(d);
+    else Combat.hitEnemy(target, d, { dot: true, x: this.cx, y: this.cy });
+    return true;
+  }
+  /* les cibles autres que le joueur : les ennemis vivants, les compagnons présents (jamais le compagnon parti ni sonné) */
+  others() {
+    const out = [];
+    const b = BALANCE.trap;
+    if (b.enemyMul || b.bossMul) for (const e of G.enemies) if (!e.dead) out.push(e);
+    if (b.petMul) for (const pe of G.pets || []) if (pe.maxHp && !pe.down && !pe.hidden()) out.push(pe);
+    return out;
   }
   update(dt, rt) {
     this.hitCd -= dt;
+    this.clock += dt;
     if (this.beats) this.syncBeat();
     if (this.disabled) return;
     const pl = G.player;
@@ -865,7 +903,10 @@ class Trap {
         this.fireCount = c.shotIdx + 1;
         this.effect.fire(this, pl, c.shotIdx);
       }
-    } else if (c.stage === 'on' && !pl.dead && this.body.hits(this, pl, rt)) this.effect.apply(this, pl, dt);
+    } else if (c.stage === 'on') {
+      if (!pl.dead && this.body.hits(this, pl, rt)) this.effect.apply(this, pl, dt);
+      for (const o of this.others()) if (this.body.hits(this, o, rt)) this.effect.apply(this, o, dt);
+    }
     if (this.effect.tick) this.effect.tick(this, dt, pl);
   }
   render(ctx, rt) {

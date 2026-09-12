@@ -176,6 +176,91 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
       if (ca.stage !== cb.stage || ca.idx !== cb.idx) same = false;
     }
     out.same = same;
+    /* 6. les deux camps (chantier 13 B) : un ennemi dans le piège prend ×enemyMul, un boss ×bossMul, un compagnon
+       ×petMul par Pets.hurt ; une recharge par cible ; une balle de piège abat l'ennemi qu'elle croise */
+    const B = BALANCE.trap;
+    const beam = mk('laser_beam', { x: 0, y: 6, w: 1, h: 1 });
+    const rtOn = beam.period - beam.active + 0.001;
+    const spawn = (x, y) => {
+      const e = Room.spawnEnemy(Content.enemy('enemy_rodeur'), x, y, {});
+      if (e) e.spawnT = 0;
+      return e;
+    };
+    arm();
+    pl.x = W / 2;
+    pl.y = ROOM_Y + 2 * TILE; // loin du rayon
+    G.enemies.length = 0;
+    const e1 = spawn(beam.cx + 200, beam.cy);
+    const hpE = e1.hp;
+    beam.update(0.016, rtOn);
+    const hitE = hpE - e1.hp;
+    beam.update(0.016, rtOn + 0.02);
+    const againE = hpE - e1.hp - hitE;
+    beam.clock += 0.6;
+    beam.update(0.016, rtOn + 0.1);
+    const laterE = hpE - e1.hp - hitE;
+    /* boss : la fraction du boss */
+    const e2 = spawn(beam.cx + 300, beam.cy);
+    e2.isBoss = true;
+    e2.weak = { rule: 'none' }; // un vrai boss a son point faible ; ici on ne teste que la fraction
+    const hpB = e2.hp;
+    beam.update(0.016, rtOn + 0.2);
+    const hitB = hpB - e2.hp;
+    /* compagnon */
+    if (!G.pets || !G.pets.length) Pets.give('pet_uno', true);
+    const pe = G.pets[0];
+    pe.x = beam.cx + 400;
+    pe.y = beam.cy;
+    pe.down && (pe.downT = 0);
+    pe.hp = pe.maxHp;
+    beam.clock += 0.6; // le compagnon attendait près de l'entrée, sur la ligne du rayon : sa recharge est passée
+    const hpP = pe.hp;
+    beam.update(0.016, rtOn + 0.3);
+    const hitP = hpP - pe.hp;
+    /* le nuage aussi, par tic */
+    const gas = mk('gas_zone', { x: 10, y: 6, w: 1, h: 1 });
+    const e3 = spawn(gas.cx + 10, gas.cy);
+    const hpG = e3.hp;
+    const gOn = gas.period - gas.active + 0.001;
+    for (let i = 0; i < 40; i++) {
+      gas.clock += 0.016;
+      gas.update(0.016, gOn + i * 0.016);
+    }
+    const hitG = hpG - e3.hp;
+    /* une balle de piège : la tourelle vise le joueur, l'ennemi est sur la trajectoire */
+    Projectiles.list.length = 0;
+    const tur = mk('turret_fixed', { x: 11, y: 0, w: 1, h: 1 });
+    pl.x = tur.cx;
+    pl.y = tur.cy + 300;
+    const e4 = spawn(tur.cx, tur.cy + 60);
+    const hpS = e4.hp;
+    tur.update(0.016, 0);
+    tur.update(0.016, tur.telegraph + 0.01);
+    const nb = Projectiles.list.length;
+    for (let i = 0; i < 30; i++) Projectiles.update(0.016);
+    const hitS = hpS - e4.hp;
+    const left = Projectiles.list.filter(q => q.trap).length;
+    out.camps = {
+      enemyMul: B.enemyMul,
+      bossMul: B.bossMul,
+      petMul: B.petMul,
+      dmg: beam.damage,
+      hitE,
+      attenduE: Math.max(1, Math.round(beam.damage * B.enemyMul)),
+      againE,
+      laterE,
+      hitB,
+      attenduB: Math.max(1, Math.round(beam.damage * B.bossMul)),
+      hitP,
+      attenduP: Math.max(1, Math.round(beam.damage * B.petMul)),
+      hitG,
+      nb,
+      hitS,
+      left,
+    };
+    for (const e of G.enemies) e.hp = 0;
+    G.enemies.length = 0;
+    Projectiles.list.length = 0;
     arm();
     G.debug.invuln = true;
     return out;
@@ -219,4 +304,14 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
     JSON.stringify(r.beats)
   );
   ok('deux pièges identiques donnent la même suite de phases', r.same);
+  const c = r.camps;
+  ok(
+    `les deux camps : un ennemi dans le rayon prend ×${c.enemyMul} (${c.hitE} pour ${c.dmg}), une recharge par cible, puis un second coup`,
+    c.hitE === c.attenduE && c.againE === 0 && c.laterE === c.attenduE,
+    JSON.stringify(c)
+  );
+  ok(`un boss prend ×${c.bossMul} (${c.hitB} pour ${c.dmg})`, c.hitB === c.attenduB, JSON.stringify(c));
+  ok(`un compagnon prend ×${c.petMul} par Pets.hurt (${c.hitP} pour ${c.dmg})`, c.hitP === c.attenduP, JSON.stringify(c));
+  ok('le nuage blesse aussi un ennemi, par tic', c.hitG > 0, JSON.stringify(c));
+  ok('une balle de tourelle abat l’ennemi qu’elle croise et disparaît', c.nb > 0 && c.hitS > 0 && c.left < c.nb, JSON.stringify(c));
 });

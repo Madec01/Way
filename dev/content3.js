@@ -944,6 +944,9 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 B : les pièges dormants posés */
+      { trap: 'trap_wagonnet', x: 14, y: 0, w: 8, phase: 0 },
+      { trap: 'trap_wagonnet', x: 2, y: 12, w: 8, phase: 1.6 },
       { trap: 'trap_embuscade', x: 0, y: 3, phase: 0 },
       { trap: 'trap_embuscade', x: 23, y: 9, phase: 1 },
     ],

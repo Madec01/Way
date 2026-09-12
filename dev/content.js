@@ -2478,6 +2478,9 @@ const CONTENT = {
       ],
       waves: [{ at: 'start', spawns: [{ enemy: 'boss_etalon_07', count: 1, x: 18, y: 6 }] }],
       traps: [
+        /* chantier 13 B : les pièges dormants posés */
+        { trap: 'trap_nappe', x: 8, y: 6, phase: 2 },
+        { trap: 'trap_nappe', x: 15, y: 6, phase: 5.5 },
         { trap: 'trap_tourelle', x: 11, y: 0, phase: 0 },
         { trap: 'trap_tourelle', x: 12, y: 12, phase: 1.2 },
       ],
@@ -2558,7 +2561,10 @@ const CONTENT = {
           ],
         },
       ],
-      traps: [],
+      traps: [
+        /* chantier 13 B : les pièges dormants posés */
+        { trap: 'trap_balayage', x: 9, y: 3, w: 7, h: 7, phase: 0 },
+      ],
       fragments: [],
       modular: [],
     },
@@ -2621,6 +2627,9 @@ const CONTENT = {
         },
       ],
       traps: [
+        /* chantier 13 B : les pièges dormants posés */
+        { trap: 'trap_rayon', x: 0, y: 9, phase: 0 },
+        { trap: 'trap_rayon', x: 23, y: 3, phase: 1.5, params: { angle: 3.1416 } },
         { trap: 'trap_tourelle', x: 6, y: 0, phase: 0 },
         { trap: 'trap_tourelle', x: 17, y: 12, phase: 1.5 },
         { trap: 'trap_rail', x: 4, y: 2, w: 8, phase: 0 },
