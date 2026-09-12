@@ -856,6 +856,7 @@ const UI = (() => {
         .filter(m => Meta.tierOf(m.id) > 0)
         .map(m => `${esc(m.name)} ${Meta.tierOf(m.id)}`)
         .join(', ') || 'aucune amélioration';
+    let prepScroll = 0; // la position de défilement survit à la reconstruction (choisir une arme ne ramène pas en haut)
     const render = () => {
       const wSel = weapons.find(w => w.id === selW);
       const sSel = r.skillChoices.find(sk => sk.id === selS);
@@ -907,6 +908,9 @@ const UI = (() => {
           <div class="row"><button class="btn primary big" id="prep-go" ${selS ? '' : 'disabled'}>${selS ? `Entrer en salle 1 avec ${esc(wSel.name)} et ${esc(sSel.name)}` : 'Choisis une compétence pour entrer'}</button><button class="btn ghost" id="prep-abort">${STR.toHub}</button></div>
           ${testrow}
         </div>`;
+      const panneau = s.querySelector('.prep2');
+      panneau.scrollTop = prepScroll;
+      panneau.onscroll = () => (prepScroll = panneau.scrollTop);
       const pr = s.querySelector('#prep-room'),
         plv = s.querySelector('#prep-level');
       if (pr)

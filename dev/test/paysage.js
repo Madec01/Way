@@ -1,5 +1,5 @@
 /* Chantier I-9 — les menus en paysage court. Sur un téléphone tenu à l'horizontale (ici 900×420 tactile), ce test
-   mesure : l'échelle des menus a un plancher (les cartes ne sont plus réduites de moitié), le camp se défile en moins
+   mesure : choisir une arme garde le défilement de la prépa ; l'échelle des menus a un plancher (les cartes ne sont plus réduites de moitié), le camp se défile en moins
    de deux écrans et demi, « Qui part ? » et « Avec qui ? » sont côte à côte, aucune carte n'est deux fois plus haute
    que large, l'en-tête et le bouton PARTIR tiennent en une ligne chacun, la phrase du palier vit sous la rangée, les
    puces bonus ⇄ malus sont fines mais les contrôles restent des cibles ; la prépa : paires côte à côte et basses,
@@ -85,6 +85,24 @@ test(
       'la prépa se défile en moins de 2,5 écrans (3,2 avant), l’en-tête reste collé en haut',
       prep.ecrans < 2.5 && prep.sticky,
       prep.ecrans.toFixed(2) + ' écrans'
+    );
+
+    /* choisir une arme ne ramène pas en haut de la prépa (retour de l'auteur) */
+    await p.evaluate(() => {
+      document.querySelector('.prep2').scrollTop = 300;
+    });
+    await p.waitForTimeout(150);
+    const armes = await p.$$('.wcard');
+    await armes[1].click();
+    await p.waitForTimeout(300);
+    const garde = await p.evaluate(() => ({
+      scroll: document.querySelector('.prep2').scrollTop,
+      choisie: document.querySelector('.wcard.selected').dataset.w,
+    }));
+    ok(
+      'choisir une arme garde la position de défilement de la prépa',
+      garde.scroll > 250 && garde.choisie === (await armes[1].getAttribute('data-w')),
+      JSON.stringify(garde)
     );
 
     /* au bureau : rien ne bouge */
