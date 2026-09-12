@@ -16,8 +16,8 @@ const SPRITE_DEFS = {
   enemy_tank: { idle: [368, 172, 16, 20], run: [432, 172, 16, 20], n: 4 },
   enemy_kamikaze: { idle: [368, 16, 16, 16], run: [432, 16, 16, 16], n: 4 },
   enemy_summoner: { idle: [368, 268, 16, 20], run: [368, 268, 16, 20], n: 4 },
-  enemy_swarm: { idle: [432, 112, 16, 16], run: [432, 112, 16, 16], n: 4 },
-  enemy_dasher: { idle: [368, 32, 16, 16], run: [432, 32, 16, 16], n: 4 },
+  enemy_swarm: { prop: 'rat', size: 22 }, // chantier 12 : la nuée de l'hôpital, des rats
+  enemy_dasher: { prop: 'all-seeing-eye', size: 28 }, // l'Éclipse : un œil qui traverse
   boss: { idle: [16, 364, 32, 36], run: [144, 364, 32, 36], n: 4, foot: true },
   chest: { idle: [304, 304, 16, 16], run: [304, 304, 16, 16], n: 3 },
   coin: { idle: [288, 272, 8, 8], run: [288, 272, 8, 8], n: 4 },
@@ -26,9 +26,9 @@ const SPRITE_DEFS = {
   enemy_rusher2: { idle: [368, 80, 16, 16], run: [432, 80, 16, 16], n: 4 },
   enemy_shooter2: { idle: [368, 300, 16, 20], run: [432, 300, 16, 20], n: 4 },
   enemy_tank2: { idle: [368, 204, 16, 20], run: [432, 204, 16, 20], n: 4 },
-  enemy_kamikaze2: { idle: [368, 144, 16, 16], run: [368, 144, 16, 16], n: 4 },
+  enemy_kamikaze2: { prop: 'grass-mushroom', size: 30, roll: true }, // la Spore : un champignon qui roule
   enemy_summoner2: { idle: [368, 328, 16, 24], run: [432, 328, 16, 24], n: 4 },
-  enemy_swarm2: { idle: [368, 112, 16, 16], run: [368, 112, 16, 16], n: 4 },
+  enemy_swarm2: { prop: 'butterfly', size: 22 }, // les Moucherons : des papillons
   enemy_dasher2: { idle: [432, 144, 16, 16], run: [432, 144, 16, 16], n: 4 },
   boss2: { idle: [16, 320, 32, 32], run: [144, 320, 32, 32], n: 4, foot: true },
   npc_ally: { idle: [368, 80, 16, 16], run: [432, 80, 16, 16], n: 4 },
@@ -251,6 +251,37 @@ const Sprites = (() => {
   const sheetReady = key => !!palSheets[key];
   /* ---- accessoires western : icônes SVG (game-icons.net, CC BY 3.0) rastérisées en 20 px puis agrandies sans lissage = pixel art ---- */
   const PROP_DEFS = {
+    /* chantier 12, séance C — accessoires découpés des planches CC0 (Kenney Roguelike Indoors, Ninja Adventure), en PNG dans
+       assets/sprites/pixel/ : pas de SVG derrière (png: true), les variantes _v2/_v3 servent de variété */
+    'hospital-bed': { d: 'pixel', png: true },
+    counter: { d: 'pixel', png: true },
+    machine: { d: 'pixel', png: true },
+    stool: { d: 'pixel', png: true },
+    pipes: { d: 'pixel', png: true },
+    boiler: { d: 'pixel', png: true },
+    'bush-round': { d: 'pixel', png: true },
+    'tree-green': { d: 'pixel', png: true },
+    'tree-pink': { d: 'pixel', png: true },
+    'rock-grey': { d: 'pixel', png: true },
+    'rock-small': { d: 'pixel', png: true },
+    stump: { d: 'pixel', png: true },
+    flowers: { d: 'pixel', png: true },
+    'shroom-cluster': { d: 'pixel', png: true },
+    'mossy-pot': { d: 'pixel', png: true },
+    'palm-big': { d: 'pixel', png: true },
+    sphinx: { d: 'pixel', png: true },
+    lion: { d: 'pixel', png: true },
+    well: { d: 'pixel', png: true },
+    'stall-red': { d: 'pixel', png: true },
+    'stall-yellow': { d: 'pixel', png: true },
+    rug: { d: 'pixel', png: true },
+    'rug-green': { d: 'pixel', png: true },
+    bones: { d: 'pixel', png: true },
+    'dry-bush': { d: 'pixel', png: true },
+    'pot-round': { d: 'pixel', png: true },
+    saguaro: { d: 'pixel', png: true },
+    'dead-tree': { d: 'pixel', png: true },
+    'skull-pile': { d: 'pixel', png: true },
     /* biome 3 — western (assets/sprites/western/) */
     cactus: { d: 'western', color: '#4f9a4f', px: 22 },
     rock: { d: 'western', color: '#8a7a66', px: 20 },
@@ -630,6 +661,7 @@ const Sprites = (() => {
   }
   function loadIcons(skip) {
     for (const name of Object.keys(PROP_DEFS)) {
+      if (PROP_DEFS[name].png) continue; // un accessoire qui n'existe qu'en PNG : rien à rastériser
       if (skip.has(name)) continue;
       const pd = PROP_DEFS[name];
       fetch(ASSET_BASE + 'sprites/' + (pd.d || 'western') + '/' + name + '.svg')
@@ -677,6 +709,18 @@ const Sprites = (() => {
     return true;
   }
   const DECO_KIND = {
+    /* chantier 12, séance C */
+    stool: 'stool',
+    flowers: 'flowers',
+    shrooms: 'shroom-cluster',
+    smallrock: 'rock-small',
+    mossypot: 'mossy-pot',
+    rug: 'rug',
+    ruggreen: 'rug-green',
+    bones: 'bones',
+    drybush: 'dry-bush',
+    potround: 'pot-round',
+    skullpile: 'skull-pile',
     skull: 'desert-skull',
     tumbleweed: 'tumbleweed',
     rails: 'rail-road',
@@ -988,6 +1032,25 @@ const Sprites = (() => {
   }
   /* obstacle décoré : `kind` de la salle → accessoire. Un même kind peut avoir une variante par biome (cf. BLOCK_BY_BIOME). */
   const BLOCK_KIND = {
+    /* chantier 12, séance C : les accessoires des planches */
+    bed: 'hospital-bed',
+    counter: 'counter',
+    machine: 'machine',
+    boiler: 'boiler',
+    pipes: 'pipes',
+    tree: 'tree-green',
+    treep: 'tree-pink',
+    bigrock: 'rock-grey',
+    stump: 'stump',
+    roundbush: 'bush-round',
+    bigpalm: 'palm-big',
+    sphinx: 'sphinx',
+    lion: 'lion',
+    well: 'well',
+    stall: 'stall-red',
+    stall2: 'stall-yellow',
+    saguaro: 'saguaro',
+    deadtree: 'dead-tree',
     cactus: 'cactus',
     rock: 'rock',
     barrel: 'barrel',
@@ -1021,7 +1084,23 @@ const Sprites = (() => {
     drapes: 'theater-curtains',
   };
   /* certains accessoires débordent volontairement de leur case : un saguaro d'une tuile de large est plus haut qu'elle */
-  const BLOCK_GROW = { cactus: 1.7, palm: 1.4, column: 1.2, windmill: 1.3, drapes: 1.2, archway: 1.2 };
+  const BLOCK_GROW = {
+    cactus: 1.7,
+    palm: 1.4,
+    column: 1.2,
+    windmill: 1.3,
+    drapes: 1.2,
+    archway: 1.2,
+    tree: 1.35,
+    treep: 1.35,
+    bigpalm: 1.5,
+    sphinx: 1.3,
+    lion: 1.3,
+    deadtree: 1.5,
+    saguaro: 1.4,
+    stall: 1.15,
+    stall2: 1.15,
+  };
   /* mélange de deux entiers : sans ça, une rangée d'obstacles alignés tirait tous la même variante (x pair, y constant → même parité) */
   function hash2(x, y) {
     let h = ((x | 0) * 374761393 + (y | 0) * 668265263) | 0;

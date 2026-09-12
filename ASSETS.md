@@ -24,7 +24,9 @@ Récupérées depuis des miroirs GitHub publics (voir la politique réseau ci-de
 | `ninja_adventure/TilesetInteriorFloor.png` (13 Ko, 352×272) | `…/Tilesets/Interior/TilesetInteriorFloor.png` | 16 px | Sérail : pavés beiges arrondis (0-9, 12-15) et une mosaïque (12, 1) |
 | `ninja_adventure/TilesetDesert.png` (19 Ko, 320×192) | `…/Tilesets/TilesetDesert.png` | 16 px | Sérail : mur de grès (15, 4-5) |
 
-Les coordonnées sont en (colonne, ligne) de tuile ; le code (`TILESETS`, dev/15_sprites.js) les multiplie par le pas. La licence CC0 de Ninja Adventure est confirmée par le README du pack (« released under the Creative Commons Zero (CC0) license »).
+Les coordonnées sont en (colonne, ligne) de tuile ; le code (`TILESETS`, dev/15_sprites.js) les multiplie par le pas.
+
+**Séance C — accessoires découpés** (non livrés en planche : seuls les PNG découpés sont dans `assets/sprites/pixel/`) : Kenney Roguelike Indoors (`media.githubusercontent.com/media/series-ai/jam-ready-assets/main/kenney-roguelike-interior-pack/2D/top-down-rpg/Tilesheets/roguelikeIndoor_transparent.png`, pas 17) — lit (13,4 1×2), comptoirs (1,12) (3,12), machines (10,14) (10,15), tabouret (0,8), tapis (3,9 1×2), tapis vert (9,9 2×2) ; Ninja Adventure `TilesetNature.png` — buissons (0-2,10), arbres (0,0 2×2) (13,0 2×2), rocher (16,8 2×2), petit rocher (18,9), souche (0,8 2×2), fleurs (0,11) (1,11) (3,11), champignons (0,14) (2,14), arbre mort (0,5 2×3) ; `TilesetVillageAbandoned.png` — pot moussu (4,4) ; `TilesetDesert.png` — palmiers (10,4 2×3) (12,4 2×3), sphinx (0,6 2×3), lion (0,9 2×3), puits (0,3 2×2), étals (2,10 2×2) (4,10 2×2), ossements (16,11) (18,11) (19,11), buissons secs (8,10) (8,11) ; `TilesetElement.png` — pot rond (2,1) ; `Pipes.png` — tuyauterie (6,0 3×1) ; `Interior/Elements.png` — chaudière (5,1 2×2) ; Kenney Roguelike Caves & Dungeons — saguaro (4,3 1×2), tas d'os (2,2). Découpe : tuiles recopiées sans gouttière puis rognées au contenu (script Pillow, chantier 12). La licence CC0 de Ninja Adventure est confirmée par le README du pack (« released under the Creative Commons Zero (CC0) license »).
 
 ## 1. Sprites
 

@@ -216,22 +216,33 @@ const Modular = (() => {
     for (const m of room.modular) {
       if (m.disabled) continue;
       ctx.save();
-      if (m.kind === 'slide_wall' && m.look === 'wagon') {
-        /* le train (chantier 9) : un wagonnet par tuile sur son rail, et un liseré orange quand il va entrer */
+      if (m.kind === 'slide_wall' && m.look) {
+        /* un mur coulissant habillé : `look: 'wagon'` (le train, chantier 9 : un wagonnet par tuile sur son rail) ou
+           n'importe quel accessoire (chantier 12 : tentures, lianes, barils) — un par tuile le long du mur */
         const o = m.obs[0];
-        ctx.setLineDash([6, 6]);
-        ctx.strokeStyle = 'rgba(60,40,20,.55)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(ROOM_X, o.py + o.ph / 2 + 10);
-        ctx.lineTo(ROOM_X + ROOM_W, o.py + o.ph / 2 + 10);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        const n = Math.max(1, Math.round(o.pw / TILE));
+        const wagon = m.look === 'wagon';
+        if (wagon) {
+          ctx.setLineDash([6, 6]);
+          ctx.strokeStyle = 'rgba(60,40,20,.55)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(ROOM_X, o.py + o.ph / 2 + 10);
+          ctx.lineTo(ROOM_X + ROOM_W, o.py + o.ph / 2 + 10);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        const horiz = o.pw >= o.ph;
+        const n = Math.max(1, Math.round((horiz ? o.pw : o.ph) / TILE));
         for (let i = 0; i < n; i++)
-          Sprites.drawProp(ctx, 'mine-wagon', o.px + (i + 0.5) * (o.pw / n), o.py + o.ph / 2, TILE * 1.15, TILE * 1.15, {
-            flip: (m.dx || 0) < 0,
-          });
+          Sprites.drawProp(
+            ctx,
+            wagon ? 'mine-wagon' : m.look,
+            horiz ? o.px + (i + 0.5) * (o.pw / n) : o.px + o.pw / 2,
+            horiz ? o.py + o.ph / 2 : o.py + (i + 0.5) * (o.ph / n),
+            TILE * 1.15,
+            TILE * 1.15,
+            { flip: (m.dx || 0) < 0 }
+          );
         if (m.warn) {
           ctx.strokeStyle = '#ffb347';
           ctx.lineWidth = 2;
