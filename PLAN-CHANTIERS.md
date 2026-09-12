@@ -203,6 +203,21 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Taille** : 4 séances, dans l'ordre A, B, C, D — A donne l'essentiel de l'effet sans risque ; D demande une passe de mesures.
 **Décisions prises** : les packs (Kenney, Ninja Adventure, 0x72 — tous CC0, crédités) ; le terrain étendu à douze salles ([24] réglé). **Reste à l'auteur** : dire si le brancard à roulettes lui plaît comme « baril » de l'hôpital, et jouer les quatre paliers.
 
+## Chantier 13 — Les pièges *(plan écrit le 12 septembre 2026, à valider)*
+
+**Objectif** : que les pièges de WAY ne soient plus seulement des obstacles qu'on subit, mais des outils qu'on utilise — contre les ennemis, quand on le décide, et qu'on peut éteindre. L'auteur l'a demandé après la variété des paliers : « le même processus pour les pièges ». Le diagnostic, les règles, l'architecture et le détail piège par piège sont dans `PLAN-PIEGES.md` (trois agents : game design, sprites et bibliothèques, moteur).
+
+**Le constat en une phrase** : dix mécaniques, quarante et un habillages, une télégraphie et une partition musicale solides — mais tout est déclenché au temps, seul le joueur est blessé, rien ne se casse ni ne se désamorce, huit pièges définis ne sont jamais posés et aucun test ne vérifie qu'un piège blesse. Dans le genre, la ligne de partage est « le piège blesse-t-il aussi les ennemis ? » : quand non, c'est un obstacle ; tous ceux de WAY le sont.
+
+- **Séance A — le socle** : les tables déclencheur × effet × corps avec `TRAP_LEGACY` (les dix mécaniques traduites à l'identique, les 41 définitions et 112 poses inchangées) ; les dettes payées (`syncBeat` en cache, `slow` et `lifetime` lus, télégraphie des dalles et du gaz en `PAL.alert`, le type `TRAP` mort retiré) ; le test `pieges.js` (dégâts, recharge, projectiles, cohérence `dangerAt` ↔ coup, déterminisme) écrit sur l'ancien code puis rejoué sur le nouveau ; le chemin sûr prouvé dans `salles.js` (à tout instant un parcours sans danger relie le sas à la porte).
+- **Séance B — les deux camps** : `enemyMul` et `bossMul` nommés dans `05_balance.js`, les balles de piège touchent les ennemis, les compagnons par `Pets.hurt`, le banc avant et après, `comportements.js` remesuré ; les huit pièges dormants posés. Le joueur voit : une Nuée qui traverse un tourniquet meurt.
+- **Séance C — le joueur décide** : les déclencheurs plaque, proximité, tir et lien ; les effets poussée, statut et feu qui reste ; des pièges cassables et le boîtier de désamorçage ; l'atelier étendu ; seize pièges nouveaux (bonbonne, défibrillateur, brancard fou, rideau, néon ; dionée, gousses, vanne, pollen ; tonneaux en file, fil armé, aiguillage, cloche ; dalles du Vizir, flaque d'huile, cage) avec des sprites des packs.
+- **Séance D — ce qui bouge et ce qui reste** : le piège porté par un ennemi passe par la table, la parenté à un mur coulissant, le calque de terrain temporaire (l'huile qui brûle), le sablier de salle, le coffre gardé, `check-terrain.js` et `salles.js` adaptés, la galerie des salles à pièges.
+
+**Fini quand** : chaque palier a au moins un piège par question (quand je passe, à qui il sert, comment je l'éteins) ; `pieges.js` et le chemin sûr prouvé verts ; le bot traverse chaque palier sans se coincer sur un piège ; le banc `normal.js` ne bouge pas de plus de 10 % ; l'auteur joue et dit qu'un piège lui a servi.
+**Taille** : 4 séances, dans l'ordre A, B, C, D — A ne change rien pour le joueur mais rend tout le reste sûr ; B est le vrai basculement ; C apporte le contenu ; D demande le plus de mesures.
+**Décisions à prendre** : les valeurs des multiplicateurs ennemis et boss (1,5 et 0,25 proposés) ; garder ou non le bonus « sans dégât » quand une poussée compte comme un coup ; sprite ou vecteur par famille.
+
 ## L'ordre, et pourquoi
 
 ```

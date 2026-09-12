@@ -1704,3 +1704,15 @@ Tests : `biomes.js`, `comportements.js`, `sprites32.js`, `vues.js`, `palette.js`
 - **Ce qui n'est pas fait, et pourquoi** : le plan ASCII complet par salle (`dev/37_layouts.js`, obstacles et décor en lettres) prévu au plan. Les plans de terrain vivent déjà dans chaque salle, à côté de ses obstacles et de son décor, et le vérificateur lit les deux : un second format aurait doublé la source de vérité sans rien changer pour le joueur. Les pièces composables selon la graine restent une option pour après.
 
 Tests : `salles.js` (6/6), `spawncheck.js`, `biomes.js`, `cadence.js`, `sols.js` passent ; batterie complète 51/52, le raté étant `cadence.js` sous la charge de la batterie (le cache du flash blanc a grossi de six images au lieu de sept), qui passe seul — comme `animaux.js` et `comportements.js` avant lui, une mesure au chronomètre que la machine chargée fausse. Galerie : 36 captures, quatre planches.
+
+## 71. Chantier 13 — les pièges, la recherche et le plan
+
+**Trois agents ont regardé les pièges de WAY sous trois angles ; le résultat est `PLAN-PIEGES.md` et le chantier 13 du plan, en quatre séances, à valider.**
+
+- **La commande** : « on va refaire le même processus mais pour les pièges du jeu » — la méthode du chantier 12 : un agent game design (les mécaniques des pièges dans le genre, leurs types, leur intégration dans les niveaux), un agent packs, presets et bibliothèques (les sprites libres, les tables de pièges des jeux open source, les bibliothèques sans build), un agent moteur (l'audit de `34_traps.js` et de tout ce qui y touche).
+- **Le diagnostic** : dix mécaniques, quarante et un habillages, cent douze poses, une télégraphie et une partition solides — mais tout est déclenché au temps, seul le joueur est blessé (aucune ligne des ennemis ne lit `room.traps`, le drapeau `trap` des balles n'est lu nulle part, la règle « ennemis à 50 % » de §13 n'a jamais été codée), rien ne se casse ni ne se désamorce, un seul effet (les dégâts), huit pièges définis jamais posés, aucun test qui vérifie qu'un piège blesse. Le genre tranche par « le piège blesse-t-il aussi les ennemis ? » : quand non, c'est un obstacle ; tous ceux de WAY le sont.
+- **Le plan** : A le socle (tables déclencheur × effet × corps à comportement identique, dettes, `pieges.js`, le chemin sûr prouvé) ; B les deux camps (`enemyMul`, `bossMul`, balles, compagnons, banc, huit pièges dormants posés) ; C le joueur décide (plaque, proximité, tir, lien ; poussée, statut, feu ; cassable et boîtier ; seize pièges nouveaux avec des sprites CC0 vérifiés — dalles 0x72, gargouille et wagonnets de Kenney Tiny Dungeon, gyrophares et roues crantées de l'Industrial Expansion, pieux de roche de Ninja Adventure) ; D ce qui bouge et ce qui reste (porté, parenté, terrain temporaire, sablier, coffre gardé).
+- **Les rapports** sont gardés dans `dev/agents/` (`pieges_design.md`, `pieges_assets.md`, `pieges_moteur.md`) : le tableau des 41 pièges avec leur sprite candidat y est.
+
+Rien n'est codé : le prochain « go » lance la séance A.
+
