@@ -1173,18 +1173,7 @@ const Combat = {
     if (!e.isBoss && RNG.chance(BALANCE.heartDropChance)) Pickups.spawn(e.x, e.y, 'heart', 15);
     if (!info.silent || e.elite) Pickups.maybeDrop(e);
     /* le coyote (Concession) laisse un piège à loup là où il tombe ; le croquemort retient qui vient de tomber près de lui */
-    if (e.variant === 'piege')
-      G.room.hazards.push({
-        x: e.x,
-        y: e.y,
-        r: 24,
-        until: Time.now + 8,
-        trap: true,
-        damage: e.damage,
-        owner: 'enemy',
-        color: '#cfd6e6',
-        cd: new Map(),
-      });
+    if (e.behavior && e.behavior.drop) Room.dropTrap(e.behavior.drop, e.x, e.y); // chantier 13 D : un piège porté, par les tables
     if (!e.isBoss && !e.raised)
       for (const s of G.enemies)
         if (s !== e && !s.dead && s.variant === 'releve' && dist(s.x, s.y, e.x, e.y) < (s.behavior.raiseRange || 320)) s.raise = e.def;

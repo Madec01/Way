@@ -61,6 +61,7 @@ CONTENT.biomes.push({
   ],
   enemyPool: ['enemy_ronce', 'enemy_pollinisateur', 'enemy_racine', 'enemy_spore', 'enemy_bourgeon', 'enemy_moucherons', 'enemy_liane'],
   trapPool: [
+    'trap_sablier',
     'trap_dionee',
     'trap_gousses',
     'trap_vanne',
@@ -1001,6 +1002,8 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 D : ce qui bouge et ce qui reste */
+      { trap: 'trap_sablier', x: 11, y: 11 },
       { trap: 'trap_epines', x: 2, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
       { trap: 'trap_epines', x: 18, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
       { trap: 'trap_epines', x: 18, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },

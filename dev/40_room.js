@@ -414,14 +414,7 @@ const Room = {
         continue;
       }
       if (h.owner === 'enemy') {
-        /* piège à loup (le coyote, chantier 9) : mord une fois celui qui marche dessus, puis disparaît */
-        if (h.trap) {
-          if (!pl.dead && dist(h.x, h.y, pl.x, pl.y) < h.r + pl.r * 0.5) {
-            Combat.hitPlayer(Math.round(h.damage * G.difficulty.damageMul), { type: 'trap', x: h.x, y: h.y, trapName: 'Piège à loup' });
-            h.until = 0;
-          }
-          continue;
-        }
+        /* (le piège à loup du coyote est un vrai piège depuis le chantier 13 D : Room.dropTrap) */
         /* zone posée par un boss : mine qui saute à l'heure dite, ou ronces qui blessent et ralentissent tant qu'on reste dedans */
         if (h.boomAt && Time.now >= h.boomAt) {
           h.boomAt = 0;
@@ -646,7 +639,20 @@ const Room = {
      C'était décidé par salle : un piège rythmique posé hors de la salle du tempo tournait à la bonne vitesse mais
      sur une phase sans rapport avec la musique — donc seule la salle 7 jouait en mesure. */
   trapTime(r, t) {
-    return (t ? t.beats : r.tempo && r.tempo.syncTraps) ? Beat.t : r.time;
+    if (t ? t.beats : r.tempo && r.tempo.syncTraps) return Beat.t;
+    return r.time + (r.trapShift || 0); // le sablier de salle (13 D) décale les pièges à l'horloge de salle, jamais ceux en musique
+  },
+  /* un piège posé en cours de salle (13 D) : le piège à loup que le coyote laisse en tombant. Il est à usage unique et
+     hors des familles du tempo ; `spawncheck.js` ne le voit pas, c'est voulu. */
+  dropTrap(id, x, y) {
+    const def = Content.trap(id);
+    if (!def || !G.room) return null;
+    const tx = clamp(Math.floor((x - ROOM_X) / TILE), 0, ROOM_COLS - 1),
+      ty = clamp(Math.floor((y - ROOM_Y) / TILE), 0, ROOM_ROWS - 1);
+    const t = new Trap(def, { x: tx, y: ty, params: { once: true } });
+    t.dropped = true;
+    G.room.traps.push(t);
+    return t;
   },
   clear() {
     const r = G.room;

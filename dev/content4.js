@@ -53,6 +53,7 @@ CONTENT.biomes.push({
   ],
   enemyPool: ['enemy_derviche', 'enemy_archer', 'enemy_colosse', 'enemy_jarre', 'enemy_charmeur', 'enemy_cobras', 'enemy_djinn'],
   trapPool: [
+    'trap_sablier',
     'trap_vizir',
     'trap_huile',
     'trap_cage',
@@ -862,6 +863,8 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 D : ce qui bouge et ce qui reste */
+      { trap: 'trap_sablier', x: 11, y: 12 },
       /* chantier 13 B : les pièges dormants posés */
       { trap: 'trap_moucharabieh', x: 8, y: 0, w: 8, h: 4, phase: 0 },
       { trap: 'trap_moucharabieh', x: 8, y: 9, w: 8, h: 4, phase: 1.5 },
@@ -1420,6 +1423,6 @@ CONTENT.traps.push(
     damage: 0,
     telegraph: 0.6,
     active: 0.4,
-    params: { near: 1, who: 'any', radius: 40, stun: 3, rootPlayer: 0.8, rearm: 4 },
+    params: { near: 1, who: 'any', radius: 40, stun: 3, rootPlayer: 0.8, rearm: 4, cage: true },
   }
 );

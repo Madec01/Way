@@ -121,17 +121,18 @@ test(async ({ page: p, ok, entrer, salle, sansPause, erreurs }) => {
   /* le coyote : un piège à loup en tombant, qui mord */
   await spawn('enemy_coyote', 80, 0, {});
   const piege = await p.evaluate(async () => {
+    /* chantier 13 D : le piège à loup est un vrai piège (Room.dropTrap), à usage unique */
     Combat.killEnemy(E);
-    const h = G.room.hazards.find(x => x.trap);
+    const h = G.room.traps.find(x => x.id === 'trap_loup' && x.dropped);
     if (!h) return { piege: false };
     G.debug.invuln = false;
     const pv0 = G.player.hp;
     G.player.invulnUntil = 0;
-    G.player.x = h.x;
-    G.player.y = h.y;
-    await new Promise(r => setTimeout(r, 120));
+    G.player.x = h.cx;
+    G.player.y = h.cy;
+    await new Promise(r => setTimeout(r, 900)); // l'annonce (0,15 s), la morsure, la fin de la fenêtre
     G.debug.invuln = true;
-    return { piege: true, mord: G.player.hp < pv0, disparu: !G.room.hazards.some(x => x.trap) };
+    return { piege: true, mord: G.player.hp < pv0, disparu: h.spent };
   });
   ok(
     'le coyote laisse un piège à loup, qui mord une fois puis disparaît',

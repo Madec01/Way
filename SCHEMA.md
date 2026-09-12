@@ -134,7 +134,8 @@ CONTENT = {
             damage, telegraph /*s*/, period /*s*/, active /*s*/, params: { /* selon kind */ },
             trigger?, body?, effect? /* ou une liste */, snd?, hp? /* chantier 13 : un kind = un triplet de TRAP_LEGACY (34_traps.js) ; une définition peut nommer le sien ;
             params à état : who, sensor, near, rearm, once, onShot ('break'|'fire'|'flip'|'toggle'), box {x,y}, link, linkRange, linkDelay, routes, sprite,
-            push : force, pushAngle · status : stun, slow, dur, slowPlayer, rootPlayer, bite · burn : burnTime · blast : radius · call : enemy, count, purse */ }],
+            push : force, pushAngle · status : stun, slow, dur, slowPlayer, rootPlayer, bite · burn : burnTime · blast : radius · call : enemy, count, purse, chest · shift : shift · parent {modular, dx, dy} · cage */ }],
+            /* un ennemi peut porter un piège : enemies[].behavior.drop = 'trap_…' (posé à sa mort par Room.dropTrap, à usage unique) */
 
   rooms: [{ id, biome, index /*1..9*/, type: 'PREP_COMBAT'|'TRAP'|'COMBAT_TRAP'|'CHEST'|'MINIBOSS'|'COMBAT_MODULAR'|'COMBAT_TRAP_MODULAR'|'CHEST_FINAL'|'BOSS_REVENGE',
             refTime /*s, temps de référence pour le score*/,

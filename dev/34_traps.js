@@ -275,7 +275,7 @@ Object.assign(TRAP_EFFECTS, {
       for (const t2 of G.room.traps) t2.linkFrom(t, rt);
     },
   },
-  /* appel : `count` ennemis `enemy` arrivent, et une bourse de `purse` crédits tombe sur la plaque (le trésor gardé) */
+  /* appel : `count` ennemis `enemy` arrivent, et une bourse de `purse` crédits tombe sur la plaque ; `chest` ouvre un coffre (le trésor gardé) */
   call: {
     weight: 0,
     onStage(t, c) {
@@ -284,9 +284,23 @@ Object.assign(TRAP_EFFECTS, {
       const p = t.p;
       Room.spawnAt({ enemy: p.enemy, count: p.count || 4, x: -1, y: -1 });
       if (p.purse) Pickups.spawn(t.cx, t.cy, 'purse', p.purse);
+      if (p.chest && !G.room.chest) Room.offerChest();
       UI.toast(t.name + ' : ' + (p.count || 4) + ' de plus');
       AudioEngine.trapWarn({ x: trapPan(t), intensity: 0.8 });
       if (p.once) t.spend();
+    },
+  },
+  /* décalage (13 D) : le sablier de salle — toutes les phases des pièges à l'horloge de salle avancent de `shift` s */
+  shift: {
+    weight: 0,
+    onStage(t, c) {
+      if (c.stage !== 'on' || t.played === c.idx) return;
+      t.played = c.idx;
+      G.room.trapShift = (G.room.trapShift || 0) + (t.p.shift || 1.5);
+      for (const o of G.room.traps) if (o !== t && !o.beats) o.warned = -1;
+      UI.toast('Les pièges changent de phase');
+      Feel.shake(4, undefined, 160);
+      AudioEngine.trapWarn({ x: trapPan(t), intensity: 0.7 });
     },
   },
 });
@@ -482,8 +496,13 @@ const TRAP_BODIES = {
     render(t, ctx, rt) {
       const warm = t.trigger.stage(t, rt).k;
       ctx.save();
-      ctx.fillStyle = '#3a3f55';
-      ctx.fillRect(t.x + 6, t.y + 6, t.w - 12, t.h - 12);
+      /* 13 D : la gargouille de Kenney Tiny Dungeon, sèche au repos, qui crache pendant l'annonce ; le halo garde la couleur du piège */
+      const g = Sprites.hasProp && Sprites.hasProp('gargoyle') ? (warm > 0.5 ? 'gargoyle-spit' : 'gargoyle') : null;
+      if (g) Sprites.drawProp(ctx, g, t.cx, t.cy + TILE * 0.5, TILE * 0.9, TILE * 1.8, { foot: true, tint: warm > 0.5 ? t.color : null });
+      else {
+        ctx.fillStyle = '#3a3f55';
+        ctx.fillRect(t.x + 6, t.y + 6, t.w - 12, t.h - 12);
+      }
       ctx.fillStyle = t.color;
       Halo.draw(ctx, t.cx, t.cy, 8 + warm * 6, t.color, 8 + warm * 18);
       ctx.beginPath();
@@ -515,12 +534,26 @@ const TRAP_BODIES = {
       const c = t.stage(rt);
       const idle = trapRgba(t.color, 0.2),
         edge = trapRgba(t.color, 0.35);
+      /* 13 D : les dalles de 0x72 (quatre images : nue, qui perce, sortie, sortie) quand la planche est là ;
+         l'annonce garde son liseré d'alerte par-dessus */
+      const frame = c.stage === 'on' ? (c.k < 0.5 ? 2 : 3) : c.stage === 'warn' ? 1 : 0;
+      const sprite = Sprites.hasProp && Sprites.hasProp('floor-spikes-' + frame) ? 'floor-spikes-' + frame : null;
       ctx.save();
       for (let ty = 0; ty < t.th; ty++)
         for (let tx = 0; tx < t.tw; tx++) {
           const x = t.x + tx * TILE,
             y = t.y + ty * TILE;
           const act = this.active(t, tx, ty, c.idx);
+          if (sprite) {
+            const f = act ? frame : 0;
+            Sprites.drawProp(ctx, 'floor-spikes-' + f, x + TILE / 2, y + TILE / 2, TILE, TILE, {});
+            if (act && c.stage === 'warn') {
+              ctx.strokeStyle = trapRgba(PAL.alert, 0.35 + 0.4 * c.k);
+              ctx.lineWidth = 2;
+              ctx.strokeRect(x + 2.5, y + 2.5, TILE - 5, TILE - 5);
+            }
+            continue;
+          }
           if (!act) {
             ctx.fillStyle = 'rgba(255,255,255,.04)';
             ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
@@ -892,7 +925,33 @@ const TRAP_BODIES = {
       } else if (c.stage === 'on') Halo.draw(ctx, t.cx, t.cy, this.radius(t), t.color, 14);
       const size = TILE * (t.p.size || 0.9);
       const ok = t.p.sprite && Sprites.drawProp(ctx, t.p.sprite, t.cx, t.cy + size * 0.45, size, size, { foot: true });
-      if (!ok) {
+      if (!ok && t.p.cage) {
+        /* la cage (13 D) : des barreaux, dessinés — suspendue au repos, au sol quand elle est tombée */
+        const down = c.stage === 'on';
+        const y0 = t.cy - (down ? 0 : 26),
+          r = 14;
+        ctx.strokeStyle = t.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(t.cx, y0 - 16, r, 5, 0, 0, TAU);
+        ctx.stroke();
+        for (let i = -2; i <= 2; i++) {
+          ctx.beginPath();
+          ctx.moveTo(t.cx + i * 6, y0 - 16);
+          ctx.lineTo(t.cx + i * 6, y0 + 8);
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.ellipse(t.cx, y0 + 8, r, 5, 0, 0, TAU);
+        ctx.stroke();
+        if (!down) {
+          ctx.setLineDash([2, 4]);
+          ctx.beginPath();
+          ctx.moveTo(t.cx, y0 - 21);
+          ctx.lineTo(t.cx, t.y - 8);
+          ctx.stroke();
+        }
+      } else if (!ok) {
         /* sans sprite : un fût rond aux couleurs du piège */
         ctx.fillStyle = '#333a4e';
         ctx.beginPath();
@@ -930,6 +989,7 @@ const TRAP_LEGACY = {
   tiles_press: { trigger: 'press', body: 'tiles', effect: 'damage', snd: 'trapSpike' }, // dalles du Vizir
   puddle_burn: { trigger: 'ignite', body: 'prop', effect: ['burn'], snd: 'trapFire' }, // flaque d'huile
   drop_near: { trigger: 'near', body: 'prop', effect: ['status'], snd: 'trapSpike' }, // cage
+  hourglass: { trigger: 'bullet', body: 'prop', effect: ['shift'], snd: 'trapWarn' }, // sablier de salle (13 D)
 };
 /* les kinds connus du contenu : chaque entrée de TRAP_LEGACY (Content.validate s'en sert) */
 TRAP_KINDS.splice(0, TRAP_KINDS.length, ...Object.keys(TRAP_LEGACY));
@@ -1089,6 +1149,22 @@ class Trap {
     this.spent = true;
     this.disabled = true;
   }
+  /* porté par un module mobile (13 D) : `params.parent = { modular, dx, dy }` — le piège suit le premier obstacle de
+     l'élément `modular` de la salle, décalé de (dx, dy) tuiles. Modular.update repositionne l'obstacle après les pièges :
+     une image de retard, invisible. */
+  follow() {
+    const r = G.room,
+      pa = this.p.parent;
+    const m = r && r.modular && r.modular[pa.modular];
+    const o = m && m.obs && m.obs[0];
+    if (!o) return;
+    this.x = o.px + (pa.dx || 0) * TILE;
+    this.y = o.py + (pa.dy || 0) * TILE;
+    this.tx = Math.round((this.x - ROOM_X) / TILE);
+    this.ty = Math.round((this.y - ROOM_Y) / TILE);
+    this.cx = this.x + this.w / 2;
+    this.cy = this.y + this.h / 2;
+  }
   /* une chose par cible et par `dur` secondes (poussées, entraves) */
   cool(target, dur) {
     const last = this.cools ? this.cools.get(target) : null;
@@ -1205,12 +1281,15 @@ class Trap {
     }
     const pl = G.player;
     const T = this.trigger;
+    if (this.p.parent) this.follow();
     /* les déclencheurs à état : sentir, puis se réarmer quand la fenêtre est passée */
     if (T.stateful) {
       if (this.firedAt == null && T.sense) T.sense(this, rt, [pl, ...this.others()]);
       else if (this.firedAt != null) {
         const done = rt - this.firedAt - this.telegraph - this.active;
-        if (done >= 0 && (this.p.once ? false : done >= (this.p.rearm != null ? this.p.rearm : 1.5))) this.firedAt = null;
+        if (done >= 0 && this.p.once)
+          this.spend(); // à usage unique : consommé une fois la fenêtre passée
+        else if (done >= (this.p.rearm != null ? this.p.rearm : 1.5)) this.firedAt = null;
       }
     }
     const c = T.stage(this, rt);

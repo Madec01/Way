@@ -1211,6 +1211,7 @@ const CONTENT = {
       ],
       enemyPool: ['enemy_rodeur', 'enemy_sentinelle', 'enemy_bloc', 'enemy_meche', 'enemy_incubateur', 'enemy_nuee', 'enemy_eclipse'],
       trapPool: [
+        'trap_sablier',
         'trap_bonbonne',
         'trap_defibrillateur',
         'trap_brancard',
@@ -2140,6 +2141,8 @@ const CONTENT = {
         },
       ],
       traps: [
+        /* chantier 13 D : ce qui bouge et ce qui reste */
+        { trap: 'trap_sablier', x: 11, y: 1 },
         /* chantier 13 C : le joueur décide */
         { trap: 'trap_bonbonne', x: 9, y: 2 },
         { trap: 'trap_bonbonne', x: 14, y: 10 },
@@ -2272,6 +2275,8 @@ const CONTENT = {
         },
       ],
       traps: [
+        /* chantier 13 D : des pointes portées par le premier mur coulissant (parent) */
+        { trap: 'trap_dalles', x: 0, y: 0, w: 1, h: 1, params: { parent: { modular: 0, dx: 0, dy: -1 }, pattern: 'plain' } },
         /* chantier 13 C : le joueur décide */
         { trap: 'trap_rideau', x: 11, y: 3, phase: 2 },
       ],
@@ -2731,3 +2736,17 @@ CONTENT.traps.push(
     params: { radiusTiles: 2.5, slow: 0.5, dur: 0.3, slowPlayer: 0.2 },
   }
 );
+
+/* chantier 13 D — le sablier de salle (tous paliers) : le retourner d'un tir décale toutes les phases des pièges à l'horloge de salle */
+CONTENT.traps.push({
+  id: 'trap_sablier',
+  name: 'Sablier de salle',
+  desc: 'Un tir le retourne : tous les pièges de la salle changent de phase d’un coup. Choisis le moment, au lieu de le subir.',
+  kind: 'hourglass',
+  color: '#ffd166',
+  damage: 0,
+  telegraph: 0.3,
+  active: 0.2,
+  hp: 1,
+  params: { sprite: 'sands-of-time', onShot: 'fire', shift: 1.5, rearm: 4, size: 0.8 },
+});

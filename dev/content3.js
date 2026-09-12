@@ -50,6 +50,8 @@ CONTENT.biomes.push({
   ],
   enemyPool: ['enemy_coyote', 'enemy_bandit', 'enemy_bison', 'enemy_baril', 'enemy_croquemort', 'enemy_scorpions', 'enemy_crotale'],
   trapPool: [
+    'trap_sablier',
+    'trap_loup',
     'trap_tonneaux',
     'trap_fil',
     'trap_aiguillage',
@@ -85,7 +87,15 @@ CONTENT.enemies.push(
     coins: 2,
     color: '#d8a25a',
     sprite: 'enemy_rusher3',
-    behavior: { variant: 'piege', lungeRange: 120, lungeWindup: 0.28, lungeSpeed: 640, lungeDuration: 0.28, lungeCooldown: 1.1 },
+    behavior: {
+      variant: 'piege',
+      drop: 'trap_loup',
+      lungeRange: 120,
+      lungeWindup: 0.28,
+      lungeSpeed: 640,
+      lungeDuration: 0.28,
+      lungeCooldown: 1.1,
+    },
     telegraph: { time: 0.28, color: '#ffd9a0' },
   },
   {
@@ -817,6 +827,8 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 D : ce qui bouge et ce qui reste */
+      { trap: 'trap_sablier', x: 18, y: 2 },
       { trap: 'trap_moulin', x: 5, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
       { trap: 'trap_ours', x: 1, y: 1, w: 3, h: 3, phase: 0 },
       { trap: 'trap_ours', x: 20, y: 9, w: 3, h: 3, phase: 1 },
@@ -1322,12 +1334,25 @@ CONTENT.traps.push(
   {
     id: 'trap_cloche',
     name: 'Cloche du saloon',
-    desc: 'Une plaque dorée : la sonner appelle quatre bandits, et une bourse tombe à tes pieds. Le trésor gardé.',
+    desc: 'Une plaque dorée : la sonner appelle quatre bandits, une bourse tombe à tes pieds et un coffre s’ouvre. Le trésor gardé.',
     kind: 'plate_call',
     color: '#ffd166',
     damage: 0,
     telegraph: 0.6,
     active: 0.2,
-    params: { who: 'player', once: true, enemy: 'enemy_bandit', count: 4, purse: 60, pattern: 'plain' },
+    params: { who: 'player', once: true, enemy: 'enemy_bandit', count: 4, purse: 60, chest: true, pattern: 'plain' },
   }
 );
+
+/* chantier 13 D — le piège porté : le coyote le laisse là où il tombe (behavior.drop), une seule morsure */
+CONTENT.traps.push({
+  id: 'trap_loup',
+  name: 'Piège à loup',
+  desc: 'Le coyote le laisse là où il tombe : une mâchoire qui mord une fois celui qui marche dessus, puis disparaît.',
+  kind: 'tiles_press',
+  color: '#cfd6e6',
+  damage: 12,
+  telegraph: 0.15,
+  active: 0.3,
+  params: { who: 'player', once: true, pattern: 'plain' },
+});

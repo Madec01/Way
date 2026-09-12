@@ -400,6 +400,90 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
     for (const e of G.enemies) e.hp = 0;
     G.enemies.length = 0;
     Projectiles.list.length = 0;
+    /* 8. ce qui bouge et ce qui reste (chantier 13 D) : le piège porté, le parent, le sablier, le coffre gardé */
+    const E = {};
+    {
+      /* le coyote tombe : un piège à loup apparaît là, mord le joueur une fois, puis disparaît */
+      const n0 = G.room.traps.length;
+      const coy = Room.spawnEnemy(Content.enemy('enemy_coyote'), W / 2 + 100, H / 2, {});
+      coy.x = W / 2 + 100;
+      coy.y = H / 2;
+      Combat.killEnemy(coy, { silent: true });
+      const t = G.room.traps[G.room.traps.length - 1];
+      E.loup = { pose: G.room.traps.length === n0 + 1 && t && t.id === 'trap_loup' && t.dropped, once: t && t.p.once };
+      if (t) {
+        arm();
+        pl.x = t.cx;
+        pl.y = t.cy;
+        const hp0 = pl.hp;
+        const rt0 = Room.trapTime(G.room, t);
+        t.update(0.016, rt0);
+        t.update(0.016, rt0 + t.telegraph + 0.05);
+        E.loup.mord = hp0 - pl.hp;
+        t.update(0.016, rt0 + t.telegraph + t.active + 0.1);
+        E.loup.parti = t.spent;
+        G.room.traps.pop();
+      }
+      G.enemies.length = 0;
+    }
+    {
+      /* le parent : des pointes qui suivent un mur coulissant */
+      const t = mkId('trap_dalles', { x: 0, y: 0, params: { parent: { modular: 0, dx: 0, dy: -1 }, pattern: 'plain' } });
+      const fake = { obs: [{ px: ROOM_X + 5 * TILE, py: ROOM_Y + 4 * TILE }] };
+      const save = G.room.modular;
+      G.room.modular = [fake];
+      t.update(0.016, 0);
+      const x1 = t.tx,
+        y1 = t.ty;
+      fake.obs[0].py += 3 * TILE;
+      t.update(0.016, 0.1);
+      G.room.modular = save;
+      E.parent = { x1, y1, y2: t.ty, suit: x1 === 5 && y1 === 3 && t.ty === 6 };
+    }
+    {
+      /* le sablier : un tir, et les pièges à l'horloge de salle changent de phase, pas ceux en musique */
+      const t = mkId('trap_sablier', { x: 11, y: 1 });
+      const shift0 = G.room.trapShift || 0;
+      const g = mkId('trap_grille', { x: 4, y: 2, w: 8, h: 6 });
+      const beat = mkId('trap_dalles', { x: 2, y: 2, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } });
+      const before = Room.trapTime(G.room, g),
+        beforeB = Room.trapTime(G.room, beat);
+      t.onShot({ x: t.cx, y: t.cy, r: 4 }, 0);
+      t.update(0.016, t.telegraph + 0.01);
+      const after = Room.trapTime(G.room, g),
+        afterB = Room.trapTime(G.room, beat);
+      E.sablier = {
+        armed: t.fires === 1,
+        shift: (G.room.trapShift || 0) - shift0,
+        salle: +(after - before).toFixed(2),
+        musique: afterB === beforeB,
+      };
+      G.room.trapShift = shift0;
+    }
+    {
+      /* la cloche : un coffre s'ouvre en plus de la bourse */
+      const t = mkId('trap_cloche', { x: 12, y: 2 });
+      const chest0 = G.room.chest;
+      G.room.chest = null;
+      const nE = G.enemies.length,
+        nP = Pickups.list.length;
+      arm();
+      pl.x = t.cx;
+      pl.y = t.cy;
+      t.update(0.016, 0);
+      t.update(0.016, t.telegraph + 0.05);
+      E.cloche = {
+        ennemis: G.enemies.length - nE,
+        bourse: Pickups.list.slice(nP).some(q => q.kind === 'purse'),
+        coffre: !!G.room.chest,
+        spent: t.spent,
+      };
+      for (const e of G.enemies) e.hp = 0;
+      G.enemies.length = 0;
+      Pickups.list.length = nP;
+      G.room.chest = chest0;
+    }
+    out.bouge = E;
     out.decide = C;
     out.kinds13 = TRAP_KINDS.length;
     arm();
@@ -456,7 +540,7 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
   ok('le nuage blesse aussi un ennemi, par tic', c.hitG > 0, JSON.stringify(c));
   ok('une balle de tourelle abat l’ennemi qu’elle croise et disparaît', c.nb > 0 && c.hitS > 0 && c.left < c.nb, JSON.stringify(c));
   const D = r.decide;
-  ok(`${r.kinds13} mécaniques connues du contenu (dix historiques et onze familles nouvelles)`, r.kinds13 === 21);
+  ok(`${r.kinds13} mécaniques connues du contenu (dix historiques et douze familles nouvelles)`, r.kinds13 === 22);
   ok(
     'plaque : le défibrillateur s’arme sous le joueur, l’arc blesse le joueur et l’ennemi et l’étourdit, puis se réarme après le délai',
     D.plaque.armed &&
@@ -494,5 +578,22 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
     'brancard : un tir, un aller sur le rail pendant la fenêtre, puis il se range',
     D.brancard.armed && D.brancard.roule,
     JSON.stringify(D.brancard)
+  );
+  const E = r.bouge;
+  ok(
+    'le piège porté : le coyote tombe, un piège à loup apparaît là, mord le joueur une fois, puis disparaît',
+    E.loup.pose && E.loup.once && E.loup.mord > 0 && E.loup.parti,
+    JSON.stringify(E.loup)
+  );
+  ok('le parent : des pointes suivent le mur coulissant qui les porte', E.parent.suit, JSON.stringify(E.parent));
+  ok(
+    'le sablier : un tir décale les pièges à l’horloge de salle, jamais ceux en musique',
+    E.sablier.armed && E.sablier.shift > 0 && E.sablier.salle > 0 && E.sablier.musique,
+    JSON.stringify(E.sablier)
+  );
+  ok(
+    'la cloche : quatre bandits, une bourse et un coffre, une seule fois',
+    E.cloche.ennemis === 4 && E.cloche.bourse && E.cloche.coffre && E.cloche.spent,
+    JSON.stringify(E.cloche)
   );
 });
