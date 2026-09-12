@@ -188,6 +188,21 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 
 ---
 
+## Chantier 12 — La variété des paliers *(proposé le 12 septembre 2026, à valider)*
+
+**Objectif** : que l'Admission, la Serre et le Sérail soient aussi variés et mémorables que la Concession — l'auteur l'a dit après une partie complète. Le diagnostic et le détail salle par salle sont dans `PLAN-VARIETE.md` (trois agents : game design, sprites et bibliothèques, moteur).
+
+**Le constat en une phrase** : les quatre paliers partagent les mêmes gabarits de salles et le même sol ; la Concession se distingue parce qu'elle a posé à la main des obstacles typés en scènes, du décor, un train habillé, du terrain, des ennemis « accessoires » et des pièges colorés à son nom — trois leviers que les autres n'ont pas tirés, et que le moteur sait déjà faire.
+
+- **Séance A — les scènes** (contenu seulement, risque faible) : un `kind` et deux à quatre décos à la main sur toutes les salles nues (Admission ×9, Serre ×9, train, poudrière, bazar, Sérail 8) ; dix pièges à la Serre (ids, noms, couleurs), la couleur sur ceux de l'Admission ; les dix pièges orphelins posés (rails de brancards, gyrophare, gatling, revolvers, braseros, rai de soleil…) ; quatre partitions de tempo distinctes. Le joueur voit : chaque salle a une silhouette voulue, les pièges de la Serre sont des plantes.
+- **Séance B — le sol et les murs** (assets ≈ 80 Ko, `index.html` inchangé) : un tileset par palier (carrelage d'hôpital et murs métal, terre et mousse et briques à lianes, mosaïque et grès, sable) depuis des packs CC0 sur des miroirs GitHub vérifiés (Ninja Adventure, Kenney Roguelike, 0x72 v4, DCSS) ; le mur du haut enfin décoré (cuve qui coule, fontaines animées, tentures, bouches d'aération) ; une `palette` pour l'Admission ; les crédits.
+- **Séance C — ce qui bouge et les accessoires** : le décor animé dans les trois autres paliers (lumières à la couleur du palier, moulin, vautour, papillon, grenouilles, sabliers) ; un `look` générique sur les murs coulissants (tentures, barrières, lianes) ; dix à quinze accessoires par palier découpés des packs en PNG (lits, paillasses, tuyaux, buissons, ruines moussues, palmiers, statues, étals) ; des ennemis « accessoires » pour l'Admission et la Serre (rat, œil volant, limace, papillon) ; les SVG et animaux orphelins branchés.
+- **Séance D — le terrain et les gabarits** : les guichets, flaques, terreau, rideaux de vapeur, bassins de hammam, sables mouvants ; un plan ASCII par salle avec légende par palier (`dev/37_layouts.js`), `check-terrain.js` étendu aux obstacles, le test `salles.js` (porte atteignable, chemin de largeur 2, apparitions sur du sol, couloir libre) et une galerie de captures de toutes les salles. Les pièces composables selon la graine restent une option pour après.
+
+**Fini quand** : la galerie de captures montre 36 salles dont aucune ne ressemble à une autre du même palier ; l'auteur joue les quatre paliers et ne distingue plus « le désert » des autres par la variété ; batterie verte ; `levels.js` sur chaque palier (le bot traverse, le taux de victoire ne baisse pas).
+**Taille** : 4 séances, dans l'ordre A, B, C, D — A donne l'essentiel de l'effet sans risque ; D demande une passe de mesures.
+**Décisions à prendre** : les packs (tous CC0, à créditer) ; le brancard à roulettes comme « baril » de l'hôpital (à fabriquer) ; garder ou non le terrain uniquement dans le Pont (le point [24] se règle ici).
+
 ## L'ordre, et pourquoi
 
 ```
