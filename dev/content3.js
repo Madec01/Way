@@ -653,8 +653,10 @@ CONTENT.rooms.push(
       { x: 17, y: 8, w: 1, h: 1, kind: 'barrel' },
     ],
     deco: [
+      { x: 2, y: 4, kind: 'saloon', big: true },
+      { x: 21, y: 1, kind: 'wanted' },
       { x: 12, y: 2, kind: 'skull' },
-      { x: 3, y: 6, kind: 'tumbleweed' },
+      { x: 3, y: 9, kind: 'tumbleweed' },
     ],
     waves: [
       {
@@ -681,7 +683,10 @@ CONTENT.rooms.push(
         ],
       },
     ],
-    traps: [],
+    traps: [
+      { trap: 'trap_revolver', x: 0, y: 3, phase: 0 },
+      { trap: 'trap_revolver', x: 23, y: 9, phase: 1.5 },
+    ],
     fragments: [],
     modular: [],
   },
@@ -905,7 +910,7 @@ CONTENT.rooms.push(
       { trap: 'trap_ours', x: 18, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
       { trap: 'trap_ours', x: 18, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
       { trap: 'trap_ours', x: 2, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
-      { trap: 'trap_ours', x: 10, y: 5, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 1 } } },
+      { trap: 'trap_gatling', x: 11, y: 6, params: { beats: { every: 4, telegraph: 1, on: 0 } } },
       { trap: 'trap_dynamite', x: 11, y: 0, params: { dir: 'down', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 1 } } },
       { trap: 'trap_dynamite', x: 12, y: 12, params: { dir: 'up', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 5 } } },
       { trap: 'trap_poudre', x: 4, y: 6, params: { beats: { period: 8, active: 2, telegraph: 2, on: 4 } } },
@@ -951,10 +956,14 @@ CONTENT.rooms.push(
     type: 'TRAIN',
     refTime: 75,
     obstacles: [
-      { x: 6, y: 4, w: 1, h: 1 },
-      { x: 17, y: 8, w: 1, h: 1 },
-      { x: 11, y: 1, w: 2, h: 1 },
-      { x: 11, y: 11, w: 2, h: 1 },
+      { x: 6, y: 4, w: 1, h: 1, kind: 'crate' },
+      { x: 17, y: 8, w: 1, h: 1, kind: 'barrel' },
+      { x: 11, y: 1, w: 2, h: 1, kind: 'crate' },
+      { x: 11, y: 11, w: 2, h: 1, kind: 'barrel' },
+    ],
+    deco: [
+      { x: 2, y: 1, kind: 'wanted' },
+      { x: 21, y: 11, kind: 'skull' },
     ],
     waves: [
       {
@@ -996,10 +1005,14 @@ CONTENT.rooms.push(
     type: 'COMBAT_TRAP_MODULAR',
     refTime: 90,
     obstacles: [
-      { x: 2, y: 2, w: 1, h: 1 },
-      { x: 21, y: 2, w: 1, h: 1 },
-      { x: 2, y: 10, w: 1, h: 1 },
-      { x: 21, y: 10, w: 1, h: 1 },
+      { x: 2, y: 2, w: 1, h: 1, kind: 'barrels' },
+      { x: 21, y: 2, w: 1, h: 1, kind: 'barrels' },
+      { x: 2, y: 10, w: 1, h: 1, kind: 'barrels' },
+      { x: 21, y: 10, w: 1, h: 1, kind: 'barrels' },
+    ],
+    deco: [
+      { x: 12, y: 1, kind: 'skull' },
+      { x: 12, y: 11, kind: 'tumbleweed' },
     ],
     waves: [
       {
@@ -1037,7 +1050,8 @@ CONTENT.rooms.push(
       { trap: 'trap_embuscade', x: 15, y: 12, phase: 1.2 },
       { trap: 'trap_ours', x: 1, y: 9, w: 3, h: 3, phase: 0 },
       { trap: 'trap_ours', x: 20, y: 1, w: 3, h: 3, phase: 1 },
-      { trap: 'trap_poudre', x: 12, y: 4, phase: 2 },
+      { trap: 'trap_barbeles', x: 6, y: 3, w: 12, h: 7, phase: 0 },
+      { trap: 'trap_detente', x: 0, y: 3, phase: 1 },
     ],
     fragments: [],
     modular: [

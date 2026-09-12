@@ -12,7 +12,8 @@ const COLS = 24,
 const src = fs.readFileSync(path.join(__dirname, '35_terrain.js'), 'utf8');
 const block = src.slice(src.indexOf('const TERRAIN = {'), src.indexOf('const TERRAIN_BY_ID'));
 const SOLID = {};
-for (const m of block.matchAll(/'(.)':\s*\{([^}]*)\}/g)) SOLID[m[1]] = /solid:\s*true/.test(m[2]);
+/* une clé qui est un identifiant valide (le muret `n`) s'écrit sans guillemets */
+for (const m of block.matchAll(/(?:'(.)'|(\w)):\s*\{([^}]*)\}/g)) SOLID[m[1] || m[2]] = /solid:\s*true/.test(m[3]);
 const CHARS = new Set(Object.keys(SOLID));
 
 let errors = 0,

@@ -1673,6 +1673,7 @@ const CONTENT = {
     {
       id: 'trap_balayage',
       name: 'Balayage laser',
+      color: '#6ee7ff',
       kind: 'laser_sweep',
       desc: 'Un rayon vertical parcourt la zone de gauche à droite en 1,6 s, puis revient au cycle suivant.',
       damage: 15,
@@ -1684,6 +1685,7 @@ const CONTENT = {
     {
       id: 'trap_tourniquet',
       name: 'Tourniquet',
+      color: '#9fd8ff',
       kind: 'laser_rotate',
       desc: '2 bras laser de 5 tuiles tournent (1,2 rad/s). Pause de 1 s tous les 6 s : la fenêtre pour traverser.',
       damage: 13,
@@ -1695,6 +1697,7 @@ const CONTENT = {
     {
       id: 'trap_grille',
       name: 'Grille',
+      color: '#6ee7ff',
       kind: 'laser_grid',
       desc: 'Lignes laser espacées de 4 tuiles. Cycles alternés : verticales puis horizontales. 1 s allumé, 2 s éteint.',
       damage: 11,
@@ -1706,6 +1709,7 @@ const CONTENT = {
     {
       id: 'trap_bouche',
       name: 'Bouche de feu',
+      color: '#ff9a3c',
       kind: 'wall_fireball',
       desc: 'Une bouche murale crache une boule de feu droite toutes les 2,5 s. Se décale avec phase.',
       damage: 13,
@@ -1717,6 +1721,7 @@ const CONTENT = {
     {
       id: 'trap_dalles',
       name: 'Dalles à pointes',
+      color: '#aab4c8',
       kind: 'spike_tiles',
       desc: 'Damier : les cases paires sortent leurs pointes 0,8 s, puis les impaires. Toujours une case sûre à côté.',
       damage: 11,
@@ -1728,6 +1733,7 @@ const CONTENT = {
     {
       id: 'trap_nappe',
       name: 'Nappe de gaz',
+      color: '#9fe0b0',
       kind: 'gas_zone',
       desc: 'Une bouche siffle 1,2 s puis libère un nuage de 2,5 tuiles pendant 3 s : 9 dégâts/s et -30 % vitesse.',
       damage: 9,
@@ -1739,6 +1745,7 @@ const CONTENT = {
     {
       id: 'trap_rail',
       name: 'Scie sur rail',
+      color: '#c8d0e0',
       kind: 'saw_rail',
       desc: 'Scie circulaire qui fait des allers-retours sur un rail de 8 tuiles à 6 tuiles/s. Jamais de pause.',
       damage: 20,
@@ -1786,6 +1793,7 @@ const CONTENT = {
     {
       id: 'trap_tourelle',
       name: 'Tourelle fixe',
+      color: '#ff9a3c',
       kind: 'turret_fixed',
       desc: 'Tourelle murale : 0,7 s de visée (rayon rouge) puis 1 balle vers le joueur toutes les 2,4 s. Destructible ? Non.',
       damage: 10,
@@ -1808,11 +1816,16 @@ const CONTENT = {
       type: 'PREP_COMBAT',
       refTime: 45,
       obstacles: [
-        { x: 6, y: 3, w: 1, h: 1 },
-        { x: 6, y: 9, w: 1, h: 1 },
-        { x: 17, y: 3, w: 1, h: 1 },
-        { x: 17, y: 9, w: 1, h: 1 },
-        { x: 11, y: 6, w: 2, h: 1 },
+        { x: 6, y: 3, w: 1, h: 1, kind: 'locker' },
+        { x: 6, y: 9, w: 1, h: 1, kind: 'locker' },
+        { x: 17, y: 3, w: 1, h: 1, kind: 'locker' },
+        { x: 17, y: 9, w: 1, h: 1, kind: 'locker' },
+        { x: 11, y: 6, w: 2, h: 1, kind: 'bin' },
+      ],
+      deco: [
+        { x: 3, y: 2, kind: 'cross' },
+        { x: 20, y: 10, kind: 'hazard' },
+        { x: 2, y: 10, kind: 'pack' },
       ],
       waves: [
         {
@@ -1908,10 +1921,15 @@ const CONTENT = {
       type: 'COMBAT_CHALLENGE',
       refTime: 70,
       obstacles: [
-        { x: 6, y: 4, w: 1, h: 1 },
-        { x: 17, y: 4, w: 1, h: 1 },
-        { x: 6, y: 8, w: 1, h: 1 },
-        { x: 17, y: 8, w: 1, h: 1 },
+        { x: 6, y: 4, w: 1, h: 1, kind: 'bin' },
+        { x: 17, y: 4, w: 1, h: 1, kind: 'bin' },
+        { x: 6, y: 8, w: 1, h: 1, kind: 'bin' },
+        { x: 17, y: 8, w: 1, h: 1, kind: 'bin' },
+      ],
+      deco: [
+        { x: 20, y: 3, kind: 'cross' },
+        { x: 3, y: 6, kind: 'pack' },
+        { x: 12, y: 10, kind: 'hazard' },
       ],
       waves: [
         {
@@ -1997,10 +2015,14 @@ const CONTENT = {
       chest: true, // coffre offert en fin de salle (chantier 9)
       refTime: 75,
       obstacles: [
-        { x: 4, y: 2, w: 2, h: 1 },
-        { x: 4, y: 10, w: 2, h: 1 },
-        { x: 18, y: 2, w: 2, h: 1 },
-        { x: 18, y: 10, w: 2, h: 1 },
+        { x: 4, y: 2, w: 2, h: 1, kind: 'drip' },
+        { x: 4, y: 10, w: 2, h: 1, kind: 'tank' },
+        { x: 18, y: 2, w: 2, h: 1, kind: 'drip' },
+        { x: 18, y: 10, w: 2, h: 1, kind: 'tank' },
+      ],
+      deco: [
+        { x: 2, y: 6, kind: 'tubes' },
+        { x: 21, y: 8, kind: 'battery' },
       ],
       waves: [
         {
@@ -2037,7 +2059,8 @@ const CONTENT = {
       traps: [
         { trap: 'trap_tourniquet', x: 11, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
         { trap: 'trap_dalles', x: 1, y: 1, w: 3, h: 3, phase: 0 },
-        { trap: 'trap_dalles', x: 20, y: 9, w: 3, h: 3, phase: 1.0 },
+        { trap: 'trap_rail', x: 7, y: 3, w: 8, phase: 0 },
+        { trap: 'trap_rail', x: 7, y: 9, w: 8, phase: 1.6 },
         { trap: 'trap_tourelle', x: 11, y: 0, phase: 0 },
       ],
       fragments: [],
@@ -2082,10 +2105,14 @@ const CONTENT = {
       type: 'MINIBOSS',
       refTime: 120,
       obstacles: [
-        { x: 5, y: 3, w: 2, h: 2 },
-        { x: 17, y: 3, w: 2, h: 2 },
-        { x: 5, y: 8, w: 2, h: 2 },
-        { x: 17, y: 8, w: 2, h: 2 },
+        { x: 5, y: 3, w: 2, h: 2, kind: 'tank' },
+        { x: 17, y: 3, w: 2, h: 2, kind: 'tank' },
+        { x: 5, y: 8, w: 2, h: 2, kind: 'tank' },
+        { x: 17, y: 8, w: 2, h: 2, kind: 'tank' },
+      ],
+      deco: [
+        { x: 11, y: 2, kind: 'hazard' },
+        { x: 11, y: 10, kind: 'hazard' },
       ],
       waves: [{ at: 'start', spawns: [{ enemy: 'boss_etalon_07', count: 1, x: 18, y: 6 }] }],
       traps: [],
@@ -2099,7 +2126,7 @@ const CONTENT = {
       index: 6,
       type: 'COMBAT_MODULAR',
       refTime: 80,
-      obstacles: [{ x: 11, y: 5, w: 2, h: 3 }],
+      obstacles: [{ x: 11, y: 5, w: 2, h: 3, kind: 'fuel' }],
       waves: [
         {
           at: 'start',
@@ -2216,10 +2243,10 @@ const CONTENT = {
       chest: true, // coffre offert en fin de salle (chantier 9)
       refTime: 95,
       obstacles: [
-        { x: 5, y: 3, w: 1, h: 1 },
-        { x: 18, y: 3, w: 1, h: 1 },
-        { x: 5, y: 9, w: 1, h: 1 },
-        { x: 18, y: 9, w: 1, h: 1 },
+        { x: 5, y: 3, w: 1, h: 1, kind: 'bin' },
+        { x: 18, y: 3, w: 1, h: 1, kind: 'bin' },
+        { x: 5, y: 9, w: 1, h: 1, kind: 'bin' },
+        { x: 18, y: 9, w: 1, h: 1, kind: 'bin' },
       ],
       waves: [
         {
@@ -2257,7 +2284,8 @@ const CONTENT = {
         { trap: 'trap_bouche', x: 11, y: 0, params: { dir: 'down', beats: { every: 8, telegraph: 1, on: 1 } } },
         { trap: 'trap_bouche', x: 12, y: 12, params: { dir: 'up', beats: { every: 8, telegraph: 1, on: 5 } } },
         { trap: 'trap_grille', x: 2, y: 1, w: 20, h: 11, params: { beats: { period: 16, active: 1, telegraph: 3, on: 0 } } },
-        { trap: 'trap_tourelle', x: 0, y: 2, params: { beats: { every: 8, telegraph: 1, on: 3 } } },
+        { trap: 'trap_diffuseur', x: 0, y: 2, params: { beats: { every: 8, telegraph: 1, on: 3 } } },
+        { trap: 'trap_gyrophare', x: 11, y: 6, params: { beats: { every: 4, telegraph: 1, on: 0 } } },
         { trap: 'trap_tourelle', x: 23, y: 10, params: { beats: { every: 8, telegraph: 1, on: 7 } } },
       ],
       fragments: [],
@@ -2270,10 +2298,53 @@ const CONTENT = {
       type: 'BOSS_REVENGE',
       refTime: 150,
       obstacles: [
-        { x: 5, y: 3, w: 2, h: 2 },
-        { x: 17, y: 3, w: 2, h: 2 },
-        { x: 5, y: 8, w: 2, h: 2 },
-        { x: 17, y: 8, w: 2, h: 2 },
+        { x: 5, y: 3, w: 2, h: 2, kind: 'tank' },
+        { x: 17, y: 3, w: 2, h: 2, kind: 'tank' },
+        { x: 5, y: 8, w: 2, h: 2, kind: 'tank' },
+        { x: 17, y: 8, w: 2, h: 2, kind: 'tank' },
+      ],
+      anims: [
+        {
+          kind: 'light',
+          x: 1,
+          y: 1,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.3, gain: 0.3, color: '#ff9a3c' },
+          beats: { bars: 1, hits: [0], active: 2 },
+        },
+        {
+          kind: 'light',
+          x: 21,
+          y: 1,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.3, gain: 0.3, color: '#ff9a3c' },
+          beats: { bars: 1, hits: [2], active: 2 },
+        },
+        {
+          kind: 'light',
+          x: 1,
+          y: 10,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.3, gain: 0.3, color: '#ff9a3c' },
+          beats: { bars: 1, hits: [2], active: 2 },
+        },
+        {
+          kind: 'light',
+          x: 21,
+          y: 10,
+          w: 2,
+          h: 2,
+          params: { radius: 2.5, base: 0.3, gain: 0.3, color: '#ff9a3c' },
+          beats: { bars: 1, hits: [0], active: 2 },
+        },
+      ],
+      deco: [
+        { x: 11, y: 2, kind: 'hazard' },
+        { x: 2, y: 1, kind: 'cross' },
+        { x: 21, y: 11, kind: 'pack' },
       ],
       waves: [{ at: 'start', spawns: [{ enemy: 'boss_etalon_07', count: 1, x: 18, y: 6 }] }],
       traps: [
@@ -2291,18 +2362,23 @@ const CONTENT = {
       type: 'SOUS_SOL',
       refTime: 80,
       obstacles: [
-        { x: 4, y: 1, w: 1, h: 2 },
-        { x: 8, y: 1, w: 1, h: 2 },
-        { x: 12, y: 1, w: 1, h: 2 },
-        { x: 16, y: 1, w: 1, h: 2 },
-        { x: 20, y: 1, w: 1, h: 2 },
-        { x: 4, y: 10, w: 1, h: 2 },
-        { x: 8, y: 10, w: 1, h: 2 },
-        { x: 12, y: 10, w: 1, h: 2 },
-        { x: 16, y: 10, w: 1, h: 2 },
-        { x: 20, y: 10, w: 1, h: 2 },
-        { x: 7, y: 5, w: 2, h: 3 },
-        { x: 15, y: 5, w: 2, h: 3 },
+        { x: 4, y: 1, w: 1, h: 2, kind: 'tank' },
+        { x: 8, y: 1, w: 1, h: 2, kind: 'tank' },
+        { x: 12, y: 1, w: 1, h: 2, kind: 'tank' },
+        { x: 16, y: 1, w: 1, h: 2, kind: 'tank' },
+        { x: 20, y: 1, w: 1, h: 2, kind: 'tank' },
+        { x: 4, y: 10, w: 1, h: 2, kind: 'tank' },
+        { x: 8, y: 10, w: 1, h: 2, kind: 'tank' },
+        { x: 12, y: 10, w: 1, h: 2, kind: 'tank' },
+        { x: 16, y: 10, w: 1, h: 2, kind: 'tank' },
+        { x: 20, y: 10, w: 1, h: 2, kind: 'tank' },
+        { x: 7, y: 5, w: 2, h: 3, kind: 'fuel' },
+        { x: 15, y: 5, w: 2, h: 3, kind: 'fuel' },
+      ],
+      deco: [
+        { x: 2, y: 6, kind: 'valve' },
+        { x: 11, y: 3, kind: 'cog' },
+        { x: 11, y: 9, kind: 'battery' },
       ],
       waves: [
         {
@@ -2340,10 +2416,10 @@ const CONTENT = {
       type: 'COMBAT_TRAP_MODULAR',
       refTime: 90,
       obstacles: [
-        { x: 2, y: 2, w: 1, h: 1 },
-        { x: 21, y: 2, w: 1, h: 1 },
-        { x: 2, y: 10, w: 1, h: 1 },
-        { x: 21, y: 10, w: 1, h: 1 },
+        { x: 2, y: 2, w: 1, h: 1, kind: 'locker' },
+        { x: 21, y: 2, w: 1, h: 1, kind: 'locker' },
+        { x: 2, y: 10, w: 1, h: 1, kind: 'locker' },
+        { x: 21, y: 10, w: 1, h: 1, kind: 'locker' },
       ],
       waves: [
         {
@@ -2379,8 +2455,8 @@ const CONTENT = {
       traps: [
         { trap: 'trap_tourelle', x: 6, y: 0, phase: 0 },
         { trap: 'trap_tourelle', x: 17, y: 12, phase: 1.5 },
-        { trap: 'trap_dalles', x: 9, y: 1, w: 3, h: 2, phase: 0 },
-        { trap: 'trap_dalles', x: 12, y: 10, w: 3, h: 2, phase: 1 },
+        { trap: 'trap_rail', x: 4, y: 2, w: 8, phase: 0 },
+        { trap: 'trap_rail', x: 12, y: 10, w: 8, phase: 1.6 },
       ],
       fragments: [],
       modular: [
