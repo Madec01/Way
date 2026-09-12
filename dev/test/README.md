@@ -13,7 +13,7 @@ node run.js duo uno         # seulement ceux-là
 node duo.js                 # un seul, en détail
 ```
 
-`run.js` sort en erreur (code 1) si un seul test échoue ou si le jeu a levé une erreur JavaScript. Captures et journaux vont dans `out/`, ignoré par git.
+`run.js` sort en erreur (code 1) si un seul test échoue ou si le jeu a levé une erreur JavaScript. Captures et journaux vont dans `out/`, ignoré par git. Trois tests mesurent au chronomètre et peuvent rater quand la machine est chargée par la batterie entière (`animaux`, `comportements`, `cadence`) : un raté isolé de l'un d'eux se relance seul avant d'être cru.
 
 ## Écrire un test
 
@@ -72,6 +72,7 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `prepa` | chantier I-4 : la planche d'icônes sur chaque arme et compétence, trois jauges par arme, un seul panneau de détail qui suit le clic et le survol, « 3 tirées au sort sur 8 », le ⇄ des paires, MODE TEST en pied, le récapitulatif du bouton, la grille sous 900 px |
 | `ressenti` | chantier F-1 : Ease et Feel, arrêt sur image (30 / 70 / 60 ms, plafonné, jamais sur un ralenti), étincelles au corps dans le sens du coup, étincelle de contact, écrasement, secousse directionnelle indépendante du zoom, plus de `G.shake`, recul de l'arme, polices pixel dans le monde, squash & stretch des planches |
 | `scenes` | chantier F-6 : l'entrée de salle en marchant, la montée de niveau mise en scène et son écran sur le temps fort, l'arrivée du boss (rideau, caméra, descente, trois secousses au temps), sa mort en 1,6 s, la mort du joueur (ralenti, ennemis figés, voile, compagnon couché), l'écran de fin après 1,4 s |
+| `salles` | chantier 12 D : les 36 salles créées sans être lancées — porte atteignable à pied et par un couloir de deux tuiles, sas d'entrée et couloir de la porte libres (obstacle, terrain solide, piège), carré 3×3 libre pour le boss, décor sur sol nu, ≤ 40 obstacles |
 | `spawncheck` | chaque salle des quatre biomes : spawns et pièges sur des tuiles libres, porte atteignable |
 | `sprites32` | une image 32×32 importée reste nette, une photo est réduite à 64 px |
 | `touch` | la couche tactile sur un téléphone simulé : joystick, tir maintenu, compétence, pause — et le pouce (I-8) : esquive, cibles ≥ 44 px, HUD ×1,35, joystick au repos et indication, tir automatique et bouton en pointillé, pause hors de la prise, camp en rangées défilables |

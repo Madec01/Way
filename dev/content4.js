@@ -15,7 +15,11 @@ CONTENT.biomes.push({
     tint: 'rgba(72,50,140,.30)',
     neon: ['#ffd166', '#8f6ad8'],
     wall: 'rgba(84,58,145,.42)',
-    terrain: { ledge: { fill: '#3a2f52', edge: '#e2d3ae' }, screen: { fill: '#241d38', edge: '#c9a05a' } },
+    terrain: {
+      ledge: { fill: '#3a2f52', edge: '#e2d3ae' },
+      screen: { fill: '#241d38', edge: '#c9a05a' },
+      water: { fill: '#1f5a6a', edge: '#8fe8f0' },
+    },
   },
   levelPassives: [
     {
@@ -942,6 +946,22 @@ CONTENT.rooms.push(
     chest: true, // coffre offert en fin de salle (chantier 9)
     refTime: 100,
     obstacles: [{ x: 11, y: 5, w: 2, h: 3, kind: 'well' }],
+    /* chantier 12 D : quatre bassins d’eau tiède aux coins du hammam */
+    terrain: [
+      '.~~~................~~~.',
+      '.~~~................~~~.',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '.~~~................~~~.',
+      '.~~~................~~~.',
+    ],
     deco: [
       { x: 2, y: 2, kind: 'teapot' },
       { x: 21, y: 10, kind: 'chalice' },

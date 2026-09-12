@@ -16,7 +16,7 @@ CONTENT.biomes.push({
     neon: ['#ffb347', '#ff6b3c'],
     wall: 'rgba(120,70,30,.42)',
     sand: true,
-    terrain: { wall: { fill: '#2e2016', edge: '#9a8768' } },
+    terrain: { wall: { fill: '#2e2016', edge: '#9a8768' }, mud: { fill: '#c9a76a', edge: '#e8d4a0' } },
   },
   levelPassives: [
     {
@@ -664,6 +664,22 @@ CONTENT.rooms.push(
       { x: 6, y: 8, w: 1, h: 1, kind: 'barrel' },
       { x: 17, y: 8, w: 1, h: 1, kind: 'barrel' },
     ],
+    /* chantier 12 D : deux langues de sable mouvant */
+    terrain: [
+      '........................',
+      '.......,,,,,............',
+      '.......,,,,,............',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '...........,,,,,........',
+      '...........,,,,,........',
+      '........................',
+    ],
     deco: [
       { x: 2, y: 4, kind: 'saloon', big: true },
       { x: 21, y: 1, kind: 'wanted' },
@@ -673,7 +689,6 @@ CONTENT.rooms.push(
       { x: 20, y: 10, kind: 'wanted' },
       { x: 9, y: 9, kind: 'rails' },
       { x: 5, y: 12, kind: 'rails' },
-      { x: 14, y: 11, kind: 'rails' },
       { x: 14, y: 1, kind: 'rails' },
       { x: 11, y: 6, kind: 'wanted' },
       { x: 3, y: 11, kind: 'skullpile' },
@@ -747,7 +762,7 @@ CONTENT.rooms.push(
     deco: [
       { x: 1, y: 11, kind: 'skull' },
       { x: 22, y: 1, kind: 'tumbleweed' },
-      { x: 12, y: 1, kind: 'skullpile' },
+      { x: 6, y: 1, kind: 'skullpile' },
       { x: 8, y: 7, kind: 'skullpile' },
       { x: 15, y: 7, kind: 'skullpile' },
       { x: 10, y: 4, kind: 'tumbleweed' },
