@@ -53,6 +53,10 @@ CONTENT.biomes.push({
   ],
   enemyPool: ['enemy_derviche', 'enemy_archer', 'enemy_colosse', 'enemy_jarre', 'enemy_charmeur', 'enemy_cobras', 'enemy_djinn'],
   trapPool: [
+    'trap_vizir',
+    'trap_huile',
+    'trap_cage',
+
     'trap_sabres',
     'trap_brasero',
     'trap_meurtriere',
@@ -768,7 +772,12 @@ CONTENT.rooms.push(
         ],
       },
     ],
-    traps: [{ trap: 'trap_braises', x: 11, y: 6, phase: 0 }],
+    traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_cage', x: 6, y: 6 },
+      { trap: 'trap_cage', x: 17, y: 6 },
+      { trap: 'trap_braises', x: 11, y: 6, phase: 0 },
+    ],
     fragments: [],
     modular: [],
   },
@@ -1096,6 +1105,9 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_huile', x: 9, y: 4 },
+      { trap: 'trap_huile', x: 14, y: 8 },
       { trap: 'trap_pieux', x: 2, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
       { trap: 'trap_pieux', x: 18, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
       { trap: 'trap_pieux', x: 18, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
@@ -1277,7 +1289,11 @@ CONTENT.rooms.push(
         ],
       },
     ],
-    traps: [],
+    traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_vizir', x: 8, y: 2, w: 3, h: 1 },
+      { trap: 'trap_vizir', x: 13, y: 9, w: 3, h: 1 },
+    ],
     fragments: [],
     modular: [],
   },
@@ -1342,6 +1358,8 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_cage', x: 11, y: 3 },
       { trap: 'trap_meurtriere', x: 7, y: 0, phase: 0 },
       { trap: 'trap_meurtriere', x: 16, y: 12, phase: 1.2 },
       { trap: 'trap_brasero', x: 3, y: 1, w: 8, phase: 0 },
@@ -1365,5 +1383,43 @@ CONTENT.rooms.push(
       },
       { kind: 'rotor', cx: 12, cy: 6.5, arms: 2, length: 3, angularSpeed: 0.9 },
     ],
+  }
+);
+
+/* chantier 13 C — le joueur décide : des pièges qui se déclenchent à la plaque, à l'approche, au tir, en chaîne ;
+   qui poussent, endorment, brûlent ; qu'on casse ou qu'on désamorce. Tous blessent les deux camps. */
+CONTENT.traps.push(
+  {
+    id: 'trap_vizir',
+    name: 'Dalles du Vizir',
+    desc: 'Les pieux sortent sous qui marche, un demi-temps après. Mène la poursuite à travers : les poursuivants déclenchent.',
+    kind: 'tiles_press',
+    color: '#e2d3ae',
+    damage: 13,
+    telegraph: 0.4,
+    active: 0.5,
+    params: { who: 'any', rearm: 1, pattern: 'plain' },
+  },
+  {
+    id: 'trap_huile',
+    name: 'Flaque d’huile',
+    desc: 'Inerte, jusqu’à ce qu’une jarre enflammée la touche : elle brûle trois secondes, pour tout le monde.',
+    kind: 'puddle_burn',
+    color: '#ffb347',
+    damage: 8,
+    telegraph: 0.2,
+    active: 0.3,
+    params: { near: 1.5, radius: 70, burnTime: 3, rearm: 6, sprite: 'oil-puddle', size: 1.2 },
+  },
+  {
+    id: 'trap_cage',
+    name: 'Cage à oiseaux',
+    desc: 'Elle tombe sur qui passe dessous : toi tu es retenu un instant, un ennemi trois secondes.',
+    kind: 'drop_near',
+    color: '#d8dce8',
+    damage: 0,
+    telegraph: 0.6,
+    active: 0.4,
+    params: { near: 1, who: 'any', radius: 40, stun: 3, rootPlayer: 0.8, rearm: 4 },
   }
 );

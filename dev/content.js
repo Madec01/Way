@@ -1211,6 +1211,11 @@ const CONTENT = {
       ],
       enemyPool: ['enemy_rodeur', 'enemy_sentinelle', 'enemy_bloc', 'enemy_meche', 'enemy_incubateur', 'enemy_nuee', 'enemy_eclipse'],
       trapPool: [
+        'trap_bonbonne',
+        'trap_defibrillateur',
+        'trap_brancard',
+        'trap_rideau',
+
         'trap_balayage',
         'trap_tourniquet',
         'trap_grille',
@@ -2135,6 +2140,10 @@ const CONTENT = {
         },
       ],
       traps: [
+        /* chantier 13 C : le joueur décide */
+        { trap: 'trap_bonbonne', x: 9, y: 2 },
+        { trap: 'trap_bonbonne', x: 14, y: 10 },
+        { trap: 'trap_defibrillateur', x: 12, y: 10 },
         { trap: 'trap_tourniquet', x: 11, y: 6, params: { beats: { turn: 4, period: 8, active: 6, telegraph: 2, on: 0 } } },
         { trap: 'trap_dalles', x: 1, y: 1, w: 3, h: 3, phase: 0 },
         { trap: 'trap_rail', x: 7, y: 3, w: 8, phase: 0 },
@@ -2262,7 +2271,10 @@ const CONTENT = {
           ],
         },
       ],
-      traps: [],
+      traps: [
+        /* chantier 13 C : le joueur décide */
+        { trap: 'trap_rideau', x: 11, y: 3, phase: 2 },
+      ],
       fragments: [],
       /* salle cadencée : quatre ventilateurs tournent d'un quart de tour à chaque temps, une valve saute sur les temps forts */
       anims: [
@@ -2401,7 +2413,15 @@ const CONTENT = {
         { trap: 'trap_dalles', x: 2, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
         { trap: 'trap_bouche', x: 11, y: 0, params: { dir: 'down', beats: { every: 8, telegraph: 1, on: 1 } } },
         { trap: 'trap_bouche', x: 12, y: 12, params: { dir: 'up', beats: { every: 8, telegraph: 1, on: 5 } } },
-        { trap: 'trap_grille', x: 2, y: 1, w: 20, h: 11, params: { beats: { period: 16, active: 1, telegraph: 3, on: 0 } } },
+        /* chantier 13 C : le néon à bascule — un tir sur le boîtier, derrière la grille, inverse les lignes allumées */
+        {
+          trap: 'trap_grille',
+          x: 2,
+          y: 1,
+          w: 20,
+          h: 11,
+          params: { beats: { period: 16, active: 1, telegraph: 3, on: 0 }, hp: 1, onShot: 'flip', box: { x: 21, y: 11 } },
+        },
         { trap: 'trap_diffuseur', x: 0, y: 2, params: { beats: { every: 8, telegraph: 1, on: 3 } } },
         { trap: 'trap_gyrophare', x: 11, y: 6, params: { beats: { every: 4, telegraph: 1, on: 0 } } },
         { trap: 'trap_tourelle', x: 23, y: 10, params: { beats: { every: 8, telegraph: 1, on: 7 } } },
@@ -2627,6 +2647,8 @@ const CONTENT = {
         },
       ],
       traps: [
+        /* chantier 13 C : le joueur décide */
+        { trap: 'trap_brancard', x: 8, y: 4, w: 8, params: { box: { x: 8, y: 4 } } },
         /* chantier 13 B : les pièges dormants posés */
         { trap: 'trap_rayon', x: 0, y: 9, phase: 0 },
         { trap: 'trap_rayon', x: 23, y: 3, phase: 1.5, params: { angle: 3.1416 } },
@@ -2657,3 +2679,55 @@ const CONTENT = {
     },
   ],
 };
+
+/* chantier 13 C — le joueur décide : des pièges qui se déclenchent à la plaque, à l'approche, au tir, en chaîne ;
+   qui poussent, endorment, brûlent ; qu'on casse ou qu'on désamorce. Tous blessent les deux camps. */
+CONTENT.traps.push(
+  {
+    id: 'trap_bonbonne',
+    name: 'Bonbonne d’oxygène',
+    desc: 'Une bonbonne qui saute au premier tir, et emporte tout à deux tuiles à la ronde — la voisine part avec elle.',
+    kind: 'blast_prop',
+    color: '#8fd8ff',
+    damage: 22,
+    telegraph: 0.35,
+    active: 0.1,
+    hp: 1,
+    params: { sprite: 'oxygen-tank', onShot: 'fire', once: true, radius: 110, link: 'oxy', linkRange: 3, linkDelay: 0.15 },
+  },
+  {
+    id: 'trap_defibrillateur',
+    name: 'Défibrillateur',
+    desc: 'Une plaque entre deux électrodes : qui s’y tient déclenche un arc qui blesse tout le monde et étourdit les ennemis.',
+    kind: 'plate_arc',
+    color: '#6ee7ff',
+    damage: 14,
+    telegraph: 0.5,
+    active: 0.6,
+    params: { angle: -1.5708, length: 9, thickness: 0.5, stun: 1, who: 'any', rearm: 2 },
+  },
+  {
+    id: 'trap_brancard',
+    name: 'Brancard fou',
+    desc: 'Un tir sur le brancard et il file sur son rail, écrase ce qu’il croise, puis revient à la main.',
+    kind: 'rail_shot',
+    color: '#c8d0e0',
+    damage: 18,
+    telegraph: 0.4,
+    active: 1,
+    hp: 1,
+    params: { speedTiles: 8, radiusTiles: 0.7, onShot: 'fire', rearm: 1, hitR: 26 },
+  },
+  {
+    id: 'trap_rideau',
+    name: 'Rideau de désinfection',
+    desc: 'Un nuage sans dégât : les ennemis y rampent, toi tu y ralentis à peine. Traîne la vague à travers.',
+    kind: 'cloud_status',
+    color: '#b7ffd0',
+    damage: 0,
+    telegraph: 1,
+    period: 7,
+    active: 3,
+    params: { radiusTiles: 2.5, slow: 0.5, dur: 0.3, slowPlayer: 0.2 },
+  }
+);

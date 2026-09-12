@@ -60,7 +60,48 @@ const TRAP_TRIGGERS = {
       return { stage: s.warm > 0 ? 'warn' : 'idle', k: s.warm, idx: s.warnIdx, shotIdx: s.shotIdx };
     },
   },
+  /* --- chantier 13 C : les déclencheurs à état. Ils dorment (`firedAt` nul), quelque chose les arme, ils jouent une
+     annonce puis une fenêtre, puis se réarment après `params.rearm` secondes (jamais si `params.once`). --- */
+  /* plaque : le joueur ou un ennemi (`params.who` : any, player, enemy) se tient sur la zone posée — ou sur le corps
+     du piège si `params.sensor` vaut 'body' (le fil de détente) */
+  press: {
+    stateful: true,
+    plate: true,
+    stage: (t, rt) => armedStage(t, rt),
+    sense(t, rt, targets) {
+      for (const o of targets) if (t.senses(o, rt)) return t.arm(rt, o);
+    },
+  },
+  /* proximité : une cible à moins de `params.near` tuiles du centre */
+  near: {
+    stateful: true,
+    stage: (t, rt) => armedStage(t, rt),
+    sense(t, rt, targets) {
+      const R = (t.p.near || 1) * TILE;
+      for (const o of targets) if (dist(o.x, o.y, t.cx, t.cy) < R + o.r) return t.arm(rt, o);
+    },
+  },
+  /* balle : armé par un tir du joueur (`Trap.onShot`, `params.onShot` = 'fire') ou par un autre piège (`params.link`) */
+  bullet: { stateful: true, box: true, stage: (t, rt) => armedStage(t, rt) },
+  /* flamme : une balle de piège enflammée (boule de feu, jarre) passe dessus */
+  ignite: {
+    stateful: true,
+    stage: (t, rt) => armedStage(t, rt),
+    sense(t, rt) {
+      const R = (t.p.near || 1) * TILE;
+      for (const q of Projectiles.list) if (q.trap && q.kind === 'fireball' && dist(q.x, q.y, t.cx, t.cy) < R) return t.arm(rt, null);
+    },
+  },
 };
+/* étape d'un déclencheur à état : armé à `firedAt` → annonce → fenêtre → fini */
+function armedStage(t, rt) {
+  const idx = t.fires || 0;
+  if (t.firedAt == null) return { stage: 'idle', k: 0, idx };
+  const l = rt - t.firedAt;
+  if (l < t.telegraph) return { stage: 'warn', k: clamp(l / t.telegraph, 0, 1), idx };
+  if (l < t.telegraph + t.active) return { stage: 'on', k: (l - t.telegraph) / t.active, idx };
+  return { stage: 'idle', k: 0, idx, done: true };
+}
 
 /* ---------- les effets : ce qui arrive à la cible ----------
    `apply(t, target, dt)` quand le corps touche la cible pendant la fenêtre active ; `fire(t, pl, idx)` à chaque coup
@@ -143,6 +184,113 @@ const TRAP_EFFECTS = {
   },
 };
 
+/* --- chantier 13 C : les effets qui ne sont pas des dégâts. `onStage(t, c, rt)` est appelé à chaque image avec
+   l'étape : un effet « d'un coup » (explosion, feu, appel) se joue une fois par fenêtre (`t.played !== c.idx`). --- */
+Object.assign(TRAP_EFFECTS, {
+  /* poussée : trois tuiles dans la direction `pushAngle` (ou loin du centre), sans dégât, une fois par demi-seconde et par cible */
+  push: {
+    weight: 0.4,
+    apply(t, target) {
+      if (!t.cool(target, 0.5)) return;
+      const a = t.p.pushAngle != null ? t.p.pushAngle : angleTo(t.cx, t.cy, target.x, target.y);
+      const f = (t.p.force || 3) * 160;
+      target.kvx = (target.kvx || 0) + Math.cos(a) * f;
+      target.kvy = (target.kvy || 0) + Math.sin(a) * f;
+      if (target === G.player) Feel.shake(3, a, 120);
+    },
+  },
+  /* statut : sur un ennemi `stun` (s) et `slow` (fraction, `dur` s) ; sur le joueur `slowPlayer` (fraction) et `rootPlayer` (s) ;
+     `bite` : des dégâts en plus (aux fractions des deux camps) */
+  status: {
+    weight: 0.5,
+    apply(t, target) {
+      const p = t.p;
+      if (target === G.player) {
+        if (p.slowPlayer) {
+          target.gasSlowUntil = Time.now + 0.1;
+          target.gasSlowMul = 1 - p.slowPlayer;
+        }
+        if (p.rootPlayer && t.cool(target, 1)) {
+          target.jamUntil = Time.now + p.rootPlayer;
+          target.jamScale = 0.15;
+        }
+      } else if (target instanceof Pet) {
+        /* un compagnon n'est ni endormi ni entravé : il n'a pas de prise sur les pièges */
+      } else {
+        if (p.stun) target.stunUntil = Math.max(target.stunUntil || 0, Time.now + p.stun);
+        if (p.slow) {
+          target.status = target.status || {};
+          target.status.freeze = { slow: p.slow, until: Time.now + (p.dur || 1) };
+        }
+      }
+      if (p.bite) t.hit(target, p.bite);
+    },
+  },
+  /* feu qui reste : une zone au sol pendant `burnTime` s, dégâts par seconde aux deux camps (Room.update, hazards) */
+  burn: {
+    weight: 1,
+    onStage(t, c) {
+      if (c.stage !== 'on' || t.played === c.idx) return;
+      t.played = c.idx;
+      G.room.hazards.push({
+        x: t.cx,
+        y: t.cy,
+        r: t.p.radius || TILE * 1.2,
+        dps: t.def.damage, // Room.update applique la difficulté
+        until: Time.now + (t.p.burnTime || 3),
+        owner: 'trap',
+        name: t.name,
+        color: t.color,
+        cd: new Map(),
+      });
+      AudioEngine.trapFire({ x: trapPan(t), intensity: 0.6 });
+    },
+  },
+  /* explosion : les deux camps dans `radius` px, en chaîne avec les pièges du même `link` à portée ; `once` l'épuise */
+  blast: {
+    weight: 1,
+    onStage(t, c, rt) {
+      if (c.stage !== 'on' || t.played === c.idx) return;
+      t.played = c.idx;
+      const p = t.p,
+        R = p.radius || TILE * 2.3,
+        pl = G.player;
+      G.room.blasts.push({ x: t.cx, y: t.cy, r: R, t: 0, life: 0.45, color: t.color, fill: true });
+      Particles.spawn(t.cx, t.cy, { count: 18, color: t.color, size: 4, speedMax: 260, glow: true, life: 0.6 });
+      Feel.shake(9, angleTo(t.cx, t.cy, pl.x, pl.y), 220);
+      AudioEngine.skillShockwave({ x: trapPan(t), intensity: 0.6 });
+      if (!pl.dead && dist(t.cx, t.cy, pl.x, pl.y) < R + pl.r)
+        Combat.hitPlayer(t.damage, { type: 'trap', x: t.cx, y: t.cy, trapName: t.name });
+      for (const o of t.others()) if (dist(t.cx, t.cy, o.x, o.y) < R + o.r) t.hitOther(o, t.damage);
+      if (p.link) for (const t2 of G.room.traps) t2.linkFrom(t, rt);
+      if (p.once) t.spend();
+    },
+  },
+  /* armer : arme les pièges du même `link` (le fil de détente et ses dynamites) */
+  arm: {
+    weight: 0,
+    onStage(t, c, rt) {
+      if (c.stage !== 'on' || t.played === c.idx) return;
+      t.played = c.idx;
+      for (const t2 of G.room.traps) t2.linkFrom(t, rt);
+    },
+  },
+  /* appel : `count` ennemis `enemy` arrivent, et une bourse de `purse` crédits tombe sur la plaque (le trésor gardé) */
+  call: {
+    weight: 0,
+    onStage(t, c) {
+      if (c.stage !== 'on' || t.played === c.idx) return;
+      t.played = c.idx;
+      const p = t.p;
+      Room.spawnAt({ enemy: p.enemy, count: p.count || 4, x: -1, y: -1 });
+      if (p.purse) Pickups.spawn(t.cx, t.cy, 'purse', p.purse);
+      UI.toast(t.name + ' : ' + (p.count || 4) + ' de plus');
+      AudioEngine.trapWarn({ x: trapPan(t), intensity: 0.8 });
+      if (p.once) t.spend();
+    },
+  },
+});
+
 /* ---------- les corps : géométrie, danger pour le bot, rendu ----------
    `hits(t, target, rt)` : le corps touche-t-il la cible maintenant (appelé pendant la fenêtre active) ;
    `danger(t, x, y, rt)` : 0..1 pour le bot, qui regarde un peu en avance (`ahead`) avec une marge ;
@@ -152,7 +300,7 @@ const TRAP_BODIES = {
   /* balayage : un rayon traverse la zone pendant la fenêtre active (aller, puis retour au cycle suivant) */
   sweep: {
     seg(t, rt) {
-      const c = t.cycle(rt);
+      const c = t.stage(rt);
       const len = t.p.axis === 'y' ? t.h : t.w;
       let k = c.stage === 'on' ? c.k : 0;
       if (t.p.pingpong !== false && c.idx % 2 === 1) k = 1 - k;
@@ -231,7 +379,7 @@ const TRAP_BODIES = {
       return false;
     },
     danger(t, x, y, rt) {
-      if (t.cycle(rt + 0.3).stage === 'idle') return 0;
+      if (t.stage(rt + 0.3).stage === 'idle') return 0;
       for (let i = 0; i < (t.p.arms || 1); i++) {
         const s = this.seg(t, rt + 0.3, i);
         if (segCircle(s.ax, s.ay, s.bx, s.by, x, y, 40)) return 1;
@@ -240,7 +388,7 @@ const TRAP_BODIES = {
     },
     render(t, ctx, rt) {
       ctx.save();
-      const c = t.cycle(rt);
+      const c = t.stage(rt);
       const arm = c.stage === 'on';
       ctx.fillStyle = '#556';
       ctx.beginPath();
@@ -275,18 +423,18 @@ const TRAP_BODIES = {
       return out;
     },
     hits(t, pl, rt) {
-      const par = t.cycle(rt).idx % 2;
+      const par = (t.stage(rt).idx + (t.flip || 0)) % 2;
       return this.lines(t).some((s, i) => i % 2 === par && segCircle(s.ax, s.ay, s.bx, s.by, pl.x, pl.y, pl.r - 2));
     },
     danger(t, x, y, rt) {
-      const c = t.cycle(rt + 0.3);
+      const c = t.stage(rt + 0.3);
       if (c.stage === 'idle') return 0;
-      const par = c.idx % 2;
+      const par = (c.idx + (t.flip || 0)) % 2;
       return this.lines(t).some((s, i) => i % 2 === par && segCircle(s.ax, s.ay, s.bx, s.by, x, y, 30)) ? 1 : 0;
     },
     render(t, ctx, rt) {
-      const c = t.cycle(rt),
-        par = c.idx % 2;
+      const c = t.stage(rt),
+        par = (c.idx + (t.flip || 0)) % 2;
       ctx.save();
       ctx.strokeStyle = t.color;
       this.lines(t).forEach((s, i) => {
@@ -349,14 +497,14 @@ const TRAP_BODIES = {
   tiles: {
     active: (t, tx, ty, idx) => (t.p.pattern === 'checker' ? (tx + ty) % 2 === idx % 2 : true),
     hits(t, pl, rt) {
-      const idx = t.cycle(rt).idx;
+      const idx = t.stage(rt).idx;
       for (let ty = 0; ty < t.th; ty++)
         for (let tx = 0; tx < t.tw; tx++)
           if (this.active(t, tx, ty, idx) && circleRect(pl.x, pl.y, pl.r - 5, t.x + tx * TILE, t.y + ty * TILE, TILE, TILE)) return true;
       return false;
     },
     danger(t, x, y, rt) {
-      const c = t.cycle(rt + 0.3);
+      const c = t.stage(rt + 0.3);
       if (c.stage === 'idle') return 0;
       for (let ty = 0; ty < t.th; ty++)
         for (let tx = 0; tx < t.tw; tx++)
@@ -364,7 +512,7 @@ const TRAP_BODIES = {
       return 0;
     },
     render(t, ctx, rt) {
-      const c = t.cycle(rt);
+      const c = t.stage(rt);
       const idle = trapRgba(t.color, 0.2),
         edge = trapRgba(t.color, 0.35);
       ctx.save();
@@ -413,7 +561,7 @@ const TRAP_BODIES = {
       return dist(pl.x, pl.y, t.cx, t.cy) < this.radius(t) + pl.r * 0.5;
     },
     danger(t, x, y, rt) {
-      const c = t.cycle(rt + 0.4);
+      const c = t.stage(rt + 0.4);
       return c.stage !== 'idle' && dist(x, y, t.cx, t.cy) < this.radius(t) + 20 ? 0.8 : 0;
     },
     disc(R, color) {
@@ -434,7 +582,7 @@ const TRAP_BODIES = {
       return c;
     },
     render(t, ctx, rt) {
-      const c = t.cycle(rt);
+      const c = t.stage(rt);
       const R = this.radius(t);
       ctx.save();
       ctx.fillStyle = '#2f3a2a';
@@ -470,7 +618,7 @@ const TRAP_BODIES = {
   rail: {
     points: t =>
       (
-        t.p.points || [
+        (t.p.routes ? t.p.routes[t.route || 0] : t.p.points) || [
           { x: 0, y: 0 },
           { x: t.tw - 1, y: 0 },
         ]
@@ -498,7 +646,7 @@ const TRAP_BODIES = {
       }
       if (!total) return pts[0];
       const sp = (t.p.speed || 160) * t.speedMul;
-      let d = t.lt(rt) * sp;
+      let d = t.travel(rt) * sp;
       d = loop ? d % total : d % (2 * total) < total ? d % (2 * total) : 2 * total - (d % (2 * total));
       for (const s of segs) {
         if (d <= s.l) {
@@ -658,7 +806,7 @@ const TRAP_BODIES = {
   /* rayon : un segment fixe depuis un mur, taillé au bord de la salle, allumé et éteint sur la partition */
   beam: {
     seg(t, rt) {
-      const c = t.cycle(rt);
+      const c = t.stage(rt);
       const a = t.p.angle || 0;
       const len = (t.p.length || 26) * TILE;
       const bx = clamp(t.cx + Math.cos(a) * len, ROOM_X, ROOM_X + ROOM_W),
@@ -705,8 +853,59 @@ const TRAP_BODIES = {
       ctx.restore();
     },
   },
-};
 
+  /* accessoire (chantier 13 C) : un corps posé — bonbonne, tonneau, gousse, cage — dessiné en sprite (`params.sprite`,
+     un PNG de assets/sprites/pixel/) avec une lueur d'alerte quand il est armé ; zone d'effet ronde (`radius`, en px) */
+  prop: {
+    radius: t => t.p.radius || TILE * 0.55,
+    hits(t, target) {
+      return dist(target.x, target.y, t.cx, t.cy) < this.radius(t) + target.r * 0.5;
+    },
+    danger(t, x, y, rt) {
+      if (t.spent) return 0;
+      const c = t.stage(rt + 0.3);
+      return c.stage !== 'idle' && dist(x, y, t.cx, t.cy) < this.radius(t) + 30 ? 1 : 0;
+    },
+    render(t, ctx, rt) {
+      const c = t.stage(rt);
+      ctx.save();
+      if (t.spent) {
+        ctx.fillStyle = 'rgba(0,0,0,.25)';
+        ctx.beginPath();
+        ctx.ellipse(t.cx, t.cy + 8, 14, 5, 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+      if (c.stage === 'warn') {
+        Halo.ring(
+          ctx,
+          t.cx,
+          t.cy,
+          this.radius(t) * (0.5 + 0.5 * c.k),
+          this.radius(t) * (0.5 + 0.5 * c.k),
+          PAL.alert,
+          2,
+          8,
+          0.4 + 0.5 * Beat.pulse(4)
+        );
+      } else if (c.stage === 'on') Halo.draw(ctx, t.cx, t.cy, this.radius(t), t.color, 14);
+      const size = TILE * (t.p.size || 0.9);
+      const ok = t.p.sprite && Sprites.drawProp(ctx, t.p.sprite, t.cx, t.cy + size * 0.45, size, size, { foot: true });
+      if (!ok) {
+        /* sans sprite : un fût rond aux couleurs du piège */
+        ctx.fillStyle = '#333a4e';
+        ctx.beginPath();
+        ctx.arc(t.cx, t.cy, 13, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = t.color;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
+  },
+};
 /* les dix mécaniques historiques, traduites en triplets — le contenu ne change pas */
 const TRAP_LEGACY = {
   laser_sweep: { trigger: 'cycle', body: 'sweep', effect: 'damage', snd: 'trapLaser' },
@@ -719,7 +918,21 @@ const TRAP_LEGACY = {
   turret_fixed: { trigger: 'shot', body: 'turret', effect: 'shoot', snd: 'trapWarn' },
   emitter: { trigger: 'shot', body: 'emitter', effect: 'salvo', snd: 'trapWarn' },
   laser_beam: { trigger: 'cycle', body: 'beam', effect: 'damage', snd: 'trapLaser' },
+  /* chantier 13 C : les familles nouvelles — le joueur décide */
+  plate_arc: { trigger: 'press', body: 'beam', effect: ['damage', 'status'], snd: 'trapLaser' }, // défibrillateur
+  blast_prop: { trigger: 'bullet', body: 'prop', effect: ['blast'], snd: 'trapFire' }, // bonbonne, tonneaux
+  rail_shot: { trigger: 'bullet', body: 'rail', effect: 'damage', snd: 'trapSaw' }, // brancard fou
+  cloud_status: { trigger: 'cycle', body: 'cloud', effect: ['status'], snd: 'trapGas' }, // rideau, pollen
+  bite_near: { trigger: 'near', body: 'tiles', effect: ['status'], snd: 'trapSpike' }, // dionée
+  sweep_push: { trigger: 'bullet', body: 'sweep', effect: ['push'], snd: 'trapLaser' }, // vanne
+  wire_arm: { trigger: 'press', body: 'beam', effect: ['arm'], snd: 'trapWarn' }, // fil de détente armé
+  plate_call: { trigger: 'press', body: 'tiles', effect: ['call'], snd: 'trapWarn' }, // cloche
+  tiles_press: { trigger: 'press', body: 'tiles', effect: 'damage', snd: 'trapSpike' }, // dalles du Vizir
+  puddle_burn: { trigger: 'ignite', body: 'prop', effect: ['burn'], snd: 'trapFire' }, // flaque d'huile
+  drop_near: { trigger: 'near', body: 'prop', effect: ['status'], snd: 'trapSpike' }, // cage
 };
+/* les kinds connus du contenu : chaque entrée de TRAP_LEGACY (Content.validate s'en sert) */
+TRAP_KINDS.splice(0, TRAP_KINDS.length, ...Object.keys(TRAP_LEGACY));
 
 class Trap {
   constructor(def, inst) {
@@ -730,7 +943,9 @@ class Trap {
     const L = TRAP_LEGACY[def.kind] || {};
     this.trigger = TRAP_TRIGGERS[def.trigger || L.trigger] || TRAP_TRIGGERS.cycle;
     this.body = TRAP_BODIES[def.body || L.body] || TRAP_BODIES.tiles;
-    this.effect = TRAP_EFFECTS[def.effect || L.effect] || TRAP_EFFECTS.damage;
+    const fx = [].concat(def.effect || L.effect || 'damage');
+    this.effects = fx.map(k => TRAP_EFFECTS[k]).filter(Boolean);
+    this.effect = this.effects[0] || TRAP_EFFECTS.damage;
     this.snd = def.snd || L.snd || 'trapWarn';
     this.p = Object.assign({}, def.params || {}, inst.params || {});
     this.tx = inst.x;
@@ -759,6 +974,15 @@ class Trap {
     this.color = this.p.color || def.color || PAL.danger; // `params.color` : une salle peut reteinter un piège
     this.disabled = false;
     this.beats = this.p.beats || null; // salle du tempo : cadence en temps musicaux (voir syncBeat)
+    /* chantier 13 C : l'état — armé à `firedAt`, `fires` coups joués, `hp` si on peut le casser ou le déclencher d'un tir,
+       `spent` quand il est consommé, `route` / `flip` pour l'aiguillage et le néon */
+    this.firedAt = null;
+    this.fires = 0;
+    this.hpMax = this.p.hp != null ? this.p.hp : def.hp || 0;
+    this.hp = this.hpMax;
+    this.spent = false;
+    this.route = 0;
+    this.flip = 0;
     /* --- adaptation des paramètres de contenu (unités de tuiles → px, mots → nombres) --- */
     const p = this.p;
     if (p.orientation) p.axis = p.orientation === 'horizontal' ? 'y' : 'x';
@@ -791,6 +1015,86 @@ class Trap {
   /* temps local du piège (avec décalage de phase) */
   lt(rt) {
     return Math.max(0, rt - this.phase);
+  }
+  /* l'étape du déclencheur à un instant donné (pur : le bot regarde en avance) */
+  stage(rt) {
+    return this.trigger.stage(this, rt);
+  }
+  /* temps de trajet d'un corps mobile : un rail à état ne roule que pendant sa fenêtre, puis se range */
+  travel(rt) {
+    if (!this.trigger.stateful) return this.lt(rt);
+    if (this.firedAt == null) return 0;
+    return clamp(rt - this.firedAt - this.telegraph, 0, this.active);
+  }
+  /* --- chantier 13 C : l'état --- */
+  /* la cible est-elle sur la zone posée (ou sur le corps si `sensor` vaut 'body') */
+  senses(o, rt) {
+    const who = this.p.who || 'any';
+    if (who === 'player' && o !== G.player) return false;
+    if (who === 'enemy' && (o === G.player || o instanceof Pet)) return false;
+    if (this.p.sensor === 'body') return this.body.hits(this, o, rt);
+    return circleRect(o.x, o.y, o.r * 0.6, this.x, this.y, this.w, this.h);
+  }
+  /* armer : une annonce, puis la fenêtre ; rien si déjà armé, épuisé ou coupé */
+  arm(rt, by) {
+    if (this.firedAt != null || this.spent || this.disabled) return false;
+    this.firedAt = rt;
+    this.fires++;
+    this.armedBy = by || null;
+    this.warned = -1;
+    if (this.body === TRAP_BODIES.rail) this.active = TRAP_BODIES.rail.length(this) / ((this.p.speed || 160) * this.speedMul); // un aller
+    return true;
+  }
+  /* un autre piège du même `link` vient de partir : on s'arme à sa suite (`linkDelay` s), s'il est à portée (`linkRange` tuiles) */
+  linkFrom(src, rt) {
+    if (src === this || !this.p.link || this.p.link !== src.p.link) return;
+    if (src.p.linkRange && dist(src.cx, src.cy, this.cx, this.cy) > src.p.linkRange * TILE) return;
+    if (this.trigger.stateful) this.arm(rt + (src.p.linkDelay || 0.15), src);
+    else this.fireNow = true; // un tireur lié part tout de suite
+  }
+  /* une balle du joueur touche le piège (son boîtier `params.box`, ou son centre) */
+  shotBy(q) {
+    if (!this.hpMax || this.spent || this.disabled) return false;
+    const b = this.boxPos();
+    return dist(q.x, q.y, b.x, b.y) < q.r + (this.p.hitR || 18);
+  }
+  boxPos() {
+    const b = this.p.box;
+    return b ? { x: ROOM_X + (b.x + 0.5) * TILE, y: ROOM_Y + (b.y + 0.5) * TILE } : { x: this.cx, y: this.cy };
+  }
+  onShot(q, rt) {
+    this.hp--;
+    const does = this.p.onShot || 'break';
+    Particles.spawn(q.x, q.y, { count: 5, color: this.color, size: 2 });
+    if (does === 'flip') this.flip ^= 1;
+    else if (does === 'toggle') this.route ^= 1;
+    else if (does === 'fire') {
+      if (this.trigger.stateful) this.arm(rt, G.player);
+      else this.fireNow = true;
+    }
+    if (this.hp <= 0) {
+      if (does === 'break') this.break();
+      else this.hp = this.hpMax; // un boîtier qui déclenche ou bascule se réarme tout seul
+    }
+  }
+  /* désamorcé : coupé `rearm` secondes (8 par défaut), puis il revient — on paie des tirs pour du calme */
+  break() {
+    this.disabled = true;
+    this.brokenAt = this.clock;
+    Floaters.add(this.cx, this.cy - 20, 'désamorcé', '#9ff', null, 'event');
+    AudioEngine.uiBack && AudioEngine.uiBack({ intensity: 0.4 });
+  }
+  /* consommé : la bonbonne a sauté, la cloche a sonné — il ne rend plus rien et ne s'annonce plus */
+  spend() {
+    this.spent = true;
+    this.disabled = true;
+  }
+  /* une chose par cible et par `dur` secondes (poussées, entraves) */
+  cool(target, dur) {
+    const last = this.cools ? this.cools.get(target) : null;
+    if (last != null && this.clock - last < dur) return false;
+    (this.cools || (this.cools = new Map())).set(target, this.clock);
+    return true;
   }
   /* cycle : renvoie {stage:'idle'|'warn'|'on', k} */
   cycle(rt) {
@@ -890,32 +1194,105 @@ class Trap {
     this.hitCd -= dt;
     this.clock += dt;
     if (this.beats) this.syncBeat();
-    if (this.disabled) return;
+    if (this.disabled) {
+      /* désamorcé : il revient après `rearm` secondes (jamais s'il est consommé) */
+      if (this.brokenAt != null && !this.spent && this.clock - this.brokenAt >= (this.p.rearm != null ? this.p.rearm : 8)) {
+        this.disabled = false;
+        this.brokenAt = null;
+        this.hp = this.hpMax;
+      }
+      return;
+    }
     const pl = G.player;
-    const c = this.trigger.stage(this, rt);
+    const T = this.trigger;
+    /* les déclencheurs à état : sentir, puis se réarmer quand la fenêtre est passée */
+    if (T.stateful) {
+      if (this.firedAt == null && T.sense) T.sense(this, rt, [pl, ...this.others()]);
+      else if (this.firedAt != null) {
+        const done = rt - this.firedAt - this.telegraph - this.active;
+        if (done >= 0 && (this.p.once ? false : done >= (this.p.rearm != null ? this.p.rearm : 1.5))) this.firedAt = null;
+      }
+    }
+    const c = T.stage(this, rt);
     if (this.body.tick) this.body.tick(this, dt, rt, pl, c);
-    if (c.stage === 'warn') this.warn(c.idx, this.snd, this.trigger.warnLevel);
-    if (this.trigger.fires) {
+    if (c.stage === 'warn') this.warn(c.idx, this.snd, T.warnLevel);
+    for (const fx of this.effects) if (fx.onStage) fx.onStage(this, c, rt);
+    if (T.fires) {
       /* un coup dû est joué une fois ; au premier réveil on ne rejoue pas un coup déjà passé */
       if (this.lastShot == null) this.lastShot = c.shotIdx;
       else if (c.shotIdx >= 0 && c.shotIdx !== this.lastShot) {
         this.lastShot = c.shotIdx;
         this.fireCount = c.shotIdx + 1;
-        this.effect.fire(this, pl, c.shotIdx);
+        for (const fx of this.effects) if (fx.fire) fx.fire(this, pl, c.shotIdx);
+      }
+      if (this.fireNow) {
+        /* un tir du joueur ou un piège lié : la salve part maintenant */
+        this.fireNow = false;
+        this.fires++;
+        for (const fx of this.effects) if (fx.fire) fx.fire(this, pl, (this.lastShot || 0) + 100 + this.fires);
       }
     } else if (c.stage === 'on') {
-      if (!pl.dead && this.body.hits(this, pl, rt)) this.effect.apply(this, pl, dt);
-      for (const o of this.others()) if (this.body.hits(this, o, rt)) this.effect.apply(this, o, dt);
+      const hitPl = !pl.dead && this.body.hits(this, pl, rt);
+      const hitO = this.others().filter(o => this.body.hits(this, o, rt));
+      for (const fx of this.effects) {
+        if (!fx.apply) continue;
+        if (hitPl) fx.apply(this, pl, dt);
+        for (const o of hitO) fx.apply(this, o, dt);
+      }
     }
-    if (this.effect.tick) this.effect.tick(this, dt, pl);
+    for (const fx of this.effects) if (fx.tick) fx.tick(this, dt, pl);
   }
   render(ctx, rt) {
     if (this.beats) this.syncBeat();
+    if (this.spent) {
+      if (this.body === TRAP_BODIES.prop) this.body.render(this, ctx, rt);
+      return;
+    }
+    if (this.hpMax) this.renderBox(ctx);
     if (this.disabled) return;
+    if (this.trigger.plate && this.p.sensor !== 'body') this.renderPlate(ctx, rt);
     this.body.render(this, ctx, rt);
+  }
+  /* la plaque : la zone posée, qui s'enfonce quand elle est armée ; le boîtier : un voyant qu'on tire (orange armé, gris coupé) */
+  renderPlate(ctx, rt) {
+    const c = this.stage(rt);
+    const armed = c.stage !== 'idle';
+    ctx.save();
+    ctx.fillStyle = armed ? trapRgba(PAL.alert, 0.25) : 'rgba(255,255,255,.06)';
+    ctx.fillRect(this.x + 6, this.y + 6, this.w - 12, this.h - 12);
+    ctx.strokeStyle = armed ? PAL.alert : trapRgba(this.color, 0.6);
+    ctx.lineWidth = 2;
+    ctx.setLineDash(armed ? [] : [3, 5]);
+    ctx.strokeRect(this.x + 6.5, this.y + 6.5, this.w - 13, this.h - 13);
+    ctx.restore();
+  }
+  renderBox(ctx) {
+    const b = this.boxPos();
+    const off = this.disabled;
+    ctx.save();
+    ctx.fillStyle = '#2a2f40';
+    ctx.fillRect(b.x - 9, b.y - 9, 18, 18);
+    ctx.strokeStyle = off ? '#666' : this.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(b.x - 9.5, b.y - 9.5, 19, 19);
+    const v = off ? '#555' : this.p.onShot === 'break' || !this.p.onShot ? '#ff9a3c' : this.color;
+    if (!off) Halo.draw(ctx, b.x, b.y, 4, v, 8);
+    ctx.fillStyle = v;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 3.5, 0, TAU);
+    ctx.fill();
+    /* les coups qu'il reste à donner */
+    if (!off && this.hpMax > 1) {
+      ctx.fillStyle = '#e8ecf7';
+      for (let i = 0; i < this.hp; i++) ctx.fillRect(b.x - 8 + i * 5, b.y + 11, 3, 2);
+    }
+    ctx.restore();
   }
   dangerAt(x, y, rt) {
     if (this.disabled) return 0;
+    /* une plaque endormie n'est pas un danger, mais le bot n'a rien à y faire : un léger repoussoir */
+    if (this.trigger.plate && this.firedAt == null && this.p.sensor !== 'body')
+      return circleRect(x, y, 10, this.x, this.y, this.w, this.h) && (this.p.who || 'any') !== 'enemy' ? 0.3 : 0;
     if (this.beats) this.syncBeat();
     return this.body.danger(this, x, y, rt);
   }

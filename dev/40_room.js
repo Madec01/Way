@@ -437,9 +437,24 @@ const Room = {
           const last = h.cd.get('pl') || -9;
           if (Time.now - last >= 0.5) {
             h.cd.set('pl', Time.now);
-            Combat.hitPlayer(Math.round(h.dps * 0.5 * G.difficulty.damageMul), { type: 'trap', x: h.x, y: h.y, trapName: 'Ronces' });
+            Combat.hitPlayer(Math.round(h.dps * 0.5 * G.difficulty.damageMul), {
+              type: 'trap',
+              x: h.x,
+              y: h.y,
+              trapName: h.name || 'Ronces',
+            });
           }
         }
+        /* le feu d'un piège (chantier 13 C) brûle aussi les ennemis, à la fraction des deux camps */
+        if (h.owner === 'trap' && h.dps)
+          for (const e of G.enemies) {
+            if (e.dead || dist(h.x, h.y, e.x, e.y) > h.r + e.r) continue;
+            const last = h.cd.get(e) || -9;
+            if (Time.now - last < 0.5) continue;
+            h.cd.set(e, Time.now);
+            const mul = e.isBoss ? BALANCE.trap.bossMul : BALANCE.trap.enemyMul;
+            if (mul) Combat.hitEnemy(e, Math.max(1, Math.round(h.dps * 0.5 * G.difficulty.damageMul * mul)), { dot: true, x: e.x, y: e.y });
+          }
         continue;
       }
       if (h.owner === 'player')

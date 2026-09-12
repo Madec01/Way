@@ -132,7 +132,9 @@ CONTENT = {
 
   traps: [{ id, name, desc, kind: 'laser_sweep'|'laser_rotate'|'laser_grid'|'wall_fireball'|'spike_tiles'|'gas_zone'|'saw_rail'|'turret_fixed'|'emitter'|'laser_beam',
             damage, telegraph /*s*/, period /*s*/, active /*s*/, params: { /* selon kind */ },
-            trigger?, body?, effect?, snd? /* chantier 13 : un kind = un triplet de TRAP_LEGACY (34_traps.js) ; une définition peut nommer le sien */ }],
+            trigger?, body?, effect? /* ou une liste */, snd?, hp? /* chantier 13 : un kind = un triplet de TRAP_LEGACY (34_traps.js) ; une définition peut nommer le sien ;
+            params à état : who, sensor, near, rearm, once, onShot ('break'|'fire'|'flip'|'toggle'), box {x,y}, link, linkRange, linkDelay, routes, sprite,
+            push : force, pushAngle · status : stun, slow, dur, slowPlayer, rootPlayer, bite · burn : burnTime · blast : radius · call : enemy, count, purse */ }],
 
   rooms: [{ id, biome, index /*1..9*/, type: 'PREP_COMBAT'|'TRAP'|'COMBAT_TRAP'|'CHEST'|'MINIBOSS'|'COMBAT_MODULAR'|'COMBAT_TRAP_MODULAR'|'CHEST_FINAL'|'BOSS_REVENGE',
             refTime /*s, temps de référence pour le score*/,

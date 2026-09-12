@@ -40,7 +40,8 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
     const tables = typeof TRAP_LEGACY !== 'undefined'; // le test se rejoue tel quel sur l'ancien moteur (sans tables)
     for (const k of tables ? TRAP_KINDS : []) {
       const L = TRAP_LEGACY[k];
-      if (!L || !TRAP_TRIGGERS[L.trigger] || !TRAP_BODIES[L.body] || !TRAP_EFFECTS[L.effect]) out.pb.push(`${k} : pas de triplet complet`);
+      if (!L || !TRAP_TRIGGERS[L.trigger] || !TRAP_BODIES[L.body] || ![].concat(L.effect).every(f => TRAP_EFFECTS[f]))
+        out.pb.push(`${k} : pas de triplet complet`);
     }
     out.tables = tables
       ? { triggers: Object.keys(TRAP_TRIGGERS), bodies: Object.keys(TRAP_BODIES), effects: Object.keys(TRAP_EFFECTS) }
@@ -261,6 +262,146 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
     for (const e of G.enemies) e.hp = 0;
     G.enemies.length = 0;
     Projectiles.list.length = 0;
+    /* 7. le joueur décide (chantier 13 C) : plaque, proximité, tir, chaîne ; poussée, statut, feu ; cassable */
+    const byId = id => CONTENT.traps.find(t => t.id === id);
+    const mkId = (id, inst) => new Trap(byId(id), inst);
+    const spawnAt = (x, y) => {
+      const e = spawn(x, y);
+      e.x = x;
+      e.y = y;
+      return e;
+    };
+    const C = {};
+    /* plaque : le défibrillateur s'arme quand on s'y tient, l'arc blesse et étourdit l'ennemi dessus */
+    {
+      const t = mkId('trap_defibrillateur', { x: 10, y: 8 });
+      arm();
+      pl.x = t.cx;
+      pl.y = t.cy;
+      const e = spawnAt(t.cx, t.cy - 100); // sur l'arc, qui monte
+      const hp0 = e.hp;
+      t.update(0.016, 0);
+      const armed = t.firedAt === 0;
+      t.update(0.016, t.telegraph + 0.05);
+      C.plaque = {
+        armed,
+        stage: t.stage(t.telegraph + 0.05).stage,
+        hitE: hp0 - e.hp,
+        stun: e.stunUntil > Time.now,
+        hitPl: pl.stats.maxHp - pl.hp,
+      };
+      /* pas rearmable avant `rearm` : la plaque reste inerte juste après */
+      t.update(0.016, t.telegraph + t.active + 0.1);
+      C.plaque.stillArmed = t.firedAt != null;
+      t.update(0.016, t.telegraph + t.active + t.p.rearm + 0.1);
+      C.plaque.rearmed = t.firedAt == null;
+    }
+    /* tir + explosion en chaîne : la bonbonne saute au tir, blesse l'ennemi à côté, arme la voisine, et se consomme */
+    {
+      const a = mkId('trap_bonbonne', { x: 8, y: 6 }),
+        b = mkId('trap_bonbonne', { x: 10, y: 6 });
+      G.room.traps.push(a, b);
+      arm();
+      pl.x = W / 2;
+      pl.y = ROOM_Y + TILE;
+      const e = spawnAt(a.cx + 40, a.cy);
+      const hp0 = e.hp;
+      const shot = a.shotBy({ x: a.cx, y: a.cy, r: 4 });
+      a.onShot({ x: a.cx, y: a.cy, r: 4 }, 0);
+      const armed = a.firedAt === 0;
+      a.update(0.016, a.telegraph + 0.02);
+      C.bonbonne = { shot, armed, hitE: hp0 - e.hp, spent: a.spent, voisine: b.firedAt != null, delai: b.firedAt };
+      G.room.traps.splice(G.room.traps.indexOf(a), 2);
+    }
+    /* cassable : deux tirs sur le boîtier d'une grille la coupent, elle revient après `rearm` */
+    {
+      const t = mkId('trap_grille', { x: 4, y: 2, w: 8, h: 6, params: { hp: 2, rearm: 2 } });
+      const q = { x: t.cx, y: t.cy, r: 4 };
+      const s1 = t.shotBy(q);
+      t.onShot(q, 0);
+      const alive = !t.disabled;
+      t.onShot(q, 0);
+      const off = t.disabled;
+      t.clock += 2.1;
+      t.update(0.016, 0);
+      C.boitier = { s1, alive, off, back: !t.disabled && t.hp === 2 };
+    }
+    /* poussée : la vanne pousse l'ennemi dans la zone balayée */
+    {
+      const t = mkId('trap_vanne', { x: 6, y: 2, w: 6, h: 5 });
+      arm();
+      pl.x = W / 2;
+      pl.y = ROOM_Y + 11 * TILE;
+      const e = spawnAt(t.x + 8, t.cy);
+      e.kvx = 0;
+      t.onShot({ x: t.cx, y: t.cy, r: 4 }, 0);
+      t.update(0.016, t.telegraph + 0.001); // le jet part du bord gauche
+      C.vanne = { armed: t.firedAt === 0, kvx: e.kvx, hp: e.hp === e.maxHp };
+    }
+    /* statut : le pollen endort l'ennemi, ralentit le joueur, ne blesse personne */
+    {
+      const t = mkId('trap_pollen', { x: 10, y: 6 });
+      arm();
+      pl.x = t.cx + 20;
+      pl.y = t.cy;
+      const e = spawnAt(t.cx - 20, t.cy);
+      const hpE = e.hp,
+        hpP = pl.hp;
+      t.update(0.016, t.period - t.active + 0.01);
+      C.pollen = { stun: e.stunUntil > Time.now, slowPl: pl.gasSlowMul, hitE: hpE - e.hp, hitP: hpP - pl.hp };
+    }
+    /* feu : la flaque s'enflamme au passage d'une jarre et laisse un feu au sol qui brûle les deux camps */
+    {
+      const t = mkId('trap_huile', { x: 10, y: 6 });
+      G.room.hazards.length = 0;
+      Projectiles.list.push({
+        x: t.cx,
+        y: t.cy,
+        vx: 0,
+        vy: 0,
+        r: 6,
+        trap: true,
+        kind: 'fireball',
+        owner: 'enemy',
+        t: 0,
+        life: 9,
+        damage: 1,
+        hit: new Set(),
+      });
+      t.update(0.016, 0);
+      const armed = t.firedAt === 0;
+      t.update(0.016, t.telegraph + 0.01);
+      const h = G.room.hazards.find(z => z.owner === 'trap');
+      C.huile = { armed, feu: !!h, dps: h && h.dps, nom: h && h.name };
+      G.room.hazards.length = 0;
+      Projectiles.list.length = 0;
+    }
+    /* proximité : la cage tombe sur l'ennemi qui passe dessous et le retient trois secondes */
+    {
+      const t = mkId('trap_cage', { x: 10, y: 6 });
+      arm();
+      pl.x = W / 2;
+      pl.y = ROOM_Y + TILE;
+      const e = spawnAt(t.cx + 10, t.cy);
+      t.update(0.016, 0);
+      const armed = t.firedAt === 0;
+      t.update(0.016, t.telegraph + 0.01);
+      C.cage = { armed, stun: e.stunUntil > Time.now + 2 };
+    }
+    /* le brancard : un tir, un aller sur le rail pendant la fenêtre, puis il se range */
+    {
+      const t = mkId('trap_brancard', { x: 6, y: 6, w: 8, params: { box: { x: 6, y: 6 } } });
+      const rest0 = TRAP_BODIES.rail.pos(t, 5).x;
+      t.onShot({ x: t.x + TILE / 2, y: t.cy, r: 4 }, 0);
+      const mid = TRAP_BODIES.rail.pos(t, t.telegraph + t.active / 2).x;
+      const end = TRAP_BODIES.rail.pos(t, t.telegraph + t.active + 5).x;
+      C.brancard = { armed: t.firedAt === 0, active: +t.active.toFixed(2), rest0, mid, end, roule: mid > rest0 && end >= mid };
+    }
+    for (const e of G.enemies) e.hp = 0;
+    G.enemies.length = 0;
+    Projectiles.list.length = 0;
+    out.decide = C;
+    out.kinds13 = TRAP_KINDS.length;
     arm();
     G.debug.invuln = true;
     return out;
@@ -314,4 +455,44 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
   ok(`un compagnon prend ×${c.petMul} par Pets.hurt (${c.hitP} pour ${c.dmg})`, c.hitP === c.attenduP, JSON.stringify(c));
   ok('le nuage blesse aussi un ennemi, par tic', c.hitG > 0, JSON.stringify(c));
   ok('une balle de tourelle abat l’ennemi qu’elle croise et disparaît', c.nb > 0 && c.hitS > 0 && c.left < c.nb, JSON.stringify(c));
+  const D = r.decide;
+  ok(`${r.kinds13} mécaniques connues du contenu (dix historiques et onze familles nouvelles)`, r.kinds13 === 21);
+  ok(
+    'plaque : le défibrillateur s’arme sous le joueur, l’arc blesse le joueur et l’ennemi et l’étourdit, puis se réarme après le délai',
+    D.plaque.armed &&
+      D.plaque.stage === 'on' &&
+      D.plaque.hitE > 0 &&
+      D.plaque.stun &&
+      D.plaque.hitPl > 0 &&
+      D.plaque.stillArmed &&
+      D.plaque.rearmed,
+    JSON.stringify(D.plaque)
+  );
+  ok(
+    'tir et chaîne : la bonbonne saute au tir, blesse l’ennemi à côté, arme sa voisine avec un délai, et se consomme',
+    D.bonbonne.shot && D.bonbonne.armed && D.bonbonne.hitE > 0 && D.bonbonne.spent && D.bonbonne.voisine && D.bonbonne.delai > 0,
+    JSON.stringify(D.bonbonne)
+  );
+  ok(
+    'cassable : deux tirs coupent la grille, elle revient après le délai',
+    D.boitier.s1 && D.boitier.alive && D.boitier.off && D.boitier.back,
+    JSON.stringify(D.boitier)
+  );
+  ok('poussée : la vanne pousse l’ennemi sans le blesser', D.vanne.armed && D.vanne.kvx > 0 && D.vanne.hp, JSON.stringify(D.vanne));
+  ok(
+    'statut : le pollen endort l’ennemi et ralentit le joueur sans blesser',
+    D.pollen.stun && D.pollen.slowPl < 1 && D.pollen.hitE === 0 && D.pollen.hitP === 0,
+    JSON.stringify(D.pollen)
+  );
+  ok(
+    'feu : la flaque s’enflamme au passage d’une jarre et laisse un feu au sol',
+    D.huile.armed && D.huile.feu && D.huile.dps > 0,
+    JSON.stringify(D.huile)
+  );
+  ok('proximité : la cage tombe sur l’ennemi et le retient', D.cage.armed && D.cage.stun, JSON.stringify(D.cage));
+  ok(
+    'brancard : un tir, un aller sur le rail pendant la fenêtre, puis il se range',
+    D.brancard.armed && D.brancard.roule,
+    JSON.stringify(D.brancard)
+  );
 });

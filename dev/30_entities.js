@@ -372,6 +372,18 @@ const Projectiles = {
       }
       /* collisions */
       if (p.owner === 'player') {
+        /* chantier 13 C : une balle du joueur touche un piège qu'on peut casser ou déclencher (son boîtier) */
+        let onTrap = false;
+        for (const t of G.room.traps)
+          if (t.shotBy(p)) {
+            t.onShot(p, Room.trapTime(G.room, t));
+            onTrap = true;
+            break;
+          }
+        if (onTrap && !p.returning) {
+          this.list.splice(i, 1);
+          continue;
+        }
         for (const e of G.enemies) {
           if (e.dead || p.hit.has(e)) continue;
           if (dist(p.x, p.y, e.x, e.y) < p.r + e.r) {

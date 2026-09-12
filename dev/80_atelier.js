@@ -25,6 +25,18 @@ const Atelier = (() => {
     turret_fixed: { size: [1, 1], act: 0.25, tele: 1, angle: 1, count: 1 },
     emitter: { size: [1, 1], act: 0.25, tele: 1, angle: 1, count: 1, spinDeg: 1, arc: 1, burst: 1 },
     laser_beam: { size: [1, 1], act: 1, tele: 1, angle: 1, len: 1 },
+    /* chantier 13 C : les familles à état (plaque, proximité, tir) — la fenêtre est courte, l'annonce aussi */
+    plate_arc: { size: [1, 1], act: 0.6, tele: 0.5, angle: 1, len: 1 },
+    blast_prop: { size: [1, 1], act: 0.1, tele: 0.4 },
+    rail_shot: { size: [8, 1], act: 0, tele: 0.5, axis: 1 },
+    cloud_status: { size: [1, 1], act: 2, tele: 1 },
+    bite_near: { size: [1, 1], act: 0.3, tele: 0.4 },
+    sweep_push: { size: [6, 5], act: 1.2, tele: 0.4, axis: 1 },
+    wire_arm: { size: [1, 1], act: 0.2, tele: 0.1, angle: 1, len: 1 },
+    plate_call: { size: [1, 1], act: 0.2, tele: 0.6 },
+    tiles_press: { size: [3, 1], act: 0.5, tele: 0.4 },
+    puddle_burn: { size: [1, 1], act: 0.3, tele: 0.2 },
+    drop_near: { size: [1, 1], act: 0.4, tele: 0.6 },
   };
   /* réglages proposés pour le décor animé */
   const AKIND = {

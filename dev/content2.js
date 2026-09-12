@@ -61,6 +61,11 @@ CONTENT.biomes.push({
   ],
   enemyPool: ['enemy_ronce', 'enemy_pollinisateur', 'enemy_racine', 'enemy_spore', 'enemy_bourgeon', 'enemy_moucherons', 'enemy_liane'],
   trapPool: [
+    'trap_dionee',
+    'trap_gousses',
+    'trap_vanne',
+    'trap_pollen',
+
     'trap_lianes',
     'trap_epines',
     'trap_spores',
@@ -713,7 +718,11 @@ CONTENT.rooms.push(
         ],
       },
     ],
-    traps: [],
+    traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_dionee', x: 8, y: 3 },
+      { trap: 'trap_dionee', x: 15, y: 9 },
+    ],
     fragments: [],
     modular: [],
   },
@@ -786,6 +795,8 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_vanne', x: 4, y: 2, w: 6, h: 5, params: { box: { x: 3, y: 4 } } },
       { trap: 'trap_arroseur', x: 4, y: 0, w: 16, h: 13, phase: 0 },
       { trap: 'trap_cracheuse', x: 7, y: 0, phase: 0 },
       { trap: 'trap_cracheuse', x: 16, y: 12, phase: 1.2 },
@@ -906,6 +917,10 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_gousses', x: 3, y: 2, phase: 0 },
+      { trap: 'trap_gousses', x: 20, y: 2, phase: 2 },
+      { trap: 'trap_gousses', x: 12, y: 11, phase: 4 },
       /* chantier 13 B : les pièges dormants posés */
       { trap: 'trap_lampe_uv', x: 23, y: 2, phase: 0, params: { angle: 3.1416 } },
       { trap: 'trap_lampe_uv', x: 0, y: 10, phase: 1.5 },
@@ -1158,6 +1173,8 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_pollen', x: 11, y: 3, phase: 3 },
       { trap: 'trap_cracheuse', x: 8, y: 0, phase: 0 },
       { trap: 'trap_cracheuse', x: 15, y: 12, phase: 1.2 },
       { trap: 'trap_spores', x: 12, y: 3, phase: 0 },
@@ -1235,5 +1252,57 @@ CONTENT.rooms.push(
     ],
     fragments: [],
     modular: [],
+  }
+);
+
+/* chantier 13 C — le joueur décide : des pièges qui se déclenchent à la plaque, à l'approche, au tir, en chaîne ;
+   qui poussent, endorment, brûlent ; qu'on casse ou qu'on désamorce. Tous blessent les deux camps. */
+CONTENT.traps.push(
+  {
+    id: 'trap_dionee',
+    name: 'Dionée',
+    desc: 'Approche à une tuile et elle claque : elle mord, retient, et un ennemi y reste deux secondes.',
+    kind: 'bite_near',
+    color: '#7ed957',
+    damage: 18,
+    telegraph: 0.4,
+    active: 0.3,
+    params: { near: 1.2, who: 'any', bite: 18, stun: 2, rootPlayer: 0.6, rearm: 2.5, pattern: 'plain' },
+  },
+  {
+    id: 'trap_gousses',
+    name: 'Gousses éclatantes',
+    desc: 'Elles mûrissent en six secondes et éclatent en couronne de graines ; un tir les fait éclater tout de suite.',
+    kind: 'emitter',
+    color: '#b7ff7a',
+    damage: 9,
+    telegraph: 0.8,
+    period: 6,
+    hp: 1,
+    params: { count: 8, speed: 210, size: 6, onShot: 'fire' },
+  },
+  {
+    id: 'trap_vanne',
+    name: 'Vanne d’arrosage',
+    desc: 'Un tir sur la vanne et le jet balaie la zone : il pousse tout de deux tuiles, sans blesser.',
+    kind: 'sweep_push',
+    color: '#9fd8ff',
+    damage: 0,
+    telegraph: 0.4,
+    active: 1.2,
+    hp: 1,
+    params: { orientation: 'vertical', pingpong: false, onShot: 'fire', force: 3, pushAngle: 0, rearm: 2 },
+  },
+  {
+    id: 'trap_pollen',
+    name: 'Pollen soporifique',
+    desc: 'Un nuage doré : les ennemis s’endorment deux secondes, toi tu ralentis. Le meilleur moment pour frapper est le plus lent pour fuir.',
+    kind: 'cloud_status',
+    color: '#ffd166',
+    damage: 0,
+    telegraph: 1,
+    period: 8,
+    active: 2,
+    params: { radiusTiles: 2.5, stun: 2, slowPlayer: 0.3 },
   }
 );

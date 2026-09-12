@@ -50,6 +50,11 @@ CONTENT.biomes.push({
   ],
   enemyPool: ['enemy_coyote', 'enemy_bandit', 'enemy_bison', 'enemy_baril', 'enemy_croquemort', 'enemy_scorpions', 'enemy_crotale'],
   trapPool: [
+    'trap_tonneaux',
+    'trap_fil',
+    'trap_aiguillage',
+    'trap_cloche',
+
     'trap_moulin',
     'trap_wagonnet',
     'trap_embuscade',
@@ -723,6 +728,8 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_cloche', x: 12, y: 2 },
       { trap: 'trap_revolver', x: 0, y: 3, phase: 0 },
       { trap: 'trap_revolver', x: 23, y: 9, phase: 1.5 },
     ],
@@ -945,7 +952,26 @@ CONTENT.rooms.push(
     ],
     traps: [
       /* chantier 13 B : les pièges dormants posés */
-      { trap: 'trap_wagonnet', x: 14, y: 0, w: 8, phase: 0 },
+      {
+        trap: 'trap_aiguillage',
+        x: 14,
+        y: 0,
+        w: 8,
+        phase: 0,
+        params: {
+          box: { x: 13, y: 2 },
+          routes: [
+            [
+              { x: 0, y: 0 },
+              { x: 7, y: 0 },
+            ],
+            [
+              { x: 0, y: 0 },
+              { x: 0, y: 6 },
+            ],
+          ],
+        },
+      },
       { trap: 'trap_wagonnet', x: 2, y: 12, w: 8, phase: 1.6 },
       { trap: 'trap_embuscade', x: 0, y: 3, phase: 0 },
       { trap: 'trap_embuscade', x: 23, y: 9, phase: 1 },
@@ -1030,13 +1056,25 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_fil', x: 0, y: 8, phase: 0 },
       { trap: 'trap_ours', x: 2, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
       { trap: 'trap_ours', x: 18, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 0 } } },
       { trap: 'trap_ours', x: 18, y: 2, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
       { trap: 'trap_ours', x: 2, y: 8, w: 4, h: 3, params: { beats: { period: 4, active: 0.5, telegraph: 1, on: 2 } } },
       { trap: 'trap_gatling', x: 11, y: 6, params: { beats: { every: 4, telegraph: 1, on: 0 } } },
-      { trap: 'trap_dynamite', x: 11, y: 0, params: { dir: 'down', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 1 } } },
-      { trap: 'trap_dynamite', x: 12, y: 12, params: { dir: 'up', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 5 } } },
+      {
+        trap: 'trap_dynamite',
+        x: 11,
+        y: 0,
+        params: { link: 'dyn', dir: 'down', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 1 } },
+      },
+      {
+        trap: 'trap_dynamite',
+        x: 12,
+        y: 12,
+        params: { link: 'dyn', dir: 'up', pattern: 'fan', count: 3, beats: { every: 8, telegraph: 1, on: 5 } },
+      },
       { trap: 'trap_poudre', x: 4, y: 6, params: { beats: { period: 8, active: 2, telegraph: 2, on: 4 } } },
       { trap: 'trap_poudre', x: 19, y: 6, params: { beats: { period: 8, active: 2, telegraph: 2, on: 0 } } },
       { trap: 'trap_embuscade', x: 0, y: 10, params: { beats: { every: 8, telegraph: 1, on: 3 } } },
@@ -1207,6 +1245,11 @@ CONTENT.rooms.push(
       },
     ],
     traps: [
+      /* chantier 13 C : le joueur décide */
+      { trap: 'trap_tonneaux', x: 3, y: 2 },
+      { trap: 'trap_tonneaux', x: 5, y: 2 },
+      { trap: 'trap_tonneaux', x: 7, y: 2 },
+      { trap: 'trap_tonneaux', x: 9, y: 2 },
       { trap: 'trap_embuscade', x: 8, y: 0, phase: 0 },
       { trap: 'trap_embuscade', x: 15, y: 12, phase: 1.2 },
       { trap: 'trap_ours', x: 1, y: 9, w: 3, h: 3, phase: 0 },
@@ -1234,5 +1277,57 @@ CONTENT.rooms.push(
         ],
       },
     ],
+  }
+);
+
+/* chantier 13 C — le joueur décide : des pièges qui se déclenchent à la plaque, à l'approche, au tir, en chaîne ;
+   qui poussent, endorment, brûlent ; qu'on casse ou qu'on désamorce. Tous blessent les deux camps. */
+CONTENT.traps.push(
+  {
+    id: 'trap_tonneaux',
+    name: 'Tonneaux de poudre',
+    desc: 'Un tir, ou l’explosion d’à côté, et la file part en chaîne, pour les deux camps.',
+    kind: 'blast_prop',
+    color: '#ff8c42',
+    damage: 20,
+    telegraph: 0.15,
+    active: 0.1,
+    hp: 1,
+    params: { sprite: 'barrel', onShot: 'fire', once: true, radius: 100, link: 'poudre', linkRange: 2.5, linkDelay: 0.15 },
+  },
+  {
+    id: 'trap_fil',
+    name: 'Fil de détente armé',
+    desc: 'Un fil tendu en travers ; qui le franchit — toi ou un ennemi — fait partir les dynamites qui y sont liées.',
+    kind: 'wire_arm',
+    color: '#b0774a',
+    damage: 0,
+    telegraph: 0.1,
+    active: 0.2,
+    params: { angle: 0, length: 26, thickness: 0.15, sensor: 'body', who: 'any', link: 'dyn', rearm: 3 },
+  },
+  {
+    id: 'trap_aiguillage',
+    name: 'Aiguillage',
+    desc: 'Un wagonnet fou et son levier : un tir dessus et il change de voie au prochain passage. Choisis qui il écrase.',
+    kind: 'saw_rail',
+    color: '#9a8a6a',
+    damage: 22,
+    telegraph: 0.5,
+    period: 3.2,
+    active: 3.2,
+    hp: 1,
+    params: { speedTiles: 6, radiusTiles: 0.65, pingpong: true, onShot: 'toggle' },
+  },
+  {
+    id: 'trap_cloche',
+    name: 'Cloche du saloon',
+    desc: 'Une plaque dorée : la sonner appelle quatre bandits, et une bourse tombe à tes pieds. Le trésor gardé.',
+    kind: 'plate_call',
+    color: '#ffd166',
+    damage: 0,
+    telegraph: 0.6,
+    active: 0.2,
+    params: { who: 'player', once: true, enemy: 'enemy_bandit', count: 4, purse: 60, pattern: 'plain' },
   }
 );
