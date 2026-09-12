@@ -345,7 +345,7 @@ const Room = {
           r.lastWaveT = r.stateT;
           for (const s of w.spawns) Room.spawnAt(s);
           if (w.at !== 'start') {
-            UI.notify({ text: STR.wave + ' ' + (++r.waveIdx + 1), color: '#ff6b6b', level: 2, key: 'wave' });
+            UI.notify({ text: STR.wave + ' ' + (++r.waveIdx + 1), color: '#e8ecf7', level: 2, key: 'wave' }); // finitions 13 : le rouge est réservé au danger
           } else r.waveIdx = 0;
           break;
         }

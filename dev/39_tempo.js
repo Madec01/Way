@@ -587,7 +587,7 @@ const Tempo = {
       const h = 6 + sp[i] * 44;
       const x = ROOM_X + i * TILE + 6;
       const gold = i % 4 === 0;
-      ctx.globalAlpha = 0.16 + 0.34 * sp[i];
+      ctx.globalAlpha = 0.08 + 0.17 * sp[i]; // finitions 13 : l'égaliseur est un fond
       ctx.fillStyle = gold ? Tempo.COLOR : '#6ee7ff';
       ctx.fillRect(x, ROOM_Y, TILE - 12, h);
       ctx.fillRect(x, ROOM_Y + ROOM_H - h, TILE - 12, h);
@@ -683,7 +683,7 @@ const Tempo = {
       const V = Engine.view;
       const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(V.w, V.h) * 0.3, W / 2, H / 2, Math.max(V.w, V.h) * 0.75);
       g.addColorStop(0, 'rgba(255,209,102,0)');
-      g.addColorStop(1, tp.boss ? `rgba(255,59,92,${0.22 * kd})` : `rgba(255,209,102,${0.16 * kd})`);
+      g.addColorStop(1, tp.boss ? `rgba(255,59,92,${0.12 * kd})` : `rgba(255,209,102,${0.08 * kd})`); // finitions 13 : le voile de la mesure, moitié moins
       ctx.fillStyle = g;
       ctx.fillRect(-V.ox, -V.oy, V.w, V.h);
     }

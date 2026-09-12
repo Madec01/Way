@@ -545,12 +545,16 @@
   /* ------------------------------------------------------------------ */
   /** Trim de niveau par son (équilibrage mesuré en rendu offline : pic visé ≈ 0,15-0,35, boss ≈ 0,6). */
   const LEVELS = {
-    shootBlade: 1.7,
-    shootBow: 1.3,
-    shootBoomerang: 1.7,
-    shootChain: 2.2,
-    shootPistol: 0.5,
-    shootHammer: 0.7,
+    /* Finitions 13 : on tire en continu dans ce jeu, le tir doit rester un fond, pas un coup — niveaux baissés de 40 %
+       et une rafale s'adoucit plus vite (voir `def`) */
+    shootBlade: 1.0,
+    shootBow: 0.8,
+    shootBoomerang: 1.0,
+    shootChain: 1.3,
+    shootPistol: 0.3,
+    shootHammer: 0.45,
+    shootOrb: 0.7,
+    shootFlame: 0.7,
     hitEnemy: 0.85,
     dash: 2,
     skillTurret: 2,
@@ -648,7 +652,8 @@
       lastAt[name] = { t: now, n: burst };
       try {
         const o = norm(opts);
-        o.g *= trim * Math.pow(0.88, burst);
+        const soft = name.startsWith('shoot') ? 0.8 : 0.88; // un tir maintenu tombe au quart de son premier coup
+        o.g *= trim * Math.pow(soft, burst);
         if (TUNE[name]) {
           const f0 = TUNE[name];
           o.p = (nearestScale(f0 * scaleRatio(o.step)) / f0) * (1 + rnd(-0.004, 0.004));

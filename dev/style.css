@@ -3096,3 +3096,9 @@ body.eco .hubcol {
     margin: 0.3em 0;
   }
 }
+
+/* Finitions 13 : l'écran de choix se verrouille 600 ms à l'ouverture (le doigt est encore sur le tir) */
+.choice.cooling .card {
+  pointer-events: none;
+  opacity: 0.75;
+}

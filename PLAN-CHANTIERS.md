@@ -218,6 +218,10 @@ Elles conditionnent des chantiers entiers ; je ne les prendrai pas à ta place.
 **Taille** : 4 séances, dans l'ordre A, B, C, D — A ne change rien pour le joueur mais rend tout le reste sûr ; B est le vrai basculement ; C apporte le contenu ; D demande le plus de mesures.
 **Décisions à prendre** : les valeurs des multiplicateurs ennemis et boss (1,5 et 0,25 proposés) ; garder ou non le bonus « sans dégât » quand une poussée compte comme un coup ; sprite ou vecteur par famille.
 
+## Finitions du chantier 13 — la lisibilité *(12 septembre 2026, CONTENT.md §76)*
+
+Quatre remarques de partie de l'auteur, toutes traitées le jour même : le contour sombre et l'anneau au sol des ennemis et des alliés ; le réticule à la place du curseur ; le verrou de 600 ms de l'écran de choix ; les armes 40 % plus discrètes. Et un agent sur la surcharge de l'écran (`dev/agents/ecran.md`) : la hiérarchie visuelle en quatre niveaux et le budget d'écran — la moitié appliquée (décor plus petit et plus discret, balles ennemies cerclées, halos courts, tempo moins clignotant, chiffres plus courts, toasts du compagnon retirés, `ecran.js` mesure le budget), l'autre moitié à discuter avec l'auteur : la teinte du décor, les particules, la fusion des chiffres, les lumières en combat.
+
 ## L'ordre, et pourquoi
 
 ```

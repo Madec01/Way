@@ -463,7 +463,6 @@ class Pet {
       this.state = 'follow';
       this.target = null;
       AudioEngine.uiBack && AudioEngine.uiBack({ intensity: 0.5 });
-      UI.toast(this.name + ' est sonné');
     }
   }
   /* déplacement de suite : rejoint le joueur au-delà de `dist`, se pose en deçà */
@@ -531,7 +530,6 @@ class Pet {
       if (this.downT <= 0) {
         this.hp = this.maxHp;
         this.snap();
-        UI.toast(this.name + ' est de retour');
       }
       this.moving = false;
       this.animStep(dt, false); // sonné : la planche « hurt » se joue (elle restait figée sur le clip d'avant)
@@ -648,6 +646,15 @@ class Pet {
     ctx.beginPath();
     ctx.ellipse(this.x, this.y + sol, s * (this.airborne ? 0.2 : 0.28), s * (this.airborne ? 0.07 : 0.1), 0, 0, TAU);
     ctx.fill();
+    /* Finitions 13 : l'anneau au sol des alliés, vert vie — l'inverse du corail des ennemis */
+    ctx.save();
+    ctx.strokeStyle = PAL.life;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = this.down ? 0.25 : 0.5;
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + sol - 2, this.r * 0.95 + 1, this.r * 0.42 + 1, 0, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
     ctx.restore();
     const pop = 1 + this.act * 0.22 + (this.popD ? Feel.popK(this) : 0);
     /* les déformations (F-7) : accroupi avant la morsure, allongée en course, assis ou en toilette au repos */

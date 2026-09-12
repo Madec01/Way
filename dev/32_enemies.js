@@ -746,6 +746,14 @@ class Enemy {
       ctx.beginPath();
       ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
       ctx.fill();
+      /* Finitions 13 : l'anneau au sol — un ennemi se repère à son anneau corail avant même son dessin */
+      ctx.strokeStyle = PAL.danger;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = alpha * (this.isBoss ? 0.75 : 0.55);
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9 + 1, this.r * 0.4 + 1, 0, 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
     }
     /* ornement du boss : dessiné par-dessus le sprite pour que les trois boss ne se confondent jamais */
     if (this.isBoss && this.bossDef && this.bossDef.crest && !this.bossDef.crestOver) Boss.drawCrest(ctx, this, this.bossDef.crest, alpha);
@@ -756,7 +764,7 @@ class Enemy {
       ctx.strokeStyle = '#ffd166';
       ctx.fillStyle = '#ffd166';
       ctx.lineWidth = 2;
-      ctx.globalAlpha = alpha * (0.3 + 0.7 * k);
+      ctx.globalAlpha = alpha * k; // finitions 13 : il ne reste pas allumé entre deux temps
       ctx.beginPath();
       ctx.arc(this.x, this.y - this.r - 10, 3 + k * 3, 0, TAU);
       ctx.fill();

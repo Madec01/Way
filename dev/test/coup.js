@@ -27,10 +27,10 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
     };
   });
   ok(
-    'dégât 18 px blanc, critique 30 doré, dégât subi 34 corail qui part vers le bas',
-    genres.dmg[0] === 18 &&
+    'dégât 14 px blanc, critique 24 doré, dégât subi 34 corail qui part vers le bas',
+    genres.dmg[0] === 14 &&
       genres.dmg[2] &&
-      genres.crit[0] === 30 &&
+      genres.crit[0] === 24 &&
       genres.crit[1] === '#ffd166' &&
       genres.taken[0] === 34 &&
       genres.taken[2] &&
@@ -90,7 +90,7 @@ test(async ({ page: p, ok, entrer, salle, sansPause }) => {
   });
   ok(
     'deux chiffres à 6 px et 50 ms d’écart fusionnent (12 + 30 = 42, plus gros), un chiffre loin reste à part',
-    fusion.un.n === 1 && fusion.un.text === '42' && fusion.un.size === 20 && fusion.un.t === 0 && fusion.deux === 2,
+    fusion.un.n === 1 && fusion.un.text === '42' && fusion.un.size === 16 && fusion.un.t === 0 && fusion.deux === 2,
     JSON.stringify(fusion.un)
   );
 

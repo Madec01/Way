@@ -55,7 +55,9 @@ Ce que `lib.js` fournit : `entrer(mode)`, `salle(n, biome)`, `run({ character, p
 | `coup` | chantier F-2 : cinq genres de chiffres flottants, Silkscreen à contour, sursaut, fusion, naissance au corps, plus de « +n XP » ; coup reçu : recul en courbe, vignette, ralenti, flash sur un gros coup, clignotement 6 Hz |
 | `duo` | l'attelage inséparable, les trois équipes, les modes de compagnon |
 | `etape0` | le socle rythmique : horloge musicale, pièges cadencés, tourniquet |
+| `ecran` | finitions 13 : le budget d'écran en combat (≤ 250 particules, ≤ 8 chiffres, ≤ 2 toasts), le décor à 0,7 tuile, les balles ennemies cerclées, les halos courts, le point du tempo éteint entre deux temps, le bandeau de vague hors du rouge, pas de toast de compagnon, les chiffres à 14 px, le tempo discret |
 | `fin` | chantier I-7 : la montée de niveau (ruban, icône, « choix 1 sur n », « tu es à … », greffes prises), le coffre en une phrase, la pause (infos de partie, stats d'arme, commandes, curseurs, fond), l'écran de fin (deux gros chiffres, progression, détail replié, suggestion d'achat, « Repartir » sans hub, HUD éteint) |
+| `finitions` | finitions 13 : le contour sombre des sprites (plus de pixels sombres avec que sans), l'anneau au sol corail et vert, le réticule dessiné et le curseur caché puis revenu, le verrou de 600 ms de l'écran de choix, les niveaux de tir ≤ 1,3 et la rafale à 0,8 |
 | `gabriel` | Gabriel et Jean : planches, cases vides de fin, clips, pieds sur la ligne de sol |
 | `habits` | plus de palier de tenue : habillé dès la salle 1, même corps après 9 greffes |
 | `interface` | chantier I-1 : onglets dans le cadre, textes obsolètes partis, attraction figée, Uno par défaut, HUD sondé (textes dans leurs panneaux, tout dans la vue), PV vert/doré/rouge + vignette, un seul compteur de série, boss en haut sans bandeau, toasts en bas à droite, badge aligné, écran de fin vrai et « Rejouer » |

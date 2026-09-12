@@ -191,6 +191,38 @@ const Sprites = (() => {
      de statut (brûlure, poison) gardent le chemin direct : elles changent avec le temps. */
   const flashCache = new Map();
   const FLASH_MAX = 160;
+  /* Finitions 13 : le contour sombre. Dans l'action, un sprite de 16 px sur un sol qui a maintenant du grain et du
+     décor se perd ; une silhouette noire dessinée quatre fois autour (2 px) le détache, quel que soit le fond.
+     `Sprites.outline` l'éteint d'un coup (rendu économe, comparaison A/B). */
+  let outline = true;
+  const OUTLINE_PX = 2;
+  const silCache = new Map(), // à part du cache des flashs : cadence.js mesure celui-là
+    SIL_MAX = 400;
+  function silhouetteFrame(id, src, sx, sy, sw, sh, dw, dh) {
+    const key = id + '|' + Math.round(dw) + '|' + Math.round(dh);
+    let c = silCache.get(key);
+    if (c) return c;
+    c = document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(dw));
+    c.height = Math.max(1, Math.ceil(dh));
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(src, sx, sy, sw, sh, 0, 0, dw, dh);
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = 'rgba(8,10,18,.92)';
+    g.fillRect(0, 0, dw, dh);
+    if (silCache.size >= SIL_MAX) silCache.delete(silCache.keys().next().value);
+    silCache.set(key, c);
+    return c;
+  }
+  function drawOutline(ctx, id, src, sx, sy, sw, sh, dw, dh, x0, y0) {
+    const sil = silhouetteFrame(id, src, sx, sy, sw, sh, dw, dh);
+    const o = OUTLINE_PX;
+    ctx.drawImage(sil, x0 - o, y0);
+    ctx.drawImage(sil, x0 + o, y0);
+    ctx.drawImage(sil, x0, y0 - o);
+    ctx.drawImage(sil, x0, y0 + o);
+  }
   function flashFrame(id, src, sx, sy, sw, sh, dw, dh, alpha) {
     const key = id + '|' + Math.round(dw) + '|' + Math.round(dh) + '|' + alpha.toFixed(2);
     let c = flashCache.get(key);
@@ -708,6 +740,8 @@ const Sprites = (() => {
     if (opts.flip) ctx.scale(-1, 1);
     if (opts.rot) ctx.rotate(opts.rot);
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+    if (opts.outline && !opts.flash)
+      drawOutline(ctx, 'prop|' + name + '|' + (opts.variant || 0), c, 0, 0, c.width, c.height, dw, dh, -dw / 2, -dh / 2);
     if (opts.flash || opts.tint) {
       const fx = flashCanvas(dw, dh);
       const g = fx.getContext('2d');
@@ -777,13 +811,14 @@ const Sprites = (() => {
     snakejar: 'snake-jar',
   };
   /* décor au sol sans collision (salles du biome 3) */
+  /* Finitions 13 : le décor au sol fait 0,7 tuile (1,05 en grand) à 60 % — il faisait la taille d'un ennemi, on le lisait avant lui */
   function drawDeco(ctx, d) {
     const name = DECO_KIND[d.kind] || d.kind;
     const x = ROOM_X + (d.x + 0.5) * TILE,
       y = ROOM_Y + (d.y + 0.5) * TILE;
     ctx.save();
-    ctx.globalAlpha = 0.8;
-    drawProp(ctx, name, x, y, TILE * (d.big ? 1.3 : 0.9), TILE * (d.big ? 1.3 : 0.9), { variant: hash2(d.x + 7, d.y + 3) });
+    ctx.globalAlpha = 0.6;
+    drawProp(ctx, name, x, y, TILE * (d.big ? 1.05 : 0.7), TILE * (d.big ? 1.05 : 0.7), { variant: hash2(d.x + 7, d.y + 3) });
     ctx.restore();
   } // rien si l'accessoire n'est pas encore chargé (pas de carré de repli)
   /* la fontaine murale animée du palier (3 images 0x72), dessinée par-dessus le sol mis en cache : un drawImage par image */
@@ -809,6 +844,7 @@ const Sprites = (() => {
           flash: opts.flash,
           tint: opts.tint,
           alpha: opts.alpha,
+          outline: outline && opts.outline !== false,
         })
       )
         return true;
@@ -840,6 +876,9 @@ const Sprites = (() => {
       ctx.translate(0, -bas);
     }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+    /* pas de contour pendant un flash : la silhouette blanche (coup reçu, mort) doit rester blanche */
+    if (outline && opts.outline !== false && !opts.flash)
+      drawOutline(ctx, key + '|' + frame, sheet, sx + frame * sw, sy, sw, sh, dw, dh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0));
     if (opts.flash && !opts.tint) {
       const fc = flashFrame(
         key + '|' + frame,
@@ -1380,6 +1419,8 @@ const Sprites = (() => {
       ctx.translate(0, -dh / 2);
     }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+    if (outline && opts.outline !== false && !opts.flash)
+      drawOutline(ctx, name + '|' + i, s.c, cx, cy, s.fw, s.fh, dw, dh, -dw / 2, -dh / 2);
     if (opts.flash) {
       /* le blanc ne couvre que les pixels du dessin — image précalculée par (planche, image, taille, intensité) */
       const fc = flashFrame(name + '|' + i, s.c, cx, cy, s.fw, s.fh, dw, dh, opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9);
@@ -1634,6 +1675,12 @@ const Sprites = (() => {
     loadProps,
     drawProp,
     hasProp: name => !!props[name],
+    get outline() {
+      return outline;
+    },
+    set outline(v) {
+      outline = !!v;
+    },
     drawDeco,
     clearFloor,
     addCustom,

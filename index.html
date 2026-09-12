@@ -3109,6 +3109,12 @@ body.eco .hubcol {
   }
 }
 
+/* Finitions 13 : l'écran de choix se verrouille 600 ms à l'ouverture (le doigt est encore sur le tir) */
+.choice.cooling .card {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
 </style>
 </head>
 <body>
@@ -3117,7 +3123,7 @@ body.eco .hubcol {
 <div id="touch" hidden></div>
 <div id="debug" hidden></div>
 <div id="atelier" hidden></div>
-<script>window.WAY_BUILD = '2026-09-12 17:51';</script>
+<script>window.WAY_BUILD = '2026-09-12 20:16';</script>
 <script>
 /* ==== 00_core.js ==== */
 /* =========================================================================
@@ -4649,12 +4655,16 @@ const BALANCE = {
   /* ------------------------------------------------------------------ */
   /** Trim de niveau par son (équilibrage mesuré en rendu offline : pic visé ≈ 0,15-0,35, boss ≈ 0,6). */
   const LEVELS = {
-    shootBlade: 1.7,
-    shootBow: 1.3,
-    shootBoomerang: 1.7,
-    shootChain: 2.2,
-    shootPistol: 0.5,
-    shootHammer: 0.7,
+    /* Finitions 13 : on tire en continu dans ce jeu, le tir doit rester un fond, pas un coup — niveaux baissés de 40 %
+       et une rafale s'adoucit plus vite (voir `def`) */
+    shootBlade: 1.0,
+    shootBow: 0.8,
+    shootBoomerang: 1.0,
+    shootChain: 1.3,
+    shootPistol: 0.3,
+    shootHammer: 0.45,
+    shootOrb: 0.7,
+    shootFlame: 0.7,
     hitEnemy: 0.85,
     dash: 2,
     skillTurret: 2,
@@ -4752,7 +4762,8 @@ const BALANCE = {
       lastAt[name] = { t: now, n: burst };
       try {
         const o = norm(opts);
-        o.g *= trim * Math.pow(0.88, burst);
+        const soft = name.startsWith('shoot') ? 0.8 : 0.88; // un tir maintenu tombe au quart de son premier coup
+        o.g *= trim * Math.pow(soft, burst);
         if (TUNE[name]) {
           const f0 = TUNE[name];
           o.p = (nearestScale(f0 * scaleRatio(o.step)) / f0) * (1 + rnd(-0.004, 0.004));
@@ -13729,6 +13740,38 @@ const Sprites = (() => {
      de statut (brûlure, poison) gardent le chemin direct : elles changent avec le temps. */
   const flashCache = new Map();
   const FLASH_MAX = 160;
+  /* Finitions 13 : le contour sombre. Dans l'action, un sprite de 16 px sur un sol qui a maintenant du grain et du
+     décor se perd ; une silhouette noire dessinée quatre fois autour (2 px) le détache, quel que soit le fond.
+     `Sprites.outline` l'éteint d'un coup (rendu économe, comparaison A/B). */
+  let outline = true;
+  const OUTLINE_PX = 2;
+  const silCache = new Map(), // à part du cache des flashs : cadence.js mesure celui-là
+    SIL_MAX = 400;
+  function silhouetteFrame(id, src, sx, sy, sw, sh, dw, dh) {
+    const key = id + '|' + Math.round(dw) + '|' + Math.round(dh);
+    let c = silCache.get(key);
+    if (c) return c;
+    c = document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(dw));
+    c.height = Math.max(1, Math.ceil(dh));
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(src, sx, sy, sw, sh, 0, 0, dw, dh);
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = 'rgba(8,10,18,.92)';
+    g.fillRect(0, 0, dw, dh);
+    if (silCache.size >= SIL_MAX) silCache.delete(silCache.keys().next().value);
+    silCache.set(key, c);
+    return c;
+  }
+  function drawOutline(ctx, id, src, sx, sy, sw, sh, dw, dh, x0, y0) {
+    const sil = silhouetteFrame(id, src, sx, sy, sw, sh, dw, dh);
+    const o = OUTLINE_PX;
+    ctx.drawImage(sil, x0 - o, y0);
+    ctx.drawImage(sil, x0 + o, y0);
+    ctx.drawImage(sil, x0, y0 - o);
+    ctx.drawImage(sil, x0, y0 + o);
+  }
   function flashFrame(id, src, sx, sy, sw, sh, dw, dh, alpha) {
     const key = id + '|' + Math.round(dw) + '|' + Math.round(dh) + '|' + alpha.toFixed(2);
     let c = flashCache.get(key);
@@ -14246,6 +14289,8 @@ const Sprites = (() => {
     if (opts.flip) ctx.scale(-1, 1);
     if (opts.rot) ctx.rotate(opts.rot);
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+    if (opts.outline && !opts.flash)
+      drawOutline(ctx, 'prop|' + name + '|' + (opts.variant || 0), c, 0, 0, c.width, c.height, dw, dh, -dw / 2, -dh / 2);
     if (opts.flash || opts.tint) {
       const fx = flashCanvas(dw, dh);
       const g = fx.getContext('2d');
@@ -14315,13 +14360,14 @@ const Sprites = (() => {
     snakejar: 'snake-jar',
   };
   /* décor au sol sans collision (salles du biome 3) */
+  /* Finitions 13 : le décor au sol fait 0,7 tuile (1,05 en grand) à 60 % — il faisait la taille d'un ennemi, on le lisait avant lui */
   function drawDeco(ctx, d) {
     const name = DECO_KIND[d.kind] || d.kind;
     const x = ROOM_X + (d.x + 0.5) * TILE,
       y = ROOM_Y + (d.y + 0.5) * TILE;
     ctx.save();
-    ctx.globalAlpha = 0.8;
-    drawProp(ctx, name, x, y, TILE * (d.big ? 1.3 : 0.9), TILE * (d.big ? 1.3 : 0.9), { variant: hash2(d.x + 7, d.y + 3) });
+    ctx.globalAlpha = 0.6;
+    drawProp(ctx, name, x, y, TILE * (d.big ? 1.05 : 0.7), TILE * (d.big ? 1.05 : 0.7), { variant: hash2(d.x + 7, d.y + 3) });
     ctx.restore();
   } // rien si l'accessoire n'est pas encore chargé (pas de carré de repli)
   /* la fontaine murale animée du palier (3 images 0x72), dessinée par-dessus le sol mis en cache : un drawImage par image */
@@ -14347,6 +14393,7 @@ const Sprites = (() => {
           flash: opts.flash,
           tint: opts.tint,
           alpha: opts.alpha,
+          outline: outline && opts.outline !== false,
         })
       )
         return true;
@@ -14378,6 +14425,9 @@ const Sprites = (() => {
       ctx.translate(0, -bas);
     }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+    /* pas de contour pendant un flash : la silhouette blanche (coup reçu, mort) doit rester blanche */
+    if (outline && opts.outline !== false && !opts.flash)
+      drawOutline(ctx, key + '|' + frame, sheet, sx + frame * sw, sy, sw, sh, dw, dh, -dw / 2, -dh / 2 - (d.foot ? 8 : 0));
     if (opts.flash && !opts.tint) {
       const fc = flashFrame(
         key + '|' + frame,
@@ -14918,6 +14968,8 @@ const Sprites = (() => {
       ctx.translate(0, -dh / 2);
     }
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+    if (outline && opts.outline !== false && !opts.flash)
+      drawOutline(ctx, name + '|' + i, s.c, cx, cy, s.fw, s.fh, dw, dh, -dw / 2, -dh / 2);
     if (opts.flash) {
       /* le blanc ne couvre que les pixels du dessin — image précalculée par (planche, image, taille, intensité) */
       const fc = flashFrame(name + '|' + i, s.c, cx, cy, s.fw, s.fh, dw, dh, opts.flash === true ? 0.75 : Math.min(1, opts.flash) * 0.9);
@@ -15172,6 +15224,12 @@ const Sprites = (() => {
     loadProps,
     drawProp,
     hasProp: name => !!props[name],
+    get outline() {
+      return outline;
+    },
+    set outline(v) {
+      outline = !!v;
+    },
     drawDeco,
     clearFloor,
     addCustom,
@@ -15914,8 +15972,8 @@ const Floaters = {
      un soin est vert, un événement (« SONNÉ », « TEMPO ×4 ») garde sa couleur. Silkscreen à contour noir : lisible
      sur n'importe quel sol. Deux chiffres du même genre trop proches fusionnent au lieu de s'empiler. */
   KINDS: {
-    dmg: { size: 18, color: '#f4f7ff', vy: -90, vx: 40, g: 180, life: 0.7 },
-    crit: { size: 30, color: PAL.gold, vy: -130, vx: 40, g: 180, life: 0.85 },
+    dmg: { size: 14, color: '#f4f7ff', vy: -90, vx: 40, g: 180, life: 0.5 }, // finitions 13 : un retour, pas une information — plus petit, plus court
+    crit: { size: 24, color: PAL.gold, vy: -130, vx: 40, g: 180, life: 0.7 },
     taken: { size: 34, color: PAL.danger, vy: 40, vx: 0, g: -160, life: 0.9 },
     heal: { size: 20, color: PAL.life, vy: -70, vx: 20, g: 0, life: 0.7 },
     event: { size: 22, color: '#fff', vy: -30, vx: 0, g: 0, life: 1.1 },
@@ -16324,7 +16382,7 @@ const Projectiles = {
   render(ctx) {
     for (const p of this.list) {
       /* la lueur d'abord, collée (Halo) : un flou sous une rotation coûtait 0,2 ms par projectile */
-      Halo.draw(ctx, p.x, p.y, p.kind === 'arrow' || p.kind === 'boomerang' ? 9 : p.r || 4, p.color, 12);
+      Halo.draw(ctx, p.x, p.y, p.kind === 'arrow' || p.kind === 'boomerang' ? 9 : p.r || 4, p.color, p.owner === 'player' ? 6 : 12); // finitions 13 : tes tirs sont un fond, les leurs un danger
       ctx.save();
       ctx.translate(p.x, p.y);
       if (p.kind === 'arrow' || (p.kind === 'bullet' && p.owner === 'player')) {
@@ -16365,6 +16423,15 @@ const Projectiles = {
         ctx.arc(0, 0, p.r, 0, TAU);
         ctx.fill();
         if (p.owner === 'enemy') {
+          /* finitions 13 : une balle ennemie est cerclée de noir puis de corail — elle ne se confond plus avec une orbe ou une étincelle */
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = 'rgba(8,10,18,.8)';
+          ctx.beginPath();
+          ctx.arc(0, 0, p.r + 1, 0, TAU);
+          ctx.stroke();
+          ctx.strokeStyle = PAL.danger;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
           ctx.fillStyle = '#fff9';
           ctx.beginPath();
           ctx.arc(0, 0, p.r * 0.4, 0, TAU);
@@ -16644,7 +16711,7 @@ const Pickups = {
       if (p.kind === 'glint') {
         const k = 1 - p.t / (p.life || 0.9);
         ctx.globalAlpha = Math.min(1, k * 2);
-        Halo.draw(ctx, p.x, p.y + p.z, 4, PAL.gold, 8);
+        Halo.draw(ctx, p.x, p.y + p.z, 4, PAL.gold, 5);
         ctx.fillStyle = PAL.gold;
         ctx.beginPath();
         ctx.arc(p.x, p.y + p.z, 4, 0, TAU);
@@ -16655,7 +16722,7 @@ const Pickups = {
       const bob = (p.z === 0 && !p.magnet ? -3 * (1 - Ease.outCubic((Beat.phase() + (p.ph || 0)) % 1)) : 0) + p.z; // posé : un petit saut sur chaque temps
       if (p.kind === 'xp') {
         const rr = 4 + Math.min(3, p.value / 6);
-        Halo.draw(ctx, p.x, p.y + bob, rr, '#7ef0ff', 8);
+        Halo.draw(ctx, p.x, p.y + bob, rr, '#7ef0ff', 4); // finitions 13 : une orbe n'est pas une balle
         ctx.fillStyle = '#7ef0ff';
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob, rr, 0, TAU);
@@ -18835,7 +18902,6 @@ class Pet {
       this.state = 'follow';
       this.target = null;
       AudioEngine.uiBack && AudioEngine.uiBack({ intensity: 0.5 });
-      UI.toast(this.name + ' est sonné');
     }
   }
   /* déplacement de suite : rejoint le joueur au-delà de `dist`, se pose en deçà */
@@ -18903,7 +18969,6 @@ class Pet {
       if (this.downT <= 0) {
         this.hp = this.maxHp;
         this.snap();
-        UI.toast(this.name + ' est de retour');
       }
       this.moving = false;
       this.animStep(dt, false); // sonné : la planche « hurt » se joue (elle restait figée sur le clip d'avant)
@@ -19020,6 +19085,15 @@ class Pet {
     ctx.beginPath();
     ctx.ellipse(this.x, this.y + sol, s * (this.airborne ? 0.2 : 0.28), s * (this.airborne ? 0.07 : 0.1), 0, 0, TAU);
     ctx.fill();
+    /* Finitions 13 : l'anneau au sol des alliés, vert vie — l'inverse du corail des ennemis */
+    ctx.save();
+    ctx.strokeStyle = PAL.life;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = this.down ? 0.25 : 0.5;
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + sol - 2, this.r * 0.95 + 1, this.r * 0.42 + 1, 0, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
     ctx.restore();
     const pop = 1 + this.act * 0.22 + (this.popD ? Feel.popK(this) : 0);
     /* les déformations (F-7) : accroupi avant la morsure, allongée en course, assis ou en toilette au repos */
@@ -20057,6 +20131,14 @@ class Enemy {
       ctx.beginPath();
       ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9, this.r * 0.4, 0, 0, TAU);
       ctx.fill();
+      /* Finitions 13 : l'anneau au sol — un ennemi se repère à son anneau corail avant même son dessin */
+      ctx.strokeStyle = PAL.danger;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = alpha * (this.isBoss ? 0.75 : 0.55);
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y + this.r - 2, this.r * 0.9 + 1, this.r * 0.4 + 1, 0, 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
     }
     /* ornement du boss : dessiné par-dessus le sprite pour que les trois boss ne se confondent jamais */
     if (this.isBoss && this.bossDef && this.bossDef.crest && !this.bossDef.crestOver) Boss.drawCrest(ctx, this, this.bossDef.crest, alpha);
@@ -20067,7 +20149,7 @@ class Enemy {
       ctx.strokeStyle = '#ffd166';
       ctx.fillStyle = '#ffd166';
       ctx.lineWidth = 2;
-      ctx.globalAlpha = alpha * (0.3 + 0.7 * k);
+      ctx.globalAlpha = alpha * k; // finitions 13 : il ne reste pas allumé entre deux temps
       ctx.beginPath();
       ctx.arc(this.x, this.y - this.r - 10, 3 + k * 3, 0, TAU);
       ctx.fill();
@@ -25396,7 +25478,7 @@ const Tempo = {
       const h = 6 + sp[i] * 44;
       const x = ROOM_X + i * TILE + 6;
       const gold = i % 4 === 0;
-      ctx.globalAlpha = 0.16 + 0.34 * sp[i];
+      ctx.globalAlpha = 0.08 + 0.17 * sp[i]; // finitions 13 : l'égaliseur est un fond
       ctx.fillStyle = gold ? Tempo.COLOR : '#6ee7ff';
       ctx.fillRect(x, ROOM_Y, TILE - 12, h);
       ctx.fillRect(x, ROOM_Y + ROOM_H - h, TILE - 12, h);
@@ -25492,7 +25574,7 @@ const Tempo = {
       const V = Engine.view;
       const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(V.w, V.h) * 0.3, W / 2, H / 2, Math.max(V.w, V.h) * 0.75);
       g.addColorStop(0, 'rgba(255,209,102,0)');
-      g.addColorStop(1, tp.boss ? `rgba(255,59,92,${0.22 * kd})` : `rgba(255,209,102,${0.16 * kd})`);
+      g.addColorStop(1, tp.boss ? `rgba(255,59,92,${0.12 * kd})` : `rgba(255,209,102,${0.08 * kd})`); // finitions 13 : le voile de la mesure, moitié moins
       ctx.fillStyle = g;
       ctx.fillRect(-V.ox, -V.oy, V.w, V.h);
     }
@@ -25955,7 +26037,7 @@ const Room = {
           r.lastWaveT = r.stateT;
           for (const s of w.spawns) Room.spawnAt(s);
           if (w.at !== 'start') {
-            UI.notify({ text: STR.wave + ' ' + (++r.waveIdx + 1), color: '#ff6b6b', level: 2, key: 'wave' });
+            UI.notify({ text: STR.wave + ' ' + (++r.waveIdx + 1), color: '#e8ecf7', level: 2, key: 'wave' }); // finitions 13 : le rouge est réservé au danger
           } else r.waveIdx = 0;
           break;
         }
@@ -28141,7 +28223,10 @@ const UI = (() => {
       const rb = s.querySelector('#choice-reroll');
       if (rb) rb.onclick = doReroll;
     };
+    /* Finitions 13 : un verrou de 600 ms — on arrive sur cet écran en plein tir, le doigt encore sur le bouton */
+    const readyAt = performance.now() + CHOICE_LOCK_MS;
     const pick = u => {
+      if (performance.now() < readyAt) return;
       state.choice = null;
       onPick(u);
     };
@@ -28153,9 +28238,11 @@ const UI = (() => {
       render();
       state.choice.choices = choices;
     };
-    state.choice = { choices, pick, reroll: reroll ? doReroll : null };
+    state.choice = { choices, pick, reroll: reroll ? doReroll : null, readyAt };
     render();
     show('choice');
+    s.classList.add('cooling');
+    setTimeout(() => s.classList.remove('cooling'), CHOICE_LOCK_MS);
     if (G.autoplay) Debug.autoChoice();
   }
   /* un mot par notion, en français : les catégories de greffes et les familles d'armes ne sortent jamais telles quelles du contenu */
@@ -28648,6 +28735,55 @@ const UI = (() => {
     } finally {
       hudEnd(ctx);
     }
+    renderReticle(ctx);
+  }
+  /* Finitions 13 : le réticule. Le curseur du système, une petite flèche blanche, se perd dans l'action ; ici un
+     anneau cerclé de noir avec quatre crans et un point, dessiné à la place (le curseur est caché sur le jeu). Rien au
+     tactile ni sur un écran de menu, où le curseur revient. */
+  const CHOICE_LOCK_MS = 600;
+  function renderReticle(ctx) {
+    const m = Input.mouse;
+    const touch = typeof Touch !== 'undefined' && (typeof Touch.active === 'function' ? Touch.active() : !!Touch.active);
+    const play = !G.overlay && G.room && G.player && !G.player.dead && !touch && !G.paused;
+    const cv = Engine.canvas;
+    if (cv) cv.style.cursor = play && m ? 'none' : '';
+    if (!play || !m) return;
+    const x = m.x / hudK,
+      y = m.y / hudK;
+    const R = 11;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const [col, lw] of [
+      ['rgba(8,10,18,.85)', 5],
+      [PAL.self, 2],
+    ]) {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.arc(x, y, R, 0, TAU);
+      ctx.stroke();
+      ctx.beginPath();
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        ctx.moveTo(x + dx * (R + 3), y + dy * (R + 3));
+        ctx.lineTo(x + dx * (R + 8), y + dy * (R + 8));
+      }
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(8,10,18,.85)';
+    ctx.beginPath();
+    ctx.arc(x, y, 3.5, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = PAL.self;
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+    hudProbe.flags.reticle = true;
   }
   function renderHudBody(ctx, pl, r, rm) {
     const V = Engine.view;
@@ -29114,6 +29250,7 @@ const UI = (() => {
     }
   }
   return {
+    CHOICE_LOCK_MS,
     init,
     show,
     hideAll,

@@ -64,8 +64,8 @@ const Floaters = {
      un soin est vert, un événement (« SONNÉ », « TEMPO ×4 ») garde sa couleur. Silkscreen à contour noir : lisible
      sur n'importe quel sol. Deux chiffres du même genre trop proches fusionnent au lieu de s'empiler. */
   KINDS: {
-    dmg: { size: 18, color: '#f4f7ff', vy: -90, vx: 40, g: 180, life: 0.7 },
-    crit: { size: 30, color: PAL.gold, vy: -130, vx: 40, g: 180, life: 0.85 },
+    dmg: { size: 14, color: '#f4f7ff', vy: -90, vx: 40, g: 180, life: 0.5 }, // finitions 13 : un retour, pas une information — plus petit, plus court
+    crit: { size: 24, color: PAL.gold, vy: -130, vx: 40, g: 180, life: 0.7 },
     taken: { size: 34, color: PAL.danger, vy: 40, vx: 0, g: -160, life: 0.9 },
     heal: { size: 20, color: PAL.life, vy: -70, vx: 20, g: 0, life: 0.7 },
     event: { size: 22, color: '#fff', vy: -30, vx: 0, g: 0, life: 1.1 },
@@ -474,7 +474,7 @@ const Projectiles = {
   render(ctx) {
     for (const p of this.list) {
       /* la lueur d'abord, collée (Halo) : un flou sous une rotation coûtait 0,2 ms par projectile */
-      Halo.draw(ctx, p.x, p.y, p.kind === 'arrow' || p.kind === 'boomerang' ? 9 : p.r || 4, p.color, 12);
+      Halo.draw(ctx, p.x, p.y, p.kind === 'arrow' || p.kind === 'boomerang' ? 9 : p.r || 4, p.color, p.owner === 'player' ? 6 : 12); // finitions 13 : tes tirs sont un fond, les leurs un danger
       ctx.save();
       ctx.translate(p.x, p.y);
       if (p.kind === 'arrow' || (p.kind === 'bullet' && p.owner === 'player')) {
@@ -515,6 +515,15 @@ const Projectiles = {
         ctx.arc(0, 0, p.r, 0, TAU);
         ctx.fill();
         if (p.owner === 'enemy') {
+          /* finitions 13 : une balle ennemie est cerclée de noir puis de corail — elle ne se confond plus avec une orbe ou une étincelle */
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = 'rgba(8,10,18,.8)';
+          ctx.beginPath();
+          ctx.arc(0, 0, p.r + 1, 0, TAU);
+          ctx.stroke();
+          ctx.strokeStyle = PAL.danger;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
           ctx.fillStyle = '#fff9';
           ctx.beginPath();
           ctx.arc(0, 0, p.r * 0.4, 0, TAU);
@@ -794,7 +803,7 @@ const Pickups = {
       if (p.kind === 'glint') {
         const k = 1 - p.t / (p.life || 0.9);
         ctx.globalAlpha = Math.min(1, k * 2);
-        Halo.draw(ctx, p.x, p.y + p.z, 4, PAL.gold, 8);
+        Halo.draw(ctx, p.x, p.y + p.z, 4, PAL.gold, 5);
         ctx.fillStyle = PAL.gold;
         ctx.beginPath();
         ctx.arc(p.x, p.y + p.z, 4, 0, TAU);
@@ -805,7 +814,7 @@ const Pickups = {
       const bob = (p.z === 0 && !p.magnet ? -3 * (1 - Ease.outCubic((Beat.phase() + (p.ph || 0)) % 1)) : 0) + p.z; // posé : un petit saut sur chaque temps
       if (p.kind === 'xp') {
         const rr = 4 + Math.min(3, p.value / 6);
-        Halo.draw(ctx, p.x, p.y + bob, rr, '#7ef0ff', 8);
+        Halo.draw(ctx, p.x, p.y + bob, rr, '#7ef0ff', 4); // finitions 13 : une orbe n'est pas une balle
         ctx.fillStyle = '#7ef0ff';
         ctx.beginPath();
         ctx.arc(p.x, p.y + bob, rr, 0, TAU);

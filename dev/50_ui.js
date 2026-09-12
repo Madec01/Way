@@ -1021,7 +1021,10 @@ const UI = (() => {
       const rb = s.querySelector('#choice-reroll');
       if (rb) rb.onclick = doReroll;
     };
+    /* Finitions 13 : un verrou de 600 ms — on arrive sur cet écran en plein tir, le doigt encore sur le bouton */
+    const readyAt = performance.now() + CHOICE_LOCK_MS;
     const pick = u => {
+      if (performance.now() < readyAt) return;
       state.choice = null;
       onPick(u);
     };
@@ -1033,9 +1036,11 @@ const UI = (() => {
       render();
       state.choice.choices = choices;
     };
-    state.choice = { choices, pick, reroll: reroll ? doReroll : null };
+    state.choice = { choices, pick, reroll: reroll ? doReroll : null, readyAt };
     render();
     show('choice');
+    s.classList.add('cooling');
+    setTimeout(() => s.classList.remove('cooling'), CHOICE_LOCK_MS);
     if (G.autoplay) Debug.autoChoice();
   }
   /* un mot par notion, en français : les catégories de greffes et les familles d'armes ne sortent jamais telles quelles du contenu */
@@ -1528,6 +1533,55 @@ const UI = (() => {
     } finally {
       hudEnd(ctx);
     }
+    renderReticle(ctx);
+  }
+  /* Finitions 13 : le réticule. Le curseur du système, une petite flèche blanche, se perd dans l'action ; ici un
+     anneau cerclé de noir avec quatre crans et un point, dessiné à la place (le curseur est caché sur le jeu). Rien au
+     tactile ni sur un écran de menu, où le curseur revient. */
+  const CHOICE_LOCK_MS = 600;
+  function renderReticle(ctx) {
+    const m = Input.mouse;
+    const touch = typeof Touch !== 'undefined' && (typeof Touch.active === 'function' ? Touch.active() : !!Touch.active);
+    const play = !G.overlay && G.room && G.player && !G.player.dead && !touch && !G.paused;
+    const cv = Engine.canvas;
+    if (cv) cv.style.cursor = play && m ? 'none' : '';
+    if (!play || !m) return;
+    const x = m.x / hudK,
+      y = m.y / hudK;
+    const R = 11;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const [col, lw] of [
+      ['rgba(8,10,18,.85)', 5],
+      [PAL.self, 2],
+    ]) {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.arc(x, y, R, 0, TAU);
+      ctx.stroke();
+      ctx.beginPath();
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        ctx.moveTo(x + dx * (R + 3), y + dy * (R + 3));
+        ctx.lineTo(x + dx * (R + 8), y + dy * (R + 8));
+      }
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(8,10,18,.85)';
+    ctx.beginPath();
+    ctx.arc(x, y, 3.5, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = PAL.self;
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+    hudProbe.flags.reticle = true;
   }
   function renderHudBody(ctx, pl, r, rm) {
     const V = Engine.view;
@@ -1994,6 +2048,7 @@ const UI = (() => {
     }
   }
   return {
+    CHOICE_LOCK_MS,
     init,
     show,
     hideAll,
